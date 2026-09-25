@@ -24,7 +24,7 @@
 
 ```bash
 npm start                      # веб
-BOT_TOKEN=... npm run bot      # телеграм-бот
+npm run bot                    # телеграм-бот (токен — в .env, см. bot/README.md)
 ```
 
 ---

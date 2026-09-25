@@ -27,9 +27,26 @@ import { Store } from './store.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+/**
+ * `.env` in the project root, if there is one — so the token lives in a file
+ * that git ignores instead of in shell history. A real environment variable
+ * wins over the file: hosting panels set those, and they must not be
+ * silently overridden by a stray local file. Built into Node, no dependency.
+ */
+const ENV_FILE = path.join(__dirname, '..', '.env');
+try {
+  process.loadEnvFile(ENV_FILE);
+} catch (err) {
+  if (err?.code !== 'ENOENT') console.error(`[bot] не удалось прочитать ${ENV_FILE}:`, err.message);
+}
+
 const TOKEN = process.env.BOT_TOKEN;
 if (!TOKEN) {
-  console.error('BOT_TOKEN не задан. Получите токен у @BotFather и запустите:\n  BOT_TOKEN=... npm run bot');
+  console.error(
+    'BOT_TOKEN не задан. Получите токен у @BotFather и положите его в файл .env в корне проекта:\n' +
+      '  BOT_TOKEN=123456:AA...\n' +
+      'или задайте переменную окружения BOT_TOKEN на хостинге.'
+  );
   process.exit(1);
 }
 
