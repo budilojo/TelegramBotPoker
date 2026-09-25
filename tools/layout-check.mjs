@@ -49,7 +49,7 @@ function table(n) {
   const chatId = String(chat--);
   const room = R.createRoom({ chatId, title: 'Проверка', host: { id: 101, name: NAMES[0], dm: 'ok' }, startingStack: 95_000_000, smallBlind: 1_000_000, bigBlind: 2_000_000 });
   for (let i = 1; i < n; i++) R.addPlayer(room, { id: 101 + i, name: NAMES[i], dm: 'ok' });
-  app.rooms.set(chatId, room);
+  app.addRoom(room);
   return room;
 }
 function play(room, until, pick) {

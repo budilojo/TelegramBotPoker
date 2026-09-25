@@ -64,7 +64,7 @@ export function startServer({ hub, port, root, host = '0.0.0.0', log = console.e
     }
     if (pathname === '/health') {
       res.writeHead(200, { 'content-type': TYPES['.json'], 'cache-control': 'no-store' });
-      res.end(JSON.stringify({ ok: true, sessions: [...hub.byRoom.values()].reduce((n, s) => n + s.size, 0) }));
+      res.end(JSON.stringify({ ok: true, sessions: hub.sessions }));
       return;
     }
     const file = files.get(pathname === '/' ? '/index.html' : pathname);

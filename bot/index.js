@@ -77,7 +77,7 @@ const hub = new Hub(app, { botToken: TOKEN });
 app.attachHub(hub);
 
 const restored = app.load();
-console.log(`[bot] @${me.username} · восстановлено столов: ${restored} · база: ${DB_PATH}`);
+console.log(`[bot] @${me.username} · восстановлено игр: ${restored} · база: ${DB_PATH}`);
 if (!WEBAPP_URL) {
   console.warn('[bot] WEBAPP_URL не задан: стол не откроется. Нужен публичный HTTPS-адрес этого сервера — см. bot/README.md.');
 } else if (!/^https:\/\//.test(WEBAPP_URL)) {
@@ -96,11 +96,12 @@ const web = startServer({
   onListen: () => console.log(`[bot] стол: http://localhost:${PORT}${WEBAPP_URL ? ` → ${WEBAPP_URL}` : ''}`),
 });
 
-/** The "/" menu: the game is played in the Mini App, the chat only needs these. */
+/** The "/" menu: the games are played in the Mini App, the chat only needs these. */
 const GROUP_COMMANDS = [
-  ['newgame', 'создать стол'],
-  ['table', 'показать стол внизу чата'],
-  ['finish', 'завершить игру (хост)'],
+  ['play', 'выбрать игру: покер или дурак'],
+  ['newgame', 'сразу покерный стол'],
+  ['table', 'показать игры внизу чата'],
+  ['finish', 'завершить свою игру (хост)'],
   ['help', 'как играть'],
 ];
 const PRIVATE_COMMANDS = [['help', 'как играть']];

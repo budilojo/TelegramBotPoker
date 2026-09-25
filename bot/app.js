@@ -1,51 +1,62 @@
 'use strict';
 /**
- * The bot's brain. The game itself is played in the Mini App (see hub.js);
- * the Telegram side is the lobby and the notifications:
+ * The bot's brain — the core of the game hub. The games themselves are
+ * played in the Mini App (see hub.js) and their rules live in their own
+ * modules (games/); the Telegram side is the lobby and the notifications:
  *
- *   - in the group: ONE card per game — created by /newgame, then only ever
- *     edited (edits do not ring anybody's phone) — with the button that opens
- *     the table; and the results of the evening at the end. Nothing else.
- *   - in private: "👉 your turn", only for somebody whose table is closed,
+ *   - in the group: `/play` posts the hub card («🎮 Во что играем?») that
+ *     opens the Mini App for THIS group; every game has ONE card of its own —
+ *     posted once, then only ever edited (edits do not ring anybody's phone) —
+ *     with the button that opens it; and the results at the end. A group may
+ *     have several games going at once, each with its own card.
+ *   - in private: "👉 your turn", only for somebody whose app is closed,
  *     and deleted again once the turn has passed.
  *
- * It also owns what has to run without anybody pressing anything: the turn
- * timer, the automatic next deal, and turning an all-in board over.
+ * It also owns what has to run without anybody pressing anything: every
+ * game's timers (the modules say what should run, this arms it).
  *
  * THE TWO RULES still hold, and are enforced where the moves now come in:
  * nobody acts for somebody else (identity = verified initData, hub.js), and
- * nobody sees somebody else's cards (each viewer gets their own state,
- * view.js). The only move the bot ever makes in somebody's place is the turn
- * timer's — switched on by the host, and only a free check or a fold.
+ * nobody sees somebody else's cards (each viewer gets their own state, from
+ * the game module's view). The only moves the bot ever makes in somebody's
+ * place are a turn timer's — switched on by the host.
  */
+import crypto from 'node:crypto';
 import { identify } from './identity.js';
-import * as R from './room.js';
-import { renderCard, renderResults, renderTurnPing } from './render.js';
 import { Outbox } from './outbox.js';
 import { NullStore } from './store.js';
 import { esc } from './fmt.js';
+import { GAMES, GAME_LIST, gameOf } from './games/index.js';
 
 const HELP = [
-  '♠️ <b>Покер в Telegram</b> — техасский холдем за столом в мини-приложении.',
+  '🎮 <b>Игры в Telegram</b> — покер и дурак в мини-приложении.',
   '',
-  '<b>/newgame</b> — создать стол. Бот пришлёт карточку с кнопкой «Открыть стол» — дальше всё там:',
-  'карты, ставки, банк, чей ход.',
+  '<b>/play</b> — выбрать игру. Бот пришлёт карточку с кнопкой — в приложении выберите',
+  '«Покер» или «Дурак» и создайте лобби; друзья присоединятся по его карточке.',
+  '<b>/newgame</b> — сразу покерный стол, как раньше.',
   '',
-  '/table — показать карточку стола внизу чата',
-  '/finish — завершить игру и показать итоги (хост)',
-  '/cancel — удалить стол (хост)',
+  '/table — показать карточки игр внизу чата',
+  '/finish — завершить свою игру и показать итоги (хост)',
+  '/cancel — удалить свою игру (хост)',
   '',
   'Чтобы бот мог напомнить, что ваш ход, — один раз нажмите Start у него в личке.',
 ].join('\n');
 
 const HELP_DM = [
-  '♠️ <b>Покер в Telegram</b>',
+  '🎮 <b>Покер и дурак в Telegram</b>',
   '',
-  'Сюда приходят напоминания «ваш ход» — только когда стол у вас закрыт.',
-  'Сама игра — в группе: напишите там /newgame и откройте стол.',
+  'Сюда приходят напоминания «ваш ход» — только когда приложение у вас закрыто.',
+  'Сама игра — в группе: напишите там /play и выберите игру.',
 ].join('\n');
 
-const WELCOME_DM = '✅ Готово: если стол будет закрыт, когда до вас дойдёт ход, — напомню здесь.';
+const WELCOME_DM = '✅ Готово: если приложение будет закрыто, когда до вас дойдёт ход, — напомню здесь.';
+
+/** Games a group may have going at once. Past this the hub asks to finish one. */
+export const MAX_LIVE_PER_GROUP = 10;
+/** A finished game stays (its results on open phones) this long after it ended. */
+export const FINISHED_KEEP_MS = 30 * 60_000;
+/** …and is dropped at start-up after this long, new game or not. */
+export const FINISHED_MAX_MS = 24 * 60 * 60_000;
 
 /** The real clock. Tests pass a fake one and move time by hand. */
 const REAL_CLOCK = {
@@ -54,23 +65,33 @@ const REAL_CLOCK = {
   clearTimeout: (h) => clearTimeout(h),
 };
 
+/** A group's public handle — `startapp=g_<code>`. Random, unrelated to the chat id. */
+export function newGroupCode() {
+  const abc = 'abcdefghijkmnpqrstuvwxyz23456789';
+  return Array.from(crypto.randomBytes(10), (b) => abc[b % abc.length]).join('');
+}
+
+export const HUB_PREFIX = 'g_';
+
 export class App {
   /**
-   * @param deck           test seam: `(room) => number[52]` — a stacked deck
+   * @param deck           test seam: `(room) => number[52]` — a stacked poker deck
+   * @param durakDeck      test seam: `(room) => string[36]` — a stacked durak deck
    * @param clock          `{ now, setTimeout, clearTimeout }` for the timers
    * @param runoutStepMs   pause between streets when an all-in board is shown
    * @param webappUrl      public HTTPS address of the Mini App
    * @param miniAppName    the short name registered with @BotFather (/newapp):
-   *                       then the group button opens the table directly
+   *                       then the group button opens the app directly
    */
   constructor({
-    api, store = new NullStore(), minIntervalMs = 1000, botUsername = '', onError = null, deck = null,
+    api, store = new NullStore(), minIntervalMs = 1000, botUsername = '', onError = null, deck = null, durakDeck = null,
     clock = REAL_CLOCK, runoutStepMs = 1500, webappUrl = '', miniAppName = '',
   } = {}) {
     this.api = api;
     this.store = store;
     this.botUsername = botUsername;
     this.deck = deck;
+    this.durakDeck = durakDeck;
     this.clock = clock;
     this.runoutStepMs = runoutStepMs;
     this.webappUrl = String(webappUrl || '').replace(/\/+$/, '');
@@ -78,9 +99,11 @@ export class App {
     this.hub = null; // set by attachHub()
     this.log = onError || ((err) => console.error('[bot]', err?.description || err?.message || err));
     this.outbox = new Outbox(api, { minIntervalMs, onError: this.log, timers: clock });
-    /** @type {Map<string, object>} chatId -> room */
+    /** @type {Map<string, object>} room code -> room (a group may have several) */
     this.rooms = new Map();
-    /** `${kind}:${chatId}` -> { key, deadline, h } — every timer the bot holds */
+    /** @type {Map<string, object>} chatId -> group { chatId, code, title, ui } */
+    this.groups = new Map();
+    /** `${kind}:${code}` -> { key, deadline, h } — every timer the bot holds */
     this.handles = new Map();
     /** private-chat work in flight (turn pings) — awaited by settle() */
     this.inflight = new Set();
@@ -91,22 +114,81 @@ export class App {
     return this;
   }
 
+  /** Every game of a chat, oldest first. */
+  roomsOf(chatId) {
+    const id = String(chatId);
+    return [...this.rooms.values()].filter((r) => r.chatId === id).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  }
+
+  /** The newest game of a chat — what "the table in this group" means for one game. */
   room(chatId) {
-    return this.rooms.get(String(chatId)) || null;
+    return this.roomsOf(chatId).at(-1) || null;
   }
 
   roomByCode(code) {
     if (!code) return null;
-    for (const room of this.rooms.values()) if (room.code === code) return room;
+    return this.rooms.get(String(code)) || null;
+  }
+
+  /** Put a room under its code (tools and tests build rooms by hand). */
+  addRoom(room) {
+    room.game = room.game || 'poker';
+    this.rooms.set(room.code, room);
+    return room;
+  }
+
+  groupByCode(code) {
+    if (!code) return null;
+    for (const g of this.groups.values()) if (g.code === code) return g;
     return null;
+  }
+
+  /** The group's hub record — created the first time somebody asks for it. */
+  ensureGroup(chatId, title = '') {
+    const id = String(chatId);
+    let g = this.groups.get(id);
+    if (!g) {
+      g = { chatId: id, code: newGroupCode(), title: '', ui: { hubMessageId: null } };
+      this.groups.set(id, g);
+    }
+    if (title) g.title = String(title).slice(0, 64);
+    this.saveGroup(g);
+    return g;
+  }
+
+  saveGroup(g) {
+    try {
+      this.store.saveGroup(g);
+    } catch (err) {
+      this.log(err);
+    }
   }
 
   /* ---------------------------------------------------------- persistence */
 
   load() {
-    for (const { chatId, data } of this.store.loadAll()) {
+    const now = this.clock.now();
+    for (const g of this.store.loadGroups()) {
+      this.groups.set(String(g.chatId), { ...g, ui: g.ui || { hubMessageId: null } });
+    }
+    for (const { chatId, code, game, data } of this.store.loadAll()) {
       try {
-        this.rooms.set(String(chatId), R.deserialize(data));
+        const room = (GAMES[game] || gameOf(data)).deserialize(data);
+        room.chatId = String(chatId); // the column wins: it is what a migration re-keys
+        room.code = room.code || code;
+        room.ui = room.ui || {};
+        // Saved before a game could wait for several people at once.
+        if (room.ui.ping) {
+          const { key, userId, messageId } = room.ui.ping;
+          room.ui.pings = messageId ? { [String(userId)]: { key, tgId: userId, messageId } } : {};
+          delete room.ui.ping;
+        }
+        // A finished game an evening ago is nobody's any more.
+        if (room.status === 'finished' && now - (room.finishedAt || 0) > FINISHED_MAX_MS) {
+          this.store.remove(room.code);
+          continue;
+        }
+        this.rooms.set(room.code, room);
       } catch (err) {
         this.log(err);
       }
@@ -116,13 +198,13 @@ export class App {
 
   save(room) {
     try {
-      this.store.save(room, R.serialize(room, this.clock.now()));
+      this.store.save(room, gameOf(room).serialize(room, this.clock.now()));
     } catch (err) {
       this.log(err);
     }
   }
 
-  /** After a restart: redraw every live card; open tables reconnect by themselves. */
+  /** After a restart: redraw every live card; open apps reconnect by themselves. */
   async resume() {
     this.syncClocks(); // timers come back with the time that was LEFT, not less
     let drawn = 0;
@@ -139,11 +221,11 @@ export class App {
     return drawn;
   }
 
-  /* ---------------------------------------------------------- the table link */
+  /* ---------------------------------------------------------- the links */
 
   /**
    * The group button. A `web_app` button is not allowed in groups, so this is
-   * a plain link: with a Mini App registered at @BotFather it opens the table
+   * a plain link: with a Mini App registered at @BotFather it opens the app
    * directly (`startapp` arrives signed, inside initData). Without one, it
    * opens the bot's private chat, and the bot answers with a `web_app` button.
    */
@@ -151,6 +233,13 @@ export class App {
     if (!this.botUsername) return null;
     if (this.miniAppName) return `https://t.me/${this.botUsername}/${this.miniAppName}?startapp=${room.code}`;
     return `https://t.me/${this.botUsername}?start=t_${room.code}`;
+  }
+
+  /** The hub of a group: `g_<code>` tells it apart from a room code (which has no `_`). */
+  hubLink(group) {
+    if (!this.botUsername) return null;
+    if (this.miniAppName) return `https://t.me/${this.botUsername}/${this.miniAppName}?startapp=${HUB_PREFIX}${group.code}`;
+    return `https://t.me/${this.botUsername}?start=${HUB_PREFIX}${group.code}`;
   }
 
   /** A `web_app` button — private chats only. */
@@ -164,15 +253,15 @@ export class App {
   /**
    * Something changed. Everyone at the table gets their own view NOW (a
    * socket has no rate limit), the group card is re-rendered at most once a
-   * second (Telegram does), and whoever is on the clock with their table
+   * second (Telegram does), and whoever the game waits for with their app
    * closed gets a nudge.
    */
   draw(room, { immediate = false } = {}) {
     this.syncClocks(); // the view carries the turn deadline: set it first
     this.hub?.broadcast(room);
-    this.track(this.pingTurn(room));
+    this.track(this.pingTurns(room));
     const produce = async () => {
-      const view = renderCard(room, { link: this.tableLink(room) });
+      const view = gameOf(room).card(room, { link: this.tableLink(room) });
       const kbKey = JSON.stringify(view.keyboard?.length ? { inline_keyboard: view.keyboard } : null);
       const unchanged = room.ui.lastText === view.text && room.ui.lastKb === kbKey;
       const buried = !!room.ui.tableMessageId && (room.ui.lastMsgId || 0) - room.ui.tableMessageId >= 2;
@@ -181,7 +270,7 @@ export class App {
       this.save(room);
     };
     if (immediate) return produce();
-    this.outbox.schedule(room.chatId, produce);
+    this.outbox.schedule(room.chatId, produce, room.code);
     return Promise.resolve();
   }
 
@@ -191,14 +280,22 @@ export class App {
     this.inflight.add(p);
   }
 
-  /** Remember the newest message id in a chat — the measure of "buried". */
+  /**
+   * Remember the newest message id in a chat — the measure of "buried". A
+   * card's own id counts for its own room only: two games' cards must not
+   * keep pushing each other to the bottom of the chat.
+   */
   seen(room, messageId) {
     if (room && Number.isFinite(messageId)) room.ui.lastMsgId = Math.max(room.ui.lastMsgId || 0, messageId);
   }
 
+  seenInChat(chatId, messageId) {
+    for (const room of this.roomsOf(chatId)) this.seen(room, messageId);
+  }
+
   /** Post the card again at the bottom of the chat; the old copy loses its button. */
   async newCard(room) {
-    this.outbox.cancel(room.chatId);
+    this.outbox.cancel(room.chatId, room.code);
     const old = room.ui.tableMessageId;
     if (old) await this.outbox.dropKeyboard(room.chatId, old);
     room.ui.tableMessageId = null;
@@ -220,34 +317,47 @@ export class App {
   /* ------------------------------------------------------- "your turn" pings */
 
   /**
-   * A new turn started. If the player on the clock does not have the table
-   * open, send them a private "👉 your turn" with a button that opens it. The
-   * previous ping — for a turn that has passed — is deleted, so a private
-   * chat never fills up with stale calls to act.
+   * Whoever the game is waiting for, if they do not have the app open, gets a
+   * private "👉 your turn" with a button that opens it. A ping for a turn that
+   * has passed is deleted, so a private chat never fills up with stale calls
+   * to act. Poker waits for one player at a time; durak may wait for several
+   * (the defender, the players who may still throw in).
    */
-  async pingTurn(room) {
-    const key = room.status === 'playing' ? R.turnKey(room) : null;
-    const last = room.ui.ping;
-    if ((last?.key ?? null) === key) return;
-    room.ui.ping = key ? { key, userId: null, messageId: null } : null;
-    if (last?.messageId) await this.outbox.removePrivate(last.userId, last.messageId);
-    if (!key) return;
-
-    const actor = R.findPlayer(room, room.hand.actorId);
-    if (!actor || actor.dm !== 'ok') return; // never pressed Start: nobody to write to
-    if (this.hub?.isPresent(room.code, actor.id)) return; // looking at the table already
-    const btn = this.webAppButton(room) || (this.tableLink(room) ? { text: '🃏 Открыть стол', url: this.tableLink(room) } : null);
-    const r = await this.outbox.dm(actor.tgId, renderTurnPing(room, actor), btn ? [[btn]] : null);
-    if (r.forbidden) this.setDm(actor.id, 'fail', { redraw: false });
-    // Only remember it if the turn is still the same one we pinged about.
-    if (r.ok && room.ui.ping?.key === key) room.ui.ping = { key, userId: actor.tgId, messageId: r.message_id };
-    else if (r.ok) await this.outbox.removePrivate(actor.tgId, r.message_id);
+  async pingTurns(room) {
+    const g = gameOf(room);
+    const wanted = () => (room.status === 'playing' ? g.waiting(room) : []);
+    const isWanted = (w) => wanted().some((x) => x.id === w.id && x.key === w.key);
+    const pings = (room.ui.pings ||= {});
+    const want = wanted();
+    for (const [uid, last] of Object.entries(pings)) {
+      if (want.some((w) => w.id === uid && w.key === last.key)) continue;
+      if (pings[uid] === last) delete pings[uid];
+      if (last.messageId) await this.outbox.removePrivate(last.tgId, last.messageId);
+    }
+    for (const w of want) {
+      if (room.ui.pings?.[w.id]?.key === w.key) continue;
+      if (!isWanted(w)) continue; // the game moved on while we were busy
+      const entry = { key: w.key, tgId: null, messageId: null };
+      (room.ui.pings ||= {})[w.id] = entry;
+      const p = room.players.find((x) => x.id === w.id);
+      if (!p || p.dm !== 'ok') continue; // never pressed Start: nobody to write to
+      if (this.hub?.isPresent(room.code, p.id)) continue; // looking at the table already
+      const link = this.tableLink(room);
+      const btn = this.webAppButton(room) || (link ? { text: '🃏 Открыть стол', url: link } : null);
+      const r = await this.outbox.dm(p.tgId, g.pingText(room, p, w), btn ? [[btn]] : null);
+      if (r.forbidden) this.setDm(p.id, 'fail', { redraw: false });
+      if (!r.ok) continue;
+      // Only remember it if the turn is still the same one we pinged about.
+      if (room.ui.pings?.[w.id] === entry && isWanted(w)) Object.assign(entry, { tgId: p.tgId, messageId: r.message_id });
+      else await this.outbox.removePrivate(p.tgId, r.message_id);
+    }
   }
 
   /* ------------------------------------------------------------ the deal */
 
   /** `{ deck }` for the room layer: stacked in tests, shuffled otherwise. */
   dealOpts(room) {
+    if (room.game === 'durak') return this.durakDeck ? { deck: () => this.durakDeck(room) } : {};
     return this.deck ? { deck: () => this.deck(room) } : {};
   }
 
@@ -259,7 +369,7 @@ export class App {
     const id = String(userId);
     if (this.store.getDm(id) !== status) this.store.setDm(id, status);
     for (const room of this.rooms.values()) {
-      const p = R.findPlayer(room, id);
+      const p = room.players.find((x) => x.id === id);
       if (!p || p.dm === status) continue;
       p.dm = status;
       if (redraw && room.status !== 'finished') this.draw(room);
@@ -270,11 +380,53 @@ export class App {
     return { id: user.id, tgId: user.tgId, name: user.name, dm: this.store.getDm(user.id) };
   }
 
+  /**
+   * A new game in a group — from /newgame or from the hub. Finished games of
+   * this chat that nobody has looked at for a while are cleared out first.
+   */
+  createGame(gameId, { chatId, title = '', host, settings = null }) {
+    const g = GAMES[gameId];
+    if (!g) return { error: 'BAD_GAME' };
+    this.purgeFinished(chatId);
+    const room = g.create({ chatId: String(chatId), title, host: this.person(host), settings });
+    if (room.error) return room;
+    room.game = g.id;
+    room.createdAt = Math.max(room.createdAt || 0, ...this.roomsOf(chatId).map((r) => (r.createdAt || 0) + 1));
+    this.rooms.set(room.code, room);
+    return room;
+  }
+
+  /** Drop a game for good: its card loses the button, open apps are told. */
+  async dropGame(room) {
+    if (room.ui.tableMessageId) await this.outbox.dropKeyboard(room.chatId, room.ui.tableMessageId);
+    this.outbox.cancel(room.chatId, room.code);
+    this.hub?.forget(room.code);
+    this.rooms.delete(room.code);
+    this.store.remove(room.code);
+    this.syncClocks();
+    this.hub?.broadcastGroup(room.chatId);
+  }
+
+  purgeFinished(chatId) {
+    const now = this.clock.now();
+    for (const room of this.roomsOf(chatId)) {
+      if (room.status !== 'finished' || now - (room.finishedAt || 0) < FINISHED_KEEP_MS) continue;
+      this.hub?.forget(room.code);
+      this.rooms.delete(room.code);
+      this.store.remove(room.code);
+    }
+  }
+
+  /** Games of a chat that are not over yet. */
+  liveRooms(chatId) {
+    return this.roomsOf(chatId).filter((r) => r.status !== 'finished');
+  }
+
   /** Chips or cards moved: show it — or, if that ended the game, the results. */
   async afterAction(room) {
-    // An all-in board is shown street by street; the reveal posts the
-    // results itself at the end if this was the last hand of the game.
-    if (this.startReveal(room)) return this.draw(room);
+    // Something the game shows on its own clock (the poker all-in board): it
+    // posts the results itself at the end if this was the last hand.
+    if (gameOf(room).beginShow?.(this, room)) return this.draw(room);
     if (room.status === 'finished') return this.finishUp(room);
     await this.draw(room);
   }
@@ -284,7 +436,7 @@ export class App {
     if (r?.finished) return this.finishUp(room);
     // Blinds alone can put everybody all-in: then the board is turned over at
     // once, and that may even end the game on the spot.
-    const revealing = this.startReveal(room);
+    const revealing = gameOf(room).beginShow?.(this, room);
     if (room.status === 'finished' && !revealing) return this.finishUp(room);
     await this.draw(room);
   }
@@ -317,20 +469,19 @@ export class App {
   /* --------------------------------------------------------------- clocks */
 
   /**
-   * The turn timer and the automatic deal, for every table. Idempotent: the
-   * room layer works out what should be running, this only makes the real
-   * timers match — arming new ones, dropping ones nobody needs.
+   * Every game's timers, for every room. Idempotent: the game module works out
+   * what should be running, this only makes the real timers match — arming
+   * new ones, dropping ones nobody needs.
    */
   syncClocks() {
     const now = this.clock.now();
     const live = new Set();
     for (const room of this.rooms.values()) {
-      const chatId = room.chatId;
-      const turn = R.syncTurn(room, now);
-      this.arm(`turn:${chatId}`, turn, () => this.onTurnTimeout(chatId, turn.key));
-      const next = R.syncAutoNext(room, now);
-      this.arm(`next:${chatId}`, next, () => this.onAutoNext(chatId, next.key));
-      live.add(`turn:${chatId}`).add(`next:${chatId}`).add(`reveal:${chatId}`);
+      for (const c of gameOf(room).clocks?.(this, room, now) || []) {
+        const id = `${c.id}:${room.code}`;
+        live.add(id);
+        if (!c.keep) this.arm(id, c.timer, c.fire);
+      }
     }
     for (const [id, cur] of this.handles) {
       if (!live.has(id)) {
@@ -354,6 +505,17 @@ export class App {
     this.handles.set(id, { key: timer.key, deadline, h });
   }
 
+  /** A one-off step on a game's own clock (the poker board, street by street). */
+  after(id, key, ms, fn) {
+    const cur = this.handles.get(id);
+    if (cur) this.clock.clearTimeout(cur.h);
+    const h = this.clock.setTimeout(() => {
+      this.handles.delete(id);
+      return this.guard(fn);
+    }, ms);
+    this.handles.set(id, { key, deadline: null, h });
+  }
+
   /** A timer callback runs outside any update: it must never throw into the void. */
   async guard(fn) {
     try {
@@ -369,78 +531,6 @@ export class App {
     this.handles.clear();
   }
 
-  /**
-   * The clock ran out on somebody. `key` names the exact turn it was armed
-   * for; if they moved in the meantime, the room layer refuses and nothing
-   * happens.
-   */
-  async onTurnTimeout(chatId, key) {
-    const room = this.room(chatId);
-    if (!room) return;
-    const r = R.timeoutMove(room, key, this.clock.now());
-    if (!r.error) await this.afterAction(room);
-    this.syncClocks(); // a timer that woke a hair early is simply re-armed
-  }
-
-  async onAutoNext(chatId, key) {
-    const room = this.room(chatId);
-    if (!room) return;
-    const r = R.autoNextHand(room, key, this.clock.now(), this.dealOpts(room));
-    if (!r.error) await this.afterDeal(room, r);
-    else if (r.error === 'NOT_ENOUGH_PLAYERS') await this.draw(room);
-    this.syncClocks();
-  }
-
-  /* --------------------------------------------------------- board reveal */
-
-  /**
-   * An all-in before the river: the board was dealt out to five cards in one
-   * go, and the pot is already paid. What remains is to SHOW it the way a
-   * table does — flop, turn, river — one step every `runoutStepMs`.
-   *
-   * Runs on timers, never on a sleep: grammY hands the bot one update at a
-   * time, and a four-second sleep inside a handler would freeze every other
-   * chat the bot is in.
-   *
-   * @returns true when a reveal started (and will finish the job itself)
-   */
-  startReveal(room) {
-    const h = room.hand;
-    if (!this.runoutStepMs || !h || h.phase !== 'complete' || h.runoutFrom == null || h.runoutShown) return false;
-    h.runoutShown = true;
-    room.ui.reveal = { handNo: h.no, shown: h.runoutFrom };
-    this.scheduleReveal(room.chatId, h.no);
-    return true;
-  }
-
-  scheduleReveal(chatId, handNo) {
-    const id = `reveal:${chatId}`;
-    const h = this.clock.setTimeout(() => {
-      this.handles.delete(id);
-      return this.guard(() => this.revealStep(chatId, handNo));
-    }, this.runoutStepMs);
-    this.handles.set(id, { key: `reveal:${handNo}`, deadline: null, h });
-  }
-
-  async revealStep(chatId, handNo) {
-    const room = this.room(chatId);
-    const r = room?.ui?.reveal;
-    // Superseded — a new hand, /finish, a restart: the final view is already up.
-    if (!r || r.handNo !== handNo || room.hand?.no !== handNo) return;
-    const next = r.shown < 3 ? 3 : r.shown + 1;
-    if (next >= 5) {
-      // The river comes with the result: that frame IS the showdown.
-      room.ui.reveal = null;
-      if (room.status === 'finished') await this.finishUp(room);
-      else await this.draw(room);
-      this.syncClocks(); // the automatic deal counts from here
-      return;
-    }
-    r.shown = next;
-    await this.draw(room);
-    this.scheduleReveal(chatId, handNo);
-  }
-
   /* ------------------------------------------------------------- messages */
 
   async onMessage(msg) {
@@ -448,16 +538,15 @@ export class App {
 
     const chatId = String(msg.chat.id);
 
-    // A group promoted to a supergroup changes chat.id. Re-key the table or
-    // it is silently lost the moment somebody upgrades the group.
+    // A group promoted to a supergroup changes chat.id. Re-key its games or
+    // they are silently lost the moment somebody upgrades the group.
     if (msg.migrate_to_chat_id) return this.migrate(chatId, String(msg.migrate_to_chat_id));
 
     if (msg.left_chat_member) return this.onLeft(chatId, msg.left_chat_member);
     if (msg.new_chat_members?.length) return this.onJoined(chatId, msg.new_chat_members);
     if (typeof msg.text !== 'string') return;
 
-    const room = this.room(chatId);
-    this.seen(room, msg.message_id);
+    this.seenInChat(chatId, msg.message_id);
     const cmd = parseCommand(msg.text, this.botUsername);
     if (!cmd) return;
     return this.onCommand(cmd, msg);
@@ -465,10 +554,11 @@ export class App {
 
   /**
    * The private chat. Start here is what lets the bot send "your turn".
-   * `/start t_<code>` comes from the group button when no Mini App is
-   * registered at @BotFather: the answer is a `web_app` button, which Telegram
-   * allows in private chats only. Nothing here seats anybody anywhere — a
-   * deep-link payload is text the user controls.
+   * `/start t_<code>` (a table) and `/start g_<code>` (a group's hub) come
+   * from the group buttons when no Mini App is registered at @BotFather: the
+   * answer is a `web_app` button, which Telegram allows in private chats only.
+   * Nothing here seats anybody anywhere — a deep-link payload is text the
+   * user controls.
    */
   async onPrivate(msg) {
     const who = identify(msg.from, msg.sender_chat);
@@ -482,9 +572,19 @@ export class App {
       const room = m ? this.roomByCode(m[1]) : null;
       if (room) {
         const btn = this.webAppButton(room);
+        const g = gameOf(room);
         const text = btn
-          ? `♠️ Стол${room.title ? ` «${esc(room.title)}»` : ''} — открывайте:`
+          ? `${g.icon} ${g.id === 'poker' ? 'Стол' : g.title}${room.title ? ` «${esc(room.title)}»` : ''} — открывайте:`
           : 'Стол есть, но адрес мини-приложения не настроен (WEBAPP_URL). Скажите тому, кто запускает бота.';
+        return void (await this.outbox.post(user.tgId, text, btn ? [[btn]] : null));
+      }
+      const gm = /^g_([a-z0-9]{4,32})$/.exec(cmd.rest);
+      const group = gm ? this.groupByCode(gm[1]) : null;
+      if (group) {
+        const btn = this.webappUrl ? { text: '🎮 Выбрать игру', web_app: { url: `${this.webappUrl}/?room=${HUB_PREFIX}${group.code}` } } : null;
+        const text = btn
+          ? `🎮 Игры группы${group.title ? ` «${esc(group.title)}»` : ''} — открывайте:`
+          : 'Адрес мини-приложения не настроен (WEBAPP_URL). Скажите тому, кто запускает бота.';
         return void (await this.outbox.post(user.tgId, text, btn ? [[btn]] : null));
       }
       return void (await this.outbox.post(user.tgId, cmd.rest ? WELCOME_DM : `${WELCOME_DM}\n\n${HELP_DM}`));
@@ -500,55 +600,102 @@ export class App {
     if (!who.ok) return void (await this.reply(chatId, who.text, msg));
 
     const user = who.user;
-    const room = this.room(chatId);
 
     switch (cmd.cmd) {
+      case 'play':
+      case 'games': {
+        const group = this.ensureGroup(chatId, msg.chat.title);
+        await this.postHub(group);
+        return;
+      }
+
       case 'newgame':
       case 'poker': {
-        if (room && room.status !== 'finished') {
+        const table = this.liveRooms(chatId).filter((r) => r.game === 'poker').at(-1);
+        if (table) {
           return void (await this.reply(
             chatId,
-            `Стол уже есть, хост — ${esc(nameOf(room, room.hostId))}. /table — показать его. ` +
-              'Новый — после /finish или /cancel.',
+            `Стол уже есть, хост — ${esc(nameOf(table, table.hostId))}. /table — показать его. ` +
+              'Новый — после /finish или /cancel. Ещё одна игра — /play.',
             msg
           ));
         }
-        if (room) this.hub?.forget(room.code);
-        const fresh = R.createRoom({ chatId, title: msg.chat.title, host: this.person(user) });
-        this.rooms.set(chatId, fresh);
+        // As it always did, a new table replaces a poker table that is over.
+        for (const old of this.roomsOf(chatId)) {
+          if (old.game !== 'poker' || old.status !== 'finished') continue;
+          this.hub?.forget(old.code);
+          this.rooms.delete(old.code);
+          this.store.remove(old.code);
+        }
+        const fresh = this.createGame('poker', { chatId, title: msg.chat.title, host: user });
         await this.newCard(fresh);
+        this.hub?.broadcastGroup(chatId);
         return;
       }
 
       case 'table': {
-        if (!room) return void (await this.reply(chatId, 'Стола нет. /newgame', msg));
-        await this.newCard(room);
+        const live = this.liveRooms(chatId);
+        if (!live.length) {
+          const last = this.room(chatId);
+          if (!last) return void (await this.reply(chatId, 'Игр нет. /play — выбрать игру, /newgame — покер.', msg));
+          await this.newCard(last);
+          return;
+        }
+        for (const room of live) await this.newCard(room);
         return;
       }
 
       case 'finish': {
-        if (!room) return void (await this.reply(chatId, 'Стола нет.', msg));
-        const r = R.endGame(room, user.id);
+        const room = this.hostTarget(chatId, user.id, { finished: true });
+        if (!room) {
+          const any = this.liveRooms(chatId).at(-1) || this.room(chatId);
+          return void (await this.reply(chatId, any ? this.hostOnly(any) : 'Стола нет.', msg));
+        }
+        const r = gameOf(room).endGame(room, user.id);
         if (r.error) return void (await this.reply(chatId, this.hostOnly(room), msg));
         await this.finishUp(room);
         return;
       }
 
       case 'cancel': {
-        if (!room) return;
-        if (!R.isHost(room, user.id)) return void (await this.reply(chatId, this.hostOnly(room), msg));
-        if (room.ui.tableMessageId) await this.outbox.dropKeyboard(chatId, room.ui.tableMessageId);
-        this.hub?.forget(room.code);
-        this.rooms.delete(chatId);
-        this.store.remove(chatId);
-        this.syncClocks();
-        await this.reply(chatId, 'Стол удалён. /newgame — создать новый.');
+        const room = this.hostTarget(chatId, user.id, { finished: true });
+        if (!room) {
+          const any = this.liveRooms(chatId).at(-1) || this.room(chatId);
+          if (any) await this.reply(chatId, this.hostOnly(any), msg);
+          return;
+        }
+        await this.dropGame(room);
+        await this.reply(chatId, room.game === 'poker' ? 'Стол удалён. /newgame — создать новый.' : `${gameOf(room).icon} ${gameOf(room).title}: игра удалена. /play — новая игра.`);
         return;
       }
 
       default:
         return;
     }
+  }
+
+  /** The game a host's command is about: the newest one they run in this chat. */
+  hostTarget(chatId, userId, { finished = false } = {}) {
+    const mine = (list) => list.filter((r) => r.hostId === String(userId)).at(-1) || null;
+    return mine(this.liveRooms(chatId)) || (finished ? mine(this.roomsOf(chatId)) : null);
+  }
+
+  /** «🎮 Во что играем?» — the card that opens the Mini App for this group. */
+  async postHub(group) {
+    const old = group.ui?.hubMessageId;
+    if (old) await this.outbox.dropKeyboard(group.chatId, old);
+    const link = this.hubLink(group);
+    const lines = ['🎮 <b>Во что играем?</b>', ''];
+    for (const g of GAME_LIST) lines.push(`${g.icon} <b>${g.title}</b> — ${esc(g.blurb)}, ${g.minPlayers}–${g.maxPlayers} игроков`);
+    lines.push('', '<i>Откройте приложение, выберите игру и создайте лобби — друзья присоединятся по его карточке.</i>');
+    try {
+      const m = await this.outbox.post(group.chatId, lines.join('\n'), link ? [[{ text: '🎮 Выбрать игру', url: link }]] : null);
+      group.ui = { ...(group.ui || {}), hubMessageId: m?.message_id ?? null };
+      this.seenInChat(group.chatId, m?.message_id);
+    } catch (err) {
+      this.log(err);
+    }
+    this.saveGroup(group);
   }
 
   /**
@@ -568,11 +715,11 @@ export class App {
   /* ----------------------------------------------------- chat membership */
 
   async onLeft(chatId, member) {
-    const room = this.room(chatId);
-    if (!room) return;
-    const r = R.markLeft(room, member.id);
-    if (r.error) return;
-    await this.afterAction(room);
+    for (const room of this.liveRooms(chatId)) {
+      const r = gameOf(room).markLeft(room, member.id);
+      if (r.error) continue;
+      await this.afterAction(room);
+    }
   }
 
   async onJoined(chatId, members) {
@@ -592,29 +739,41 @@ export class App {
     }
     if (status === 'left' || status === 'kicked') {
       const chatId = String(u.chat.id);
-      const room = this.room(chatId);
-      if (room) this.hub?.forget(room.code);
-      this.rooms.delete(chatId);
-      this.store.remove(chatId);
+      for (const room of this.roomsOf(chatId)) {
+        this.hub?.forget(room.code);
+        this.rooms.delete(room.code);
+      }
+      const group = this.groups.get(chatId);
+      if (group) this.hub?.forgetGroup(group.code);
+      this.groups.delete(chatId);
+      this.store.removeChat(chatId);
+      this.syncClocks();
     }
   }
 
-  migrate(oldId, newId) {
-    const room = this.room(oldId);
-    if (!room) return;
-    room.chatId = newId;
-    // Message ids do not survive the migration either. The room code does,
-    // so every open table keeps working without anybody noticing.
-    room.ui.tableMessageId = null;
-    room.ui.lastText = null;
-    room.ui.lastKb = null;
-    room.ui.lastMsgId = 0;
-    room.ui.reveal = null; // its timer is keyed by the old id and will find nothing
-    this.rooms.delete(oldId);
-    this.rooms.set(newId, room);
+  async migrate(oldId, newId) {
+    const rooms = this.roomsOf(oldId);
+    for (const room of rooms) {
+      room.chatId = newId;
+      // Message ids do not survive the migration either. The room code does,
+      // so every open table keeps working without anybody noticing.
+      room.ui.tableMessageId = null;
+      room.ui.lastText = null;
+      room.ui.lastKb = null;
+      room.ui.lastMsgId = 0;
+      gameOf(room).onMigrate?.(room);
+    }
+    const group = this.groups.get(oldId);
+    if (group) {
+      this.groups.delete(oldId);
+      group.chatId = newId;
+      group.ui = { hubMessageId: null };
+      this.groups.set(newId, group);
+    }
     this.store.migrate(oldId, newId);
-    this.save(room);
-    return this.newCard(room);
+    if (group) this.saveGroup(group);
+    for (const room of rooms) this.save(room);
+    for (const room of rooms) if (room.status !== 'finished') await this.newCard(room);
   }
 
   /* --------------------------------------------------------------- finish */
@@ -622,18 +781,19 @@ export class App {
   async finishUp(room) {
     // The card says the game is over; the results go below it as their own
     // message — the one message of the evening worth a notification.
-    this.outbox.cancel(room.chatId);
-    room.ui.reveal = null; // the final word is the whole board, not a frame of it
+    const g = gameOf(room);
+    this.outbox.cancel(room.chatId, room.code);
+    g.onFinish?.(room);
     this.hub?.broadcast(room);
-    this.track(this.pingTurn(room)); // drops any "your turn" still hanging around
+    this.track(this.pingTurns(room)); // drops any "your turn" still hanging around
     if (room.ui.tableMessageId) {
       try {
-        await this.outbox.draw(room, renderCard(room, { link: this.tableLink(room) }));
+        await this.outbox.draw(room, g.card(room, { link: this.tableLink(room) }));
       } catch (err) {
         this.log(err);
       }
     }
-    await this.outbox.post(room.chatId, renderResults(room));
+    await this.outbox.post(room.chatId, g.results(room));
     this.save(room);
   }
 
@@ -643,7 +803,7 @@ export class App {
   async reply(chatId, text, toMsg = null) {
     try {
       const m = await this.outbox.post(chatId, text, null, toMsg ? { reply_parameters: replyTo(toMsg) } : {});
-      this.seen(this.room(chatId), m?.message_id);
+      this.seenInChat(chatId, m?.message_id);
       return m;
     } catch (err) {
       this.log(err);

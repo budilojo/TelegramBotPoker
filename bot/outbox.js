@@ -49,7 +49,7 @@ export class Outbox {
       setTimeout: (fn, ms) => setTimeout(fn, ms),
       clearTimeout: (t) => clearTimeout(t),
     };
-    /** @type {Map<string, {last:number, timer:any, pending:null|Function, running:boolean}>} */
+    /** @type {Map<string, {last:number, timer:any, pending:Map<string, Function>, running:boolean}>} */
     this.chats = new Map();
   }
 
@@ -57,7 +57,7 @@ export class Outbox {
     const key = String(chatId);
     let s = this.chats.get(key);
     if (!s) {
-      s = { last: 0, timer: null, pending: null, running: false };
+      s = { last: 0, timer: null, pending: new Map(), running: false };
       this.chats.set(key, s);
     }
     return s;
@@ -66,10 +66,16 @@ export class Outbox {
   /**
    * Ask for `produce()` to be run for this chat. `produce` is called at FLUSH
    * time, not now, so a coalesced burst always renders the latest state.
+   *
+   * `key` tells apart several messages in one chat — a group may have a
+   * poker table and a durak game going at once, each with its own card. A
+   * newer redraw replaces an older one of the SAME key only; the chat as a
+   * whole is still edited at most once per `minIntervalMs`.
    */
-  schedule(chatId, produce) {
+  schedule(chatId, produce, key = '') {
     const s = this.slot(chatId);
-    s.pending = produce;
+    s.pending.delete(key); // re-queued at the back: the freshest goes last
+    s.pending.set(key, produce);
     if (s.running || s.timer) return;
     const wait = Math.max(0, s.last + this.minIntervalMs - this.timers.now());
     if (wait === 0) return void this.#fire(chatId);
@@ -82,18 +88,22 @@ export class Outbox {
   async #fire(chatId) {
     const s = this.slot(chatId);
     if (s.running) return;
-    const produce = s.pending;
-    if (!produce) return;
-    s.pending = null;
+    if (!s.pending.size) return;
+    const batch = [...s.pending.values()];
+    s.pending.clear();
     s.running = true;
     s.last = this.timers.now();
     try {
-      await produce();
-    } catch (err) {
-      this.onError(err, chatId);
+      for (const produce of batch) {
+        try {
+          await produce();
+        } catch (err) {
+          this.onError(err, chatId);
+        }
+      }
     } finally {
       s.running = false;
-      if (s.pending && !s.timer) {
+      if (s.pending.size && !s.timer) {
         s.timer = this.timers.setTimeout(() => {
           s.timer = null;
           this.#fire(chatId);
@@ -107,10 +117,11 @@ export class Outbox {
    * message outright: a stale closure firing afterwards would edit the new
    * message, or re-attach a keyboard to a hand that is already frozen.
    */
-  cancel(chatId) {
+  cancel(chatId, key = null) {
     const s = this.slot(chatId);
-    s.pending = null;
-    if (s.timer) {
+    if (key == null) s.pending.clear();
+    else s.pending.delete(key);
+    if (s.timer && !s.pending.size) {
       this.timers.clearTimeout(s.timer);
       s.timer = null;
     }
@@ -120,14 +131,14 @@ export class Outbox {
   async drain() {
     for (let i = 0; i < 20; i++) {
       const slots = [...this.chats.values()];
-      const busy = slots.filter((s) => s.pending || s.running || s.timer);
+      const busy = slots.filter((s) => s.pending.size || s.running || s.timer);
       if (!busy.length) return;
       for (const [chatId, s] of this.chats) {
         if (s.timer) {
           this.timers.clearTimeout(s.timer);
           s.timer = null;
         }
-        if (s.pending && !s.running) await this.#fire(chatId);
+        if (s.pending.size && !s.running) await this.#fire(chatId);
       }
       await sleep(0);
     }

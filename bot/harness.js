@@ -16,6 +16,8 @@ import { NullStore } from './store.js';
 import { dealOrder } from './cards.js';
 import { parseCard, freshDeck, shuffled, seededRng } from './deck.js';
 import { signInitData } from './webapp-auth.js';
+import { nextDealOrder } from './games/durak/rules.js';
+import { freshDeck36, isCard, shuffled36 } from './games/durak/cards.js';
 
 export { user };
 
@@ -58,6 +60,47 @@ export function stack(holes = {}, board = '', { seed = 7 } = {}) {
     for (let i = 0; i < 52; i++) if (deck[i] == null) deck[i] = rest.shift();
     return deck;
   };
+}
+
+/**
+ * A stacked durak pack, for tests that need to know who holds what.
+ *
+ *   durakStack({ [alice.id]: '6S 7S 8S 9S 10S JS', [bob.id]: '…' }, { trump: 'AD', talon: 'KD QD' })
+ *
+ * Returns `(room) => string[36]`, called when the game is dealt — so it can
+ * follow the real dealing order (one card at a time from the dealer's left).
+ * `trump` is the bottom card of the pack; `talon` the cards on top of the pack
+ * after the deal, top first. Everything not named fills in, in a fixed order.
+ */
+export function durakStack(hands = {}, { trump = null, talon = '' } = {}) {
+  const parse = (s) => String(s || '').trim().split(/\s+/).filter(Boolean).map((c) => {
+    if (!isCard(c)) throw new Error(`не карта: ${c}`);
+    return c;
+  });
+  return (room) => {
+    const { dealOrder } = nextDealOrder(room);
+    const n = dealOrder.length;
+    const deck = new Array(36).fill(null);
+    const used = new Set();
+    const put = (i, c) => {
+      if (used.has(c)) throw new Error(`карта дважды в подтасовке: ${c}`);
+      if (deck[i] != null) throw new Error(`место ${i} занято дважды`);
+      used.add(c);
+      deck[i] = c;
+    };
+    dealOrder.forEach((id, i) => parse(hands[id]).forEach((c, k) => put(k * n + i, c)));
+    if (trump && deck[35] !== trump) put(35, trump);
+    parse(talon).forEach((c, k) => put(6 * n + k, c));
+    const rest = freshDeck36().filter((c) => !used.has(c));
+    for (let i = 0; i < 36; i++) if (deck[i] == null) deck[i] = rest.shift();
+    return deck;
+  };
+}
+
+/** A different honest-looking durak pack every game, reproducible from the seed. */
+export function durakDecks(seed = 1) {
+  const rnd = seededRng(seed);
+  return () => shuffled36(rnd);
 }
 
 /** A different honest-looking deck every hand, reproducible from the seed. */
@@ -126,13 +169,14 @@ export class Table {
   constructor({
     chatId = -1001234, minIntervalMs = 0, store = new NullStore(), botUsername = 'ChipTableBot', deck = seededDecks(1),
     clock = new FakeClock(), runoutStepMs = 0, miniAppName = 'table', webappUrl = 'https://poker.example',
+    durakDeck = durakDecks(1), tg = null,
   } = {}) {
     this.chatId = chatId;
-    this.tg = new TelegramStub();
+    this.tg = tg || new TelegramStub();
     this.errors = [];
     this.clock = clock;
     this.app = new App({
-      api: this.tg, store, minIntervalMs, botUsername, deck, clock, runoutStepMs, miniAppName, webappUrl,
+      api: this.tg, store, minIntervalMs, botUsername, deck, durakDeck, clock, runoutStepMs, miniAppName, webappUrl,
       onError: (e) => this.errors.push(e),
     });
     this.hub = new Hub(this.app, { botToken: TEST_TOKEN });
@@ -144,6 +188,22 @@ export class Table {
 
   get room() {
     return this.app.room(this.chatId);
+  }
+
+  /** The newest durak game of this group. */
+  get durak() {
+    return this.app.roomsOf(this.chatId).filter((r) => r.game === 'durak').at(-1) || null;
+  }
+
+  /** This group's hub record (after /play). */
+  get group() {
+    return this.app.groups.get(String(this.chatId)) || null;
+  }
+
+  /** Swap the pack the NEXT durak games are dealt from. */
+  useDurakDeck(fn) {
+    this.app.durakDeck = fn;
+    return this;
   }
 
   /** Swap the deck the NEXT hands are dealt from. */
@@ -231,6 +291,21 @@ export class Table {
     );
     if (r.session) this.pages.set(String(u.id), { session: r.session, inbox });
     return r;
+  }
+
+  /**
+   * Open the Mini App from the group's hub card — `startapp=g_<code>`, the
+   * way the «🎮 Выбрать игру» button does. `room` is what a page asks for
+   * after a reconnect (the room it had stepped into).
+   */
+  openHub(u, { room = null, group = this.group } = {}) {
+    if (!group) throw new Error('сначала /play');
+    return this.open(u, { initData: initDataFor(u, { startParam: `g_${group.code}`, clock: this.clock }), room });
+  }
+
+  /** Open the Mini App on a given room, as its card's button does. */
+  openRoom(u, room) {
+    return this.open(u, { initData: initDataFor(u, { startParam: room.code, clock: this.clock }) });
   }
 
   page(u) {

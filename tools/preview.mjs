@@ -45,7 +45,7 @@ function table(n, { host = 101, ...opts } = {}) {
   const [hid, hname] = PEOPLE.find(([id]) => id === host);
   const room = R.createRoom({ chatId, title: 'Покер по пятницам', host: { id: hid, name: hname, dm: 'ok' }, smallBlind: 25, bigBlind: 50, ...opts });
   for (const [id, name] of PEOPLE.filter(([id]) => id !== host).slice(0, n - 1)) R.addPlayer(room, { id, name, dm: 'ok' });
-  app.rooms.set(chatId, room);
+  app.addRoom(room);
   return room;
 }
 
