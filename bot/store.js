@@ -28,6 +28,11 @@ CREATE TABLE IF NOT EXISTS meta (
   key   TEXT PRIMARY KEY,
   value TEXT
 );
+CREATE TABLE IF NOT EXISTS users (
+  user_id    TEXT PRIMARY KEY,
+  dm         TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+);
 `;
 
 export class Store {
@@ -47,7 +52,25 @@ export class Store {
       all: this.db.prepare('SELECT chat_id, data FROM rooms ORDER BY updated_at DESC'),
       del: this.db.prepare('DELETE FROM rooms WHERE chat_id = ?'),
       rekey: this.db.prepare('UPDATE rooms SET chat_id = ? WHERE chat_id = ?'),
+      getDm: this.db.prepare('SELECT dm FROM users WHERE user_id = ?'),
+      putDm: this.db.prepare(
+        'INSERT INTO users (user_id, dm, updated_at) VALUES (?, ?, ?) ' +
+          'ON CONFLICT(user_id) DO UPDATE SET dm = excluded.dm, updated_at = excluded.updated_at'
+      ),
     };
+  }
+
+  /**
+   * Can the bot write to this person privately? Telegram forbids a bot to
+   * start a conversation, so the only way to know is that they pressed Start
+   * ('ok') or that a delivery bounced ('fail'). Unknown is `null`.
+   */
+  getDm(userId) {
+    return this.q.getDm.get(String(userId))?.dm ?? null;
+  }
+
+  setDm(userId, status) {
+    this.q.putDm.run(String(userId), status, Date.now());
   }
 
   save(room, serialized) {
@@ -90,8 +113,21 @@ export class Store {
   }
 }
 
-/** A drop-in that keeps nothing — used by tests that do not care about disk. */
+/**
+ * A drop-in that keeps no tables — used by tests that do not care about disk.
+ * DM status is still remembered in memory: without it every test would have
+ * to re-open every player's private chat before each hand.
+ */
 export class NullStore {
+  constructor() {
+    this.dm = new Map();
+  }
+  getDm(userId) {
+    return this.dm.get(String(userId)) ?? null;
+  }
+  setDm(userId, status) {
+    this.dm.set(String(userId), status);
+  }
   save() {}
   loadAll() {
     return [];

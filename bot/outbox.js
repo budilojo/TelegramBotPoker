@@ -13,10 +13,14 @@
  * 3. The table message can be deleted by a human. An edit then fails with
  *    "message to edit not found" — post a fresh one instead of dying.
  * 4. 429 carries `retry_after`; honour it once rather than hammering.
+ * 5. A bot may not write first. A private message to somebody who never
+ *    pressed Start (or who blocked the bot) fails with 403 — that is an
+ *    expected answer, not a crash, and the caller needs to know which it was.
  */
 
 const NOT_MODIFIED = /message is not modified/i;
 const GONE = /message to edit not found|message can't be edited|MESSAGE_ID_INVALID/i;
+const FORBIDDEN = /bot can't initiate conversation|bot was blocked|user is deactivated|chat not found|Forbidden/i;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -33,12 +37,18 @@ export class Outbox {
   /**
    * @param api    the Telegram port (grammY's `bot.api`, or the test stub)
    * @param minIntervalMs  floor between two edits of the same chat
+   * @param timers  `{ now, setTimeout, clearTimeout }` — the app's clock, so a
+   *                test can space taps out in time without waiting for real
    */
-  constructor(api, { minIntervalMs = 1000, onError = () => {}, timers = globalThis } = {}) {
+  constructor(api, { minIntervalMs = 1000, onError = () => {}, timers = null } = {}) {
     this.api = api;
     this.minIntervalMs = minIntervalMs;
     this.onError = onError;
-    this.timers = timers;
+    this.timers = timers ?? {
+      now: () => Date.now(),
+      setTimeout: (fn, ms) => setTimeout(fn, ms),
+      clearTimeout: (t) => clearTimeout(t),
+    };
     /** @type {Map<string, {last:number, timer:any, pending:null|Function, running:boolean}>} */
     this.chats = new Map();
   }
@@ -61,7 +71,7 @@ export class Outbox {
     const s = this.slot(chatId);
     s.pending = produce;
     if (s.running || s.timer) return;
-    const wait = Math.max(0, s.last + this.minIntervalMs - Date.now());
+    const wait = Math.max(0, s.last + this.minIntervalMs - this.timers.now());
     if (wait === 0) return void this.#fire(chatId);
     s.timer = this.timers.setTimeout(() => {
       s.timer = null;
@@ -76,7 +86,7 @@ export class Outbox {
     if (!produce) return;
     s.pending = null;
     s.running = true;
-    s.last = Date.now();
+    s.last = this.timers.now();
     try {
       await produce();
     } catch (err) {
@@ -141,11 +151,28 @@ export class Outbox {
   /**
    * Draw `view` as the room's single table message: edit when it exists,
    * post when it does not, skip entirely when nothing changed.
+   *
+   * `move: true` re-posts the table at the bottom of the chat and deletes the
+   * old copy. That is for when people are typing commands: each /call pushes
+   * the table further up, and an edit nobody can see is no use to the next
+   * player. A bot may always delete its own messages in a group, so this
+   * needs no admin rights.
    */
-  async draw(room, view, { forceNew = false } = {}) {
+  async draw(room, view, { forceNew = false, move = false } = {}) {
     const markup = view.keyboard?.length ? { inline_keyboard: view.keyboard } : undefined;
     const kbKey = JSON.stringify(markup ?? null);
     const opts = { parse_mode: 'HTML', reply_markup: markup, link_preview_options: { is_disabled: true } };
+
+    if (move && room.ui.tableMessageId) {
+      const old = room.ui.tableMessageId;
+      const msg = await this.#call('sendMessage', room.chatId, view.text, opts);
+      room.ui.tableMessageId = msg.message_id;
+      room.ui.lastText = view.text;
+      room.ui.lastKb = kbKey;
+      // Older than 48 hours cannot be deleted; then at least take its buttons.
+      if (!(await this.remove(room.chatId, old))) await this.dropKeyboard(room.chatId, old);
+      return { sent: true, moved: true, message_id: msg.message_id };
+    }
 
     if (!forceNew && room.ui.tableMessageId) {
       if (room.ui.lastText === view.text && room.ui.lastKb === kbKey) return { skipped: true };
@@ -188,11 +215,39 @@ export class Outbox {
    * MUST be called for every callback_query, including refusals: without it
    * the user's button spins forever and they assume the bot is dead.
    */
-  async answer(id, text, showAlert = false) {
+  async answer(id, text, { alert = false, url = null } = {}) {
+    const opts = {};
+    if (text) {
+      opts.text = text;
+      opts.show_alert = alert;
+    }
+    // `t.me/<bot>?start=...` — the one URL a callback answer may open without
+    // a game: it takes the person straight into the private chat.
+    if (url) opts.url = url;
     try {
-      await this.api.answerCallbackQuery(id, text ? { text, show_alert: showAlert } : {});
+      await this.api.answerCallbackQuery(id, opts);
     } catch (err) {
       this.onError(err, null);
+    }
+  }
+
+  /**
+   * A private message. Never throws for the expected refusal (never pressed
+   * Start, blocked the bot): that comes back as `{ ok:false, forbidden:true }`
+   * so the game can fall back instead of stalling.
+   */
+  async dm(userId, text, keyboard = null) {
+    try {
+      const msg = await this.#call('sendMessage', userId, text, {
+        parse_mode: 'HTML',
+        link_preview_options: { is_disabled: true },
+        ...(keyboard?.length ? { reply_markup: { inline_keyboard: keyboard } } : {}),
+      });
+      return { ok: true, message_id: msg.message_id };
+    } catch (err) {
+      const forbidden = FORBIDDEN.test(describe(err)) || err?.error_code === 403;
+      if (!forbidden) this.onError(err, userId);
+      return { ok: false, forbidden };
     }
   }
 
@@ -210,28 +265,20 @@ export class Outbox {
     }
   }
 
-  async pin(chatId, messageId) {
-    try {
-      await this.api.pinChatMessage(chatId, messageId, { disable_notification: true });
-    } catch {
-      /* not an admin, or pinning is off — the game does not depend on it */
-    }
+  /** A private message of ours that has served its purpose (a stale "your turn"). */
+  async removePrivate(userId, messageId) {
+    return this.remove(userId, messageId);
   }
 
-  async unpin(chatId, messageId) {
-    try {
-      await this.api.unpinChatMessage(chatId, messageId);
-    } catch {
-      /* ignore */
-    }
-  }
-
+  /** @returns true when the message is gone */
   async remove(chatId, messageId) {
-    if (!messageId) return;
+    if (!messageId) return false;
     try {
       await this.api.deleteMessage(chatId, messageId);
+      return true;
     } catch {
-      /* deleting somebody else's message needs admin rights — never fatal */
+      /* somebody else's message needs admin rights; ours older than 48h cannot go */
+      return false;
     }
   }
 }

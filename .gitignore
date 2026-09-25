@@ -9,3 +9,11 @@ data/rooms.json
 # Telegram-бот: локальная база столов
 data/bot.db
 data/bot.db-*
+
+# токен бота и прочие секреты — никогда в git
+.env
+.env.*
+!.env.example
+
+# скриншоты стола (npm run preview) — собираются заново, в git не нужны
+preview/

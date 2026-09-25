@@ -7,16 +7,16 @@
  * they can contain HTML-special characters, emoji and control codes.
  */
 
-/** 7550 -> "7 550". Used everywhere money is shown. */
+/** 1000000 -> "1.000.000". Used everywhere chips are shown — the Mini App does the same. */
 export function num(n) {
   const v = Math.round(Number(n) || 0);
   const s = String(Math.abs(v));
   const parts = [];
   for (let i = s.length; i > 0; i -= 3) parts.unshift(s.slice(Math.max(0, i - 3), i));
-  return (v < 0 ? '−' : '') + parts.join(' ');
+  return (v < 0 ? '−' : '') + parts.join('.');
 }
 
-/** Signed, for the P/L column: +1 200 / −450 / 0. */
+/** Signed, for the P/L column: +1.200 / −450 / 0. */
 export function signed(n) {
   const v = Math.round(Number(n) || 0);
   if (v === 0) return '0';
@@ -36,12 +36,14 @@ const CONTROL_CHARS = /[\p{Cc}\p{Cf}]/gu;
  * Telegram first_name is free-form. Strip control characters (they would let
  * someone inject RTL overrides into the table) and cap the length.
  */
-export function cleanName(raw, fallback = 'Игрок') {
-  const s = String(raw ?? '')
+export function cleanName(raw, fallback = 'Игрок', max = 16) {
+  const s = [...String(raw ?? '')
     .replace(CONTROL_CHARS, '')
     .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 16);
+    .trim()]
+    .slice(0, max)
+    .join('')
+    .trim();
   return s || fallback;
 }
 
@@ -109,6 +111,23 @@ export function hhmm(ts, tz = process.env.TZ || undefined) {
     }).format(d);
   } catch {
     return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  }
+}
+
+/** 14:31:45 — for deadlines, where a minute is too coarse. */
+export function hhmmss(ts, tz = process.env.TZ || undefined) {
+  const d = new Date(ts);
+  try {
+    return new Intl.DateTimeFormat('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+      timeZone: tz,
+    }).format(d);
+  } catch {
+    const p2 = (n) => String(n).padStart(2, '0');
+    return `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`;
   }
 }
 
