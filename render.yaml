@@ -1,0 +1,31 @@
+# Render blueprint — https://render.com/docs/blueprint-spec
+#
+# Подключить: Render → New → Blueprint → выбрать этот репозиторий.
+# Если Render не примет файл (схема блюпринтов иногда меняется), то же самое
+# делается руками: New → Web Service, Build `npm ci`, Start `npm start`.
+#
+# Что важно для этого приложения:
+#   • нужен живой процесс с WebSocket — serverless не подойдёт;
+#   • порт берётся из переменной PORT, сервер уже слушает 0.0.0.0;
+#   • диск эфемерный: data/rooms.json не переживёт передеплой, и это нормально
+#     — комнаты живут один вечер, а состояние игры лежит в памяти процесса;
+#   • на бесплатном тарифе инстанс засыпает после ~15 минут тишины и
+#     просыпается около минуты. Первый зашедший подождёт, дальше открытые
+#     WebSocket-соединения держат его бодрым.
+
+services:
+  - type: web
+    name: chip-table
+    runtime: node
+    plan: free
+    # Поменяйте на ближайший к вам: oregon, ohio, virginia, singapore.
+    region: frankfurt
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"

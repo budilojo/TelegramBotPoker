@@ -1,0 +1,26 @@
+{
+  "name": "chip-table",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Virtual poker chips for live games with real cards — web app + Telegram bot",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "bot": "node --disable-warning=ExperimentalWarning bot/index.js",
+    "bot:dev": "node --watch --disable-warning=ExperimentalWarning bot/index.js",
+    "test": "node --test --test-timeout=25000 --disable-warning=ExperimentalWarning server/*.test.js bot/*.test.js",
+    "test:bot": "node --test --test-timeout=25000 --disable-warning=ExperimentalWarning bot/*.test.js",
+    "icons": "node tools/make-icons.mjs"
+  },
+  "engines": {
+    "node": ">=22.5"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "grammy": "^1.46.0",
+    "qrcode": "^1.5.4",
+    "ws": "^8.18.0"
+  }
+}
