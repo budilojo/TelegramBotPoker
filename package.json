@@ -15,7 +15,8 @@
     "icons": "node tools/make-icons.mjs",
     "preview": "node --disable-warning=ExperimentalWarning tools/preview.mjs",
     "e2e": "node --disable-warning=ExperimentalWarning tools/e2e.mjs",
-    "cards": "node tools/make-cards.mjs"
+    "cards": "node tools/make-cards.mjs",
+    "layout": "node --disable-warning=ExperimentalWarning tools/layout-check.mjs"
   },
   "engines": {
     "node": ">=22.5"

@@ -531,17 +531,6 @@ function notifyHint() {
 
 /* ----------------------------------------------------------------- table */
 
-/** Seats around the oval, clockwise from you at the bottom — as at a real table. */
-function positions(n, withHero) {
-  const out = [];
-  for (let i = 0; i < n; i++) {
-    const t = withHero ? (i + 1) / (n + 1) : (i + 0.5) / n;
-    const th = Math.PI / 2 + t * 2 * Math.PI;
-    out.push({ x: clamp(50 + 43 * Math.cos(th), 13, 87), y: clamp(50 + 45 * Math.sin(th), 10, 90) });
-  }
-  return out;
-}
-
 function plateText(p, s) {
   const a = p.amount ? ` ${fmt(p.amount)}` : '';
   switch (p.status) {
@@ -630,7 +619,7 @@ function dealIn(el, hd, seat, k) {
   }, { duration: 520, delay: (k * dealOrder.size + i) * 75 });
 }
 
-function seatEl(p, pos, s) {
+function seatEl(p, s) {
   const h0 = s.hand;
   const win = h0?.result?.winners?.find((w) => w.seat === p.seat);
   const plan = planFor(s) || { flip: 0, best: 0, pay: 0 };
@@ -651,7 +640,7 @@ function seatEl(p, pos, s) {
 
   let minis = null;
   if (p.cards) {
-    // Shown at the showdown: the backs turn over.
+    // Shown at the showdown: the cards turn over right on top of the avatar.
     minis = h('div.minis.shown', p.cards.map((c, k) => {
       const img = animateOnce(cardImg(c), `show:${h0.no}:${p.seat}:${k}`,
         [{ transform: 'perspective(300px) rotateY(90deg) scale(0.9)', offset: 0 }], { duration: 460, delay: plan.flip + k * 110 });
@@ -661,26 +650,28 @@ function seatEl(p, pos, s) {
     minis = h('div.minis', [0, 1].map((k) => dealIn(backImg(), h0, p.seat, k)));
   }
 
-  const text = plateText(p, s);
+  // At the end of a hand the plate says how it ended for this player: the
+  // pot they took, the hand they showed, or that they did not show.
+  let text = plateText(p, s);
+  let kind = p.status;
+  if (h0?.phase === 'complete' && !win && p.handName) {
+    text = p.handName;
+    kind = 'hand';
+  }
   const plate = win
-    ? animateOnce(h('div.plate.win', `+${fmt(win.amount)}`), `winplate:${h0.no}:${p.seat}`,
+    ? animateOnce(h(`div.plate.win${fmt(win.amount).length > 8 ? '.long' : ''}`, `+${fmt(win.amount)}`), `winplate:${h0.no}:${p.seat}`,
       [{ transform: 'translateY(10px) scale(0.3)', opacity: 0, offset: 0 }, { transform: 'scale(1.25)', opacity: 1, offset: 0.6 }],
       { duration: 700, delay: plan.pay + 400 })
     : text
-      ? animateOnce(h(`div.plate.${p.status}`, text), `plate:${h0?.no}:${h0?.street}:${p.seat}:${text}`,
+      ? animateOnce(h(`div.plate.${kind}${text.length > 14 ? '.xlong' : text.length > 11 ? '.long' : ''}`, text), `plate:${h0?.no}:${h0?.street}:${p.seat}:${text}`,
         [{ transform: 'scale(0.55)', opacity: 0, offset: 0 }], { duration: 320, delay: h0?.phase === 'complete' ? plan.flip : 0 })
       : null;
 
-  // Seats in the top half hang from their avatar and grow downwards, so shown
-  // cards never climb into the top bar; the lower ones stay centred.
-  return h(`div.${cls}${pos.y < 40 ? '.hang' : ''}`, { 'data-seat': p.seat, style: { left: `${pos.x}%`, top: `${pos.y}%` } },
-    av,
-    h('div.nm', p.name),
-    counter('div.stk.num', stackKey(p), p.stack, stackMotion(s)),
+  // A fixed-size box: where it goes is worked out by layoutTable().
+  return h(`div.${cls}`, { 'data-seat': p.seat },
+    h('div.pod', av, minis),
+    h('div.info', h('div.nm', p.name), counter('div.stk.num', stackKey(p), p.stack, stackMotion(s))),
     plate,
-    minis,
-    p.handName ? animateOnce(h('div.hand-tag', p.handName), `tag:${h0.no}:${p.seat}`,
-      [{ transform: 'translateY(-5px)', opacity: 0, offset: 0 }], { duration: 400, delay: plan.flip + 350 }) : null,
   );
 }
 
@@ -735,17 +726,156 @@ function renderTable() {
   const meIdx = ring.findIndex((p) => p.isMe);
   const heroAtTable = meIdx >= 0;
   const others = heroAtTable ? [...ring.slice(meIdx + 1), ...ring.slice(0, meIdx)] : ring;
-  const pos = positions(others.length, heroAtTable);
   dealOrder = new Map([...others, ...(heroAtTable ? [ring[meIdx]] : [])].map((p, i) => [p.seat, i]));
 
-  const table = h('div.table',
+  const r = hd?.phase === 'complete' && !hd.revealing ? hd.result : null;
+  const table = h('div.table', { 'data-hero': heroAtTable ? '1' : '0', 'data-lines': r?.kind === 'showdown' ? Math.max(1, resultRows(r).length) : 1 },
     h('div.felt'),
     centerEl(s),
-    others.map((p, i) => seatEl(p, pos[i], s)),
+    others.map((p) => seatEl(p, s)),
   );
 
   $app.append(top, table, heroEl(s), panelEl(s));
+  layoutTable();
 }
+
+/* ---------------------------------------------------------- table layout */
+
+/*
+ * Where everything on the felt goes is worked out here, in pixels, from the
+ * size the table actually has — not in fixed percentages, which on a short
+ * screen put the top seat right on top of the pot. Seats sit on the rail of
+ * an oval that keeps them inside the table; the board takes the width left
+ * between the side seats; and if anything still touches anything, seats and
+ * cards shrink together (--u) until nothing does.
+ */
+const SEAT_W = 104; // the widest thing in a seat: its plate
+const SEAT_H = 90;
+const EDGE = 4;
+
+/*
+ * Where the others sit around you, clockwise from your left, in degrees on
+ * the oval (0 = right, 90 = down to you, 270 = the far side). Chosen like a
+ * poker client's seat map: while there is room, nobody sits level with the
+ * board, so the board can stay wide. With seven others somebody has to.
+ */
+const SEAT_MAP = {
+  1: [270],
+  2: [210, 330],
+  3: [212, 270, 328],
+  4: [150, 228, 312, 30],
+  5: [148, 208, 270, 332, 32],
+  6: [138, 202, 246, 294, 338, 42],
+  7: [135, 180, 225, 270, 315, 0, 45],
+};
+
+function seatSpots(W, H, n, withHero, u) {
+  const sw = SEAT_W * u;
+  const sh = SEAT_H * u;
+  const rx = Math.max(0, W / 2 - EDGE - sw / 2);
+  const ry = Math.max(0, H / 2 - EDGE - sh / 2);
+  const spots = [];
+  for (let k = 0; k < n; k++) {
+    const deg = withHero && SEAT_MAP[n] ? SEAT_MAP[n][k] : 90 + ((withHero ? (k + 1) / (n + 1) : (k + 0.5) / n) * 360);
+    const th = (deg * Math.PI) / 180;
+    spots.push({ x: W / 2 + rx * Math.cos(th), y: H / 2 + ry * Math.sin(th) });
+  }
+  return { spots, rx, ry, sw, sh };
+}
+
+/** The widest board cards that still pass between the seats level with the board. */
+function boardCardWidth(W, H, u, geo, lines) {
+  let cw = 48 * u;
+  for (let i = 0; i < 3; i++) {
+    const ch = (30 + 12 + 17 * lines) * u + cw * 1.4;
+    const boardTop = H / 2 - ch / 2 + 36 * u;
+    const boardBottom = boardTop + cw * 1.4;
+    let half = W / 2 - EDGE;
+    for (const p of geo.spots) {
+      const dx = Math.abs(p.x - W / 2);
+      if (dx < geo.sw / 2 + 24) continue; // right above or below the middle: a matter for --u, not for the cards
+      if (p.y - geo.sh / 2 < boardBottom + 6 && p.y + geo.sh / 2 > boardTop - 6) half = Math.min(half, dx - geo.sw / 2 - 6);
+    }
+    cw = clamp(Math.min(48 * u, (2 * half - 16) / 5), 18, 56);
+  }
+  return cw;
+}
+
+function layoutTable() {
+  const t = $app.querySelector('.table');
+  if (!t) return;
+  const W = t.clientWidth;
+  const H = t.clientHeight;
+  const seats = [...t.querySelectorAll('.seat')];
+  const felt = t.querySelector('.felt');
+  const withHero = t.dataset.hero === '1';
+  const lines = Number(t.dataset.lines) || 1;
+  const apply = (u) => {
+    const geo = seatSpots(W, H, seats.length, withHero, u);
+    const cw = boardCardWidth(W, H, u, geo, lines);
+    t.style.setProperty('--u', u.toFixed(3));
+    t.style.setProperty('--card-w', `${cw.toFixed(1)}px`);
+    seats.forEach((el, k) => {
+      el.style.left = `${geo.spots[k].x.toFixed(1)}px`;
+      el.style.top = `${geo.spots[k].y.toFixed(1)}px`;
+    });
+    // The felt is the oval the seats sit on: each seat half on the rail.
+    Object.assign(felt.style, {
+      left: `${(W / 2 - geo.rx).toFixed(1)}px`,
+      top: `${(H / 2 - geo.ry).toFixed(1)}px`,
+      width: `${(2 * geo.rx).toFixed(1)}px`,
+      height: `${(2 * geo.ry).toFixed(1)}px`,
+    });
+    return !crowded(t);
+  };
+  // The biggest scale at which nothing touches: two at a table have room
+  // to be big even on a short screen, eight need to be small. Never below
+  // 0.6: past that names stop being readable, and a table that small is
+  // better slightly crowded than illegible.
+  const MIN = 0.6;
+  let hi = clamp(W / 390, MIN, 1.12);
+  if (apply(hi)) return;
+  let lo = MIN;
+  if (!apply(lo)) return; // cannot fit at all: keep the smallest
+  for (let i = 0; i < 6; i++) {
+    const mid = (lo + hi) / 2;
+    if (apply(mid)) lo = mid;
+    else hi = mid;
+  }
+  // In steps of 0.05, so the table does not breathe every time a plate
+  // changes from CALL to RAISE 16.000.000.
+  const step = Math.max(MIN, Math.floor(lo * 20) / 20);
+  if (!apply(step)) apply(lo);
+}
+
+/** Does any seat touch the middle, another seat, or the edge? Measured, not guessed — with room to breathe. */
+function crowded(t) {
+  const hit = (a, b, gap) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > -gap && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > -gap;
+  const box = (el) => el.getBoundingClientRect();
+  const tr = box(t);
+  const middle = [t.querySelector('.pot'), t.querySelector('.board')].filter(Boolean).map(box);
+  // The winning five lift out of the board (.card.best): count them lifted.
+  if (middle[1]) middle[1] = { left: middle[1].left, right: middle[1].right, top: middle[1].top - 9, bottom: middle[1].bottom };
+  const line = t.querySelector('.result-line, .bet-line');
+  if (line?.textContent.trim()) {
+    const range = document.createRange();
+    range.selectNodeContents(line);
+    middle.push(range.getBoundingClientRect());
+  }
+  // Boxes, not the cards inside them: a card in flight must not shrink the table.
+  const seats = [...t.querySelectorAll('.seat')].map((el) => [...el.querySelectorAll('.pod, .minis, .info, .plate')].map(box));
+  for (let i = 0; i < seats.length; i++) {
+    for (const p of seats[i]) {
+      if (p.left < tr.left + 2 || p.right > tr.right - 2 || p.top < tr.top + 1 || p.bottom > tr.bottom - 1) return true;
+      if (middle.some((m) => hit(p, m, 4))) return true;
+      for (let j = i + 1; j < seats.length; j++) if (seats[j].some((q) => hit(p, q, 2))) return true;
+    }
+  }
+  return false;
+}
+
+window.addEventListener('resize', layoutTable);
+tg?.onEvent?.('viewportChanged', layoutTable);
 
 /** A board card lands: dealt from above and turned face up. The flop comes one card after another. */
 function boardCard(el, hd, i) {
@@ -798,9 +928,19 @@ function resultLine(s) {
   const r = s.hand.result;
   const name = (seat) => s.players.find((p) => p.seat === seat)?.name ?? '?';
   if (r.kind === 'aborted') return h('div.result-line', 'Раздача прервана — фишки вернулись');
-  const parts = r.winners.map((w) => `${name(w.seat)} +${fmt(w.amount)}${w.hand ? ` · ${w.hand}` : ''}`);
   if (r.kind === 'fold' && r.winners[0]) return h('div.result-line', `${name(r.winners[0].seat)} забирает ${fmt(r.winners[0].amount)}`);
-  return h('div.result-line', parts.join('\n'));
+  return h('div.result-line', resultRows(r).map((g) => `${g.names.map(name).join(' и ')} +${fmt(g.amount)}${g.hand ? ` · ${g.hand}` : ''}`).join('\n'));
+}
+
+/** One row per outcome: a pot split between equal hands is one row — «Lev и Иван +500 · Стрит». */
+function resultRows(r) {
+  const rows = [];
+  for (const w of r.winners) {
+    const same = rows.find((g) => g.amount === w.amount && g.hand === w.hand);
+    if (same) same.names.push(w.seat);
+    else rows.push({ names: [w.seat], amount: w.amount, hand: w.hand });
+  }
+  return rows;
 }
 
 function heroEl(s) {
