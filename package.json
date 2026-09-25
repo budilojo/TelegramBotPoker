@@ -2,7 +2,7 @@
   "name": "chip-table",
   "version": "1.0.0",
   "private": true,
-  "description": "Poker chips for live games with real cards (web app) and full Texas hold'em in a Telegram group (bot)",
+  "description": "Poker chips for live games with real cards (web app) and Texas hold'em at a Telegram Mini App table (bot)",
   "type": "module",
   "main": "server/index.js",
   "scripts": {
@@ -12,7 +12,10 @@
     "bot:dev": "node --watch --disable-warning=ExperimentalWarning bot/index.js",
     "test": "node --test --test-timeout=25000 --disable-warning=ExperimentalWarning server/*.test.js bot/*.test.js",
     "test:bot": "node --test --test-timeout=25000 --disable-warning=ExperimentalWarning bot/*.test.js",
-    "icons": "node tools/make-icons.mjs"
+    "icons": "node tools/make-icons.mjs",
+    "preview": "node --disable-warning=ExperimentalWarning tools/preview.mjs",
+    "e2e": "node --disable-warning=ExperimentalWarning tools/e2e.mjs",
+    "cards": "node tools/make-cards.mjs"
   },
   "engines": {
     "node": ">=22.5"

@@ -13,17 +13,20 @@
  * heavier and its API is harder to fake cleanly.
  *
  * WHY LONG POLLING. grammY's built-in poller processes updates strictly one
- * at a time, which removes an entire class of race between two people tapping
- * at once. It also needs no public URL, no TLS and no webhook registration,
- * so the same command runs on a laptop, a VPS or a container. The cost is
- * that the process must stay awake — see README for the hosting choice.
+ * at a time, and needs no webhook registration. The Mini App does need a
+ * public HTTPS address (Telegram opens nothing else), but that is a plain
+ * static page plus a WebSocket on PORT — a tunnel in front of a laptop is
+ * enough. Races between two people tapping at once cannot happen either way:
+ * every change to a room is a synchronous function on a single thread. The
+ * cost is that the process must stay awake — see README for hosting.
  */
-import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Bot } from 'grammy';
 import { App } from './app.js';
 import { Store } from './store.js';
+import { Hub } from './hub.js';
+import { startServer } from './server.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -52,6 +55,11 @@ if (!TOKEN) {
 
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'bot.db');
 const DRAW_INTERVAL_MS = Number(process.env.DRAW_INTERVAL_MS || 1000);
+const PORT = Number(process.env.PORT || 8080);
+/** Public HTTPS address of this process — Telegram opens Mini Apps over HTTPS only. */
+const WEBAPP_URL = (process.env.WEBAPP_URL || '').replace(/\/+$/, '');
+/** Short name of the Mini App registered with @BotFather (/newapp). */
+const MINIAPP = (process.env.MINIAPP || '').trim();
 
 const bot = new Bot(TOKEN);
 const store = new Store(DB_PATH);
@@ -62,32 +70,40 @@ const app = new App({
   store,
   minIntervalMs: DRAW_INTERVAL_MS,
   botUsername: me.username,
+  webappUrl: WEBAPP_URL,
+  miniAppName: MINIAPP,
 });
+const hub = new Hub(app, { botToken: TOKEN });
+app.attachHub(hub);
 
 const restored = app.load();
 console.log(`[bot] @${me.username} · восстановлено столов: ${restored} · база: ${DB_PATH}`);
+if (!WEBAPP_URL) {
+  console.warn('[bot] WEBAPP_URL не задан: стол не откроется. Нужен публичный HTTPS-адрес этого сервера — см. bot/README.md.');
+} else if (!/^https:\/\//.test(WEBAPP_URL)) {
+  console.warn(`[bot] WEBAPP_URL должен начинаться с https:// — Telegram не откроет ${WEBAPP_URL}`);
+}
+if (!MINIAPP) {
+  console.warn('[bot] MINIAPP не задан: кнопка в группе откроет личку с ботом, а не сам стол. ' +
+    'Зарегистрируйте приложение у @BotFather (/newapp) и впишите его короткое имя в .env.');
+}
 
-/**
- * The "/" menu. /fold and /allin are deliberately NOT in it: a menu entry is
- * one tap, and those are the two moves a stray tap must never make. They work
- * when typed — typing is a decision.
- */
+const web = startServer({
+  hub,
+  port: PORT,
+  root: path.join(__dirname, '..', 'miniapp'),
+  log: (...a) => console.error('[web]', ...a),
+  onListen: () => console.log(`[bot] стол: http://localhost:${PORT}${WEBAPP_URL ? ` → ${WEBAPP_URL}` : ''}`),
+});
+
+/** The "/" menu: the game is played in the Mini App, the chat only needs these. */
 const GROUP_COMMANDS = [
-  ['check', 'чек'],
-  ['call', 'уравнять ставку'],
-  ['raise', 'поднять ДО суммы: /raise 300'],
-  ['bet', 'поставить: /bet 200'],
-  ['next', 'следующая раздача'],
-  ['table', 'показать стол внизу чата'],
-  ['join', 'сесть за стол'],
-  ['leave', 'встать из-за стола'],
   ['newgame', 'создать стол'],
+  ['table', 'показать стол внизу чата'],
+  ['finish', 'завершить игру (хост)'],
   ['help', 'как играть'],
 ];
-const PRIVATE_COMMANDS = [
-  ['cards', 'мои карты в текущих раздачах'],
-  ['help', 'как играть'],
-];
+const PRIVATE_COMMANDS = [['help', 'как играть']];
 const asCommands = (list) => list.map(([command, description]) => ({ command, description }));
 try {
   await bot.api.setMyCommands(asCommands(GROUP_COMMANDS), { scope: { type: 'all_group_chats' } });
@@ -106,18 +122,6 @@ bot.catch((err) => {
   console.error('[bot] необработанная ошибка:', err?.error?.description ?? err?.message ?? err);
 });
 
-/**
- * An optional health port. Some always-on hosts insist on a bound port, and
- * an uptime pinger needs something to ping. The bot itself does not need it.
- */
-if (process.env.PORT) {
-  http
-    .createServer((req, res) => {
-      res.writeHead(200, { 'content-type': 'application/json' });
-      res.end(JSON.stringify({ ok: true, bot: me.username, tables: app.rooms.size }));
-    })
-    .listen(Number(process.env.PORT), () => console.log(`[bot] health на :${process.env.PORT}`));
-}
 
 let stopping = false;
 async function shutdown(signal) {
@@ -127,6 +131,7 @@ async function shutdown(signal) {
   try {
     await bot.stop();
     app.stop(); // turn timers and the automatic deal come back from the database
+    await web.close();
     await app.settle(); // flush any redraw that was still coalescing
   } catch (err) {
     console.error('[bot]', err);

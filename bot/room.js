@@ -17,12 +17,14 @@
  * bot deals and reads the hands itself, so there is nobody to pick a winner
  * and nothing to pick.
  */
+import crypto from 'node:crypto';
 import {
   startHand,
   applyAction,
   legalActions,
   computePots,
   awardPots,
+  previewPayouts,
   gameOverCheck,
   canDeal,
   clone,
@@ -38,19 +40,32 @@ const HISTORY_DEPTH = 60;
 export const AUTO_NEXT_MS = 10_000;
 /** This many timed-out turns in a row and the player is sat out. */
 export const TIMEOUTS_TO_SIT_OUT = 2;
+/** Seats at the table. More does not fit legibly on a phone screen. */
+export const MAX_SEATS = 8;
+
+/**
+ * The room's public handle — what goes into `startapp=` of the table link.
+ * Random and unrelated to the chat id: a link must not be guessable, and a
+ * chat id must not leak through it.
+ */
+export function newRoomCode() {
+  const abc = 'abcdefghijkmnpqrstuvwxyz23456789';
+  return Array.from(crypto.randomBytes(10), (b) => abc[b % abc.length]).join('');
+}
 
 /** Where decks come from. Tests inject a stacked deck; production shuffles. */
 const defaultDeck = () => shuffled();
 
 /* ------------------------------------------------------------------ model */
 
-export function createRoom({ chatId, host, title = '', startingStack = 10000, smallBlind = 25, bigBlind = 50 }) {
+export function createRoom({ chatId, host, title = '', code = newRoomCode(), startingStack = 10000, smallBlind = 25, bigBlind = 50 }) {
   const sb = intIn(smallBlind, 1, 1_000_000, 25);
   const bb = intIn(bigBlind, sb, 2_000_000, Math.max(sb * 2, 50));
   const stack = intIn(startingStack, bb, 100_000_000, 10_000);
 
   const room = {
     chatId: String(chatId),
+    code,
     title: cleanName(title, '', 40),
     createdAt: Date.now(),
     touchedAt: Date.now(),
@@ -63,6 +78,10 @@ export function createRoom({ chatId, host, title = '', startingStack = 10000, sm
       levelMinutes: 20,
       schedule: makeSchedule(sb, bb),
       turnSeconds: 0, // 0 = no turn timer; the host opts in with /timer
+      // 'virtual' — the bot shuffles, deals and reads the hands.
+      // 'live'    — real cards on a real table: the app keeps the chips, a
+      //             human dealer (or the table) says who won.
+      cards: 'virtual',
     },
     level: { index: 0, elapsedMs: 0, runningSince: null },
     pendingBlinds: null,
@@ -89,6 +108,7 @@ export function createRoom({ chatId, host, title = '', startingStack = 10000, sm
       pendingBet: null, // { userId, promptMessageId }
       armedAllIn: null, // { userId } — ALL-IN by button needs a second tap
       reveal: null, // { handNo, shown } — an all-in board being turned card by card
+      winner: null, // { potIndex, review } — live cards: which pot the dealer is deciding
     },
   };
   if (host) {
@@ -117,6 +137,8 @@ export function addPlayer(room, user) {
     }
     return existing;
   }
+  const taken = room.players.filter((x) => !x.kicked && !x.left && x.role !== 'dealer').length;
+  if (taken >= MAX_SEATS) return { error: 'TABLE_FULL' };
   const p = {
     id: String(user.id),
     tgId: Number(user.tgId ?? user.id),
@@ -128,7 +150,8 @@ export function addPlayer(room, user) {
     kicked: false,
     timeouts: 0, // turns in a row lost to the timer
     dm: user.dm ?? null, // 'ok' | 'fail' | null — can the bot write to them?
-    role: 'player', // the engine deals in anyone whose role is not 'dealer'
+    role: 'player', // 'player' | 'dealer' — the engine never deals a dealer in
+    pendingRole: null, // a role change asked for mid-hand lands at the next deal
     waiting: room.status !== 'lobby', // joined mid-game -> dealt in next hand
     inHand: false,
     folded: false,
@@ -174,11 +197,90 @@ export function touch(room) {
 /* -------------------------------------------------------------- authority */
 
 /**
- * The host is a PERMISSION (run the room), independent of having a seat.
- * With the bot dealing and reading the hands there is no second authority:
- * nobody decides a pot, so nobody needs the right to.
+ * Three separate checks, as in the web app. The host is a PERMISSION (run the
+ * room); dealer is a ROLE (run the hand with real cards). A person can hold
+ * both, either or neither, and no screen is keyed off a single field.
  */
 export const isHost = (room, userId) => room.hostId === String(userId);
+export const roleOf = (p) => (p?.role === 'dealer' ? 'dealer' : 'player');
+export const dealers = (room) => room.players.filter((p) => roleOf(p) === 'dealer' && !p.kicked && !p.left);
+export const isLive = (room) => room.settings.cards === 'live';
+
+/**
+ * Who may close a pot — only ever a question with real cards: when the bot
+ * deals, it reads the hands itself and nobody decides anything. With a dealer
+ * assigned it is their job (the host kept as a fallback, so a dead phone
+ * cannot freeze the table). With no dealer, any seated participant.
+ */
+export function canDecideWinner(room, userId) {
+  const d = dealers(room);
+  if (d.length === 0) return isSeated(room, userId);
+  if (d.some((x) => x.id === String(userId))) return true;
+  return isHost(room, userId);
+}
+
+/* ------------------------------------------------------------------ roles */
+
+function lockedInHand(room, p) {
+  return !!room.hand && room.hand.phase !== 'complete' && p.inHand && !p.folded;
+}
+
+export function setRole(room, userId, targetId, role) {
+  if (!isHost(room, userId)) return { error: 'NOT_HOST' };
+  if (role !== 'player' && role !== 'dealer') return { error: 'BAD_ROLE' };
+  if (role === 'dealer' && !isLive(room)) return { error: 'NOT_LIVE' };
+  const p = findPlayer(room, targetId);
+  if (!p || p.kicked) return { error: 'NO_PLAYER' };
+  if (roleOf(p) === role && !p.pendingRole) return { ok: true, noop: true };
+
+  pushUndo(room, `роль: ${p.name}`);
+  // Swapping a role mid-hand would strand chips in the pot, so it waits.
+  if (lockedInHand(room, p)) {
+    p.pendingRole = roleOf(p) === role ? null : role;
+    if (p.pendingRole === 'dealer') {
+      for (const other of room.players) {
+        if (other.id !== p.id && other.pendingRole === 'dealer') other.pendingRole = null;
+      }
+    }
+    room.notice = p.pendingRole
+      ? `${p.name} станет ${role === 'dealer' ? 'дилером' : 'игроком'} со следующей раздачи`
+      : null;
+    touch(room);
+    return { ok: true, deferred: true };
+  }
+
+  applyRole(room, p, role);
+  room.notice = `${p.name} — ${role === 'dealer' ? 'дилер' : 'игрок'}`;
+  touch(room);
+  return { ok: true };
+}
+
+/**
+ * One pair of hands deals the cards, so the DEALER role is handed over, never
+ * cloned: giving it to somebody takes it off whoever held it or was queued.
+ */
+function clearOtherDealers(room, keepId) {
+  for (const other of room.players) {
+    if (other.id === keepId) continue;
+    if (other.pendingRole === 'dealer') other.pendingRole = null;
+    if (roleOf(other) === 'dealer') applyRole(room, other, 'player');
+  }
+}
+
+function applyRole(room, p, role) {
+  p.role = role;
+  p.pendingRole = null;
+  if (role === 'dealer') {
+    clearOtherDealers(room, p.id);
+    p.waiting = false;
+  } else if (room.status !== 'lobby') {
+    p.waiting = true; // back to the felt from the next hand on
+  }
+}
+
+function applyPendingRoles(room) {
+  for (const p of room.players) if (p.pendingRole) applyRole(room, p, p.pendingRole);
+}
 
 /* ----------------------------------------------------------- blind levels */
 
@@ -273,6 +375,7 @@ export function bumpLevel(room, userId) {
 const SNAPSHOT_KEYS = [
   'stack', 'inHand', 'folded', 'allIn', 'bet', 'committed', 'acted',
   'raiseLocked', 'lastAction', 'lastAmount', 'waiting', 'sittingOut', 'kicked', 'left', 'timeouts',
+  'role', 'pendingRole',
 ];
 
 function pushUndo(room, label) {
@@ -290,6 +393,7 @@ function pushUndo(room, label) {
     pendingBlinds: room.pendingBlinds ? { ...room.pendingBlinds } : null,
     hostId: room.hostId,
     finishedAt: room.finishedAt,
+    winner: room.ui.winner ? clone(room.ui.winner) : null,
     players: room.players.map((p) => {
       const snap = { id: p.id, stats: clone(p.stats) };
       for (const k of SNAPSHOT_KEYS) snap[k] = p[k];
@@ -336,6 +440,7 @@ export function undo(room, userId) {
     p.stats = clone(s.stats);
   }
   room.ui.armedAllIn = null;
+  room.ui.winner = snap.winner ? clone(snap.winner) : null;
   room.notice = `Отменено: ${snap.label}`;
   touch(room);
   return { ok: true, label: snap.label };
@@ -366,8 +471,15 @@ function deal(room, deckFn) {
   room.hand.timeouts = 0; // moves the timer made for them
   room.autoNext = null;
   room.ui.reveal = null;
-  dealHoles(room, deckFn());
+  room.ui.winner = null;
+  if (isLive(room)) {
+    // Real cards: the dealer at the table deals them. The bot holds no deck.
+    room.hand.live = true;
+  } else {
+    dealHoles(room, deckFn());
+  }
   syncCards(room);
+  if (room.hand.phase === 'showdown') openWinnerFlow(room); // blinds alone put all in
   sealUndo(room);
   return { ok: true };
 }
@@ -375,6 +487,7 @@ function deal(room, deckFn) {
 export function startGame(room, userId, { deck = defaultDeck } = {}) {
   if (!isHost(room, userId)) return { error: 'NOT_HOST' };
   if (room.status !== 'lobby') return { error: 'ALREADY_STARTED' };
+  applyPendingRoles(room);
   if (dealable(room).length < 2) return { error: 'NOT_ENOUGH_PLAYERS' };
   room.players.forEach((p) => (p.waiting = false));
   room.status = 'playing';
@@ -402,6 +515,14 @@ export function nextHand(room, userId, { deck = defaultDeck, auto = false } = {}
   if (room.hand && room.hand.phase !== 'complete') return { error: 'HAND_IN_PROGRESS' };
   if (!auto && !isSeated(room, userId) && !isHost(room, userId)) return { error: 'NOT_SEATED' };
 
+  // Pacing belongs to whoever holds the deck: with a dealer at a real table,
+  // an eager tap from a player would post blinds before the cards are shuffled.
+  if (!auto && isLive(room) && dealers(room).length > 0 && !isHost(room, userId) &&
+      !dealers(room).some((d) => d.id === String(userId))) {
+    return { error: 'DEALER_DEALS' };
+  }
+
+  applyPendingRoles(room);
   if (dealable(room).length < 2) {
     touch(room);
     const withChips = room.players.filter((p) => !p.kicked && !p.left && p.stack > 0);
@@ -466,9 +587,108 @@ function afterMove(room) {
   room.ui.armedAllIn = null;
   room.ui.pendingBet = null;
   syncCards(room);
+  // Real cards: the engine stops at the showdown and waits for a human.
+  if (room.hand?.phase === 'showdown') openWinnerFlow(room);
   sealUndo(room);
   afterHandMaybeOver(room);
   touch(room);
+}
+
+/* ---------------------------------------------- winner selection (real cards) */
+
+/** Pots that need a human decision — a pot with one claimant is a refund. */
+export function openPots(room) {
+  const h = room.hand;
+  if (!h || h.phase !== 'showdown') return [];
+  return h.pots.map((p, i) => i).filter((i) => h.pots[i].eligible.length > 1);
+}
+
+function openWinnerFlow(room) {
+  if (room.ui.winner) return;
+  const steps = openPots(room);
+  room.ui.winner = steps.length ? { potIndex: steps[0], review: false } : { potIndex: -1, review: true };
+}
+
+/** Mark or unmark `seat` as a winner of pot `potIndex`. Several = a split. */
+export function toggleWinner(room, userId, potIndex, seat) {
+  const h = room.hand;
+  if (!h || h.phase !== 'showdown') return { error: 'NOT_SHOWDOWN' };
+  if (!canDecideWinner(room, userId)) return { error: 'DEALER_DECIDES' };
+  const pot = h.pots[potIndex];
+  if (!pot || pot.eligible.length < 2) return { error: 'BAD_POT' };
+  const p = room.players[seat];
+  // A folded player is never eligible — the one mistake that cannot be made.
+  if (!p || !pot.eligible.includes(p.id)) return { error: 'NOT_ELIGIBLE' };
+  const at = pot.winners.indexOf(p.id);
+  if (at >= 0) pot.winners.splice(at, 1);
+  else pot.winners.push(p.id);
+  touch(room);
+  return { ok: true, name: p.name, on: at < 0 };
+}
+
+/** Move to the next undecided pot, or to the review screen. */
+export function winnerNext(room, userId) {
+  const h = room.hand;
+  if (!h || h.phase !== 'showdown') return { error: 'NOT_SHOWDOWN' };
+  if (!canDecideWinner(room, userId)) return { error: 'DEALER_DECIDES' };
+  const w = room.ui.winner;
+  if (!w || w.review) return { error: 'BAD_STEP' };
+  if (!h.pots[w.potIndex] || h.pots[w.potIndex].winners.length === 0) return { error: 'NO_WINNER_SELECTED' };
+  const steps = openPots(room);
+  const nextIdx = steps[steps.indexOf(w.potIndex) + 1];
+  room.ui.winner = nextIdx === undefined ? { potIndex: -1, review: true } : { potIndex: nextIdx, review: false };
+  touch(room);
+  return { ok: true };
+}
+
+export function winnerBack(room, userId) {
+  const h = room.hand;
+  if (!h || h.phase !== 'showdown') return { error: 'NOT_SHOWDOWN' };
+  if (!canDecideWinner(room, userId)) return { error: 'DEALER_DECIDES' };
+  const steps = openPots(room);
+  const w = room.ui.winner;
+  if (!w) return { error: 'BAD_STEP' };
+  if (w.review) {
+    if (!steps.length) return { error: 'BAD_STEP' };
+    room.ui.winner = { potIndex: steps[steps.length - 1], review: false };
+  } else {
+    const at = steps.indexOf(w.potIndex);
+    if (at <= 0) return { error: 'BAD_STEP' };
+    room.ui.winner = { potIndex: steps[at - 1], review: false };
+  }
+  touch(room);
+  return { ok: true };
+}
+
+/**
+ * The preview the dealer confirms and the real payout are THE SAME function
+ * in the engine (`distribution`), so the numbers on screen cannot drift from
+ * the numbers that land in the stacks.
+ */
+export const preview = (room) => previewPayouts(room);
+
+/** Chips move here, and only here — after the review screen. */
+export function confirmWinners(room, userId, seq) {
+  const h = room.hand;
+  if (!h || h.phase !== 'showdown') return { error: 'NOT_SHOWDOWN' };
+  if (!canDecideWinner(room, userId)) return { error: 'DEALER_DECIDES' };
+  if (typeof seq === 'number' && seq !== room.seq) return { error: 'STALE', seq: room.seq };
+  if (!room.ui.winner?.review) return { error: 'BAD_STEP' };
+  if (h.pots.some((p) => p.winners.length === 0)) return { error: 'NO_WINNER_SELECTED' };
+
+  // Real cards: undoing a mis-tapped result reveals nothing the table did not
+  // see, so — unlike a dealt deck — this is allowed until the next deal.
+  pushUndo(room, `итог раздачи #${h.no}`);
+  const r = awardPots(room, h.pots.map((p) => p.winners));
+  if (r.error) {
+    room.undo.pop();
+    return r;
+  }
+  h.decided = true;
+  room.ui.winner = null;
+  afterHandMaybeOver(room);
+  touch(room);
+  return r;
 }
 
 /* ------------------------------------------------------------- turn timer */
@@ -561,6 +781,7 @@ export function syncAutoNext(room, now) {
   const h = room.hand;
   const on =
     (room.settings.turnSeconds || 0) > 0 &&
+    !isLive(room) && // real cards are shuffled by hand: the dealer paces the table
     (room.status === 'playing' || room.status === 'paused') &&
     h && h.phase === 'complete' &&
     !(room.ui.reveal && room.ui.reveal.handNo === h.no) &&
@@ -675,12 +896,24 @@ export function updateSettings(room, userId, patch = {}) {
 
   const blindsMoved = sb !== cur.smallBlind || bb !== cur.bigBlind;
   const timerMoved = turnSeconds !== (cur.turnSeconds || 0);
+  const cards = patch.cards === 'live' || patch.cards === 'virtual' ? patch.cards : cur.cards || 'virtual';
+  const cardsMoved = cards !== (cur.cards || 'virtual');
+  // Switching between real and dealt cards in the middle of a hand would
+  // leave the hand half one thing, half the other.
+  if (cardsMoved && room.hand && room.hand.phase !== 'complete' && !inLobby) return { error: 'HAND_IN_PROGRESS' };
   const changed =
-    blindsMoved || timerMoved || stack !== cur.startingStack || mode !== cur.blindMode || minutes !== cur.levelMinutes;
+    blindsMoved || timerMoved || cardsMoved || stack !== cur.startingStack || mode !== cur.blindMode ||
+    minutes !== cur.levelMinutes;
   if (!changed) return { ok: true, noop: true };
 
   pushUndo(room, 'изменение настроек');
-  room.settings = { ...cur, startingStack: stack, blindMode: mode, levelMinutes: minutes, turnSeconds };
+  room.settings = { ...cur, startingStack: stack, blindMode: mode, levelMinutes: minutes, turnSeconds, cards };
+  if (cardsMoved && cards === 'virtual') {
+    // No dealer when the bot deals: whoever held the role goes back to a seat.
+    for (const p of room.players) {
+      if (roleOf(p) === 'dealer' || p.pendingRole) applyRole(room, p, 'player');
+    }
+  }
 
   if (inLobby) {
     room.settings.smallBlind = sb;
@@ -708,7 +941,11 @@ export function updateSettings(room, userId, patch = {}) {
     }
   }
 
-  room.notice = timerMoved && !blindsMoved
+  room.notice = cardsMoved
+    ? cards === 'live'
+      ? 'Играем настоящими картами: бот ведёт фишки, победителя отмечает дилер.'
+      : 'Карты раздаёт бот.'
+    : timerMoved && !blindsMoved
     ? turnSeconds
       ? `Таймер хода: ${turnSeconds} с. Не успел — чек или фолд; следующая раздача сама через ${AUTO_NEXT_MS / 1000} с.`
       : 'Таймер хода выключен. Следующую раздачу запускают вручную.'
@@ -863,6 +1100,7 @@ export function endGame(room, userId) {
   } else {
     pushUndo(room, 'завершение игры');
   }
+  room.ui.winner = null;
   finish(room);
   touch(room);
   return { ok: true };
@@ -902,6 +1140,8 @@ export function deserialize(data) {
   // A board half-way through turning over is shown whole after a restart.
   room.ui.reveal = null;
   room.settings.turnSeconds = room.settings.turnSeconds || 0;
+  room.settings.cards = room.settings.cards || 'virtual';
+  room.code = room.code || newRoomCode();
   if (room.level && room.status === 'playing') room.level.runningSince = Date.now();
   return room;
 }

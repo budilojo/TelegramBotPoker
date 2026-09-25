@@ -48,10 +48,15 @@ export class TelegramStub {
     }
   }
 
-  #checkKeyboard(markup) {
+  #checkKeyboard(markup, chatId) {
     for (const row of markup?.inline_keyboard ?? []) {
       for (const b of row) {
         if (b.url != null) continue; // a link button carries no callback_data
+        if (b.web_app != null) {
+          // Telegram allows Mini App buttons in private chats only.
+          if (Number(chatId) < 0) throw new TelegramError('Bad Request: BUTTON_TYPE_INVALID');
+          continue;
+        }
         const size = Buffer.byteLength(String(b.callback_data ?? ''), 'utf8');
         if (size > 64 || size === 0) throw new TelegramError(`BUTTON_DATA_INVALID: ${size} bytes`);
       }
@@ -60,7 +65,7 @@ export class TelegramStub {
 
   async sendMessage(chatId, text, opts = {}) {
     this.#record('sendMessage', { chatId: String(chatId), text });
-    this.#checkKeyboard(opts.reply_markup);
+    this.#checkKeyboard(opts.reply_markup, chatId);
     // Positive ids are people. Groups and supergroups are negative.
     if (Number(chatId) > 0 && !this.dmOpen.has(String(chatId))) {
       throw new TelegramError("Forbidden: bot can't initiate conversation with a user", 403);
@@ -77,7 +82,7 @@ export class TelegramStub {
 
   async editMessageText(chatId, messageId, text, opts = {}) {
     this.#record('editMessageText', { chatId: String(chatId), messageId, text });
-    this.#checkKeyboard(opts.reply_markup);
+    this.#checkKeyboard(opts.reply_markup, chatId);
     const m = this.messages.get(messageId);
     if (!m || m.deleted) throw new TelegramError('Bad Request: message to edit not found');
     if (m.text === text && sameMarkup(m.markup, opts.reply_markup)) {

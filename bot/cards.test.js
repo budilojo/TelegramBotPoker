@@ -3,54 +3,41 @@
  * The second rule, next to "nobody acts for somebody else":
  * NOBODY SEES SOMEBODY ELSE'S CARDS.
  *
- * Hole cards may leave the bot in exactly two ways — a private message to
- * their owner, and a popup Telegram shows only to the person who pressed.
- * These tests look at EVERYTHING the bot ever sent (every send and every
- * edit, deleted messages included), not just at the final screen: a card
- * that flashed in the group for one edit has leaked just the same.
+ * Hiding a card on screen is not enough — whatever reaches a phone can be
+ * read off it. So these tests read EVERYTHING the server ever sent to each
+ * person's Mini App, every state of every hand, plus every text the bot ever
+ * put into the group (sends and edits). A card that reached the wrong phone
+ * once has leaked, whatever the screen showed.
  *
- * And the other half of dealing the cards: the bot now decides who wins, so
- * a wrong answer here silently hands a pot to the wrong person.
+ * And the other half of dealing: the bot decides who wins, so a wrong answer
+ * here silently hands a pot to the wrong person.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Table, user, stack } from './harness.js';
-import { cardText, BOARD_SIZE } from './cards.js';
+import { Table, user, stack, FakeClock } from './harness.js';
+import { BOARD_SIZE } from './cards.js';
+import { cardCode } from './view.js';
 import { rank } from './eval.js';
 import { Store } from './store.js';
 import { App } from './app.js';
-import { distribution, legalActions } from '../server/game.js';
+import { Hub } from './hub.js';
+import { distribution } from '../server/game.js';
 import { seededRng } from './deck.js';
-import { pressUpdate } from './tg-stub.js';
+import { TEST_TOKEN, initDataFor } from './harness.js';
 
-const CAST = () => ({
-  ivan: user(101, 'Иван'),
-  max: user(202, 'Макс'),
-  dima: user(303, 'Дима'),
-  sasha: user(404, 'Саша'),
-});
+const CAST = () => ({ ivan: user(101, 'Иван'), max: user(202, 'Макс'), dima: user(303, 'Дима'), sasha: user(404, 'Саша') });
 const THREE = () => ({ ivan: user(101, 'Иван'), max: user(202, 'Макс'), dima: user(303, 'Дима') });
 
-/** Every text the bot ever put into a chat: sends AND edits. */
-function everything(t, chatId) {
-  return t.tg.calls
-    .filter((c) => (c.method === 'sendMessage' || c.method === 'editMessageText') && c.chatId === String(chatId))
-    .map((c) => c.text);
-}
-const shows = (texts, card) => texts.some((x) => x.includes(cardText(card)));
+/** A card code as it travels to a page: quoted, so "AS" does not match inside "10AS…". */
+const q = (c) => `"${cardCode(c)}"`;
 
-/** The message of hand #no as it stands in the chat now (frozen or live). */
-function handMessage(t, no) {
-  let found = null;
-  for (const m of t.tg.messages.values()) {
-    if (m.chatId === String(t.chatId) && !m.deleted && m.text.includes(`РАЗДАЧА #${no}`)) found = m;
-  }
-  return found;
-}
+/** Every text the bot ever put into the group chat. */
+const groupTexts = (t) =>
+  t.tg.calls.filter((c) => (c.method === 'sendMessage' || c.method === 'editMessageText') && c.chatId === String(t.chatId)).map((c) => c.text).join('\n');
 
 /* ---------------------------------------------------------- the deal */
 
-test('every player gets exactly their own two cards, in their own private chat', async () => {
+test('every player sees exactly their own two cards — and nobody else\'s', async () => {
   const cast = CAST();
   const t = new Table();
   await t.begin(cast);
@@ -58,183 +45,142 @@ test('every player gets exactly their own two cards, in their own private chat',
   const all = [];
   for (const u of Object.values(cast)) {
     const mine = t.hole(u);
-    assert.equal(mine.length, 2, `${u.first_name} has two cards`);
+    assert.equal(mine.length, 2);
     all.push(...mine);
-    const dm = t.lastDm(u);
-    for (const c of mine) assert.ok(dm.includes(cardText(c)), `${u.first_name}'s own ${cardText(c)} is in their DM`);
+    assert.deepEqual(t.state(u).me.cards, mine.map(cardCode), `${u.first_name} has their cards on screen`);
     for (const other of Object.values(cast)) {
       if (other === u) continue;
       for (const c of t.hole(other)) {
-        assert.ok(!shows(t.tg.dms(u.id), c), `${u.first_name} must never receive ${other.first_name}'s ${cardText(c)}`);
+        assert.ok(!t.received(u).includes(q(c)), `${u.first_name}'s phone received ${cardCode(c)} of ${other.first_name}`);
       }
     }
   }
   assert.equal(new Set(all).size, 8, 'one deck: no card dealt twice');
-
-  // Private messages went to players and only to players.
-  const privateTargets = new Set(
-    t.tg.calls.filter((c) => c.method === 'sendMessage' && Number(c.chatId) > 0).map((c) => c.chatId)
-  );
-  for (const id of privateTargets) {
-    assert.ok(Object.values(cast).some((u) => String(u.id) === id), `a private message went to a stranger: ${id}`);
-  }
 });
 
-test('the group never sees a hole card before the showdown — not even in one edit', async () => {
+test('no phone ever receives a hole card of another player before the showdown', async () => {
   const cast = THREE();
   const t = new Table();
   await t.seat(cast);
-  t.useDeck(stack(
-    { [cast.ivan.id]: 'As Ah', [cast.max.id]: 'Kd Kc', [cast.dima.id]: '7c 2d' },
-    '4s 9h Jd 3c 8s'
-  ));
-  await t.press(cast.ivan, 'Начать игру');
+  t.useDeck(stack({ 101: 'As Ah', 202: 'Kd Kc', 303: '7c 2d' }, '4s 9h Jd 3c 8s'));
+  await t.send(cast.ivan, { t: 'start' });
+  const spectator = user(9999, 'Прохожий');
+  t.open(spectator);
 
   // Play to the river and stop one move short of the showdown.
   let guard = 0;
   while (guard++ < 40) {
     const h = t.room.hand;
-    const who = t.actorOf(cast);
     const lastMove = h.street === 'river' && t.room.players.filter((p) => p.inHand && !p.folded && !p.acted).length === 1;
     if (lastMove) break;
-    await t.press(who, t.button('CHECK') ? 'CHECK' : 'CALL');
+    const who = t.actorOf(cast);
+    await t.act(who, t.state(who).legal.canCheck ? 'check' : 'call');
   }
   assert.equal(t.room.hand.street, 'river');
-  assert.equal(t.room.hand.phase, 'betting');
 
-  const group = everything(t, t.chatId);
-  for (const u of Object.values(cast)) {
-    for (const c of t.hole(u)) assert.ok(!shows(group, c), `${cardText(c)} of ${u.first_name} leaked into the group`);
+  for (const viewer of [...Object.values(cast), spectator]) {
+    for (const owner of Object.values(cast)) {
+      if (owner === viewer) continue;
+      for (const c of t.hole(owner)) {
+        assert.ok(!t.received(viewer).includes(q(c)), `${viewer.first_name} saw ${cardCode(c)} of ${owner.first_name}`);
+      }
+    }
   }
-  for (const c of t.room.hand.board) assert.ok(shows(group, c), `the board card ${cardText(c)} is public`);
-
-  // The last check. Now the winner shows — and only the winner: the two
-  // losing hands (nobody is all-in) are mucked, and stay unseen for good.
-  await t.press(t.actorOf(cast), 'CHECK');
-  assert.equal(t.room.hand.phase, 'complete');
-  const after = everything(t, t.chatId);
-  for (const c of t.hole(cast.ivan)) assert.ok(shows(after, c), 'the winning aces are shown');
-  for (const u of [cast.max, cast.dima]) {
-    for (const c of t.hole(u)) assert.ok(!shows(after, c), `${u.first_name} lost and mucked, ${cardText(c)} was shown`);
-    assert.match(t.text(), new RegExp(`${u.first_name}: карты не показаны`));
-  }
-  assert.doesNotMatch(t.text(), /Пара K|Старшая/, 'not even the name of a mucked hand');
+  for (const c of t.room.hand.board) assert.ok(t.received(spectator).includes(q(c)), 'the board is public');
 });
 
-test('a folded hand is never shown — not at showdown, not anywhere', async () => {
+test('at showdown only the hands that must be shown reach the other phones', async () => {
   const cast = THREE();
   const t = new Table();
   await t.seat(cast);
-  t.useDeck(stack(
-    { [cast.ivan.id]: 'As Ah', [cast.max.id]: 'Kd Kc', [cast.dima.id]: 'Qh Qd' },
-    '4s 9h Jd 3c 8s'
-  ));
-  await t.press(cast.ivan, 'Начать игру');
-
-  // Дима folds on his first turn — by typing it: as the big blind he faces
-  // no bet, and the FOLD button is hidden when checking is free. The other
-  // two go to showdown.
+  t.useDeck(stack({ 101: 'As Ah', 202: 'Kd Kc', 303: 'Qh Qd' }, '4s 9h Jd 3c 8s'));
+  await t.send(cast.ivan, { t: 'start' });
+  // Дима folds on his first turn; Иван and Макс go to showdown. Nobody all-in.
   let folded = false;
   let guard = 0;
   while (t.room.hand.phase === 'betting' && guard++ < 40) {
     const who = t.actorOf(cast);
     if (who === cast.dima && !folded) {
-      await t.cmd(who, '/fold');
+      await t.act(who, 'fold');
       folded = true;
-    } else {
-      await t.press(who, t.button('CHECK') ? 'CHECK' : 'CALL');
-    }
+    } else await t.act(who, t.state(who).legal.canCheck ? 'check' : 'call');
   }
-  assert.ok(folded, 'Дима really folded');
-  assert.ok(t.room.hand.shown, 'it went to a showdown');
+  assert.ok(folded && t.room.hand.shown);
 
-  const group = everything(t, t.chatId);
-  for (const c of t.hole(cast.dima)) assert.ok(!shows(group, c), `folded ${cardText(c)} was shown`);
-  for (const c of t.hole(cast.ivan)) assert.ok(shows(group, c), 'the winner shows');
-  for (const c of t.hole(cast.max)) assert.ok(!shows(group, c), 'the loser mucks');
-  assert.equal(t.room.hand.shown[String(cast.dima.id)], undefined, 'and it is not even in the record');
-  assert.doesNotMatch(t.text(), /Дима:/, 'a folded player is not even listed at the showdown');
+  const seen = t.received(cast.dima);
+  for (const c of t.hole(cast.ivan)) assert.ok(seen.includes(q(c)), 'the winner shows');
+  for (const c of t.hole(cast.max)) assert.ok(!seen.includes(q(c)), 'the loser mucks — unseen');
+  for (const c of t.hole(cast.dima)) assert.ok(!t.received(cast.ivan).includes(q(c)), 'the folded hand is never shown');
+  const maxRow = t.state(cast.dima).players.find((p) => p.name === 'Макс');
+  assert.equal(maxRow.mucked, true);
+  assert.equal(maxRow.handName, null, 'not even the name of a mucked hand');
 });
 
 test('winning because everyone folded shows nobody\'s cards, the winner\'s included', async () => {
   const cast = CAST();
   const t = new Table();
   await t.begin(cast);
-
   let guard = 0;
-  while (t.room.hand.phase === 'betting' && guard++ < 10) await t.press(t.actorOf(cast), 'FOLD');
+  while (t.room.hand.phase === 'betting' && guard++ < 10) await t.act(t.actorOf(cast), 'fold');
 
   assert.equal(t.room.hand.phase, 'complete');
-  assert.equal(t.room.hand.shown, null, 'no showdown happened');
-  const group = everything(t, t.chatId);
-  for (const u of Object.values(cast)) {
-    for (const c of t.hole(u)) assert.ok(!shows(group, c), `${cardText(c)} of ${u.first_name} was revealed`);
-  }
-  assert.match(t.text(), /остальные сбросили/);
-});
-
-/* ---------------------------------------------------------- peeking */
-
-test('"🂠 Мои карты" shows your own cards to you — whoever\'s copy of the button you press', async () => {
-  const cast = CAST();
-  const t = new Table();
-  await t.begin(cast);
-
-  for (const u of Object.values(cast)) {
-    const a = await t.peek(u);
-    assert.equal(a.show_alert, true, 'a popup only the presser sees, not a toast in the chat');
-    for (const c of t.hole(u)) assert.ok(a.text.includes(cardText(c)));
-    for (const other of Object.values(cast)) {
-      if (other === u) continue;
-      for (const c of t.hole(other)) assert.ok(!a.text.includes(cardText(c)), `${u.first_name} saw ${cardText(c)}`);
+  for (const viewer of Object.values(cast)) {
+    for (const owner of Object.values(cast)) {
+      if (owner === viewer) continue;
+      for (const c of t.hole(owner)) assert.ok(!t.received(viewer).includes(q(c)), `${cardCode(c)} of ${owner.first_name} reached ${viewer.first_name}`);
     }
-    assert.ok(a.text.length <= 200, 'Telegram cuts callback answers at 200 characters');
   }
-
-  // Everyone presses literally the same button: there is nothing in it that
-  // could point at somebody else's hand.
-  const data = t.button('Мои карты').callback_data;
-  assert.doesNotMatch(data, /10[1-4]|20[12]|30[13]|40[14]/, 'the button carries no player id');
-
-  const stranger = await t.peek(user(9999, 'Прохожий'));
-  assert.match(stranger.text, /не в этой раздаче/);
+  assert.equal(t.state(cast.ivan).hand.result.kind, 'fold');
 });
 
-test('/cards in the group reveals nothing; in the private chat it shows your hand', async () => {
+test('the group chat never gets a card — not a hole card, not even the board', async () => {
   const cast = THREE();
   const t = new Table();
   await t.begin(cast);
+  await t.runToShowdown(cast);
+  assert.ok(t.room.hand.shown, 'it went all the way to a showdown');
+  // A card, in any way the bot could ever write one: a rank next to a suit
+  // ("A♠", "10♥️") or a picture code ("AS", "10H"). The ♠️ in the card's
+  // title is decoration and has no rank next to it.
+  const group = groupTexts(t);
+  assert.doesNotMatch(group, /(?:10|[2-9JQKA])[♠♥♦♣]/, 'a card was written into the group');
+  for (const c of [...Object.values(t.room.hand.holes).flat(), ...t.room.hand.board]) {
+    assert.ok(!new RegExp(`\\b${cardCode(c)}\\b`).test(group), `${cardCode(c)} in the group`);
+  }
+});
 
-  await t.cmd(cast.max, '/cards');
-  const reply = t.lastPost();
-  assert.match(reply, /в личке|Мои карты/);
-  for (const u of Object.values(cast)) for (const c of t.hole(u)) assert.ok(!reply.includes(cardText(c)));
-
-  await t.dm(cast.max, '/cards');
-  const dm = t.lastDm(cast.max);
-  for (const c of t.hole(cast.max)) assert.ok(dm.includes(cardText(c)));
-  for (const c of [...t.hole(cast.ivan), ...t.hole(cast.dima)]) assert.ok(!dm.includes(cardText(c)));
+test('the deck and anybody\'s Telegram id never reach a phone', async () => {
+  const cast = CAST();
+  const t = new Table();
+  await t.begin(cast);
+  const next = t.room.hand.deck.slice(t.room.hand.cursor, t.room.hand.cursor + 5).map(cardCode);
+  const seen = t.received(cast.max);
+  assert.doesNotMatch(seen, /"deck"|"cursor"|"holes"/);
+  assert.ok(!next.every((c) => seen.includes(`"${c}"`)), 'the coming board is not on the phone');
+  for (const u of Object.values(cast)) {
+    assert.ok(!seen.includes(String(u.id)), `Telegram id ${u.id} was sent to a page`);
+  }
 });
 
 /* -------------------------------------------------------- the board */
 
-test('the board follows the street: 0, 3, 4, 5 cards — and the group sees each one', async () => {
+test('the board follows the street: 0, 3, 4, 5 cards — the same on every phone', async () => {
   const cast = THREE();
   const t = new Table();
   await t.begin(cast);
-
   const seen = new Set();
   let guard = 0;
   while (t.room.hand.phase === 'betting' && guard++ < 40) {
     const h = t.room.hand;
-    assert.equal(h.board.length, BOARD_SIZE[h.street], `${h.street}: ${h.board.length} cards on the board`);
-    for (const c of h.board) assert.ok(t.text().includes(cardText(c)));
+    for (const u of Object.values(cast)) {
+      assert.deepEqual(t.state(u).hand.board, h.board.map(cardCode));
+    }
+    assert.equal(h.board.length, BOARD_SIZE[h.street]);
     seen.add(h.street);
-    await t.press(t.actorOf(cast), t.button('CHECK') ? 'CHECK' : 'CALL');
+    const who = t.actorOf(cast);
+    await t.act(who, t.state(who).legal.canCheck ? 'check' : 'call');
   }
   assert.deepEqual([...seen], ['preflop', 'flop', 'turn', 'river']);
-  assert.equal(t.room.hand.board.length, 5);
-
   const dealt = [...Object.values(t.room.hand.holes).flat(), ...t.room.hand.board];
   assert.equal(new Set(dealt).size, dealt.length, 'hole cards and board come from one deck');
 });
@@ -244,19 +190,8 @@ test('an all-in before the river still deals the whole board', async () => {
   const t = new Table();
   await t.begin(cast);
   await t.shoveDown(cast);
-
   assert.equal(t.room.hand.phase, 'complete');
-  assert.equal(t.room.hand.board.length, 5, 'the rest of the board is dealt out at once');
-  // Equal stacks all-in usually end the game on the spot. The hand's own
-  // message must still show how it ended — board, hands, winner — before
-  // the results are posted underneath it.
-  const m = handMessage(t, 1);
-  for (const c of t.room.hand.board) assert.ok(m.text.includes(cardText(c)), `${cardText(c)} is on the final board`);
-  assert.match(m.text, /ВСКРЫТИЕ/);
-  if (t.room.status === 'finished') {
-    assert.equal(m.markup, null, 'a finished game leaves no live buttons behind');
-    assert.match(t.lastPost(), /ИТОГИ/);
-  }
+  assert.equal(t.room.hand.board.length, 5);
 });
 
 /* ---------------------------------------------------------- who wins */
@@ -265,47 +200,35 @@ test('the best hand takes the pot — the bot reads the cards, nobody picks', as
   const cast = THREE();
   const t = new Table();
   await t.seat(cast, { blinds: [25, 50] });
-  t.useDeck(stack(
-    { [cast.ivan.id]: '9c 9d', [cast.max.id]: 'Kd Kc', [cast.dima.id]: '7c 2d' },
-    'As 9h Jd 3c 8s'
-  ));
-  await t.press(cast.ivan, 'Начать игру');
+  t.useDeck(stack({ 101: '9c 9d', 202: 'Kd Kc', 303: '7c 2d' }, 'As 9h Jd 3c 8s'));
+  await t.send(cast.ivan, { t: 'start' });
   await t.runToShowdown(cast);
 
-  const h = t.room.hand;
-  assert.deepEqual(h.pots.map((p) => p.winners), [[String(cast.ivan.id)]], 'a set of nines beats kings');
-  const stackOf = (u) => t.room.players.find((p) => p.id === String(u.id)).stack;
-  assert.equal(stackOf(cast.ivan), 10100);
-  assert.equal(stackOf(cast.max), 9950);
-  assert.equal(stackOf(cast.dima), 9950);
-  assert.match(t.text(), /🏆 <b>Иван<\/b> \+150 · Сет 9/);
-  assert.match(t.text(), /Иван: 9♣️ 9♦️ — Сет 9/);
-  assert.match(t.text(), /Макс: карты не показаны/, 'the beaten kings are mucked');
-  assert.doesNotMatch(everything(t, t.chatId).join('\n'), /K♦️ K♣️/);
+  assert.deepEqual(t.room.hand.pots.map((p) => p.winners), [['101']], 'a set of nines beats kings');
+  const r = t.state(cast.max).hand.result;
+  assert.deepEqual(r.winners, [{ seat: 0, amount: 150, hand: 'Сет 9' }]);
+  const stackOf = (id) => t.room.players.find((p) => p.id === id).stack;
+  assert.deepEqual(['101', '202', '303'].map(stackOf), [10100, 9950, 9950]);
 });
 
 test('equal hands split the pot, and not a chip goes missing on the odd one', async () => {
   const cast = THREE();
   const t = new Table();
   await t.seat(cast, { blinds: [25, 50] });
-  // The board is a royal flush: everybody plays it, everybody ties.
-  t.useDeck(stack({}, 'As Ks Qs Js 10s'));
-  await t.press(cast.ivan, 'Начать игру');
-
-  // Make the pot odd: the small blind folds its 25 and the other two split 125.
+  t.useDeck(stack({}, 'As Ks Qs Js 10s')); // the board plays: everybody ties
+  await t.send(cast.ivan, { t: 'start' });
   let guard = 0;
   while (t.room.hand.phase === 'betting' && guard++ < 40) {
     const who = t.actorOf(cast);
-    const p = t.room.players.find((x) => x.id === String(who.id));
-    if (p.id === t.room.hand.sbId && t.button('FOLD')) await t.press(who, 'FOLD');
-    else await t.press(who, t.button('CHECK') ? 'CHECK' : 'CALL');
+    const l = t.state(who).legal;
+    if (String(who.id) === t.room.hand.sbId && l.toCall > 0) await t.act(who, 'fold');
+    else await t.act(who, l.canCheck ? 'check' : 'call');
   }
-
   const [pot] = t.room.hand.pots;
   assert.equal(pot.amount, 125);
-  assert.equal(pot.winners.length, 2, 'two live hands, one split');
-  const gains = pot.winners.map((id) => t.room.players.find((p) => p.id === id).stack - (10000 - 50));
-  assert.deepEqual(gains.sort(), [62, 63], 'the odd chip goes to one of them, none is lost');
+  assert.equal(pot.winners.length, 2);
+  const gains = pot.winners.map((id) => t.room.players.find((p) => p.id === id).stack - 9950);
+  assert.deepEqual(gains.sort(), [62, 63]);
   assert.equal(t.chips(), 30000);
 });
 
@@ -313,42 +236,26 @@ test('side pots: the short stack with the best hand wins only what it could cove
   const cast = THREE();
   const t = new Table();
   await t.seat(cast, { blinds: [25, 50] });
-  const bySeat = { 101: 1000, 202: 5000, 303: 5000 };
+  const depth = { 101: 1000, 202: 5000, 303: 5000 };
   for (const p of t.room.players) {
-    p.stack = bySeat[p.id];
-    p.stats.buyIn = bySeat[p.id];
+    p.stack = depth[p.id];
+    p.stats.buyIn = depth[p.id];
   }
-  t.useDeck(stack(
-    { [cast.ivan.id]: 'As Ah', [cast.max.id]: 'Kd Kc', [cast.dima.id]: 'Qh Qd' },
-    '2s 7h 9d Jc 3s'
-  ));
-  await t.press(cast.ivan, 'Начать игру');
+  t.useDeck(stack({ 101: 'As Ah', 202: 'Kd Kc', 303: 'Qh Qd' }, '2s 7h 9d Jc 3s'));
+  await t.send(cast.ivan, { t: 'start' });
   await t.shoveDown(cast);
 
-  const h = t.room.hand;
-  assert.equal(h.pots.length, 2);
-  assert.deepEqual(h.pots.map((p) => [p.amount, p.winners]), [
-    [3000, ['101']], // aces take the main pot…
-    [8000, ['202']], // …and the side pot they had no stake in goes to the kings
-  ]);
-  const stackOf = (id) => t.room.players.find((p) => p.id === id).stack;
-  assert.equal(stackOf('101'), 3000);
-  assert.equal(stackOf('202'), 8000);
-  assert.equal(stackOf('303'), 0);
-  assert.match(t.text(), /MAIN POT 3 000 → Иван/);
-  assert.match(t.text(), /SIDE POT 1 8 000 → Макс/);
+  assert.deepEqual(t.room.hand.pots.map((p) => [p.amount, p.winners]), [[3000, ['101']], [8000, ['202']]]);
+  const r = t.state(cast.dima).hand.result;
+  assert.deepEqual(r.pots.map((p) => [p.label, p.amount, p.winners]), [['MAIN POT', 3000, [0]], ['SIDE POT 1', 8000, [1]]]);
 });
 
 test('every pot pays exactly the engine\'s split of the best hands among ITS claimants', async () => {
-  // Randomised: four stacks of different depth shove every hand, so most
-  // hands have two or three pots. The expected winners are recomputed here,
-  // pot by pot, from the dealt cards; the expected chips come from the
-  // engine's own `distribution` — the call the web app's preview uses.
   const cast = CAST();
   const rnd = seededRng(31337);
   let checked = 0;
   for (let round = 0; round < 25; round++) {
-    const t = new Table({ deck: undefined });
+    const t = new Table();
     t.useDeck(() => {
       const d = Array.from({ length: 52 }, (_, i) => i);
       for (let i = 51; i > 0; i--) {
@@ -363,96 +270,28 @@ test('every pot pays exactly the engine\'s split of the best hands among ITS cla
       p.stack = depth[i];
       p.stats.buyIn = depth[i];
     });
-    const TOTAL = depth.reduce((a, b) => a + b, 0);
-    await t.press(cast.ivan, 'Начать игру');
+    await t.send(cast.ivan, { t: 'start' });
     await t.shoveDown(cast);
 
     const room = t.room;
     const h = room.hand;
     assert.equal(h.phase, 'complete');
-    assert.equal(t.chips(), TOTAL, 'chips conserved');
+    assert.equal(t.chips(), depth.reduce((a, b) => a + b, 0));
     if (!h.shown) continue;
 
     const seven = (id) => [...h.holes[id], ...h.board];
-    const expectedPots = h.pots.map((pot) => ({
+    const expected = h.pots.map((pot) => ({
       ...pot,
       winners: pot.eligible.length === 1 ? [...pot.eligible] : rank(pot.eligible.map((id) => ({ id, cards: seven(id) })))[0].ids,
     }));
-    expectedPots.forEach((pot, i) => {
-      assert.deepEqual([...h.pots[i].winners].sort(), [...pot.winners].sort(), `pot ${i} went to the wrong hand`);
-    });
-
-    const { totals } = distribution(room, expectedPots);
+    expected.forEach((pot, i) => assert.deepEqual([...h.pots[i].winners].sort(), [...pot.winners].sort(), `pot ${i}`));
+    const { totals } = distribution(room, expected);
     for (const p of room.players) {
-      const paid = p.stack - (h.startStacks[p.id] - p.committed);
-      assert.equal(paid, totals.get(p.id) ?? 0, `${p.name} was paid ${paid}`);
+      assert.equal(p.stack - (h.startStacks[p.id] - p.committed), totals.get(p.id) ?? 0, p.name);
     }
     checked++;
   }
   assert.ok(checked >= 20, `only ${checked} showdowns were checked`);
-});
-
-/* --------------------------------------------- without a private chat */
-
-test('without a private chat you still sit down, are told how to fix it, and can still see your cards', async () => {
-  const cast = THREE();
-  const t = new Table();
-  await t.start(cast.ivan);
-  await t.start(cast.dima);
-  await t.cmd(cast.ivan, '/newgame');
-  await t.cmd(cast.dima, '/join');
-
-  // Макс never pressed Start. The button seats him AND opens the bot's chat.
-  await t.press(cast.max, 'Сесть за стол');
-  assert.ok(t.room.players.find((p) => p.id === '202'), 'seated anyway');
-  assert.equal(t.answer().url, 'https://t.me/ChipTableBot?start=cards', 'one tap away from Start');
-  assert.match(t.text(), /Макс\s+10 000\s+нет лички/);
-
-  await t.press(cast.ivan, 'Начать игру');
-  assert.equal(t.room.players.find((p) => p.id === '202').dm, 'fail', 'the delivery bounced');
-  assert.match(t.text(), /Не дошло в личку: Макс/);
-  assert.equal(t.errors.length, 0, 'a bounced private message is expected, not an error');
-
-  const a = await t.peek(cast.max);
-  for (const c of t.hole(cast.max)) assert.ok(a.text.includes(cardText(c)), 'the popup still works');
-
-  // He presses Start mid-hand: the warning goes, and his cards arrive.
-  await t.start(cast.max, 'cards');
-  assert.doesNotMatch(t.text(), /Не дошло в личку/);
-  const dm = t.tg.dms(cast.max.id).join('\n');
-  for (const c of t.hole(cast.max)) assert.ok(dm.includes(cardText(c)), 'the current hand was delivered late');
-});
-
-test('the Start link cannot seat you at a table — seats are taken in the group only', async () => {
-  const cast = THREE();
-  const t = new Table();
-  await t.seat(cast);
-  const stranger = user(9999, 'Прохожий');
-
-  await t.start(stranger, 'cards');
-  await t.start(stranger, `j${t.chatId}`);
-  await t.dm(stranger, '/join');
-  assert.equal(t.room.players.length, 3, 'nobody was seated from a private chat');
-});
-
-test('blocking the bot is noticed, and unblocking too', async () => {
-  const cast = THREE();
-  const t = new Table();
-  await t.seat(cast);
-  const block = (status) => t.raw({
-    update_id: 1,
-    my_chat_member: {
-      chat: { id: 202, type: 'private' },
-      from: cast.max,
-      new_chat_member: { status, user: { id: 1, is_bot: true } },
-    },
-  });
-
-  await block('kicked');
-  assert.equal(t.room.players.find((p) => p.id === '202').dm, 'fail');
-  assert.match(t.text(), /нет лички/);
-  await block('member');
-  assert.equal(t.room.players.find((p) => p.id === '202').dm, 'ok');
 });
 
 /* ---------------------------------------------- no second chances */
@@ -463,24 +302,20 @@ test('undo can never re-deal a hand or take back a card', async () => {
   await t.begin(cast, { blinds: [25, 50] });
   const holes = JSON.stringify(t.room.hand.holes);
 
-  // Right after the deal: nothing to undo — otherwise "undo" is a re-shuffle.
-  await t.cmd(cast.ivan, '/undo');
-  assert.match(t.lastPost(), /Отменять нечего/);
+  await t.send(cast.ivan, { t: 'undo' });
+  assert.equal(t.lastError(cast.ivan).code, 'NOTHING_TO_UNDO', 'right after the deal — otherwise undo is a re-shuffle');
   assert.equal(JSON.stringify(t.room.hand.holes), holes);
 
-  // Close the pre-flop so the flop comes out, then try to take that back.
-  await t.runToShowdown({ ...cast }, 3);
+  await t.runToShowdown(cast, 3);
   assert.equal(t.room.hand.street, 'flop');
   const board = [...t.room.hand.board];
-  await t.cmd(cast.ivan, '/undo');
+  await t.send(cast.ivan, { t: 'undo' });
   assert.deepEqual(t.room.hand.board, board, 'the flop stays out');
-  assert.equal(t.room.hand.street, 'flop');
 
-  // Host admin actions since the last card are still undoable.
-  await t.cmd(cast.ivan, '/blinds 100 200');
+  await t.send(cast.ivan, { t: 'settings', smallBlind: 100, bigBlind: 200 });
   assert.deepEqual(t.room.pendingBlinds, { sb: 100, bb: 200 });
-  await t.cmd(cast.ivan, '/undo');
-  assert.equal(t.room.pendingBlinds, null, 'the blinds change was undone');
+  await t.send(cast.ivan, { t: 'undo' });
+  assert.equal(t.room.pendingBlinds, null, 'the host\'s own settings change was undone');
   assert.deepEqual(t.room.hand.board, board, 'and the cards did not move');
 });
 
@@ -491,25 +326,35 @@ test('a restart mid-hand keeps the cards and deals the same turn it would have',
   const cast = THREE();
   const t = new Table({ store });
   await t.begin(cast, { blinds: [25, 50] });
-  await t.runToShowdown(cast, 3); // to the flop
+  await t.runToShowdown(cast, 3);
   assert.equal(t.room.hand.street, 'flop');
   const holes = JSON.stringify(t.room.hand.holes);
-  const board = [...t.room.hand.board];
   const nextCard = t.room.hand.deck[t.room.hand.cursor];
+  const maxCards = t.state(cast.max).me.cards;
 
-  const app2 = new App({ api: t.tg, store, minIntervalMs: 0, botUsername: 'ChipTableBot' });
+  const clock = new FakeClock();
+  const app2 = new App({ api: t.tg, store, minIntervalMs: 0, botUsername: 'ChipTableBot', clock, runoutStepMs: 0 });
+  const hub2 = new Hub(app2, { botToken: TEST_TOKEN });
+  app2.attachHub(hub2);
   app2.load();
   await app2.resume();
   const room2 = app2.room(t.chatId);
   assert.equal(JSON.stringify(room2.hand.holes), holes, 'nobody got new cards');
-  assert.deepEqual(room2.hand.board, board);
 
-  // Check the flop through on the restored bot.
+  // Phones reconnect by themselves; Макс sees the same two cards.
+  const inbox = {};
+  const pages = {};
+  for (const u of Object.values(cast)) {
+    inbox[u.id] = [];
+    pages[u.id] = hub2.open({ initData: initDataFor(u, { startParam: room2.code, clock }) }, (m) => inbox[u.id].push(m)).session;
+  }
+  const last = (u) => inbox[u.id].filter((m) => m.t === 'state').at(-1).state;
+  assert.deepEqual(last(cast.max).me.cards, maxCards);
+
   let guard = 0;
   while (room2.hand.street === 'flop' && guard++ < 6) {
     const who = Object.values(cast).find((u) => String(u.id) === room2.hand.actorId);
-    const b = t.tg.message(room2.ui.tableMessageId).markup.inline_keyboard.flat().find((x) => x.text === 'CHECK');
-    await app2.handleUpdate(pressUpdate(t.chatId, who, b.callback_data, room2.ui.tableMessageId));
+    await hub2.handle(pages[who.id], { t: 'act', action: 'check' });
     await app2.settle();
   }
   assert.equal(room2.hand.street, 'turn');
@@ -519,60 +364,55 @@ test('a restart mid-hand keeps the cards and deals the same turn it would have',
 
 /* ------------------------------------------------ the long run */
 
-test('many random hands, buttons and typed commands mixed: cards and chips stay sound', async () => {
+test('many random hands through the Mini App: cards and chips stay sound', async () => {
   const cast = CAST();
   const rnd = seededRng(4242);
   const t = new Table();
   await t.seat(cast, { blinds: [25, 50], stack: 3000 });
-  const TOTAL = t.chips();
-  await t.press(cast.ivan, 'Начать игру');
+  let TOTAL = t.chips();
+  await t.send(cast.ivan, { t: 'start' });
 
   let hands = 0;
-  let typed = 0;
+  let rebuys = 0;
   let guard = 0;
   while (t.room.status !== 'finished' && hands < 40 && guard++ < 3000) {
     const h = t.room.hand;
     if (h.phase === 'complete') {
       assert.equal(t.chips(), TOTAL, `chips leaked in hand ${h.no}`);
       hands++;
-      await t.press(cast[['ivan', 'max', 'dima', 'sasha'][rnd(4)]], 'Следующая раздача');
+      // Pot-sized raises bust people fast; the host re-buys them, as at a
+      // real table — and the total grows by exactly the re-buys.
+      for (const [seat, p] of t.room.players.entries()) {
+        if (p.stack > 0) continue;
+        await t.send(cast.ivan, { t: 'rebuy', seat });
+        TOTAL += t.room.settings.startingStack;
+        rebuys++;
+      }
+      assert.equal(t.chips(), TOTAL, 'a re-buy adds exactly one starting stack');
+      await t.send(Object.values(cast)[rnd(4)], { t: 'next' });
       continue;
     }
-
-    // Dealing is sound at every single step.
     const dealt = [...Object.values(h.holes).flat(), ...h.board];
     assert.equal(new Set(dealt).size, dealt.length, 'a card was dealt twice');
     assert.equal(h.board.length, BOARD_SIZE[h.street]);
     assert.ok(t.room.players.every((p) => p.stack >= 0));
 
     const who = t.actorOf(cast);
-    const l = legalActions(t.room, String(who.id));
+    const l = t.state(who).legal;
     const moves = [];
     if (l.canCheck) moves.push(['check'], ['check']);
     if (l.canCall) moves.push(['call'], ['call']);
     if (l.toCall > 0) moves.push(['fold']);
-    if (l.canBet || l.canRaise) {
-      const span = l.maxTotal - l.minTotal;
-      moves.push([l.canBet ? 'bet' : 'raise', l.minTotal + rnd(Math.max(1, Math.floor(span / 3)))]);
-      if (rnd(6) === 0) moves.push(['allin']);
+    for (const p of l.presets) {
+      if (p.kind === 'size') moves.push([l.canBet ? 'bet' : 'raise', p.total]);
+      else if (rnd(6) === 0) moves.push(['allin']); // rare, or the evening ends in four hands
     }
     const [move, amount] = moves[rnd(moves.length)];
-
-    if (rnd(2) === 0) {
-      typed++;
-      await t.cmd(who, amount != null ? `/${move} ${amount}` : `/${move}`);
-    } else if (move === 'allin') {
-      await t.press(who, 'ALL-IN');
-      await t.press(who, 'ПОДТВЕРДИТЬ');
-    } else if (move === 'bet' || move === 'raise') {
-      await t.pressData(who, `a:${move}:${t.room.seq}:${amount}`);
-    } else {
-      const label = { check: 'CHECK', call: 'CALL', fold: 'FOLD' }[move];
-      await t.press(who, label);
-    }
+    // Half the time, send the seq the page was drawn with — as the real page does.
+    await t.act(who, move, amount, rnd(2) ? { seq: t.state(who).seq } : {});
   }
-  assert.ok(hands >= 10, `expected a long session, got ${hands} hands`);
-  assert.ok(typed > 30, 'the typed path really was exercised');
+  assert.ok(hands >= 30, `expected a long session, got ${hands} hands`);
+  assert.ok(rebuys > 0, 'the re-buy path was exercised');
   if (t.room.hand.phase === 'complete') assert.equal(t.chips(), TOTAL);
   assert.equal(t.errors.length, 0, t.errors.map((e) => e.message || e).join('; '));
 });

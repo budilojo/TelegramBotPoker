@@ -37,12 +37,18 @@ export class Outbox {
   /**
    * @param api    the Telegram port (grammY's `bot.api`, or the test stub)
    * @param minIntervalMs  floor between two edits of the same chat
+   * @param timers  `{ now, setTimeout, clearTimeout }` — the app's clock, so a
+   *                test can space taps out in time without waiting for real
    */
-  constructor(api, { minIntervalMs = 1000, onError = () => {}, timers = globalThis } = {}) {
+  constructor(api, { minIntervalMs = 1000, onError = () => {}, timers = null } = {}) {
     this.api = api;
     this.minIntervalMs = minIntervalMs;
     this.onError = onError;
-    this.timers = timers;
+    this.timers = timers ?? {
+      now: () => Date.now(),
+      setTimeout: (fn, ms) => setTimeout(fn, ms),
+      clearTimeout: (t) => clearTimeout(t),
+    };
     /** @type {Map<string, {last:number, timer:any, pending:null|Function, running:boolean}>} */
     this.chats = new Map();
   }
@@ -65,7 +71,7 @@ export class Outbox {
     const s = this.slot(chatId);
     s.pending = produce;
     if (s.running || s.timer) return;
-    const wait = Math.max(0, s.last + this.minIntervalMs - Date.now());
+    const wait = Math.max(0, s.last + this.minIntervalMs - this.timers.now());
     if (wait === 0) return void this.#fire(chatId);
     s.timer = this.timers.setTimeout(() => {
       s.timer = null;
@@ -80,7 +86,7 @@ export class Outbox {
     if (!produce) return;
     s.pending = null;
     s.running = true;
-    s.last = Date.now();
+    s.last = this.timers.now();
     try {
       await produce();
     } catch (err) {
@@ -230,11 +236,12 @@ export class Outbox {
    * Start, blocked the bot): that comes back as `{ ok:false, forbidden:true }`
    * so the game can fall back instead of stalling.
    */
-  async dm(userId, text) {
+  async dm(userId, text, keyboard = null) {
     try {
       const msg = await this.#call('sendMessage', userId, text, {
         parse_mode: 'HTML',
         link_preview_options: { is_disabled: true },
+        ...(keyboard?.length ? { reply_markup: { inline_keyboard: keyboard } } : {}),
       });
       return { ok: true, message_id: msg.message_id };
     } catch (err) {
@@ -256,6 +263,11 @@ export class Outbox {
       const d = describe(err);
       if (!NOT_MODIFIED.test(d) && !GONE.test(d)) this.onError(err, chatId);
     }
+  }
+
+  /** A private message of ours that has served its purpose (a stale "your turn"). */
+  async removePrivate(userId, messageId) {
+    return this.remove(userId, messageId);
   }
 
   /** @returns true when the message is gone */

@@ -1,15 +1,25 @@
 'use strict';
 /**
  * Test harness. Lets a test read like a hand of poker instead of like a pile
- * of Telegram update objects.
+ * of protocol messages.
+ *
+ * Every person at the table opens the Mini App the way Telegram would let
+ * them — with an initData signed by the bot's token — and the harness keeps
+ * EVERYTHING the server ever sent to each of them. That is what the privacy
+ * tests read: not what the screen shows at the end, but every state that
+ * ever reached a phone.
  */
 import { App } from './app.js';
+import { Hub } from './hub.js';
 import { TelegramStub, cmdUpdate, pressUpdate, dmUpdate, user } from './tg-stub.js';
 import { NullStore } from './store.js';
 import { dealOrder } from './cards.js';
 import { parseCard, freshDeck, shuffled, seededRng } from './deck.js';
+import { signInitData } from './webapp-auth.js';
 
 export { user };
+
+export const TEST_TOKEN = '123456:test-token-for-the-harness';
 
 /**
  * A stacked deck, for tests that need to know who wins.
@@ -57,7 +67,7 @@ export { freshDeck };
 
 /**
  * A clock that only moves when the test says so. Timers fire in order of
- * their due time, each one awaited — so a turn timeout that draws the table
+ * their due time, each one awaited — so a turn timeout that redraws the table
  * and arms the next timer has fully happened before the next one fires.
  */
 export class FakeClock {
@@ -94,6 +104,16 @@ export class FakeClock {
   }
 }
 
+/** Sign the initData Telegram would hand this person's Mini App. */
+export function initDataFor(u, { startParam = null, token = TEST_TOKEN, authDate = null, clock = null } = {}) {
+  const fields = {
+    auth_date: authDate ?? Math.floor((clock ? clock.now() : Date.now()) / 1000),
+    user: { id: u.id, first_name: u.first_name, is_bot: false },
+  };
+  if (startParam) fields.start_param = startParam;
+  return signInitData(fields, token);
+}
+
 export class Table {
   /**
    * `runoutStepMs` is 0 by default: most tests want the showdown on screen
@@ -102,22 +122,20 @@ export class Table {
    */
   constructor({
     chatId = -1001234, minIntervalMs = 0, store = new NullStore(), botUsername = 'ChipTableBot', deck = seededDecks(1),
-    clock = new FakeClock(), runoutStepMs = 0,
+    clock = new FakeClock(), runoutStepMs = 0, miniAppName = 'table', webappUrl = 'https://poker.example',
   } = {}) {
     this.chatId = chatId;
     this.tg = new TelegramStub();
     this.errors = [];
     this.clock = clock;
     this.app = new App({
-      api: this.tg,
-      store,
-      minIntervalMs,
-      botUsername,
-      deck,
-      clock,
-      runoutStepMs,
+      api: this.tg, store, minIntervalMs, botUsername, deck, clock, runoutStepMs, miniAppName, webappUrl,
       onError: (e) => this.errors.push(e),
     });
+    this.hub = new Hub(this.app, { botToken: TEST_TOKEN });
+    this.app.attachHub(this.hub);
+    /** userId -> { session, inbox: [] } */
+    this.pages = new Map();
     this.date = 1_700_000_000; // Telegram message clock, in seconds
   }
 
@@ -131,28 +149,17 @@ export class Table {
     return this;
   }
 
-  /* --------------------------------------------------------------- input */
+  /* ------------------------------------------------------------- Telegram */
 
-  /**
-   * A message typed into the group. It takes its id from the same counter as
-   * the bot's own messages, as in a real supergroup — that is how the bot
-   * tells whether its table has been buried under the conversation. Each
-   * message is sent a few seconds after the previous one unless `date` says
-   * otherwise.
-   */
+  /** A message typed into the group — ids share one counter with the bot's. */
   async cmd(from, text, extra = {}) {
     this.date += extra.date != null ? 0 : 5;
-    const upd = cmdUpdate(this.chatId, from, text, {
-      message_id: this.tg.nextId++,
-      date: extra.date ?? this.date,
-      ...extra,
-    });
+    const upd = cmdUpdate(this.chatId, from, text, { message_id: this.tg.nextId++, date: extra.date ?? this.date, ...extra });
     await this.app.handleUpdate(upd);
     await this.app.settle();
     return this;
   }
 
-  /** A message in the private chat with the bot. */
   async dm(from, text) {
     await this.app.handleUpdate(dmUpdate(from, text));
     await this.app.settle();
@@ -171,97 +178,31 @@ export class Table {
     return this;
   }
 
-  /** Let `ms` of table time pass: turn timers, the automatic deal, the reveal. */
-  async advance(ms) {
-    await this.clock.advance(ms);
-    await this.app.settle();
-    return this;
-  }
-
-  /** Press a button on the TABLE message, found by its visible label. */
-  async press(from, label) {
-    const b = this.button(label);
-    if (!b) {
-      throw new Error(
-        `нет кнопки "${label}". Есть: ${this.buttons().map((x) => x.text).join(' | ')}`
-      );
-    }
-    return this.pressData(from, b.callback_data);
-  }
-
-  /** Press by raw callback_data — used to replay somebody else's button. */
-  async pressData(from, data, messageId = this.tableId) {
+  /** Press a button on a group message by raw callback_data (legacy buttons). */
+  async pressData(from, data, messageId = this.cardId) {
     await this.app.handleUpdate(pressUpdate(this.chatId, from, data, messageId));
     await this.app.settle();
     return this;
   }
 
-  /** Press a button on the most recent HOST PANEL (kick / rebuy / host). */
-  async panel(from, label) {
-    const m = this.lastPanel();
-    if (!m) throw new Error('панель не открыта');
-    const b = m.markup.inline_keyboard.flat().find((x) => x.text.toLowerCase().includes(String(label).toLowerCase()));
-    if (!b) throw new Error(`нет кнопки "${label}" в панели`);
-    return this.pressData(from, b.callback_data, m.id);
-  }
-
-  /** "🂠 Мои карты" — returns the popup exactly as Telegram shows it to `from`. */
-  async peek(from) {
-    await this.press(from, 'Мои карты');
-    return this.answer();
-  }
-
-  /* -------------------------------------------------------------- output */
-
-  get tableId() {
+  get cardId() {
     return this.room?.ui?.tableMessageId ?? null;
   }
 
+  /** The group card as it stands. */
   text() {
-    const m = this.tg.message(this.tableId);
-    return m ? m.text : '';
+    return this.tg.message(this.cardId)?.text ?? '';
   }
 
-  buttons() {
-    const m = this.tg.message(this.tableId);
-    return m?.markup?.inline_keyboard?.flat() ?? [];
+  cardButtons() {
+    return this.tg.message(this.cardId)?.markup?.inline_keyboard?.flat() ?? [];
   }
 
-  /**
-   * Find a button by its visible label, best match first. Ranking matters:
-   * a plain `includes` makes "ALL-IN" match "CALL 2 975 (all-in)" and the
-   * test then silently drives the wrong action.
-   */
-  button(label) {
-    const n = String(label).toLowerCase();
-    const all = this.buttons().filter((b) => b.callback_data);
-    return (
-      all.find((b) => b.text.toLowerCase() === n) ||
-      all.find((b) => b.text.toLowerCase().startsWith(n)) ||
-      all.find((b) => b.text.toLowerCase().includes(n)) ||
-      null
-    );
-  }
-
-  labels() {
-    return this.buttons().map((b) => b.text);
-  }
-
-  lastPanel() {
-    let found = null;
-    for (const [id, m] of this.tg.messages) {
-      if (m.chatId !== String(this.chatId) || m.deleted || id === this.tableId) continue;
-      if (m.markup?.inline_keyboard?.some((row) => row.some((b) => b.callback_data))) found = { id, ...m };
-    }
-    return found;
-  }
-
-  /** Text of the newest plain message (errors, results, prompts). */
+  /** Text of the newest group message that is not the card (replies, results). */
   lastPost() {
     let found = '';
     for (const [id, m] of this.tg.messages) {
-      if (m.chatId !== String(this.chatId) || m.deleted) continue;
-      if (id === this.tableId) continue;
+      if (m.chatId !== String(this.chatId) || m.deleted || id === this.cardId) continue;
       found = m.text;
     }
     return found;
@@ -271,26 +212,68 @@ export class Table {
     return this.tg.lastAnswer();
   }
 
-  /** Newest private message the bot sent to `u`. */
   lastDm(u) {
     const all = this.tg.dms(u.id);
     return all[all.length - 1] ?? null;
   }
 
-  /** The two hole cards the bot dealt `u` this hand (card ints), or null. */
-  hole(u) {
-    return this.room?.hand?.holes?.[String(u.id)] ?? null;
+  /* ------------------------------------------------------------- Mini App */
+
+  /** Open the table in `u`'s Mini App. Returns what the hub said. */
+  open(u, { initData = null, room = null } = {}) {
+    const inbox = [];
+    const r = this.hub.open(
+      { initData: initData ?? initDataFor(u, { startParam: this.room?.code, clock: this.clock }), room },
+      (msg) => inbox.push(JSON.parse(JSON.stringify(msg)))
+    );
+    if (r.session) this.pages.set(String(u.id), { session: r.session, inbox });
+    return r;
   }
 
-  /**
-   * Press without draining the outbox — the only way to observe coalescing,
-   * since state mutates synchronously but the redraw is queued.
-   */
-  async fire(from, label) {
-    const b = this.button(label);
-    if (!b) throw new Error(`нет кнопки "${label}"`);
-    await this.app.handleUpdate(pressUpdate(this.chatId, from, b.callback_data, this.tableId));
+  page(u) {
+    const id = String(u.id);
+    if (!this.pages.has(id)) {
+      const r = this.open(u);
+      if (!r.session) throw new Error(`не открылся стол для ${u.first_name}: ${r.text}`);
+    }
+    return this.pages.get(id);
+  }
+
+  close(u) {
+    const p = this.pages.get(String(u.id));
+    if (p) this.hub.close(p.session);
+    this.pages.delete(String(u.id));
+  }
+
+  /** Send one message from `u`'s Mini App, and let everything it causes happen. */
+  async send(u, msg) {
+    const p = this.page(u);
+    await this.hub.handle(p.session, msg);
+    await this.app.settle();
     return this;
+  }
+
+  /** The latest state `u`'s Mini App holds. */
+  state(u) {
+    const inbox = this.page(u).inbox;
+    for (let i = inbox.length - 1; i >= 0; i--) if (inbox[i].t === 'state') return inbox[i].state;
+    return null;
+  }
+
+  /** Every message `u`'s Mini App ever received, as one string — for leak hunts. */
+  received(u) {
+    return JSON.stringify(this.pages.get(String(u.id))?.inbox ?? []);
+  }
+
+  /** The last error toast `u` got, or null. */
+  lastError(u) {
+    const inbox = this.page(u).inbox;
+    for (let i = inbox.length - 1; i >= 0; i--) if (inbox[i].t === 'error') return inbox[i];
+    return null;
+  }
+
+  act(u, action, amount, { seq } = {}) {
+    return this.send(u, { t: 'act', action, amount, ...(seq != null ? { seq } : {}) });
   }
 
   /* -------------------------------------------------------------- sugar */
@@ -310,45 +293,51 @@ export class Table {
     return Object.values(cast).find((u) => String(u.id) === id) || null;
   }
 
+  /** The two hole cards the bot dealt `u` this hand (card ints), or null. */
+  hole(u) {
+    return this.room?.hand?.holes?.[String(u.id)] ?? null;
+  }
+
+  /** Let `ms` of table time pass: turn timers, the automatic deal, the reveal. */
+  async advance(ms) {
+    await this.clock.advance(ms);
+    await this.app.settle();
+    return this;
+  }
+
   /**
-   * Seat everybody and set the table up. `cast[0]` is the host. Everyone
-   * presses Start in private first (as the lobby asks them to), unless
-   * `dm: false` — for the tests about people who did not.
+   * Set the table up: `cast[0]` creates it in the group, everyone opens the
+   * Mini App from the card and sits down. With `dm` everyone has also
+   * pressed Start in the bot's private chat (so turn pings can reach them).
    */
   async seat(cast, { blinds = null, stack: chips = null, dm = true } = {}) {
     const list = Object.values(cast);
     if (dm) for (const u of list) await this.start(u);
     await this.cmd(list[0], '/newgame');
-    for (const u of list.slice(1)) await this.cmd(u, '/join');
-    if (chips) await this.cmd(list[0], `/stack ${chips}`);
-    if (blinds) await this.cmd(list[0], `/blinds ${blinds[0]} ${blinds[1]}`);
+    for (const u of list.slice(1)) await this.send(u, { t: 'sit' });
+    this.page(list[0]);
+    const patch = {};
+    if (chips) patch.startingStack = chips;
+    if (blinds) Object.assign(patch, { smallBlind: blinds[0], bigBlind: blinds[1] });
+    if (Object.keys(patch).length) await this.send(list[0], { t: 'settings', ...patch });
     return this;
   }
 
   async begin(cast, opts) {
     await this.seat(cast, opts);
-    await this.press(Object.values(cast)[0], 'Начать игру');
+    await this.send(Object.values(cast)[0], { t: 'start' });
     return this;
   }
 
-  /**
-   * Everyone shoves where they can, otherwise calls — the quickest way to a
-   * board with side pots. Note the deliberate `startsWith`: a plain substring
-   * match on "ALL-IN" also hits "CALL 2 975 (all-in)", which is a different
-   * action entirely.
-   */
+  /** Everyone shoves where they can, otherwise calls. */
   async shoveDown(cast, limit = 24) {
     let guard = 0;
     while (this.room.hand?.phase === 'betting' && guard++ < limit) {
       const who = this.actorOf(cast);
       if (!who) break;
-      const allIn = this.buttons().find((b) => b.text.startsWith('ALL-IN'));
-      if (allIn) {
-        await this.pressData(who, allIn.callback_data);
-        await this.press(who, 'ПОДТВЕРДИТЬ');
-      } else {
-        await this.press(who, this.button('CALL') ? 'CALL' : 'CHECK');
-      }
+      const l = this.state(who).legal;
+      if (l && (l.canBet || l.canRaise) && l.maxTotal > l.currentBet) await this.act(who, 'allin');
+      else await this.act(who, l?.canCheck ? 'check' : 'call');
     }
     return this;
   }
@@ -359,7 +348,8 @@ export class Table {
     while (this.room.hand?.phase === 'betting' && guard++ < limit) {
       const who = this.actorOf(cast);
       if (!who) break;
-      await this.press(who, this.button('CHECK') ? 'CHECK' : 'CALL');
+      const l = this.state(who).legal;
+      await this.act(who, l?.canCheck ? 'check' : 'call');
     }
     return this;
   }
