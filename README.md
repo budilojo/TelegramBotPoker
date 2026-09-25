@@ -112,7 +112,7 @@ bot/
   render.js      чистые функции room -> { text, keyboard }
   outbox.js      лимиты Telegram, склейка перерисовок, ошибки правки
   store.js       SQLite (node:sqlite): столы и кто нажал Start
-  *.test.js      142 теста на стабе Telegram
+  *.test.js      168 тестов на стабе Telegram и фальшивых часах
 tools/
   bots.mjs       боты для проверки стола
   make-icons.mjs генерация PNG-иконок из кода

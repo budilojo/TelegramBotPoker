@@ -55,19 +55,67 @@ export function seededDecks(seed = 1) {
 
 export { freshDeck };
 
+/**
+ * A clock that only moves when the test says so. Timers fire in order of
+ * their due time, each one awaited — so a turn timeout that draws the table
+ * and arms the next timer has fully happened before the next one fires.
+ */
+export class FakeClock {
+  constructor(start = Date.UTC(2026, 8, 25, 11, 0, 0)) {
+    this.t = start;
+    this.queue = [];
+    this.seq = 0;
+    this.now = () => this.t;
+    this.setTimeout = (fn, ms) => {
+      const h = { at: this.t + Math.max(0, Number(ms) || 0), fn, n: ++this.seq };
+      this.queue.push(h);
+      return h;
+    };
+    this.clearTimeout = (h) => {
+      this.queue = this.queue.filter((x) => x !== h);
+    };
+  }
+
+  async advance(ms) {
+    const end = this.t + ms;
+    for (let guard = 0; guard < 10_000; guard++) {
+      this.queue.sort((a, b) => a.at - b.at || a.n - b.n);
+      const next = this.queue[0];
+      if (!next || next.at > end) break;
+      this.queue.shift();
+      this.t = Math.max(this.t, next.at);
+      await next.fn();
+    }
+    this.t = end;
+  }
+
+  pending() {
+    return this.queue.length;
+  }
+}
+
 export class Table {
+  /**
+   * `runoutStepMs` is 0 by default: most tests want the showdown on screen
+   * the moment the last chip goes in. The reveal tests turn it on and move
+   * the fake clock by hand.
+   */
   constructor({
     chatId = -1001234, minIntervalMs = 0, store = new NullStore(), botUsername = 'ChipTableBot', deck = seededDecks(1),
+    clock = new FakeClock(), runoutStepMs = 0,
   } = {}) {
     this.chatId = chatId;
     this.tg = new TelegramStub();
     this.errors = [];
+    this.clock = clock;
     this.app = new App({
       api: this.tg,
       store,
       minIntervalMs,
       botUsername,
       deck,
+      clock,
+      runoutStepMs,
       onError: (e) => this.errors.push(e),
     });
     this.date = 1_700_000_000; // Telegram message clock, in seconds
@@ -119,6 +167,13 @@ export class Table {
 
   async raw(update) {
     await this.app.handleUpdate(update);
+    await this.app.settle();
+    return this;
+  }
+
+  /** Let `ms` of table time pass: turn timers, the automatic deal, the reveal. */
+  async advance(ms) {
+    await this.clock.advance(ms);
     await this.app.settle();
     return this;
   }

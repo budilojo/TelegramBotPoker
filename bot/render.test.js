@@ -10,14 +10,14 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createRoom, addPlayer, startGame, act, endGame } from './room.js';
+import { createRoom, addPlayer, startGame, act, endGame, syncTurn } from './room.js';
 import { renderRoom, renderResults, renderHole, actionKeyboard, commandHints } from './render.js';
 import { legalActions } from '../server/game.js';
 import { padEnd, visualWidth } from './fmt.js';
 import { stack } from './harness.js';
 
 /** Wall-clock differs per run and per timezone; nothing else may. */
-const norm = (s) => s.replace(/\d\d:\d\d/g, 'HH:MM');
+const norm = (s) => s.replace(/\d\d:\d\d(:\d\d)?/g, (m) => (m.length > 5 ? 'HH:MM:SS' : 'HH:MM'));
 
 function fixture() {
   const room = createRoom({
@@ -201,6 +201,38 @@ test('snapshot: a hand abandoned by /finish says so and shows no cards', () => {
       'Саша          10 000  0</pre>',
     ].join('\n')
   );
+});
+
+test('snapshot: a turn on the clock says when, and what happens then', () => {
+  const room = fixture();
+  room.settings.turnSeconds = 60;
+  deal(room);
+  syncTurn(room, Date.UTC(2026, 8, 25, 11, 0, 0));
+  const text = norm(renderRoom(room).text);
+  assert.match(text, /\n⏱ ход до HH:MM:SS — потом фолд$/, 'a fixed time, not a countdown that edits every second');
+});
+
+test('snapshot: an all-in board being turned over — the flop frame', () => {
+  const room = sidePotFixture();
+  room.ui.reveal = { handNo: room.hand.no, shown: 3 };
+  const v = renderRoom(room);
+  assert.equal(
+    norm(v.text),
+    [
+      '♠️ <b>РАЗДАЧА #1 · ОЛЛ-ИН</b> · HH:MM',
+      '',
+      '🂠 <b>J♠️ 9♥️ 4♦️</b>',
+      '',
+      'Иван: A♠️ A♥️',
+      'Макс: K♦️ K♣️',
+      'Дима: Q♥️ Q♦️',
+      'Саша: 7♣️ 2♦️',
+      '',
+      '<b>БАНК 25 000</b>',
+      '<i>Открываем борд…</i>',
+    ].join('\n')
+  );
+  assert.deepEqual(v.keyboard.map((r) => r.map((b) => b.text)), [['🂠 Мои карты']]);
 });
 
 test('snapshot: final results balance to zero', () => {

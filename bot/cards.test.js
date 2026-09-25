@@ -108,13 +108,17 @@ test('the group never sees a hole card before the showdown — not even in one e
   }
   for (const c of t.room.hand.board) assert.ok(shows(group, c), `the board card ${cardText(c)} is public`);
 
-  // The last check: now the hands that reached the showdown are shown.
+  // The last check. Now the winner shows — and only the winner: the two
+  // losing hands (nobody is all-in) are mucked, and stay unseen for good.
   await t.press(t.actorOf(cast), 'CHECK');
   assert.equal(t.room.hand.phase, 'complete');
   const after = everything(t, t.chatId);
-  for (const u of Object.values(cast)) {
-    for (const c of t.hole(u)) assert.ok(shows(after, c), `at showdown ${u.first_name}'s cards are shown`);
+  for (const c of t.hole(cast.ivan)) assert.ok(shows(after, c), 'the winning aces are shown');
+  for (const u of [cast.max, cast.dima]) {
+    for (const c of t.hole(u)) assert.ok(!shows(after, c), `${u.first_name} lost and mucked, ${cardText(c)} was shown`);
+    assert.match(t.text(), new RegExp(`${u.first_name}: карты не показаны`));
   }
+  assert.doesNotMatch(t.text(), /Пара K|Старшая/, 'not even the name of a mucked hand');
 });
 
 test('a folded hand is never shown — not at showdown, not anywhere', async () => {
@@ -146,8 +150,10 @@ test('a folded hand is never shown — not at showdown, not anywhere', async () 
 
   const group = everything(t, t.chatId);
   for (const c of t.hole(cast.dima)) assert.ok(!shows(group, c), `folded ${cardText(c)} was shown`);
-  for (const c of [...t.hole(cast.ivan), ...t.hole(cast.max)]) assert.ok(shows(group, c));
+  for (const c of t.hole(cast.ivan)) assert.ok(shows(group, c), 'the winner shows');
+  for (const c of t.hole(cast.max)) assert.ok(!shows(group, c), 'the loser mucks');
   assert.equal(t.room.hand.shown[String(cast.dima.id)], undefined, 'and it is not even in the record');
+  assert.doesNotMatch(t.text(), /Дима:/, 'a folded player is not even listed at the showdown');
 });
 
 test('winning because everyone folded shows nobody\'s cards, the winner\'s included', async () => {
@@ -273,7 +279,9 @@ test('the best hand takes the pot — the bot reads the cards, nobody picks', as
   assert.equal(stackOf(cast.max), 9950);
   assert.equal(stackOf(cast.dima), 9950);
   assert.match(t.text(), /🏆 <b>Иван<\/b> \+150 · Сет 9/);
-  assert.match(t.text(), /Макс: K♦️ K♣️ — Пара K/);
+  assert.match(t.text(), /Иван: 9♣️ 9♦️ — Сет 9/);
+  assert.match(t.text(), /Макс: карты не показаны/, 'the beaten kings are mucked');
+  assert.doesNotMatch(everything(t, t.chatId).join('\n'), /K♦️ K♣️/);
 });
 
 test('equal hands split the pot, and not a chip goes missing on the odd one', async () => {

@@ -13,20 +13,21 @@
  * - Buttons are visible to everybody in the group. They are NOT a permission:
  *   every press is re-checked against `from.id` on the server.
  * - The group message never contains a card that is not public: the board,
- *   and at showdown the hands of the players who reached it. Hole cards go to
+ *   and at showdown the hands that must be shown (pot winners, all-ins; the
+ *   other losers muck). Hole cards go to
  *   the private chat, or to the "🂠 Мои карты" popup that Telegram shows only
  *   to the person who pressed it.
  * - Command hints are wrapped in <code>. Telegram turns a bare `/allin` in a
  *   bot's message into a link that SENDS the command on tap — a stray tap on
  *   the hint line would shove somebody's stack. <code> is copied, not sent.
  */
-import { legalActions, results } from '../server/game.js';
+import { legalActions, results, distribution } from '../server/game.js';
 import { NS, encode } from './cb.js';
 import {
-  num, signed, esc, padEnd, padStart, hhmm, STREET_RU, ACTION_RU,
+  num, signed, esc, padEnd, padStart, hhmm, hhmmss, STREET_RU, ACTION_RU,
 } from './fmt.js';
-import { startBlocker } from './room.js';
-import { cardsText, holeOf } from './cards.js';
+import { startBlocker, turnKey, AUTO_NEXT_MS } from './room.js';
+import { cardsText, holeOf, boardShown } from './cards.js';
 
 const NAME_W = 10;
 const STACK_W = 8;
@@ -49,7 +50,9 @@ export function renderRoom(room, opts = {}) {
   if (room.status === 'lobby') return lobbyView(room, opts);
   const h = room.hand;
   if (!h) return lobbyView(room, opts);
-  if (h.phase === 'complete') return completeView(room);
+  if (h.phase === 'complete') {
+    return room.ui?.reveal?.handNo === h.no ? revealView(room) : completeView(room);
+  }
   return bettingView(room);
 }
 
@@ -66,7 +69,8 @@ function lobbyView(room, { botUsername = '' } = {}) {
     '♠️ <b>НОВЫЙ СТОЛ</b> · техасский холдем',
     '',
     `Стек ${num(s.startingStack)} · блайнды ${num(s.smallBlind)}/${num(s.bigBlind)}` +
-      (s.blindMode === 'levels' ? ` · уровни по ${s.levelMinutes} мин` : ''),
+      (s.blindMode === 'levels' ? ` · уровни по ${s.levelMinutes} мин` : '') +
+      (s.turnSeconds ? ` · ⏱ ${s.turnSeconds} с на ход` : ''),
     '',
   ];
 
@@ -224,6 +228,12 @@ function bettingView(room) {
     else bits.push('можно чекнуть');
     lines.push(`▶️ <b>${esc(actor.name)}</b> · ${bits.join(' · ')}`);
     lines.push(`<code>${esc(commandHints(legal))}</code>`);
+    // A fixed time, not a countdown: a ticking number would turn every
+    // second into an edit and burn the chat's rate limit in a minute.
+    const t = room.turn;
+    if (t && t.key === turnKey(room) && t.deadline != null) {
+      lines.push(`⏱ ход до ${hhmmss(t.deadline)} — потом ${legal.canCheck ? 'чек' : 'фолд'}`);
+    }
   }
   const lost = undelivered(room);
   if (lost.length) {
@@ -351,32 +361,45 @@ function completeView(room) {
 
   if (h.aborted) {
     lines.push('<i>Игру завершили посреди раздачи — поставленные фишки вернулись владельцам.</i>');
+  } else if (!shown) {
+    for (const x of h.payouts || []) {
+      lines.push(`🏆 <b>${esc(x.name)}</b> +${num(x.amount)} — остальные сбросили`);
+    }
   } else {
-    const pay = h.payouts || [];
-    for (const x of pay) {
-      const hand = shown?.[x.playerId]?.name;
-      lines.push(
-        `🏆 <b>${esc(x.name)}</b> +${num(x.amount)}` +
-          (hand ? ` · ${esc(hand)}` : shown ? '' : ' — остальные сбросили')
-      );
+    // Winnings and refunds, told apart: chips nobody called coming back are
+    // not a won pot and get no trophy. Both figures come from the engine's
+    // own `distribution` — the call that actually paid them.
+    const { perPot } = distribution(room, h.pots);
+    const won = new Map();
+    const back = new Map();
+    h.pots.forEach((pot, i) => {
+      const into = pot.eligible.length > 1 ? won : back;
+      for (const { id, share } of perPot[i]) into.set(id, (into.get(id) || 0) + share);
+    });
+    for (const p of room.players) {
+      if (!won.has(p.id)) continue;
+      lines.push(`🏆 <b>${esc(p.name)}</b> +${num(won.get(p.id))} · ${esc(shown[p.id]?.name ?? '')}`);
+    }
+    for (const p of room.players) {
+      if (!back.has(p.id)) continue;
+      lines.push(`↩️ ${esc(p.name)} +${num(back.get(p.id))} — возврат неуравненной ставки`);
     }
 
-    if (shown) {
-      // Only the hands that reached the showdown. A folded hand is never
-      // shown — not here, not anywhere.
+    // Only the hands that have to be shown: pot winners and all-ins. A
+    // losing hand is mucked unseen — its name would give it away too — and a
+    // folded hand is never shown at all.
+    lines.push('');
+    for (const p of room.players) {
+      const sh = shown[p.id];
+      if (sh) lines.push(`${esc(p.name)}: ${cardsText(sh.cards)} — ${esc(sh.name)}`);
+      else if (h.mucked?.includes(p.id)) lines.push(`${esc(p.name)}: карты не показаны`);
+    }
+    if (h.pots.length > 1) {
       lines.push('');
-      for (const p of room.players) {
-        const s = shown[p.id];
-        if (!s) continue;
-        lines.push(`${esc(p.name)}: ${cardsText(s.cards)} — ${esc(s.name)}`);
-      }
-      if (h.pots.length > 1) {
-        lines.push('');
-        for (const pot of h.pots) {
-          const names = pot.winners.map((id) => nameOf(room, id));
-          const tag = pot.eligible.length === 1 ? ' (возврат)' : '';
-          lines.push(`${potLabel(pot)} ${num(pot.amount)} → ${esc(names.join(' + '))}${tag}`);
-        }
+      for (const pot of h.pots) {
+        const names = pot.winners.map((id) => nameOf(room, id));
+        const tag = pot.eligible.length === 1 ? ' (возврат)' : '';
+        lines.push(`${potLabel(pot)} ${num(pot.amount)} → ${esc(names.join(' + '))}${tag}`);
       }
     }
   }
@@ -386,17 +409,42 @@ function completeView(room) {
     `<pre>${esc(
       visible(room)
         .map((p) => padEnd(p.name, NAME_W + 2) + padStart(num(p.stack), STACK_W) +
-          '  ' + signed(p.stack - p.stats.buyIn))
+          '  ' + signed(p.stack - p.stats.buyIn) +
+          // Who will NOT be dealt next hand — the moment it matters is now.
+          (p.left ? '  вышел' : p.sittingOut ? '  пропуск' : ''))
         .join('\n')
     )}</pre>`
   );
   if (room.notice) lines.push(`<i>${esc(room.notice)}</i>`);
+  if (room.autoNext && room.status === 'playing') {
+    lines.push(`<i>Следующая раздача сама через ${AUTO_NEXT_MS / 1000} с — или кнопкой.</i>`);
+  }
 
   const kb = [];
   if (room.status === 'paused') kb.push([btn('▶️ Продолжить', NS.GAME, 'resume', room.seq)]);
   else kb.push([btn('🃏 Следующая раздача', NS.GAME, 'next', room.seq)]);
   kb.push([peekButton()]);
   return { text: lines.join('\n').trimEnd(), keyboard: kb };
+}
+
+/**
+ * An all-in board being turned over, one street at a time. The outcome is
+ * already decided (and paid) — this is only what the group is shown while
+ * the cards come out. Tabled here: the all-in hands, as at a real table.
+ * A player who is NOT all-in shows only if they win, so not before the end.
+ */
+function revealView(room) {
+  const h = room.hand;
+  const board = boardShown(room);
+  const lines = [`♠️ <b>РАЗДАЧА #${h.no} · ОЛЛ-ИН</b> · ${hhmm(h.startedAt || Date.now())}`, ''];
+  lines.push(board.length ? `🂠 <b>${cardsText(board)}</b>` : '🂠 <i>Борд ещё не открыт.</i>', '');
+  for (const p of room.players) {
+    const s = h.shown?.[p.id];
+    if (s && p.allIn) lines.push(`${esc(p.name)}: ${cardsText(s.cards)}`);
+  }
+  const pot = h.pots.reduce((sum, x) => sum + x.amount, 0);
+  lines.push('', `<b>БАНК ${num(pot)}</b>`, '<i>Открываем борд…</i>');
+  return { text: lines.join('\n'), keyboard: [[peekButton()]] };
 }
 
 function finishedView(room) {

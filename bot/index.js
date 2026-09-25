@@ -109,6 +109,7 @@ async function shutdown(signal) {
   console.log(`[bot] ${signal} — останавливаюсь`);
   try {
     await bot.stop();
+    app.stop(); // turn timers and the automatic deal come back from the database
     await app.settle(); // flush any redraw that was still coalescing
   } catch (err) {
     console.error('[bot]', err);

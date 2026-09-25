@@ -34,6 +34,11 @@ import { shuffled } from './deck.js';
 const UNDO_DEPTH = 40;
 const HISTORY_DEPTH = 60;
 
+/** With the turn timer on, the next hand is dealt this long after the last one ends. */
+export const AUTO_NEXT_MS = 10_000;
+/** This many timed-out turns in a row and the player is sat out. */
+export const TIMEOUTS_TO_SIT_OUT = 2;
+
 /** Where decks come from. Tests inject a stacked deck; production shuffles. */
 const defaultDeck = () => shuffled();
 
@@ -57,9 +62,12 @@ export function createRoom({ chatId, host, title = '', startingStack = 10000, sm
       blindMode: 'fixed', // 'fixed' | 'levels'
       levelMinutes: 20,
       schedule: makeSchedule(sb, bb),
+      turnSeconds: 0, // 0 = no turn timer; the host opts in with /timer
     },
     level: { index: 0, elapsedMs: 0, runningSince: null },
     pendingBlinds: null,
+    turn: null, // { key, actorId, deadline, remaining } — the turn timer
+    autoNext: null, // { key, deadline, remaining } — the next deal, with the timer on
     players: [],
     hostId: null,
     dealerId: null, // the BUTTON seat (engine naming), not a person dealing
@@ -80,6 +88,7 @@ export function createRoom({ chatId, host, title = '', startingStack = 10000, sm
       lastMsgId: 0, // newest message id seen in the chat — to tell if the table got buried
       pendingBet: null, // { userId, promptMessageId }
       armedAllIn: null, // { userId } — ALL-IN by button needs a second tap
+      reveal: null, // { handNo, shown } — an all-in board being turned card by card
     },
   };
   if (host) {
@@ -103,6 +112,7 @@ export function addPlayer(room, user) {
     if (existing.left || existing.sittingOut) {
       existing.left = false;
       existing.sittingOut = false;
+      existing.timeouts = 0;
       touch(room);
     }
     return existing;
@@ -116,6 +126,7 @@ export function addPlayer(room, user) {
     sittingOut: false,
     left: false,
     kicked: false,
+    timeouts: 0, // turns in a row lost to the timer
     dm: user.dm ?? null, // 'ok' | 'fail' | null — can the bot write to them?
     role: 'player', // the engine deals in anyone whose role is not 'dealer'
     waiting: room.status !== 'lobby', // joined mid-game -> dealt in next hand
@@ -261,7 +272,7 @@ export function bumpLevel(room, userId) {
  */
 const SNAPSHOT_KEYS = [
   'stack', 'inHand', 'folded', 'allIn', 'bet', 'committed', 'acted',
-  'raiseLocked', 'lastAction', 'lastAmount', 'waiting', 'sittingOut', 'kicked', 'left',
+  'raiseLocked', 'lastAction', 'lastAmount', 'waiting', 'sittingOut', 'kicked', 'left', 'timeouts',
 ];
 
 function pushUndo(room, label) {
@@ -351,6 +362,10 @@ export function startBlocker(room) {
 function deal(room, deckFn) {
   const r = startHand(room);
   if (r.error) return r;
+  room.hand.voluntary = 0; // moves people made themselves this hand
+  room.hand.timeouts = 0; // moves the timer made for them
+  room.autoNext = null;
+  room.ui.reveal = null;
   dealHoles(room, deckFn());
   syncCards(room);
   sealUndo(room);
@@ -377,12 +392,15 @@ export function startGame(room, userId, { deck = defaultDeck } = {}) {
   return { ok: true };
 }
 
-export function nextHand(room, userId, { deck = defaultDeck } = {}) {
+/**
+ * @param auto  dealt by the table's own clock (turn timer on), not by a person
+ */
+export function nextHand(room, userId, { deck = defaultDeck, auto = false } = {}) {
   if (room.status === 'finished') return { error: 'GAME_FINISHED' };
   if (room.status === 'paused') return { error: 'GAME_PAUSED' };
   if (room.status === 'lobby') return { error: 'NOT_PLAYING' };
   if (room.hand && room.hand.phase !== 'complete') return { error: 'HAND_IN_PROGRESS' };
-  if (!isSeated(room, userId) && !isHost(room, userId)) return { error: 'NOT_SEATED' };
+  if (!auto && !isSeated(room, userId) && !isHost(room, userId)) return { error: 'NOT_SEATED' };
 
   if (dealable(room).length < 2) {
     touch(room);
@@ -432,25 +450,172 @@ export function act(room, userId, action, amount, seq) {
     }
   }
 
+  const h = room.hand;
   const r = applyAction(room, String(userId), action, amount);
   if (r.error) return r;
   room.notice = null; // a notice is news, not furniture: the next action clears it
+  const p = findPlayer(room, userId);
+  if (p) p.timeouts = 0; // they are here
+  h.voluntary = (h.voluntary || 0) + 1;
+  afterMove(room);
+  return r;
+}
+
+/** Everything that follows a move, whoever or whatever made it. */
+function afterMove(room) {
   room.ui.armedAllIn = null;
   room.ui.pendingBet = null;
   syncCards(room);
   sealUndo(room);
   afterHandMaybeOver(room);
   touch(room);
+}
+
+/* ------------------------------------------------------------- turn timer */
+
+/**
+ * Identifies one turn: the hand, how far it has got, and who is on the
+ * clock. The engine logs every move and every new street, so the key changes
+ * with each of them — including when the same player acts twice in a row
+ * across a street (heads-up big blind), who then gets a fresh clock.
+ */
+export function turnKey(room) {
+  const h = room.hand;
+  if (!h || h.phase !== 'betting' || !h.actorId) return null;
+  return `${h.no}:${h.log.length}:${h.actorId}`;
+}
+
+/**
+ * Bring the turn timer in line with the room. Idempotent — call it as often
+ * as you like. A pause parks the clock (the remaining time is kept), and so
+ * does saving to disk: time the bot spent down is nobody's time.
+ *
+ * @returns the timer, or null when there is none to run
+ */
+export function syncTurn(room, now) {
+  const secs = room.settings.turnSeconds || 0;
+  const key = turnKey(room);
+  if (!secs || !key || (room.status !== 'playing' && room.status !== 'paused')) {
+    room.turn = null;
+    return null;
+  }
+  if (room.turn?.key !== key) {
+    room.turn = { key, actorId: room.hand.actorId, deadline: null, remaining: secs * 1000 };
+  }
+  const t = room.turn;
+  if (room.status === 'paused') {
+    if (t.deadline != null) {
+      t.remaining = Math.max(0, t.deadline - now);
+      t.deadline = null;
+    }
+    return null;
+  }
+  if (t.deadline == null) t.deadline = now + t.remaining;
+  return t;
+}
+
+/**
+ * The clock ran out. The table's rule — which the host switched on — makes
+ * the one move that costs nothing: check if it is free, fold if it is not.
+ * Never a call, never a bet: the timer may end your hand, it may not spend
+ * your chips.
+ *
+ * `key` is the turn the timer was armed for. If anything has happened since
+ * (the player moved, a street turned, the hand ended) it no longer matches
+ * and nothing is done — which is also what makes a late timer harmless.
+ */
+export function timeoutMove(room, key, now) {
+  const t = room.turn;
+  if (room.status !== 'playing') return { error: 'NOT_PLAYING' };
+  if (!key || turnKey(room) !== key || !t || t.key !== key) return { error: 'STALE' };
+  if (t.deadline == null || now < t.deadline) return { error: 'EARLY' };
+
+  const h = room.hand;
+  const p = findPlayer(room, h.actorId);
+  const l = legalActions(room, p.id);
+  const action = l?.canCheck ? 'check' : 'fold';
+  const r = applyAction(room, p.id, action);
+  if (r.error) return r;
+
+  h.timeouts = (h.timeouts || 0) + 1;
+  p.timeouts = (p.timeouts || 0) + 1;
+  const what = action === 'check' ? 'чек' : 'фолд';
+  if (p.timeouts >= TIMEOUTS_TO_SIT_OUT) {
+    p.sittingOut = true;
+    room.notice = `${p.name}: время вышло — ${what}. Второй раз подряд — пропускает раздачи; /join, чтобы вернуться.`;
+  } else {
+    room.notice = `${p.name}: время вышло — ${what}.`;
+  }
+  afterMove(room);
+  return { ok: true, action, playerId: p.id, satOut: p.sittingOut };
+}
+
+/* ------------------------------------------------------- automatic dealing */
+
+/**
+ * With the turn timer on, the table deals itself: AUTO_NEXT_MS after a hand
+ * ends — and after an all-in board has finished turning over. Parked on
+ * pause and on disk, like the turn timer.
+ */
+export function syncAutoNext(room, now) {
+  const h = room.hand;
+  const on =
+    (room.settings.turnSeconds || 0) > 0 &&
+    (room.status === 'playing' || room.status === 'paused') &&
+    h && h.phase === 'complete' &&
+    !(room.ui.reveal && room.ui.reveal.handNo === h.no) &&
+    room.autoNextHalted !== h.no; // it tried and there was nobody to deal to
+  if (!on) {
+    room.autoNext = null;
+    return null;
+  }
+  const key = `next:${h.no}`;
+  if (room.autoNext?.key !== key) room.autoNext = { key, deadline: null, remaining: AUTO_NEXT_MS };
+  const a = room.autoNext;
+  if (room.status === 'paused') {
+    if (a.deadline != null) {
+      a.remaining = Math.max(0, a.deadline - now);
+      a.deadline = null;
+    }
+    return null;
+  }
+  if (a.deadline == null) a.deadline = now + a.remaining;
+  return a;
+}
+
+/** The table's own clock deals the next hand, if it is still due. */
+export function autoNextHand(room, key, now, opts = {}) {
+  const a = room.autoNext;
+  if (!a || a.key !== key || room.status !== 'playing') return { error: 'STALE' };
+  if (a.deadline == null || now < a.deadline) return { error: 'EARLY' };
+  room.autoNext = null;
+  const r = nextHand(room, null, { ...opts, auto: true });
+  if (r.error === 'NOT_ENOUGH_PLAYERS') {
+    // Do not retry every ten seconds into an empty table: wait for a person
+    // to press "next hand" (or /next) once people are back.
+    room.autoNextHalted = room.hand?.no ?? null;
+    room.notice = 'Автораздача остановлена: за столом меньше двух игроков. /join — вернуться, /next — раздать.';
+    touch(room);
+  }
   return r;
 }
 
-/** Hand finished (by showdown or folds): trim history, end the game if it is won. */
+/**
+ * Hand finished (by showdown or folds): trim history, end the game if it is
+ * won — and if the timer played the whole hand while nobody moved a finger,
+ * stop the table instead of letting it deal to an empty room forever.
+ */
 function afterHandMaybeOver(room) {
   const h = room.hand;
   if (!h || h.phase !== 'complete') return;
   if (room.history.length > HISTORY_DEPTH) room.history.length = HISTORY_DEPTH;
   const contenders = room.players.filter((p) => !p.kicked && !p.left);
-  if (gameOverCheck({ players: contenders })) finish(room);
+  if (gameOverCheck({ players: contenders })) return finish(room);
+  if ((h.timeouts || 0) > 0 && !(h.voluntary || 0) && room.status === 'playing') {
+    room.status = 'paused';
+    setLevelClock(room, false);
+    room.notice = 'За всю раздачу никто не сходил сам — пауза. Хост продолжит: /resume.';
+  }
 }
 
 function finish(room) {
@@ -496,6 +661,8 @@ export function updateSettings(room, userId, patch = {}) {
   const mode =
     patch.blindMode === 'levels' || patch.blindMode === 'fixed' ? patch.blindMode : cur.blindMode;
   const minutes = intIn(patch.levelMinutes, 3, 180, cur.levelMinutes);
+  const turnSeconds =
+    patch.turnSeconds === 0 ? 0 : patch.turnSeconds != null ? intIn(patch.turnSeconds, 15, 600, 60) : cur.turnSeconds || 0;
 
   const editableBlinds = inLobby || mode === 'fixed';
   const sb = editableBlinds ? intIn(patch.smallBlind, 1, 1_000_000, cur.smallBlind) : cur.smallBlind;
@@ -507,12 +674,13 @@ export function updateSettings(room, userId, patch = {}) {
     : cur.startingStack;
 
   const blindsMoved = sb !== cur.smallBlind || bb !== cur.bigBlind;
+  const timerMoved = turnSeconds !== (cur.turnSeconds || 0);
   const changed =
-    blindsMoved || stack !== cur.startingStack || mode !== cur.blindMode || minutes !== cur.levelMinutes;
+    blindsMoved || timerMoved || stack !== cur.startingStack || mode !== cur.blindMode || minutes !== cur.levelMinutes;
   if (!changed) return { ok: true, noop: true };
 
   pushUndo(room, 'изменение настроек');
-  room.settings = { ...cur, startingStack: stack, blindMode: mode, levelMinutes: minutes };
+  room.settings = { ...cur, startingStack: stack, blindMode: mode, levelMinutes: minutes, turnSeconds };
 
   if (inLobby) {
     room.settings.smallBlind = sb;
@@ -540,11 +708,15 @@ export function updateSettings(room, userId, patch = {}) {
     }
   }
 
-  room.notice = inLobby
-    ? `Настройки: стек ${stack}, блайнды ${room.settings.smallBlind}/${room.settings.bigBlind}`
-    : blindsMoved
-      ? `Блайнды со следующей раздачи: ${sb}/${bb}`
-      : `Уровни блайндов: по ${minutes} мин`;
+  room.notice = timerMoved && !blindsMoved
+    ? turnSeconds
+      ? `Таймер хода: ${turnSeconds} с. Не успел — чек или фолд; следующая раздача сама через ${AUTO_NEXT_MS / 1000} с.`
+      : 'Таймер хода выключен. Следующую раздачу запускают вручную.'
+    : inLobby
+      ? `Настройки: стек ${stack}, блайнды ${room.settings.smallBlind}/${room.settings.bigBlind}`
+      : blindsMoved
+        ? `Блайнды со следующей раздачи: ${sb}/${bb}`
+        : `Уровни блайндов: по ${minutes} мин`;
   touch(room);
   return { ok: true };
 }
@@ -702,11 +874,19 @@ export function endGame(room, userId) {
  * The level clock is parked on the way out: time the bot spent restarting is
  * not time the table spent playing.
  */
-export function serialize(room) {
+export function serialize(room, now = Date.now()) {
   const copy = clone(room);
   if (copy.level?.runningSince) {
     copy.level.elapsedMs += Date.now() - copy.level.runningSince;
     copy.level.runningSince = null;
+  }
+  // Same for the turn timer and the next deal: saved as time LEFT, so that a
+  // bot that was down for ten minutes does not time everybody out on waking.
+  for (const c of [copy.turn, copy.autoNext]) {
+    if (c && c.deadline != null) {
+      c.remaining = Math.max(0, c.deadline - now);
+      c.deadline = null;
+    }
   }
   return copy;
 }
@@ -719,6 +899,9 @@ export function deserialize(data) {
   room.ui.lastText = null; // force a redraw of the table message
   room.ui.lastKb = null;
   room.ui.lastMsgId = room.ui.lastMsgId || 0;
+  // A board half-way through turning over is shown whole after a restart.
+  room.ui.reveal = null;
+  room.settings.turnSeconds = room.settings.turnSeconds || 0;
   if (room.level && room.status === 'playing') room.level.runningSince = Date.now();
   return room;
 }

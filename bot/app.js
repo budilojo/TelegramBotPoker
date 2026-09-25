@@ -15,8 +15,11 @@
  * 2. Nobody ever sees somebody else's cards. Hole cards leave the bot in
  *    exactly two ways: a private message to `chat_id = owner's Telegram id`,
  *    and a callback answer — a popup Telegram shows only to the person who
- *    pressed. The group sees the board, and at showdown the hands that
- *    reached it. Nothing else.
+ *    pressed. The group sees the board, and at showdown the hands that must
+ *    be shown — pot winners and all-ins. Nothing else.
+ *
+ * The one move the bot makes in somebody's place is the turn timer's, and
+ * only because the host switched it on: a free check, or a fold. Never chips.
  *
  * Note on ordering: every mutation that moves a chip or a card happens
  * synchronously, before the first `await`. Two updates that arrive in the
@@ -47,6 +50,7 @@ const HELP = [
   '',
   '<b>Хост:</b> /stack 10000 · /blinds 25 50 · /levels 20 · /rebuy · /kick · /host · ' +
     '/level · /pause · /resume · /undo · /finish · /cancel',
+  '<b>/timer 60</b> — таймер хода: не успел — чек или фолд, раздачи идут сами. /timer off — выключить.',
   '',
   'Бот не может написать первым: чтобы карты приходили в личку, один раз нажмите Start у бота.',
 ].join('\n');
@@ -60,18 +64,35 @@ const HELP_DM = [
 
 const WELCOME_DM = '✅ Готово: карты будут приходить сюда. Возвращайтесь в группу.';
 
+/** The real clock. Tests pass a fake one and move time by hand. */
+const REAL_CLOCK = {
+  now: () => Date.now(),
+  setTimeout: (fn, ms) => setTimeout(fn, ms),
+  clearTimeout: (h) => clearTimeout(h),
+};
+
 export class App {
   /**
-   * @param deck  test seam: `(room) => number[52]` — a stacked deck. Production
-   *              leaves it out and every hand is shuffled with crypto.randomInt.
+   * @param deck          test seam: `(room) => number[52]` — a stacked deck.
+   *                      Production leaves it out: every hand is shuffled with
+   *                      crypto.randomInt.
+   * @param clock         `{ now, setTimeout, clearTimeout }` — the turn timer,
+   *                      the automatic deal and the board reveal all run on it
+   * @param runoutStepMs  pause between streets when an all-in board is turned
+   *                      over; 0 shows the whole board at once
    */
   constructor({
     api, store = new NullStore(), minIntervalMs = 1000, botUsername = '', onError = null, deck = null,
+    clock = REAL_CLOCK, runoutStepMs = 1500,
   } = {}) {
     this.api = api;
     this.store = store;
     this.botUsername = botUsername;
     this.deck = deck;
+    this.clock = clock;
+    this.runoutStepMs = runoutStepMs;
+    /** `${kind}:${chatId}` -> { key, deadline, h } — every timer the bot holds */
+    this.handles = new Map();
     this.log = onError || ((err) => console.error('[bot]', err?.description || err?.message || err));
     this.outbox = new Outbox(api, { minIntervalMs, onError: this.log });
     /** @type {Map<string, object>} */
@@ -95,7 +116,7 @@ export class App {
 
   save(room) {
     try {
-      this.store.save(room, R.serialize(room));
+      this.store.save(room, R.serialize(room, this.clock.now()));
     } catch (err) {
       this.log(err);
     }
@@ -103,6 +124,7 @@ export class App {
 
   /** After a restart: redraw every live table so play resumes where it stopped. */
   async resume() {
+    this.syncClocks(); // timers come back with the time that was LEFT, not less
     let drawn = 0;
     for (const room of this.rooms.values()) {
       if (room.status === 'finished') continue;
@@ -129,6 +151,7 @@ export class App {
    * and the message is edited in place.
    */
   draw(room, { immediate = false } = {}) {
+    this.syncClocks(); // the table shows the turn deadline: set it before drawing
     const produce = async () => {
       const view = renderRoom(room, { botUsername: this.botUsername });
       const kbKey = JSON.stringify(view.keyboard?.length ? { inline_keyboard: view.keyboard } : null);
@@ -228,7 +251,138 @@ export class App {
       if (update.callback_query) {
         await this.outbox.answer(update.callback_query.id, 'Ошибка. Попробуйте ещё раз.');
       }
+    } finally {
+      // Whatever just happened may have started a turn, ended one or ended a
+      // hand: re-arm the timers from the state, not from what we think changed.
+      this.syncClocks();
     }
+  }
+
+  /* --------------------------------------------------------------- clocks */
+
+  /**
+   * The turn timer and the automatic deal, for every table. Idempotent: the
+   * room layer works out what should be running, this only makes the real
+   * timers match — arming new ones, dropping ones nobody needs.
+   */
+  syncClocks() {
+    const now = this.clock.now();
+    const live = new Set();
+    for (const room of this.rooms.values()) {
+      const chatId = room.chatId;
+      const turn = R.syncTurn(room, now);
+      this.arm(`turn:${chatId}`, turn, () => this.onTurnTimeout(chatId, turn.key));
+      const next = R.syncAutoNext(room, now);
+      this.arm(`next:${chatId}`, next, () => this.onAutoNext(chatId, next.key));
+      live.add(`turn:${chatId}`).add(`next:${chatId}`).add(`reveal:${chatId}`);
+    }
+    for (const [id, cur] of this.handles) {
+      if (!live.has(id)) {
+        this.clock.clearTimeout(cur.h);
+        this.handles.delete(id);
+      }
+    }
+  }
+
+  arm(id, timer, fire) {
+    const cur = this.handles.get(id);
+    const deadline = timer?.deadline ?? null;
+    if (cur && cur.key === timer?.key && cur.deadline === deadline) return;
+    if (cur) this.clock.clearTimeout(cur.h);
+    this.handles.delete(id);
+    if (deadline == null) return;
+    const h = this.clock.setTimeout(() => {
+      this.handles.delete(id);
+      return this.guard(fire);
+    }, Math.max(0, deadline - this.clock.now()));
+    this.handles.set(id, { key: timer.key, deadline, h });
+  }
+
+  /** A timer callback runs outside any update: it must never throw into the void. */
+  async guard(fn) {
+    try {
+      await fn();
+    } catch (err) {
+      this.log(err);
+    }
+  }
+
+  /** Stop every timer — shutdown, and the end of a test. */
+  stop() {
+    for (const cur of this.handles.values()) this.clock.clearTimeout(cur.h);
+    this.handles.clear();
+  }
+
+  /**
+   * The clock ran out on somebody. `key` names the exact turn it was armed
+   * for; if they moved in the meantime, the room layer refuses and nothing
+   * happens.
+   */
+  async onTurnTimeout(chatId, key) {
+    const room = this.room(chatId);
+    if (!room) return;
+    const r = R.timeoutMove(room, key, this.clock.now());
+    if (!r.error) await this.afterAction(room);
+    this.syncClocks(); // a timer that woke a hair early is simply re-armed
+  }
+
+  async onAutoNext(chatId, key) {
+    const room = this.room(chatId);
+    if (!room) return;
+    const r = R.autoNextHand(room, key, this.clock.now(), this.dealOpts(room));
+    if (!r.error) await this.afterDeal(room, r);
+    else if (r.error === 'NOT_ENOUGH_PLAYERS') await this.draw(room);
+    this.syncClocks();
+  }
+
+  /* --------------------------------------------------------- board reveal */
+
+  /**
+   * An all-in before the river: the board was dealt out to five cards in one
+   * go, and the pot is already paid. What remains is to SHOW it the way a
+   * table does — flop, turn, river — one step every `runoutStepMs`.
+   *
+   * Runs on timers, never on a sleep: grammY hands the bot one update at a
+   * time, and a four-second sleep inside a handler would freeze every other
+   * chat the bot is in.
+   *
+   * @returns true when a reveal started (and will finish the job itself)
+   */
+  startReveal(room) {
+    const h = room.hand;
+    if (!this.runoutStepMs || !h || h.phase !== 'complete' || h.runoutFrom == null || h.runoutShown) return false;
+    h.runoutShown = true;
+    room.ui.reveal = { handNo: h.no, shown: h.runoutFrom };
+    this.scheduleReveal(room.chatId, h.no);
+    return true;
+  }
+
+  scheduleReveal(chatId, handNo) {
+    const id = `reveal:${chatId}`;
+    const h = this.clock.setTimeout(() => {
+      this.handles.delete(id);
+      return this.guard(() => this.revealStep(chatId, handNo));
+    }, this.runoutStepMs);
+    this.handles.set(id, { key: `reveal:${handNo}`, deadline: null, h });
+  }
+
+  async revealStep(chatId, handNo) {
+    const room = this.room(chatId);
+    const r = room?.ui?.reveal;
+    // Superseded — a new hand, /finish, a restart: the final view is already up.
+    if (!r || r.handNo !== handNo || room.hand?.no !== handNo) return;
+    const next = r.shown < 3 ? 3 : r.shown + 1;
+    if (next >= 5) {
+      // The river comes with the result: that frame IS the showdown.
+      room.ui.reveal = null;
+      if (room.status === 'finished') await this.finishUp(room);
+      else await this.draw(room);
+      this.syncClocks(); // the automatic deal counts from here
+      return;
+    }
+    r.shown = next;
+    await this.draw(room);
+    this.scheduleReveal(chatId, handNo);
   }
 
   room(chatId) {
@@ -374,6 +528,7 @@ export class App {
       case 'stack':
       case 'blinds':
       case 'levels':
+      case 'timer':
         return this.onSettings(cmd, room, user, chatId);
 
       case 'kick':
@@ -562,6 +717,16 @@ export class App {
       if (sb == null || bb == null) return void (await this.reply(chatId, 'Например: /blinds 25 50'));
       if (bb < sb) return void (await this.reply(chatId, 'Большой блайнд не может быть меньше малого.'));
       patch = { smallBlind: sb, bigBlind: bb };
+    } else if (cmd.cmd === 'timer') {
+      const raw = (cmd.args[0] || '').toLowerCase();
+      if (raw === 'off' || raw === 'выкл' || raw === '0') patch = { turnSeconds: 0 };
+      else {
+        const n = intArg(raw);
+        if (n == null || n < 15 || n > 600) {
+          return void (await this.reply(chatId, 'Например: /timer 60 — от 15 до 600 секунд на ход. /timer off — выключить.'));
+        }
+        patch = { turnSeconds: n };
+      }
     } else {
       const raw = (cmd.args[0] || '').toLowerCase();
       if (raw === 'off' || raw === 'выкл') patch = { blindMode: 'fixed' };
@@ -747,6 +912,9 @@ export class App {
    * cancelled by `finishUp`, and the final showdown would never be shown.
    */
   async afterAction(room) {
+    // An all-in board is shown street by street; the reveal posts the
+    // results itself at the end if this was the last hand of the game.
+    if (this.startReveal(room)) return this.draw(room);
     if (room.status === 'finished') return this.finishUp(room);
     await this.draw(room);
   }
@@ -754,9 +922,11 @@ export class App {
   /** A hand was just dealt (or the game ended instead): cards out, table up. */
   async afterDeal(room, r) {
     if (r.finished) return this.finishUp(room);
+    // Blinds alone can put everybody all-in: then the board is turned over
+    // at once, and that may even end the game on the spot.
+    const revealing = this.startReveal(room);
     await this.dealOut(room);
-    // Blinds alone can put everybody all-in and end the game on the spot.
-    if (room.status === 'finished') await this.finishUp(room);
+    if (room.status === 'finished' && !revealing) await this.finishUp(room);
   }
 
   async cbGame(room, user, { verb }, ans) {
@@ -873,6 +1043,7 @@ export class App {
     room.ui.lastText = null;
     room.ui.lastKb = null;
     room.ui.lastMsgId = 0;
+    room.ui.reveal = null; // its timer is keyed by the old id and will find nothing
     this.rooms.delete(oldId);
     this.rooms.set(newId, room);
     this.store.migrate(oldId, newId);
@@ -887,6 +1058,7 @@ export class App {
     // gone — then post the results as their own message: it is the record of
     // the evening and belongs at the bottom of the chat.
     this.outbox.cancel(room.chatId);
+    room.ui.reveal = null; // the final word is the whole board, not a frame of it
     if (room.ui.tableMessageId && room.hand) {
       const last = renderRoom({ ...room, status: 'playing' });
       try {

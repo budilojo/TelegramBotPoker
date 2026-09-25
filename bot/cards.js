@@ -71,6 +71,8 @@ export function dealHoles(room, deck = shuffled()) {
   h.board = [];
   h.holes = {};
   h.shown = null;
+  h.mucked = [];
+  h.runoutFrom = null;
   const order = dealOrder(room);
   for (const id of order) h.holes[id] = [];
   for (let round = 0; round < 2; round++) {
@@ -99,7 +101,9 @@ export function syncCards(room) {
 
   if (h.phase === 'showdown') {
     // Олл-ин до ривера: движок улицы не двигает — остаток борда формальность,
-    // и его докладывают сразу.
+    // и его докладывают сразу. Сколько карт было открыто ДО этого, помним:
+    // бот открывает остаток в группе по одной улице, а не разом.
+    if (h.board.length < 5) h.runoutFrom = h.board.length;
     dealBoardTo(h, 5);
     resolveShowdown(room);
     return 'showdown';
@@ -118,17 +122,18 @@ export function syncCards(room) {
  * Вскрытие. Каждый банк — отдельно, среди СВОИХ претендентов: короткий
  * олл-ин с лучшей рукой берёт основной банк, а сайд-пот, на который он не
  * претендует, уходит лучшей руке среди остальных.
+ *
+ * Кто показывает карты:
+ *   - каждый, кто выиграл хотя бы один спорный банк — без показа банк не
+ *     забирают;
+ *   - каждый, кто в олл-ине, — олл-ин вскрывается всегда;
+ *   - остальные проигравшие сбрасывают молча (`mucked`): ни карт, ни
+ *     названия комбинации в группе нет. Название тоже выдаёт руку.
+ * Возврат лишних фишек (банк с одним претендентом) выигрышем не считается.
  */
 function resolveShowdown(room) {
   const h = room.hand;
   const seven = (id) => [...h.holes[id], ...h.board];
-
-  const live = room.players.filter((p) => p.inHand && !p.folded);
-  const shown = {};
-  for (const p of live) {
-    const b = best5(seven(p.id));
-    shown[p.id] = { cards: [...h.holes[p.id]], best: b.cards, score: b.score, name: b.name };
-  }
 
   const assignments = h.pots.map((pot) => {
     if (pot.eligible.length === 1) return [...pot.eligible]; // возврат, не спор
@@ -138,7 +143,25 @@ function resolveShowdown(room) {
   const r = awardPots(room, assignments);
   if (r.error) throw new Error(`движок не принял вскрытие: ${r.error}`);
 
+  const winners = new Set();
+  h.pots.forEach((pot, i) => {
+    if (pot.eligible.length > 1) assignments[i].forEach((id) => winners.add(id));
+  });
+
+  const live = room.players.filter((p) => p.inHand && !p.folded);
+  const shown = {};
+  const mucked = [];
+  for (const p of live) {
+    if (!winners.has(p.id) && !p.allIn) {
+      mucked.push(p.id);
+      continue;
+    }
+    const b = best5(seven(p.id));
+    shown[p.id] = { cards: [...h.holes[p.id]], best: b.cards, score: b.score, name: b.name };
+  }
+
   h.shown = shown;
+  h.mucked = mucked;
   closeDeck(h);
 
   // Запись в историю движка: чем закончилась раздача, для итогов вечера.
@@ -165,6 +188,18 @@ export function holeOf(room, userId) {
 }
 
 /**
+ * Та часть борда, которую группа уже видела. Пока олл-ин-борд открывается по
+ * улице, в состоянии уже лежат все пять карт — но показывать их раньше
+ * группы нельзя никому, даже через «Мои карты».
+ */
+export function boardShown(room) {
+  const h = room.hand;
+  const b = h?.board || [];
+  const r = room.ui?.reveal;
+  return r && r.handNo === h?.no ? b.slice(0, r.shown) : b;
+}
+
+/**
  * Текст для «🂠 Мои карты» — всплывающее окно, которое Telegram показывает
  * ТОЛЬКО нажавшему. Лимит — 200 символов, поэтому коротко.
  */
@@ -174,9 +209,10 @@ export function peekText(room, userId) {
   const mine = holeOf(room, userId);
   if (!mine) return 'Вы не в этой раздаче.';
   const p = room.players.find((x) => x.id === String(userId));
+  const board = boardShown(room);
   const lines = [`Раздача #${h.no}. Ваши карты: ${cardsText(mine)}`];
-  if (h.board.length) lines.push(`Борд: ${cardsText(h.board)}`);
-  if (h.board.length >= 3) lines.push(`У вас: ${best5([...mine, ...h.board]).name}`);
+  if (board.length) lines.push(`Борд: ${cardsText(board)}`);
+  if (board.length >= 3) lines.push(`У вас: ${best5([...mine, ...board]).name}`);
   if (p?.folded) lines.push('Вы сбросили.');
   return lines.join('\n');
 }

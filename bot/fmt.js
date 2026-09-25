@@ -114,6 +114,23 @@ export function hhmm(ts, tz = process.env.TZ || undefined) {
   }
 }
 
+/** 14:31:45 — for deadlines, where a minute is too coarse. */
+export function hhmmss(ts, tz = process.env.TZ || undefined) {
+  const d = new Date(ts);
+  try {
+    return new Intl.DateTimeFormat('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+      timeZone: tz,
+    }).format(d);
+  } catch {
+    const p2 = (n) => String(n).padStart(2, '0');
+    return `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`;
+  }
+}
+
 export const STREET_RU = {
   preflop: 'ПРЕФЛОП',
   flop: 'ФЛОП',
