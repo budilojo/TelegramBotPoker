@@ -1,60 +1,83 @@
 'use strict';
 /**
  * The bot's brain. Takes normalised Telegram updates, decides what is allowed,
- * mutates the room, redraws the table. Knows nothing about long polling or
- * webhooks, and talks to Telegram only through an injected `api` port — which
- * is why the whole thing can be tested without a network.
+ * mutates the room, redraws the table, sends the cards. Knows nothing about
+ * long polling or webhooks, and talks to Telegram only through an injected
+ * `api` port — which is why the whole thing can be tested without a network.
  *
- * THE RULE THIS FILE EXISTS TO ENFORCE: nobody ever acts for somebody else.
- * A button in a group chat is visible to everyone and can be pressed by
- * everyone, so a button is never a permission. Every single press is
- * re-checked here against `callback_query.from.id`, which Telegram signs and
- * a client cannot forge.
+ * THE TWO RULES THIS FILE EXISTS TO ENFORCE:
  *
- * Note on ordering: every state mutation below happens synchronously, before
- * the first `await`. Two updates that arrive in the same tick therefore cannot
- * interleave inside a mutation, and the second one sees the bumped `seq`.
+ * 1. Nobody ever acts for somebody else. A button in a group chat is visible
+ *    to everyone and can be pressed by everyone, and a command can be typed
+ *    by anyone, so neither is a permission. Every press and every command is
+ *    re-checked here against `from.id`, which Telegram signs and a client
+ *    cannot forge.
+ * 2. Nobody ever sees somebody else's cards. Hole cards leave the bot in
+ *    exactly two ways: a private message to `chat_id = owner's Telegram id`,
+ *    and a callback answer — a popup Telegram shows only to the person who
+ *    pressed. The group sees the board, and at showdown the hands that
+ *    reached it. Nothing else.
+ *
+ * Note on ordering: every mutation that moves a chip or a card happens
+ * synchronously, before the first `await`. Two updates that arrive in the
+ * same tick therefore cannot interleave inside one, and the second sees the
+ * bumped `seq`. (The only state touched between awaits is the display-only
+ * "can we write to them" flag while the private messages go out.)
  */
 import { legalActions } from '../server/game.js';
 import { identify } from './identity.js';
 import { decode, argInt, NS } from './cb.js';
 import * as R from './room.js';
 import {
-  renderRoom, renderResults, renderRoles, renderKick, renderRebuy, renderTransfer,
+  renderRoom, renderResults, renderKick, renderRebuy, renderTransfer, renderHole, dmLink,
 } from './render.js';
+import { peekText, holeOf, cardsText } from './cards.js';
 import { Outbox } from './outbox.js';
 import { NullStore } from './store.js';
 import { esc, num } from './fmt.js';
 
 const HELP = [
-  '♠️ <b>Chip Table</b> — фишки для покера настоящими картами.',
-  'Карты раздаёте вы, бот считает фишки: стеки, ставки, банк, очередь, блайнды, сайд-поты.',
+  '♠️ <b>Покер в чате</b> — техасский холдем. Бот тасует и сдаёт, карты приходят в личку, ставки — здесь.',
   '',
-  '<b>/newgame</b> — создать стол (вы хост)',
-  '<b>/join</b> — сесть за стол · <b>/leave</b> — встать',
-  '<b>/table</b> — заново показать стол',
+  '<b>/newgame</b> — создать стол · <b>/join</b> — сесть · <b>/leave</b> — встать',
   '',
-  '<b>Хост:</b>',
-  '/stack 10000 — стартовый стек (до старта)',
-  '/blinds 25 50 — блайнды (в игре — со следующей раздачи)',
-  '/levels 20 | /levels off — растущие блайнды',
-  '/roles — назначить дилера · /kick — удалить игрока',
-  '/rebuy — докупка фишек · /host — передать права',
-  '/level — поднять уровень блайндов досрочно',
-  '/pause · /resume · /finish — итоги · /cancel — удалить стол',
+  '<b>Ход:</b> /check · /call · /fold · /raise 300 · /bet 200 · /allin',
+  '<i>/raise 300 — поднять ДО 300: столько всего будет стоять перед вами на этой улице.</i>',
+  '/next — следующая раздача · /table — показать стол',
+  '',
+  '<b>Хост:</b> /stack 10000 · /blinds 25 50 · /levels 20 · /rebuy · /kick · /host · ' +
+    '/level · /pause · /resume · /undo · /finish · /cancel',
+  '',
+  'Бот не может написать первым: чтобы карты приходили в личку, один раз нажмите Start у бота.',
 ].join('\n');
 
-const GROUP_ONLY = 'Бот работает в групповом чате: добавьте меня в группу и напишите /newgame.';
+const HELP_DM = [
+  '♠️ <b>Покер в чате</b>',
+  '',
+  'Сюда приходят ваши карты. Сама игра — в группе: добавьте меня туда и напишите /newgame.',
+  '/cards — показать ваши карты в текущих раздачах.',
+].join('\n');
+
+const WELCOME_DM = '✅ Готово: карты будут приходить сюда. Возвращайтесь в группу.';
 
 export class App {
-  constructor({ api, store = new NullStore(), minIntervalMs = 1000, botUsername = '', onError = null } = {}) {
+  /**
+   * @param deck  test seam: `(room) => number[52]` — a stacked deck. Production
+   *              leaves it out and every hand is shuffled with crypto.randomInt.
+   */
+  constructor({
+    api, store = new NullStore(), minIntervalMs = 1000, botUsername = '', onError = null, deck = null,
+  } = {}) {
     this.api = api;
     this.store = store;
     this.botUsername = botUsername;
+    this.deck = deck;
     this.log = onError || ((err) => console.error('[bot]', err?.description || err?.message || err));
     this.outbox = new Outbox(api, { minIntervalMs, onError: this.log });
     /** @type {Map<string, object>} */
     this.rooms = new Map();
+    /** `${chatId}:${userId}` -> Telegram date of that user's last applied typed move */
+    this.lastTyped = new Map();
   }
 
   /* ---------------------------------------------------------- persistence */
@@ -97,11 +120,22 @@ export class App {
 
   /* -------------------------------------------------------------- drawing */
 
-  /** Schedule a redraw of the table message (coalesced, latest state wins). */
+  /**
+   * Schedule a redraw of the table message (coalesced, latest state wins).
+   *
+   * If the table has been buried — somebody typed a command, the bot replied
+   * — the new state is posted at the bottom and the old copy deleted; an edit
+   * three screens up is an edit nobody sees. With buttons only, nothing moves
+   * and the message is edited in place.
+   */
   draw(room, { immediate = false } = {}) {
     const produce = async () => {
-      const view = renderRoom(room);
-      await this.outbox.draw(room, view);
+      const view = renderRoom(room, { botUsername: this.botUsername });
+      const kbKey = JSON.stringify(view.keyboard?.length ? { inline_keyboard: view.keyboard } : null);
+      const unchanged = room.ui.lastText === view.text && room.ui.lastKb === kbKey;
+      const buried = !!room.ui.tableMessageId && (room.ui.lastMsgId || 0) - room.ui.tableMessageId >= 2;
+      await this.outbox.draw(room, view, { move: buried && !unchanged });
+      this.seen(room, room.ui.tableMessageId);
       this.save(room);
     };
     if (immediate) return produce();
@@ -109,30 +143,76 @@ export class App {
     return Promise.resolve();
   }
 
+  /** Remember the newest message id in a chat — the measure of "buried". */
+  seen(room, messageId) {
+    if (room && Number.isFinite(messageId)) room.ui.lastMsgId = Math.max(room.ui.lastMsgId || 0, messageId);
+  }
+
   /**
-   * One table message per hand, as asked: the finished hand stays in the chat
-   * as its own record, and the new one lands at the bottom where people are
-   * actually looking instead of scrolled away above the conversation.
+   * One table message per hand: the finished hand stays in the chat as its
+   * own record, and the new one lands at the bottom where people are looking.
    */
   async newTableMessage(room) {
     this.outbox.cancel(room.chatId);
     const old = room.ui.tableMessageId;
-    if (old) {
-      await this.outbox.dropKeyboard(room.chatId, old);
-      if (room.ui.pinnedMessageId === old) await this.outbox.unpin(room.chatId, old);
-    }
+    if (old) await this.outbox.dropKeyboard(room.chatId, old);
     room.ui.tableMessageId = null;
     room.ui.lastText = null;
     room.ui.lastKb = null;
     await this.draw(room, { immediate: true });
-    await this.outbox.pin(room.chatId, room.ui.tableMessageId);
-    room.ui.pinnedMessageId = room.ui.tableMessageId;
     this.save(room);
   }
 
   /** Test seam: wait until every coalesced redraw has actually gone out. */
   settle() {
     return this.outbox.drain();
+  }
+
+  /* ------------------------------------------------------------ the cards */
+
+  /** `{ deck }` for the room layer: stacked in tests, shuffled otherwise. */
+  dealOpts(room) {
+    return this.deck ? { deck: () => this.deck(room) } : {};
+  }
+
+  /**
+   * A new hand was dealt: send every player their two cards, privately, then
+   * put the table up. Cards first, so that whoever is first to act already
+   * has them when the table appears.
+   *
+   * A private message only ever goes to `p.tgId` — the Telegram id the player
+   * joined with — and only ever contains `holeOf(room, p.id)`: their own two.
+   */
+  async dealOut(room) {
+    const h = room.hand;
+    for (const p of room.players) {
+      const text = renderHole(room, p.id);
+      if (!text) continue;
+      const r = await this.outbox.dm(p.tgId, text);
+      if (r.ok) this.setDm(p.id, 'ok', { redraw: false });
+      else if (r.forbidden) this.setDm(p.id, 'fail', { redraw: false });
+      if (room.hand !== h) return; // the room moved on under us (should not happen)
+    }
+    await this.newTableMessage(room);
+  }
+
+  /**
+   * Can the bot write to this person? Known from Start ('ok'), a bounced
+   * delivery ('fail'), or Telegram telling us they blocked/unblocked the bot.
+   */
+  setDm(userId, status, { redraw = true } = {}) {
+    const id = String(userId);
+    if (this.store.getDm(id) !== status) this.store.setDm(id, status);
+    for (const room of this.rooms.values()) {
+      const p = R.findPlayer(room, id);
+      if (!p || p.dm === status) continue;
+      p.dm = status;
+      if (redraw && room.status !== 'finished') this.draw(room);
+    }
+  }
+
+  person(user) {
+    return { id: user.id, tgId: user.tgId, name: user.name, dm: this.store.getDm(user.id) };
   }
 
   /* --------------------------------------------------------------- router */
@@ -158,6 +238,8 @@ export class App {
   /* ------------------------------------------------------------- messages */
 
   async onMessage(msg) {
+    if (msg.chat?.type === 'private') return this.onPrivate(msg);
+
     const chatId = String(msg.chat.id);
 
     // A group promoted to a supergroup changes chat.id. Re-key the table or
@@ -166,10 +248,10 @@ export class App {
 
     if (msg.left_chat_member) return this.onLeft(chatId, msg.left_chat_member);
     if (msg.new_chat_members?.length) return this.onJoined(chatId, msg.new_chat_members);
-    if (msg.pinned_message) return this.tidyPin(chatId, msg);
     if (typeof msg.text !== 'string') return;
 
     const room = this.room(chatId);
+    this.seen(room, msg.message_id);
 
     // A reply to our ForceReply prompt: the "custom amount" path.
     const pb = room?.ui?.pendingBet;
@@ -182,14 +264,53 @@ export class App {
     return this.onCommand(cmd, msg);
   }
 
+  /**
+   * The private chat. Pressing Start here is the one thing that lets the bot
+   * send cards at all. Nothing typed here can seat anybody anywhere: the
+   * deep-link payload is text the user controls, so it is not trusted to
+   * name a table. Seats are taken in the group, where being able to press a
+   * button already proves you are a member.
+   */
+  async onPrivate(msg) {
+    const who = identify(msg.from, msg.sender_chat);
+    if (!who.ok) return;
+    const user = who.user;
+    // Any private message means the chat is open.
+    this.setDm(user.id, 'ok');
+
+    const cmd = typeof msg.text === 'string' ? parseCommand(msg.text, this.botUsername) : null;
+    if (cmd?.cmd === 'start') {
+      await this.outbox.post(user.tgId, cmd.rest ? WELCOME_DM : `${WELCOME_DM}\n\n${HELP_DM}`);
+      // Pressed Start in the middle of a hand whose cards bounced: deliver now.
+      const live = this.myCards(user.id);
+      if (live) await this.outbox.post(user.tgId, live);
+      return;
+    }
+    if (cmd?.cmd === 'cards') {
+      return void (await this.outbox.post(user.tgId, this.myCards(user.id) || 'Сейчас вы не в раздаче.'));
+    }
+    return void (await this.outbox.post(user.tgId, HELP_DM));
+  }
+
+  /** Every live hand this person holds cards in, or null — for private chat only. */
+  myCards(userId) {
+    const out = [];
+    for (const room of this.rooms.values()) {
+      const h = room.hand;
+      const mine = holeOf(room, userId);
+      if (!mine || !h || h.phase === 'complete' || room.status === 'finished') continue;
+      const board = h.board?.length ? ` · борд ${cardsText(h.board)}` : '';
+      out.push(`${room.title ? esc(room.title) + ': ' : ''}раздача #${h.no} — <b>${cardsText(mine)}</b>${board}`);
+    }
+    return out.length ? `🂠 Ваши карты:\n${out.join('\n')}` : null;
+  }
+
   async onCommand(cmd, msg) {
     const chatId = String(msg.chat.id);
-    const isGroup = msg.chat.type === 'group' || msg.chat.type === 'supergroup';
     const who = identify(msg.from, msg.sender_chat);
 
     if (cmd.cmd === 'start' || cmd.cmd === 'help') return void (await this.reply(chatId, HELP));
-    if (!isGroup) return void (await this.reply(chatId, GROUP_ONLY));
-    if (!who.ok) return void (await this.reply(chatId, who.text));
+    if (!who.ok) return void (await this.reply(chatId, who.text, msg));
 
     const user = who.user;
     const room = this.room(chatId);
@@ -203,26 +324,21 @@ export class App {
               'Завершите его через /finish или /cancel, потом создавайте новый.'
           ));
         }
-        const fresh = R.createRoom({ chatId, host: { id: user.id, tgId: user.tgId, name: user.name } });
+        const fresh = R.createRoom({ chatId, title: msg.chat.title, host: this.person(user) });
         this.rooms.set(chatId, fresh);
         await this.newTableMessage(fresh);
         return;
       }
 
-      case 'join': {
+      case 'join':
         if (!room) return void (await this.reply(chatId, 'Стола нет. /newgame'));
-        if (room.status === 'finished') return void (await this.reply(chatId, 'Игра завершена.'));
-        R.addPlayer(room, { id: user.id, tgId: user.tgId, name: user.name });
-        await this.draw(room);
-        return;
-      }
+        return this.join(room, user, null, msg);
 
       case 'leave': {
         if (!room) return;
         const r = R.sitOut(room, user.id, true);
-        if (r.error) return void (await this.reply(chatId, 'Вы не за столом.'));
-        await this.draw(room);
-        return;
+        if (r.error) return void (await this.reply(chatId, 'Вы не за столом.', msg));
+        return this.afterAction(room);
       }
 
       case 'table': {
@@ -231,49 +347,61 @@ export class App {
         return;
       }
 
+      case 'check':
+      case 'call':
+      case 'fold':
+      case 'bet':
+      case 'raise':
+      case 'allin':
+        return this.onTypedMove(room, user, cmd, msg);
+
+      case 'next':
+      case 'deal': {
+        if (!room) return void (await this.reply(chatId, 'Стола нет. /newgame'));
+        const r = R.nextHand(room, user.id, this.dealOpts(room));
+        if (r.error) return void (await this.reply(chatId, this.explain(room, r.error), msg));
+        return this.afterDeal(room, r);
+      }
+
+      case 'cards':
+        // Never in the group. Point to the two private ways instead.
+        return void (await this.reply(
+          chatId,
+          'Карты — в личке у бота или кнопкой «🂠 Мои карты» под столом: её ответ видите только вы.',
+          msg
+        ));
+
       case 'stack':
       case 'blinds':
       case 'levels':
         return this.onSettings(cmd, room, user, chatId);
 
-      case 'roles': {
-        if (!room) return;
-        if (!R.isHost(room, user.id)) return void (await this.reply(chatId, this.hostOnly(room)));
-        const v = renderRoles(room);
-        await this.outbox.post(chatId, v.text, v.keyboard);
-        return;
-      }
-
-      case 'kick': {
-        if (!room) return;
-        if (!R.isHost(room, user.id)) return void (await this.reply(chatId, this.hostOnly(room)));
-        const v = renderKick(room);
-        await this.outbox.post(chatId, v.text, v.keyboard);
-        return;
-      }
-
-      case 'rebuy': {
-        if (!room) return;
-        if (!R.isHost(room, user.id)) return void (await this.reply(chatId, this.hostOnly(room)));
-        const v = renderRebuy(room);
-        await this.outbox.post(chatId, v.text, v.keyboard);
-        return;
-      }
-
+      case 'kick':
+      case 'rebuy':
       case 'host': {
         if (!room) return;
-        if (!R.isHost(room, user.id)) return void (await this.reply(chatId, this.hostOnly(room)));
-        const v = renderTransfer(room);
-        await this.outbox.post(chatId, v.text, v.keyboard);
+        if (!R.isHost(room, user.id)) return void (await this.reply(chatId, this.hostOnly(room), msg));
+        const v = { kick: renderKick, rebuy: renderRebuy, host: renderTransfer }[cmd.cmd](room);
+        const m = await this.outbox.post(chatId, v.text, v.keyboard);
+        this.seen(room, m?.message_id);
         return;
       }
 
       case 'level': {
         if (!room) return;
         const r = R.bumpLevel(room, user.id);
-        if (r.error) return void (await this.reply(chatId, this.explain(room, r.error)));
-        await this.draw(room);
+        if (r.error) return void (await this.reply(chatId, this.explain(room, r.error), msg));
         await this.reply(chatId, `⏫ ${esc(room.notice)}`);
+        await this.draw(room);
+        return;
+      }
+
+      case 'undo': {
+        if (!room) return;
+        const r = R.undo(room, user.id);
+        if (r.error) return void (await this.reply(chatId, this.explain(room, r.error), msg));
+        await this.reply(chatId, `↩️ Отменено: ${esc(r.label)}`);
+        await this.draw(room);
         return;
       }
 
@@ -281,7 +409,7 @@ export class App {
       case 'resume': {
         if (!room) return;
         const r = R.setPaused(room, user.id, cmd.cmd === 'pause');
-        if (r.error) return void (await this.reply(chatId, this.explain(room, r.error)));
+        if (r.error) return void (await this.reply(chatId, this.explain(room, r.error), msg));
         await this.draw(room);
         return;
       }
@@ -289,14 +417,14 @@ export class App {
       case 'finish': {
         if (!room) return void (await this.reply(chatId, 'Стола нет.'));
         const r = R.endGame(room, user.id);
-        if (r.error) return void (await this.reply(chatId, this.explain(room, r.error)));
+        if (r.error) return void (await this.reply(chatId, this.explain(room, r.error), msg));
         await this.finishUp(room);
         return;
       }
 
       case 'cancel': {
         if (!room) return;
-        if (!R.isHost(room, user.id)) return void (await this.reply(chatId, this.hostOnly(room)));
+        if (!R.isHost(room, user.id)) return void (await this.reply(chatId, this.hostOnly(room), msg));
         if (room.ui.tableMessageId) await this.outbox.dropKeyboard(chatId, room.ui.tableMessageId);
         this.rooms.delete(chatId);
         this.store.remove(chatId);
@@ -306,6 +434,115 @@ export class App {
       default:
         return;
     }
+  }
+
+  /**
+   * Sit down — by /join or by the button. Mid-game you are dealt in from the
+   * next hand. If the bot cannot write to you yet, you are told how to fix
+   * it; a button press goes one step further and opens the private chat.
+   */
+  async join(room, user, ans, msg) {
+    if (room.status === 'finished') {
+      return ans ? ans('Игра завершена.') : void (await this.reply(room.chatId, 'Игра завершена.', msg));
+    }
+    const before = R.findPlayer(room, user.id);
+    const wasOut = before && (before.sittingOut || before.left);
+    const p = R.addPlayer(room, this.person(user));
+    if (p.error) {
+      const t = 'Хост удалил вас из этой игры.';
+      return ans ? ans(t, { alert: true }) : void (await this.reply(room.chatId, t, msg));
+    }
+    const needDm = p.dm !== 'ok';
+    const midGame = room.status !== 'lobby';
+    const status = before && !wasOut ? 'Вы уже за столом.' : midGame ? 'Вы сядете со следующей раздачи.' : 'Вы за столом.';
+
+    if (ans) {
+      // One tap: seated, and — if the bot cannot write to you — straight into
+      // the private chat to press Start. A callback answer may open exactly
+      // this kind of link: t.me/<bot>?start=...
+      const link = dmLink(this.botUsername);
+      if (needDm && link) await ans(`${status} Нажмите Start — туда придут карты.`, { url: link });
+      else await ans(status);
+    } else if (needDm || midGame) {
+      const link = dmLink(this.botUsername);
+      const text =
+        `${esc(user.name)}: ${status.toLowerCase()}` +
+        (needDm ? ' Чтобы карты приходили в личку, нажмите кнопку и Start.' : '');
+      const kb = needDm && link ? [[{ text: '🔑 Карты в личку', url: link }]] : null;
+      const m = await this.outbox.post(room.chatId, text, kb, { reply_parameters: replyTo(msg) });
+      this.seen(room, m?.message_id);
+    }
+    return this.draw(room);
+  }
+
+  /* ------------------------------------------------------- typed moves */
+
+  /**
+   * /check /call /fold /bet N /raise N /allin — the same moves as the buttons,
+   * through the same `R.act`, behind the same identity check.
+   *
+   * A typed command carries no `seq`, so the double-tap guard is different:
+   * two identical commands sent within a second by the same person are one
+   * intention sent twice. That matters in one spot — when your move closes a
+   * street and you are first to act on the next, a duplicate /check would
+   * check a flop you have not seen yet.
+   */
+  async onTypedMove(room, user, cmd, msg) {
+    const chatId = String(msg.chat.id);
+    const say = (text) => this.reply(chatId, text, msg);
+    if (!room) return void (await say('Стола нет. /newgame'));
+    const h = room.hand;
+    if (room.status === 'paused') return void (await say('Игра на паузе.'));
+    if (room.status !== 'playing' || !h) return void (await say('Игра ещё не началась.'));
+    if (h.phase !== 'betting') return void (await say('Раздача закончена. /next — следующая.'));
+
+    if (h.actorId !== user.id) {
+      const actor = nameOf(room, h.actorId);
+      return void (await say(R.findPlayer(room, user.id) ? `Сейчас ходит ${esc(actor)}.` : `Вы не за столом. Ходит ${esc(actor)}.`));
+    }
+
+    const key = `${chatId}:${user.id}`;
+    const prev = this.lastTyped.get(key);
+    if (prev != null && Number.isFinite(msg.date) && msg.date - prev <= 1) {
+      return void (await say('Похоже на повтор — предыдущий ход уже применён. Посмотрите стол и повторите, если нужно.'));
+    }
+
+    const legal = legalActions(room, user.id);
+    if (!legal) return void (await say('Сейчас так сходить нельзя.'));
+
+    let action = cmd.cmd;
+    let amount = null;
+    if (action === 'call' && legal.canCheck) action = 'check'; // nothing to call: that is a check
+    if (action === 'check' && !legal.canCheck) {
+      return void (await say(`Чек нельзя — перед вами ставка. /call ${legal.callAmount} или /fold.`));
+    }
+    if (action === 'bet' || action === 'raise') {
+      if (!legal.canBet && !legal.canRaise) {
+        // Two different reasons, and the player needs to hear the right one.
+        if (legal.stack <= legal.toCall) {
+          return void (await say(`Фишек хватает только на колл: /call ${legal.callAmount} — это и будет олл-ин.`));
+        }
+        return void (await say(this.explain(room, 'CANNOT_RAISE')));
+      }
+      amount = amountArg(cmd.rest);
+      const range = `от ${legal.minTotal} до ${legal.maxTotal}`;
+      if (amount == null) {
+        return void (await say(`Сколько? Например <code>/${cmd.cmd} ${legal.minTotal}</code> — сумма ${range}.`));
+      }
+      if (amount < legal.minTotal || amount > legal.maxTotal) {
+        return void (await say(
+          `Можно ${range}. /raise N — это сколько всего будет стоять перед вами на этой улице.`
+        ));
+      }
+      // Lenient about the word, strict about the chips: /bet into a bet is a
+      // raise to that total, /raise with nothing to raise is a bet.
+      action = legal.canBet ? 'bet' : 'raise';
+    }
+
+    const r = R.act(room, user.id, action, amount);
+    if (r.error) return void (await say(this.explain(room, r.error)));
+    if (Number.isFinite(msg.date)) this.lastTyped.set(key, msg.date);
+    return this.afterAction(room);
   }
 
   async onSettings(cmd, room, user, chatId) {
@@ -337,8 +574,8 @@ export class App {
 
     const r = R.updateSettings(room, user.id, patch);
     if (r.error) return void (await this.reply(chatId, this.explain(room, r.error)));
-    await this.draw(room);
     if (room.notice) await this.reply(chatId, `⚙️ ${esc(room.notice)}`);
+    await this.draw(room);
   }
 
   /* ------------------------------------------------- custom bet amount */
@@ -354,7 +591,7 @@ export class App {
       return void (await this.reply(room.chatId, `Эту ставку делает ${esc(nameOf(room, pb.userId))}.`));
     }
 
-    const total = intArg(String(msg.text).replace(/[\s_ ]/g, ''));
+    const total = amountArg(msg.text);
     const legal = legalActions(room, who.user.id);
     if (!legal || !(legal.canBet || legal.canRaise)) {
       room.ui.pendingBet = null;
@@ -379,7 +616,7 @@ export class App {
   /* ------------------------------------------------------------ callbacks */
 
   async onCallback(cq) {
-    const ans = (text, alert = false) => this.outbox.answer(cq.id, text, alert);
+    const ans = (text, opts) => this.outbox.answer(cq.id, text, opts);
 
     // 1. WHO pressed it. Anonymous admins are refused here and nowhere else.
     // Only `cq.from` matters: a callback_query has no sender_chat of its own,
@@ -387,7 +624,7 @@ export class App {
     // button sits on — in a channel's discussion group that is the channel,
     // which would refuse every real player at the table.
     const who = identify(cq.from);
-    if (!who.ok) return ans(who.text, true);
+    if (!who.ok) return ans(who.text, { alert: true });
 
     const parsed = decode(cq.data);
     if (!parsed) return ans('Кнопка не распознана.');
@@ -398,27 +635,30 @@ export class App {
 
     const user = who.user;
     switch (parsed.ns) {
+      case NS.CARDS: return this.cbPeek(room, user, ans);
       case NS.LOBBY: return this.cbLobby(room, user, parsed, ans);
       case NS.ACT:   return this.cbAction(room, user, parsed, ans);
       case NS.GAME:  return this.cbGame(room, user, parsed, ans);
-      case NS.WIN:   return this.cbWinner(room, user, parsed, ans);
       case NS.HOST:  return this.cbHost(room, user, parsed, ans, cq);
       default:       return ans('Неизвестная кнопка.');
     }
   }
 
+  /**
+   * "🂠 Мои карты". The answer is a popup that Telegram shows ONLY to the
+   * person who pressed, and it is computed from `from.id` — so pressing
+   * somebody else's copy of the button still shows you your own cards.
+   */
+  cbPeek(room, user, ans) {
+    return ans(peekText(room, user.id), { alert: true });
+  }
+
   async cbLobby(room, user, { verb }, ans) {
-    if (room.status === 'finished') return ans('Игра завершена.');
-    if (verb === 'sit') {
-      const before = room.players.length;
-      R.addPlayer(room, { id: user.id, tgId: user.tgId, name: user.name });
-      await ans(before === room.players.length ? 'Вы уже за столом.' : 'Вы за столом.');
-      return this.draw(room);
-    }
+    if (verb === 'sit') return this.join(room, user, ans);
     if (verb === 'leave') {
       const r = R.sitOut(room, user.id, true);
       await ans(r.error ? 'Вы и так не за столом.' : 'Вы встали из-за стола.');
-      if (!r.error) await this.draw(room);
+      if (!r.error) await this.afterAction(room);
       return;
     }
     return ans('');
@@ -495,38 +735,45 @@ export class App {
         },
       }
     );
+    this.seen(room, msg?.message_id);
     room.ui.pendingBet = { userId: user.id, promptMessageId: msg.message_id };
     this.save(room);
     return ans('Введите сумму ответом на сообщение.');
   }
 
-  /** After chips moved: redraw, and start a fresh message when a hand ends. */
+  /**
+   * After chips moved: redraw — or, if that was the last hand of the game,
+   * go straight to the results. Scheduling a redraw first would only have it
+   * cancelled by `finishUp`, and the final showdown would never be shown.
+   */
   async afterAction(room) {
+    if (room.status === 'finished') return this.finishUp(room);
     await this.draw(room);
+  }
+
+  /** A hand was just dealt (or the game ended instead): cards out, table up. */
+  async afterDeal(room, r) {
+    if (r.finished) return this.finishUp(room);
+    await this.dealOut(room);
+    // Blinds alone can put everybody all-in and end the game on the spot.
     if (room.status === 'finished') await this.finishUp(room);
   }
 
-  async cbGame(room, user, { verb, seq }, ans) {
+  async cbGame(room, user, { verb }, ans) {
     switch (verb) {
       case 'start': {
-        const r = R.startGame(room, user.id);
+        const r = R.startGame(room, user.id, this.dealOpts(room));
         if (r.error) return ans(this.explain(room, r.error));
-        await ans('Поехали.');
-        return this.newTableMessage(room);
+        await ans('Карты розданы — смотрите в личке.');
+        return this.afterDeal(room, r);
       }
       case 'next': {
-        if (!R.findPlayer(room, user.id)) return ans('Вы не за столом.');
-        const r = R.nextHand(room, user.id);
+        const r = R.nextHand(room, user.id, this.dealOpts(room));
         if (r.error) return ans(this.explain(room, r.error));
+        // Answer before the private messages go out: with nine players that
+        // is nine requests, and the button must not spin through all of them.
         await ans('');
-        if (r.finished) return this.finishUp(room);
-        return this.newTableMessage(room);
-      }
-      case 'undo': {
-        const r = R.undo(room, user.id);
-        if (r.error) return ans(this.explain(room, r.error));
-        await ans(`Отменено: ${r.label}`);
-        return this.draw(room);
+        return this.afterDeal(room, r);
       }
       case 'pause':
       case 'resume': {
@@ -540,77 +787,24 @@ export class App {
     }
   }
 
-  /**
-   * Winner selection. The app never computes a share: the numbers shown are
-   * `previewPayouts()`, which is the same engine call that moves the chips.
-   */
-  async cbWinner(room, user, { verb, seq, args }, ans) {
-    if (!room.hand || room.hand.phase !== 'showdown') return ans('Банк уже закрыт.');
-    if (!R.canDecideWinner(room, user.id)) {
-      const d = R.dealers(room)[0];
-      return ans(d ? `Победителя определяет ${d.name}.` : 'Вы не за столом.');
-    }
-
-    if (verb === 'pick') {
-      if (seq !== room.seq) return ans('Состояние изменилось — посмотрите список ещё раз.');
-      const r = R.toggleWinner(room, user.id, argInt(args, 0), argInt(args, 1));
-      if (r.error) return ans(this.explain(room, r.error));
-      await ans(r.on ? `${r.name} — забирает` : `${r.name} — снято`);
-      return this.draw(room);
-    }
-    if (verb === 'next' || verb === 'back') {
-      const r = verb === 'next' ? R.winnerNext(room, user.id) : R.winnerBack(room, user.id);
-      if (r.error) return ans(this.explain(room, r.error));
-      await ans('');
-      return this.draw(room);
-    }
-    if (verb === 'ok') {
-      const r = R.confirmWinners(room, user.id, seq);
-      if (r.error === 'STALE') {
-        await ans('Уже применено.');
-        return this.draw(room);
-      }
-      if (r.error) return ans(this.explain(room, r.error));
-      await ans('Банк роздан.');
-      await this.draw(room);
-      if (room.status === 'finished') await this.finishUp(room);
-      return;
-    }
-    return ans('');
-  }
-
-  async cbHost(room, user, { verb, seq, args }, ans, cq) {
+  async cbHost(room, user, { verb, args }, ans, cq) {
     if (verb === 'close') {
       await ans('');
       return this.outbox.remove(room.chatId, cq.message.message_id);
     }
     if (!R.isHost(room, user.id)) return ans(this.hostOnly(room));
 
-    if (verb === 'role') {
-      const seat = argInt(args, 0);
-      const p = room.players[seat];
-      if (!p) return ans('Игрок не найден.');
-      const next = R.roleOf(p) === 'dealer' ? 'player' : 'dealer';
-      const r = R.setRole(room, user.id, p.id, next);
-      if (r.error) return ans(this.explain(room, r.error));
-      await ans(r.deferred ? 'Сменится со следующей раздачи.' : 'Готово.');
-      await this.editPanel(room, cq, renderRoles(room));
-      return this.draw(room);
-    }
+    const p = room.players[argInt(args, 0)];
+    if (!p) return ans('Игрок не найден.');
+
     if (verb === 'kick') {
-      const seat = argInt(args, 0);
-      const p = room.players[seat];
-      if (!p) return ans('Игрок не найден.');
       const r = R.kickPlayer(room, user.id, p.id);
       if (r.error) return ans(this.explain(room, r.error));
       await ans(`${p.name} удалён.`);
       await this.editPanel(room, cq, renderKick(room));
-      return this.draw(room);
+      return this.afterAction(room);
     }
     if (verb === 'host') {
-      const seat = argInt(args, 0);
-      const p = room.players[seat];
-      if (!p) return ans('Игрок не найден.');
       const r = R.transferHost(room, user.id, p.id);
       if (r.error) return ans(this.explain(room, r.error));
       await ans(`${p.name} — новый хост.`);
@@ -618,9 +812,6 @@ export class App {
       return this.draw(room);
     }
     if (verb === 'rebuy') {
-      const seat = argInt(args, 0);
-      const p = room.players[seat];
-      if (!p) return ans('Игрок не найден.');
       const r = R.adjustStack(room, user.id, p.id, room.settings.startingStack);
       if (r.error) return ans(this.explain(room, r.error));
       await ans(`${p.name}: +${room.settings.startingStack}`);
@@ -648,7 +839,7 @@ export class App {
     if (!room) return;
     const r = R.markLeft(room, member.id);
     if (r.error) return;
-    await this.draw(room);
+    await this.afterAction(room);
   }
 
   async onJoined(chatId, members) {
@@ -658,6 +849,14 @@ export class App {
 
   async onMyChatMember(u) {
     const status = u.new_chat_member?.status;
+    // In a private chat this is the only notice that somebody blocked the bot
+    // (or unblocked it): exactly the "can we send cards" signal.
+    if (u.chat?.type === 'private') {
+      const id = u.from?.id ?? u.chat.id;
+      if (status === 'kicked') this.setDm(id, 'fail');
+      else if (status === 'member') this.setDm(id, 'ok');
+      return;
+    }
     if (status === 'left' || status === 'kicked') {
       const chatId = String(u.chat.id);
       this.rooms.delete(chatId);
@@ -671,9 +870,9 @@ export class App {
     room.chatId = newId;
     // Message ids do not survive the migration either.
     room.ui.tableMessageId = null;
-    room.ui.pinnedMessageId = null;
     room.ui.lastText = null;
     room.ui.lastKb = null;
+    room.ui.lastMsgId = 0;
     this.rooms.delete(oldId);
     this.rooms.set(newId, room);
     this.store.migrate(oldId, newId);
@@ -681,63 +880,65 @@ export class App {
     return this.newTableMessage(room);
   }
 
-  /** Delete the "pinned a message" service notice we caused ourselves. */
-  async tidyPin(chatId, msg) {
-    const room = this.room(chatId);
-    if (!room) return;
-    if (msg.pinned_message?.message_id !== room.ui.pinnedMessageId) return;
-    await this.outbox.remove(chatId, msg.message_id);
-  }
-
   /* --------------------------------------------------------------- finish */
 
   async finishUp(room) {
-    // Freeze the last hand where it stands, then post the results as their own
-    // message: it is the record of the evening and belongs at the bottom of
-    // the chat, not hidden inside a message that keeps getting edited.
+    // Freeze the last hand where it stands — showing how it ENDED, buttons
+    // gone — then post the results as their own message: it is the record of
+    // the evening and belongs at the bottom of the chat.
     this.outbox.cancel(room.chatId);
-    if (room.ui.tableMessageId) await this.outbox.dropKeyboard(room.chatId, room.ui.tableMessageId);
-    if (room.ui.pinnedMessageId) await this.outbox.unpin(room.chatId, room.ui.pinnedMessageId);
+    if (room.ui.tableMessageId && room.hand) {
+      const last = renderRoom({ ...room, status: 'playing' });
+      try {
+        await this.outbox.draw(room, { text: last.text, keyboard: [] });
+      } catch (err) {
+        this.log(err);
+      }
+    }
     room.ui.tableMessageId = null;
-    room.ui.pinnedMessageId = null;
     await this.outbox.post(room.chatId, renderResults(room));
     this.save(room);
   }
 
   /* ---------------------------------------------------------------- utils */
 
-  reply(chatId, text) {
-    return this.outbox.post(chatId, text).catch((err) => this.log(err));
+  /** A message in the group; as a reply when it answers somebody's command. */
+  async reply(chatId, text, toMsg = null) {
+    try {
+      const m = await this.outbox.post(chatId, text, null, toMsg ? { reply_parameters: replyTo(toMsg) } : {});
+      this.seen(this.room(chatId), m?.message_id);
+      return m;
+    } catch (err) {
+      this.log(err);
+      return null;
+    }
   }
 
   hostOnly(room) {
-    return `Это может только хост — ${nameOf(room, room.hostId)}.`;
+    return `Это может только хост — ${esc(nameOf(room, room.hostId))}.`;
   }
 
   /** Engine and room error codes turned into something a human can act on. */
   explain(room, code) {
-    const dealer = R.dealers(room)[0]?.name;
     const map = {
       NOT_HOST: this.hostOnly(room),
-      NOT_ALLOWED: `Это может хост${dealer ? ` или дилер (${dealer})` : ''}.`,
-      DEALER_DECIDES: dealer ? `Победителя определяет ${dealer}.` : 'Сейчас нельзя.',
-      DEALER_DEALS: dealer ? `Следующую раздачу сдаёт ${dealer}.` : 'Сейчас нельзя.',
-      NOT_YOUR_TURN: `Сейчас ходит ${nameOf(room, room.hand?.actorId)}.`,
-      NOT_ENOUGH_PLAYERS: 'Нужно минимум два игрока с фишками.',
+      NOT_SEATED: 'Вы не за столом.',
+      KICKED: 'Хост удалил вас из этой игры.',
+      NOT_YOUR_TURN: `Сейчас ходит ${esc(nameOf(room, room.hand?.actorId))}.`,
+      NOT_ENOUGH_PLAYERS: 'Нужно минимум два игрока с фишками. Хост может сделать /rebuy.',
       NOT_ENOUGH_CHIPS: 'Не хватает фишек.',
       BELOW_MIN_RAISE: 'Меньше минимального повышения.',
       CANNOT_CHECK: 'Чек сейчас нельзя — перед вами ставка.',
       CANNOT_CALL: 'Коллировать нечего.',
       CANNOT_BET: 'Ставку сейчас сделать нельзя.',
       CANNOT_RAISE: 'Повышать нельзя: короткий олл-ин не открыл торговлю заново.',
-      NO_WINNER_SELECTED: 'Сначала отметьте, кто забрал банк.',
-      NOTHING_TO_UNDO: 'Отменять нечего.',
+      NOTHING_TO_UNDO: 'Отменять нечего. Ставки и раздачи не отменяются — только действия хоста.',
       HAND_IN_PROGRESS: 'Раздача ещё идёт.',
       ALREADY_STARTED: 'Игра уже идёт.',
       GAME_FINISHED: 'Игра завершена.',
       GAME_PAUSED: 'Игра на паузе.',
       NOT_PLAYING: 'Игра ещё не началась.',
-      CANNOT_KICK_HOST: 'Хоста удалить нельзя — сначала передайте права.',
+      CANNOT_KICK_HOST: 'Хоста удалить нельзя — сначала передайте права: /host.',
       STALE: 'Состояние изменилось — попробуйте ещё раз.',
       BAD_AMOUNT: 'Некорректная сумма.',
       NOT_LEVELS: 'Растущие блайнды выключены: /levels 20',
@@ -751,6 +952,8 @@ export class App {
 /* -------------------------------------------------------------- helpers */
 
 const nameOf = (room, id) => room.players.find((p) => p.id === String(id))?.name ?? '—';
+
+const replyTo = (msg) => (msg?.message_id ? { message_id: msg.message_id, allow_sending_without_reply: true } : undefined);
 
 export function parseCommand(text, botUsername = '') {
   const m = /^\/([A-Za-z0-9_]+)(?:@([A-Za-z0-9_]+))?(?:\s+([\s\S]*))?$/.exec(String(text).trim());
@@ -766,4 +969,15 @@ function intArg(v) {
   if (v == null) return null;
   const n = Math.round(Number(String(v).replace(',', '.')));
   return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+/**
+ * A chip amount as people type it: "3000", "3 000", "3_000", "3 000" (NBSP).
+ * Only whole digits — "3к" or "2.5" are refused, not guessed at: a guess about
+ * somebody's chips is a bet they did not make.
+ */
+export function amountArg(text) {
+  const s = String(text ?? '').replace(/[\s_   ]/g, '');
+  if (!/^\d{1,12}$/.test(s)) return null;
+  return Number(s);
 }

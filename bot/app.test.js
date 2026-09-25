@@ -4,12 +4,20 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Table, user } from './harness.js';
-import { App, parseCommand } from './app.js';
+import { Table, user, stack } from './harness.js';
+import { App, parseCommand, amountArg } from './app.js';
 import { Store } from './store.js';
-import { TelegramStub, cmdUpdate, pressUpdate } from './tg-stub.js';
-import { preview } from './room.js';
-import { totalPot } from '../server/game.js';
+import { pressUpdate } from './tg-stub.js';
+import { totalPot, legalActions } from '../server/game.js';
+
+/** The message of hand #no as it stands in the chat now (frozen or live). */
+function handText(t, no) {
+  let found = '';
+  for (const m of t.tg.messages.values()) {
+    if (m.chatId === String(t.chatId) && !m.deleted && m.text.includes(`РАЗДАЧА #${no}`)) found = m.text;
+  }
+  return found;
+}
 
 const CAST = () => ({
   ivan: user(101, 'Иван'),
@@ -43,23 +51,27 @@ test('tapping the same button twice applies it exactly once', async () => {
   assert.match(t.answer().text, /Уже применено/);
 });
 
-test('a double tap on "confirm winners" pays out once', async () => {
-  const cast = CAST();
+test('the same typed move sent twice within a second is applied once', async () => {
+  // Heads-up the big blind closes the pre-flop AND acts first on the flop:
+  // a duplicated /check would check a flop its author has not seen.
+  const cast = { ivan: user(101, 'Иван'), max: user(202, 'Макс') };
   const t = new Table();
-  await t.begin(cast);
-  await t.runToShowdown(cast);
+  await t.begin(cast, { blinds: [25, 50] });
+  await t.press(t.actorOf(cast), 'CALL'); // the button (SB) completes
 
-  await t.press(cast.ivan, 'Макс');
-  await t.press(cast.ivan, 'К распределению');
-  const confirm = t.button('Подтвердить');
+  const bb = t.actorOf(cast);
+  assert.equal(String(bb.id), t.room.hand.bbId);
+  await t.cmd(bb, '/check', { date: 2_000_000_000 });
+  assert.equal(t.room.hand.street, 'flop');
+  assert.equal(t.actor(), String(bb.id), 'the big blind is first on the flop');
 
-  const before = t.room.players.find((p) => p.id === '202').stack;
-  await t.pressData(cast.ivan, confirm.callback_data);
-  const after = t.room.players.find((p) => p.id === '202').stack;
-  await t.pressData(cast.ivan, confirm.callback_data);
+  await t.cmd(bb, '/check', { date: 2_000_000_001 }); // the same tap, a second later
+  assert.equal(t.actor(), String(bb.id), 'the duplicate did not act on the flop');
+  assert.equal(t.room.players.find((p) => p.id === String(bb.id)).acted, false);
+  assert.match(t.lastPost(), /повтор/i, 'and the author is told why');
 
-  assert.equal(t.room.players.find((p) => p.id === '202').stack, after);
-  assert.ok(after > before, 'the pot was actually awarded once');
+  await t.cmd(bb, '/check', { date: 2_000_000_009 }); // a real decision, later
+  assert.notEqual(t.actor(), String(bb.id), 'a deliberate move afterwards goes through');
 });
 
 /* ------------------------------------------------------ chip conservation */
@@ -72,22 +84,10 @@ test('chips are conserved across many hands played through the bot', async () =>
   await t.press(cast.ivan, 'Начать игру');
 
   for (let hand = 0; hand < 12; hand++) {
-    if (t.room.status === 'finished') break;
     await t.runToShowdown(cast);
-    if (t.room.hand.phase === 'showdown') {
-      const pots = t.room.hand.pots;
-      for (let i = 0; i < pots.length; i++) {
-        if (pots[i].eligible.length <= 1) continue;
-        const name = t.room.players.find((p) => p.id === pots[i].eligible[hand % pots[i].eligible.length]).name;
-        await t.press(cast.ivan, name);
-        await t.press(cast.ivan, t.button('Далее') ? 'Далее' : 'К распределению');
-      }
-      await t.press(cast.ivan, 'Подтвердить');
-    }
-    assert.equal(t.room.hand.phase, 'complete', `hand ${hand + 1} must be settled`);
+    assert.equal(t.room.hand.phase, 'complete', `hand ${hand + 1} must be settled by the bot itself`);
     assert.equal(t.chips(), TOTAL, `chips leaked after hand ${hand + 1}`);
     assert.ok(t.room.players.every((p) => p.stack >= 0), 'no negative stacks');
-
     if (t.room.status === 'finished') break;
     await t.press(cast.ivan, 'Следующая раздача');
   }
@@ -112,76 +112,34 @@ test('folding everyone out still conserves chips and needs no winner screen', as
   assert.equal(t.room.hand.phase, 'complete');
   assert.equal(t.chips(), TOTAL);
   assert.match(t.text(), /ЗАВЕРШЕНА/);
+  assert.match(t.text(), /остальные сбросили/);
 });
 
 /* ------------------------------------------------------------- side pots */
-
-test('side pots through the bot pay exactly what the preview promised', async () => {
-  const cast = CAST();
-  const t = new Table();
-  await t.seat(cast, { blinds: [25, 50] });
-
-  // Three different stacks guarantee a main pot plus at least one side pot.
-  const bySeat = { 101: 1000, 202: 3000, 303: 5000, 404: 5000 };
-  for (const p of t.room.players) {
-    p.stack = bySeat[p.id];
-    p.stats.buyIn = bySeat[p.id];
-  }
-  const TOTAL = t.chips(); // before any blinds are posted
-  await t.press(cast.ivan, 'Начать игру');
-
-  await t.shoveDown(cast);
-
-  assert.equal(t.room.hand.phase, 'showdown');
-  assert.ok(t.room.hand.pots.length > 1, `expected side pots, got ${t.room.hand.pots.length}`);
-
-  // Walk the pots, giving each one to its smallest eligible stack.
-  let steps = 0;
-  while (!t.room.ui.winner.review && steps++ < 6) {
-    const pot = t.room.hand.pots[t.room.ui.winner.potIndex];
-    const winner = t.room.players.find((p) => p.id === pot.eligible[0]);
-    await t.press(cast.ivan, winner.name);
-    await t.press(cast.ivan, t.button('Далее') ? 'Далее' : 'К распределению');
-  }
-
-  // What the review screen promises, straight from the engine's own
-  // `distribution()` — the same call that is about to move the chips.
-  const promised = preview(t.room);
-  assert.ok(promised.length > 0);
-  const reviewText = t.text();
-  for (const row of promised) {
-    assert.ok(
-      reviewText.includes(row.name),
-      `the review screen must name ${row.name}`
-    );
-  }
-
-  const before = new Map(t.room.players.map((p) => [p.id, p.stack]));
-  await t.press(cast.ivan, 'Подтвердить');
-
-  for (const row of promised) {
-    const delta = t.room.players.find((p) => p.id === row.playerId).stack - before.get(row.playerId);
-    assert.equal(delta, row.amount, `${row.name} got ${delta}, preview said ${row.amount}`);
-  }
-  assert.equal(t.chips(), TOTAL, 'side-pot payout conserved chips');
-});
 
 test('a pot only one player can claim is a refund, never a question', async () => {
   const cast = { ivan: user(101, 'Иван'), max: user(202, 'Макс'), dima: user(303, 'Дима') };
   const t = new Table();
   await t.seat(cast, { blinds: [25, 50] });
+  // Three different depths: the deepest stack shoves more than anyone can
+  // call, and that excess is a pot with a single claimant.
+  const depth = { 101: 200, 202: 3000, 303: 5000 };
   for (const p of t.room.players) {
-    p.stack = p.id === '101' ? 200 : 5000;
+    p.stack = depth[p.id];
     p.stats.buyIn = p.stack;
   }
+  const TOTAL = t.chips();
   await t.press(cast.ivan, 'Начать игру');
 
   await t.shoveDown(cast);
 
   const solo = t.room.hand.pots.filter((p) => p.eligible.length === 1);
+  assert.ok(solo.length > 0, 'the deep stacks over-shoved into a pot only they can win');
   for (const pot of solo) {
-    assert.equal(pot.winners.length, 1, 'an uncontested pot is settled without asking');
+    assert.deepEqual(pot.winners, pot.eligible, 'an uncontested pot goes back to its only claimant');
   }
+  assert.equal(t.chips(), TOTAL);
+  assert.match(handText(t, 1), /\(возврат\)/);
 });
 
 /* ---------------------------------------------------------------- all-in */
@@ -256,6 +214,264 @@ test('a hidden ALL-IN is refused by the server, not just left off the keyboard',
 
   await t.pressData(cast.sasha, `a:allinok:${t.room.seq}`);
   assert.equal(t.room.hand.currentBet, 90);
+});
+
+/* ------------------------------------------------------------ typed moves */
+
+test('typed moves do what the buttons do: /call, /raise N, /check, /fold', async () => {
+  const cast = CAST();
+  const t = new Table();
+  await t.begin(cast, { blinds: [25, 50] });
+  const bet = (u) => t.room.players.find((p) => p.id === String(u.id)).bet;
+
+  let who = t.actorOf(cast);
+  await t.cmd(who, '/call');
+  assert.equal(bet(who), 50);
+
+  who = t.actorOf(cast);
+  await t.cmd(who, '/raise 300');
+  assert.equal(bet(who), 300, '/raise N is a raise TO N — the total in front of you');
+  assert.equal(t.room.hand.currentBet, 300);
+
+  who = t.actorOf(cast);
+  await t.cmd(who, '/fold');
+  assert.equal(t.room.players.find((p) => p.id === String(who.id)).folded, true);
+
+  who = t.actorOf(cast);
+  await t.cmd(who, '/raise 1 000'); // with a thousands separator, as people type it
+  assert.equal(bet(who), 1000);
+});
+
+test('/bet and /raise are forgiving about the word, strict about the chips', async () => {
+  const cast = { ivan: user(101, 'Иван'), max: user(202, 'Макс'), dima: user(303, 'Дима') };
+  const t = new Table();
+  await t.begin(cast, { blinds: [25, 50] });
+  const bet = (u) => t.room.players.find((p) => p.id === String(u.id)).bet;
+
+  // Pre-flop there is a bet (the big blind): /bet 200 means "raise to 200".
+  let who = t.actorOf(cast);
+  await t.cmd(who, '/bet 200');
+  assert.equal(bet(who), 200);
+
+  // Nothing to call yet /call typed: that is a check, not an error.
+  await t.runToShowdown(cast, 2);
+  assert.equal(t.room.hand.street, 'flop');
+  who = t.actorOf(cast);
+  await t.cmd(who, '/call');
+  assert.equal(t.room.players.find((p) => p.id === String(who.id)).lastAction, 'CHECK');
+
+  // But never the other way round: /check facing a bet does not put chips in.
+  who = t.actorOf(cast);
+  await t.cmd(who, '/raise 100');
+  const facing = t.actorOf(cast);
+  const stack = t.room.players.find((p) => p.id === String(facing.id)).stack;
+  await t.cmd(facing, '/check');
+  assert.equal(t.room.players.find((p) => p.id === String(facing.id)).stack, stack);
+  assert.equal(t.actor(), String(facing.id), 'still their decision');
+  assert.match(t.lastPost(), /Чек нельзя/);
+});
+
+test('a typed amount outside the legal range is refused with the range, and moves nothing', async () => {
+  const cast = CAST();
+  const t = new Table();
+  await t.begin(cast, { blinds: [25, 50] });
+  const who = t.actorOf(cast);
+  const before = t.room.players.map((p) => p.stack);
+
+  await t.cmd(who, '/raise 70'); // min raise is to 100
+  assert.match(t.lastPost(), /Можно от 100 до 10000/);
+  await t.cmd(who, '/raise 999999');
+  assert.match(t.lastPost(), /Можно от 100 до 10000/);
+  await t.cmd(who, '/raise');
+  assert.match(t.lastPost(), /Сколько\?/);
+  await t.cmd(who, '/raise 2.5к');
+  assert.match(t.lastPost(), /Сколько\?/, 'a guess about chips is a bet nobody made');
+
+  assert.deepEqual(t.room.players.map((p) => p.stack), before);
+  assert.equal(t.actor(), String(who.id));
+});
+
+test('/raise with only enough chips to call says so, instead of blaming a short all-in', async () => {
+  const cast = { ivan: user(101, 'Иван'), max: user(202, 'Макс'), dima: user(303, 'Дима') };
+  const t = new Table();
+  await t.seat(cast, { blinds: [25, 50] });
+  t.room.players[2].stack = 300; // Дима, the big blind, is short
+  t.room.players[2].stats.buyIn = 300;
+  await t.press(cast.ivan, 'Начать игру');
+
+  await t.cmd(cast.ivan, '/raise 1000');
+  await t.cmd(cast.max, '/call');
+  assert.equal(t.actor(), '303');
+  await t.cmd(cast.dima, '/raise 2000');
+  assert.match(t.lastPost(), /хватает только на колл: \/call 250/);
+  assert.doesNotMatch(t.lastPost(), /короткий олл-ин/);
+  assert.equal(t.actor(), '303', 'still his decision');
+});
+
+test('a typed /allin cannot re-open betting that a short all-in closed', async () => {
+  // The same rule as the hidden ALL-IN button — a typed command has no
+  // button to hide, so only the server check stands in the way.
+  const cast = CAST();
+  const t = new Table();
+  await t.seat(cast, { blinds: [25, 50] });
+  t.room.players[1].stack = 90;
+  t.room.players[1].stats.buyIn = 90;
+  await t.press(cast.ivan, 'Начать игру');
+
+  await t.cmd(cast.sasha, '/call');
+  await t.cmd(cast.ivan, '/call');
+  await t.cmd(cast.max, '/allin'); // 90: short of a full raise
+  await t.cmd(cast.dima, '/call');
+
+  assert.equal(t.actor(), '404');
+  const before = t.room.players.find((p) => p.id === '404').stack;
+  await t.cmd(cast.sasha, '/allin');
+  assert.equal(t.room.players.find((p) => p.id === '404').stack, before);
+  assert.equal(t.room.hand.currentBet, 90, 'the betting stayed closed');
+  assert.match(t.lastPost(), /Повышать нельзя/);
+});
+
+test('while people type, the table follows them to the bottom of the chat', async () => {
+  const cast = CAST();
+  const t = new Table();
+  await t.begin(cast, { blinds: [25, 50] });
+  const first = t.tableId;
+
+  // A button press edits in place: the table is where the finger is.
+  await t.press(t.actorOf(cast), 'CALL');
+  assert.equal(t.tableId, first);
+
+  // Chat moves on — two messages the bot never sees (privacy mode), then a
+  // typed command. The command's id reveals how far the table was buried.
+  t.tg.nextId += 2;
+  await t.cmd(t.actorOf(cast), '/call');
+  assert.ok(t.tableId > first, 'a fresh copy was posted below the conversation');
+  assert.equal(t.tg.message(first).deleted, true, 'and the buried copy removed, not left to confuse');
+  assert.equal(
+    [...t.tg.messages.values()].filter((m) => m.chatId === String(t.chatId) && !m.deleted && m.text.includes('РАЗДАЧА #1')).length,
+    1,
+    'exactly one live table'
+  );
+
+  // Right under the table, a command does not need a new copy.
+  const now = t.tableId;
+  await t.cmd(t.actorOf(cast), '/call');
+  assert.equal(t.tableId, now, 'one message below is still in view: edited in place');
+});
+
+/* ------------------------------------------------- people come and go */
+
+test('a player removed mid-hand leaves their chips in the pot and their result in the P/L', async () => {
+  const cast = CAST();
+  const t = new Table();
+  await t.seat(cast, { blinds: [25, 50] });
+  const TOTAL = t.chips();
+  await t.press(cast.ivan, 'Начать игру');
+
+  // Саша raises, then the host removes him while the hand is on.
+  assert.equal(t.actor(), '404');
+  await t.cmd(cast.sasha, '/raise 500');
+  await t.cmd(cast.ivan, '/kick');
+  await t.panel(cast.ivan, 'Саша');
+
+  const sasha = t.room.players.find((p) => p.id === '404');
+  assert.ok(sasha, 'the row stays — the engine sums the pot from it');
+  assert.equal(sasha.folded, true);
+  assert.equal(totalPot(t.room), 500 + 25 + 50, 'his 500 are still in the pot');
+  assert.equal(t.chips(), TOTAL, 'nothing vanished with him');
+
+  await t.runToShowdown({ ivan: cast.ivan, max: cast.max, dima: cast.dima });
+  assert.equal(t.chips(), TOTAL);
+  await t.press(cast.ivan, 'Следующая раздача');
+  assert.equal(t.room.players.find((p) => p.id === '404').inHand, false, 'not dealt in again');
+
+  await t.cmd(cast.sasha, '/join');
+  assert.equal(t.room.players.find((p) => p.id === '404').kicked, true, 'and cannot walk back in');
+
+  await t.cmd(cast.ivan, '/finish');
+  assert.match(t.lastPost(), /Саша \(удалён\)/);
+  assert.match(t.lastPost(), /Сумма P\/L: 0/, 'his −500 is part of the evening');
+});
+
+test('/leave and then /join puts you back in the game', async () => {
+  const cast = CAST();
+  const t = new Table();
+  await t.begin(cast);
+  await t.cmd(cast.dima, '/leave');
+  const dima = () => t.room.players.find((p) => p.id === '303');
+  assert.equal(dima().sittingOut, true);
+
+  await t.cmd(cast.dima, '/join');
+  assert.equal(dima().sittingOut, false, 'a second /join is "I am back", not a no-op');
+  await t.runToShowdown(cast);
+  await t.press(cast.ivan, 'Следующая раздача');
+  assert.equal(dima().inHand, true);
+});
+
+test('when the last opponent walks out, the pot goes to the one left — nobody moves for them', async () => {
+  const cast = { ivan: user(101, 'Иван'), max: user(202, 'Макс') };
+  const t = new Table();
+  await t.seat(cast, { blinds: [25, 50] });
+  const TOTAL = t.chips();
+  await t.press(cast.ivan, 'Начать игру');
+
+  // Heads-up: Иван (button) is on the clock; Макс leaves the group.
+  assert.equal(t.actor(), '101');
+  await t.raw({
+    update_id: 11,
+    message: {
+      message_id: t.tg.nextId++,
+      chat: { id: t.chatId, type: 'supergroup' },
+      from: cast.max,
+      left_chat_member: { id: 202, is_bot: false, first_name: 'Макс' },
+    },
+  });
+
+  const ivan = t.room.players.find((p) => p.id === '101');
+  assert.equal(t.room.hand.phase, 'complete', 'the hand is closed, not left waiting on Иван');
+  assert.equal(ivan.lastAction, 'SB', 'Иван made no move: none was made in his name');
+  assert.equal(t.chips(), TOTAL);
+  assert.equal(ivan.stack, 10050, 'he takes back his blind and Макс\'s');
+});
+
+test('an all-in player who leaves the chat keeps their hand in play', async () => {
+  const cast = { ivan: user(101, 'Иван'), max: user(202, 'Макс'), dima: user(303, 'Дима') };
+  const t = new Table();
+  await t.seat(cast, { blinds: [25, 50] });
+  t.useDeck(stack({ 101: 'As Ah', 202: 'Kd Kc', 303: '7c 2d' }, 'Qs 9h 4d 3c 8s'));
+  await t.press(cast.ivan, 'Начать игру');
+  await t.press(cast.ivan, 'ALL-IN');
+  await t.press(cast.ivan, 'ПОДТВЕРДИТЬ');
+
+  await t.raw({
+    update_id: 12,
+    message: {
+      message_id: t.tg.nextId++,
+      chat: { id: t.chatId, type: 'supergroup' },
+      from: cast.ivan,
+      left_chat_member: { id: 101, is_bot: false, first_name: 'Иван' },
+    },
+  });
+  assert.equal(t.room.players.find((p) => p.id === '101').folded, false, 'nothing left to decide, nothing to fold');
+
+  await t.press(cast.max, 'CALL');
+  await t.press(cast.dima, 'FOLD');
+  assert.equal(t.room.hand.pots[0].winners[0], '101', 'his aces still win');
+});
+
+test('only somebody at the table can deal the next hand', async () => {
+  const cast = { ivan: user(101, 'Иван'), max: user(202, 'Макс') };
+  const t = new Table();
+  await t.begin(cast);
+  await t.runToShowdown(cast);
+  const n = t.room.handNo;
+
+  await t.press(user(9999, 'Прохожий'), 'Следующая раздача');
+  assert.equal(t.room.handNo, n);
+  assert.match(t.answer().text, /не за столом/);
+
+  await t.cmd(cast.max, '/next');
+  assert.equal(t.room.handNo, n + 1);
 });
 
 /* --------------------------------------------------------- custom amount */
@@ -372,21 +588,23 @@ test('when the host leaves, the table gets a new one instead of freezing', async
 
 /* ------------------------------------------------------------------ undo */
 
-test('undo puts the chips back where they were', async () => {
+test('undo takes back the host\'s own admin action, and says so', async () => {
   const cast = CAST();
   const t = new Table();
   await t.begin(cast);
-  await t.runToShowdown(cast);
-  await t.press(cast.ivan, 'Макс');
-  await t.press(cast.ivan, 'К распределению');
+  await t.cmd(cast.ivan, '/rebuy');
+  await t.panel(cast.ivan, 'Дима'); // a tap on the wrong name
 
-  const before = t.room.players.map((p) => p.stack);
-  await t.press(cast.ivan, 'Подтвердить');
-  assert.notDeepEqual(t.room.players.map((p) => p.stack), before);
+  const dima = () => t.room.players.find((p) => p.id === '303');
+  assert.equal(dima().stats.buyIn, 20000);
+  await t.cmd(cast.ivan, '/undo');
+  assert.equal(dima().stats.buyIn, 10000, 'the re-buy was taken back');
+  assert.match(t.lastPost(), /Отменено: докупка: Дима/);
 
-  await t.press(cast.ivan, 'Отменить результат');
-  assert.deepEqual(t.room.players.map((p) => p.stack), before, 'undo restored every stack');
-  assert.equal(t.room.hand.phase, 'showdown', 'and put the decision back on screen');
+  // A bet is not an admin action: after one, there is nothing left to undo.
+  await t.press(t.actorOf(cast), 'CALL');
+  await t.cmd(cast.ivan, '/undo');
+  assert.match(t.lastPost(), /Ставки и раздачи не отменяются/);
 });
 
 /* ------------------------------------------------------------- restarts */
@@ -412,7 +630,7 @@ test('a restart mid-hand restores the table and play continues', async () => {
   assert.equal(room2.handNo, handNo);
   assert.equal(room2.hand.actorId, actorId, 'the same player is still on the clock');
   assert.deepEqual(room2.players.map((p) => p.stack), stacks);
-  assert.equal(room2.ui.tableMessageId, tableMessageId, 'it redrew the same pinned message');
+  assert.equal(room2.ui.tableMessageId, tableMessageId, 'it redrew the same table message');
   assert.match(t.tg.message(tableMessageId).text, /РАЗДАЧА/);
 
   // And the restored table still takes actions.
@@ -528,8 +746,14 @@ test('every button ever rendered fits in 64 bytes, even with real Telegram ids',
   collect();
   await t.runToShowdown(cast);
   collect();
-  await t.press(cast.a, t.room.players.find((p) => p.id === t.room.hand.pots[0].eligible[0]).name);
-  collect();
+  if (t.room.status !== 'finished') {
+    await t.press(cast.a, 'Следующая раздача');
+    collect();
+  }
+  await t.cmd(cast.a, '/kick');
+  t.lastPanel().markup.inline_keyboard.flat().forEach((b) => seen.add(b.callback_data));
+  await t.cmd(cast.a, '/rebuy');
+  t.lastPanel().markup.inline_keyboard.flat().forEach((b) => seen.add(b.callback_data));
 
   assert.ok(seen.size > 8, `expected a decent sample, got ${seen.size}`);
   for (const data of seen) {
@@ -554,18 +778,11 @@ test('commands addressed to another bot are ignored', async () => {
 
 test('the game refuses to run outside a group', async () => {
   const t = new Table();
-  await t.app.handleUpdate({
-    update_id: 9,
-    message: {
-      message_id: 1,
-      chat: { id: 555, type: 'private' },
-      from: user(555, 'Иван'),
-      text: '/newgame',
-    },
-  });
-  await t.app.settle();
-  assert.equal(t.app.room(555), null);
-  assert.match(t.tg.messages.get(100).text, /групповом чате/);
+  const ivan = user(555, 'Иван');
+  await t.start(ivan);
+  await t.dm(ivan, '/newgame');
+  assert.equal(t.app.room(555), null, 'no table in a private chat');
+  assert.match(t.lastDm(ivan), /в группе/);
 });
 
 test('blinds changed mid-game land on the next hand, not this one', async () => {
@@ -579,9 +796,6 @@ test('blinds changed mid-game land on the next hand, not this one', async () => 
   assert.match(t.text(), /25\/50 → 100\/200/, 'and everyone can see it coming');
 
   await t.runToShowdown(cast);
-  await t.press(cast.ivan, 'Макс');
-  await t.press(cast.ivan, 'К распределению');
-  await t.press(cast.ivan, 'Подтвердить');
   await t.press(cast.ivan, 'Следующая раздача');
 
   assert.equal(t.room.settings.bigBlind, 200);
@@ -593,9 +807,8 @@ test('/finish ends the game and posts an honest P/L table', async () => {
   const t = new Table();
   await t.begin(cast, { blinds: [25, 50] });
   await t.runToShowdown(cast);
-  await t.press(cast.ivan, 'Макс');
-  await t.press(cast.ivan, 'К распределению');
-  await t.press(cast.ivan, 'Подтвердить');
+  await t.press(cast.ivan, 'Следующая раздача');
+  await t.press(t.actorOf(cast), 'CALL'); // chips in the pot of an unfinished hand
 
   await t.cmd(cast.max, '/finish');
   assert.equal(t.room.status, 'playing', 'only the host may end the game');
@@ -604,8 +817,9 @@ test('/finish ends the game and posts an honest P/L table', async () => {
   assert.equal(t.room.status, 'finished');
   const results = t.lastPost();
   assert.match(results, /ИТОГИ/);
-  assert.match(results, /Сумма P\/L: 0/, 'the table must balance to zero');
+  assert.match(results, /Сумма P\/L: 0/, 'the unfinished pot went back — the table balances');
   for (const p of t.room.players) assert.ok(results.includes(p.name));
+  assert.match(handText(t, 2), /ПРЕРВАНА/, 'the abandoned hand says so instead of pretending');
 });
 
 test('a re-buy tops up the stack and the buy-in, so P/L stays honest', async () => {
@@ -627,23 +841,41 @@ test('a re-buy tops up the stack and the buy-in, so P/L stays honest', async () 
 });
 
 test('a busted player can be brought back instead of ending the evening', async () => {
+  const cast = { ivan: user(101, 'Иван'), max: user(202, 'Макс'), dima: user(303, 'Дима') };
+  const t = new Table();
+  await t.seat(cast, { blinds: [25, 50] });
+  // Иван shoves seven-deuce into aces; Дима stays out of it.
+  t.useDeck(stack({ 101: '7c 2d', 202: 'As Ah', 303: '9c 8c' }, 'Kd Qh 4s 5d Jc'));
+  await t.press(cast.ivan, 'Начать игру');
+  await t.press(cast.ivan, 'ALL-IN');
+  await t.press(cast.ivan, 'ПОДТВЕРДИТЬ');
+  await t.press(cast.max, 'CALL'); // covering the shove is a call, not a raise
+  await t.press(cast.dima, 'FOLD');
+
+  const ivan = () => t.room.players.find((p) => p.id === '101');
+  assert.equal(ivan().stack, 0, 'Иван busted');
+  assert.equal(t.room.status, 'playing', 'two stacks left: the evening goes on');
+
+  await t.cmd(cast.ivan, '/rebuy');
+  await t.panel(cast.ivan, 'Иван');
+  assert.equal(ivan().stack, 10000);
+  await t.press(cast.max, 'Следующая раздача');
+  assert.equal(ivan().inHand, true, 'back in from the next hand');
+  assert.equal(t.hole(cast.ivan).length, 2, 'with cards');
+});
+
+test('when only one stack is left, the game ends and the results are posted', async () => {
   const cast = { ivan: user(101, 'Иван'), max: user(202, 'Макс') };
   const t = new Table();
   await t.seat(cast, { blinds: [25, 50] });
+  t.useDeck(stack({ 101: '7c 2d', 202: 'As Ah' }, 'Kd Qh 4s 5d Jc'));
   await t.press(cast.ivan, 'Начать игру');
   await t.shoveDown(cast);
 
-  // Give the whole thing to one of them: heads-up, the other is now broke.
-  const pot = t.room.hand.pots[0];
-  const winner = t.room.players.find((p) => p.id === pot.eligible[0]);
-  await t.press(cast.ivan, winner.name);
-  await t.press(cast.ivan, 'К распределению');
-  await t.press(cast.ivan, 'Подтвердить');
-
-  assert.equal(t.room.status, 'finished', 'with one stack left the game is over');
-
-  const broke = t.room.players.find((p) => p.stack === 0);
-  assert.ok(broke, 'somebody really busted');
+  assert.equal(t.room.status, 'finished');
+  assert.match(t.lastPost(), /ИТОГИ/);
+  assert.match(t.lastPost(), /Сумма P\/L: 0/);
+  assert.match(handText(t, 1), /🏆 <b>Макс<\/b> \+20 000/, 'the deciding hand is shown, not cut off');
 });
 
 test('the host can hand the room over, and only the host can', async () => {
@@ -701,4 +933,14 @@ test('parseCommand handles the shapes Telegram actually sends', () => {
   assert.equal(parseCommand('не /join'), null, 'a command must start the message');
   assert.equal(parseCommand(''), null);
   assert.equal(parseCommand('/'), null);
+});
+
+test('amountArg reads chip amounts the way people type them, and nothing else', () => {
+  assert.equal(amountArg('3000'), 3000);
+  assert.equal(amountArg('3 000'), 3000);
+  assert.equal(amountArg('3\u00a0000'), 3000);
+  assert.equal(amountArg('3_000'), 3000);
+  for (const bad of ['', '3к', '2.5', '-100', '1e5', 'все', '0x10']) {
+    assert.equal(amountArg(bad), null, `"${bad}" is not an amount`);
+  }
 });

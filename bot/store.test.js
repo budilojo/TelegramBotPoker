@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { Store } from './store.js';
-import { createRoom, addPlayer, startGame, serialize, deserialize } from './room.js';
+import { createRoom, addPlayer, startGame, act, serialize, deserialize } from './room.js';
 
 function sample() {
   const room = createRoom({ chatId: -1001, host: { id: 1, name: 'Иван' } });
@@ -110,4 +110,34 @@ test('it creates its own directory on first run', () => {
   assert.equal(again.loadAll().length, 1, 'and the data is really on disk');
   again.close();
   fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('who has pressed Start survives a restart — cards must not start bouncing', () => {
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'bot-dm-')), 'bot.db');
+  const a = new Store(file);
+  assert.equal(a.getDm('202'), null, 'unknown until they press Start or a delivery bounces');
+  a.setDm('202', 'ok');
+  a.setDm('303', 'fail');
+  a.setDm('202', 'ok'); // idempotent
+  a.close();
+
+  const b = new Store(file);
+  assert.equal(b.getDm('202'), 'ok');
+  assert.equal(b.getDm('303'), 'fail');
+  b.close();
+});
+
+test('the deck of a hand in progress is saved, and dropped once the hand is over', () => {
+  const room = sample();
+  const back = deserialize(serialize(room));
+  assert.deepEqual(back.hand.deck, room.hand.deck, 'a restart continues the same deck');
+  assert.deepEqual(back.hand.holes, room.hand.holes);
+  assert.equal(back.hand.deck.length, 52);
+
+  let guard = 0;
+  while (room.hand.phase === 'betting' && guard++ < 10) act(room, room.hand.actorId, 'fold');
+  assert.equal(room.hand.phase, 'complete');
+  const done = deserialize(serialize(room));
+  assert.equal(done.hand.deck, null, '"what would have come next" is not kept anywhere');
+  assert.ok(done.hand.holes, 'the dealt cards themselves are the record of the hand');
 });

@@ -36,12 +36,14 @@ const CONTROL_CHARS = /[\p{Cc}\p{Cf}]/gu;
  * Telegram first_name is free-form. Strip control characters (they would let
  * someone inject RTL overrides into the table) and cap the length.
  */
-export function cleanName(raw, fallback = 'Игрок') {
-  const s = String(raw ?? '')
+export function cleanName(raw, fallback = 'Игрок', max = 16) {
+  const s = [...String(raw ?? '')
     .replace(CONTROL_CHARS, '')
     .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 16);
+    .trim()]
+    .slice(0, max)
+    .join('')
+    .trim();
   return s || fallback;
 }
 

@@ -50,6 +50,36 @@ const app = new App({
 const restored = app.load();
 console.log(`[bot] @${me.username} · восстановлено столов: ${restored} · база: ${DB_PATH}`);
 
+/**
+ * The "/" menu. /fold and /allin are deliberately NOT in it: a menu entry is
+ * one tap, and those are the two moves a stray tap must never make. They work
+ * when typed — typing is a decision.
+ */
+const GROUP_COMMANDS = [
+  ['check', 'чек'],
+  ['call', 'уравнять ставку'],
+  ['raise', 'поднять ДО суммы: /raise 300'],
+  ['bet', 'поставить: /bet 200'],
+  ['next', 'следующая раздача'],
+  ['table', 'показать стол внизу чата'],
+  ['join', 'сесть за стол'],
+  ['leave', 'встать из-за стола'],
+  ['newgame', 'создать стол'],
+  ['help', 'как играть'],
+];
+const PRIVATE_COMMANDS = [
+  ['cards', 'мои карты в текущих раздачах'],
+  ['help', 'как играть'],
+];
+const asCommands = (list) => list.map(([command, description]) => ({ command, description }));
+try {
+  await bot.api.setMyCommands(asCommands(GROUP_COMMANDS), { scope: { type: 'all_group_chats' } });
+  await bot.api.setMyCommands(asCommands(PRIVATE_COMMANDS), { scope: { type: 'all_private_chats' } });
+} catch (err) {
+  // A missing menu is cosmetic; the commands work without it.
+  console.error('[bot] не удалось задать меню команд:', err?.description ?? err?.message ?? err);
+}
+
 // Everything goes through one handler: the App owns the routing.
 bot.use(async (ctx) => {
   await app.handleUpdate(ctx.update);
@@ -93,12 +123,13 @@ process.once('SIGTERM', () => shutdown('SIGTERM'));
 await bot.start({
   // Privacy mode stays ON: the bot must not read the group's conversation.
   // Commands, replies to its own messages and callback queries arrive anyway,
-  // and that is everything this design needs.
+  // and that is everything this design needs. `my_chat_member` also covers
+  // private chats: it is how the bot learns that somebody blocked it.
   allowed_updates: ['message', 'callback_query', 'my_chat_member'],
   onStart: async () => {
     console.log('[bot] long polling запущен');
-    // Redraw every live table: after a restart the pinned message is stale,
-    // and the game must continue from exactly where it stopped.
+    // Redraw every live table: the game must continue from exactly where it
+    // stopped — same hand, same cards, same player on the clock.
     await app.resume();
   },
   drop_pending_updates: false,

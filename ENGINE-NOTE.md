@@ -126,7 +126,12 @@ if (action === 'allin') {
 
 **Что сделано в боте.** Пока решение не принято, бот закрывает это у себя:
 `bot/room.js` → `act()` отклоняет агрессивный `allin` при `raiseLocked` до
-вызова `applyAction`, и кнопка ALL-IN гейтится так же, как в вебе. Тест —
+вызова `applyAction`, и кнопка ALL-IN гейтится так же, как в вебе. Тесты —
 `bot/app.test.js` → «a hidden ALL-IN is refused by the server, not just left
-off the keyboard». Если правка приземлится в движке, guard в боте станет
+off the keyboard» и «a typed /allin cannot re-open betting that a short
+all-in closed». Если правка приземлится в движке, guard в боте станет
 избыточным, но безвредным.
+
+С тех пор как бот принимает текстовые команды, находка стала важнее: у
+набранного `/allin` нет кнопки, которую можно спрятать, и без серверной
+проверки правило не держалось бы вообще ничем.

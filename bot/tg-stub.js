@@ -9,7 +9,10 @@
  *   - editing a message to the exact same text+markup raises 400
  *     "message is not modified";
  *   - editing a deleted message raises 400 "message to edit not found";
- *   - callback_data longer than 64 bytes is rejected outright.
+ *   - callback_data longer than 64 bytes is rejected outright;
+ *   - a private message to somebody who never pressed Start raises 403
+ *     "bot can't initiate conversation with a user" — the rule that shapes
+ *     the whole card-delivery design.
  */
 
 export class TelegramError extends Error {
@@ -32,6 +35,8 @@ export class TelegramStub {
     this.answered = [];
     this.pinned = new Set();
     this.failNext = null; // queue an error to test recovery paths
+    /** Users who pressed Start: the only private chats the bot may write to. */
+    this.dmOpen = new Set();
   }
 
   #record(method, payload) {
@@ -46,8 +51,9 @@ export class TelegramStub {
   #checkKeyboard(markup) {
     for (const row of markup?.inline_keyboard ?? []) {
       for (const b of row) {
+        if (b.url != null) continue; // a link button carries no callback_data
         const size = Buffer.byteLength(String(b.callback_data ?? ''), 'utf8');
-        if (size > 64) throw new TelegramError(`BUTTON_DATA_INVALID: ${size} bytes`);
+        if (size > 64 || size === 0) throw new TelegramError(`BUTTON_DATA_INVALID: ${size} bytes`);
       }
     }
   }
@@ -55,6 +61,10 @@ export class TelegramStub {
   async sendMessage(chatId, text, opts = {}) {
     this.#record('sendMessage', { chatId: String(chatId), text });
     this.#checkKeyboard(opts.reply_markup);
+    // Positive ids are people. Groups and supergroups are negative.
+    if (Number(chatId) > 0 && !this.dmOpen.has(String(chatId))) {
+      throw new TelegramError("Forbidden: bot can't initiate conversation with a user", 403);
+    }
     const id = this.nextId++;
     this.messages.set(id, {
       chatId: String(chatId),
@@ -91,7 +101,7 @@ export class TelegramStub {
 
   async answerCallbackQuery(id, opts = {}) {
     this.#record('answerCallbackQuery', { id });
-    this.answered.push({ id, text: opts.text ?? '', show_alert: !!opts.show_alert });
+    this.answered.push({ id, text: opts.text ?? '', show_alert: !!opts.show_alert, url: opts.url ?? null });
     return true;
   }
 
@@ -131,6 +141,16 @@ export class TelegramStub {
     return this.messages.get(id);
   }
 
+  /** Every message the bot sent into this person's private chat. */
+  dms(userId) {
+    return [...this.messages.values()].filter((m) => m.chatId === String(userId)).map((m) => m.text);
+  }
+
+  /** Every message the bot sent into the group, deleted ones included. */
+  groupTexts(chatId) {
+    return [...this.messages.values()].filter((m) => m.chatId === String(chatId)).map((m) => m.text);
+  }
+
   /** Every button label currently on the table, flattened. */
   buttons(chatId) {
     const m = this.live(chatId);
@@ -167,10 +187,24 @@ export function cmdUpdate(chatId, from, text, extra = {}) {
     update_id: updateId++,
     message: {
       message_id: 900000 + updateId,
-      chat: { id: chatId, type: 'supergroup' },
+      chat: { id: chatId, type: 'supergroup', title: 'Покер по пятницам' },
       from,
       text,
       ...extra,
+    },
+  };
+}
+
+/** A message in the private chat between `from` and the bot. */
+export function dmUpdate(from, text) {
+  return {
+    update_id: updateId++,
+    message: {
+      message_id: 900000 + updateId,
+      chat: { id: from.id, type: 'private', first_name: from.first_name },
+      from,
+      text,
+      date: Math.floor(Date.now() / 1000),
     },
   };
 }

@@ -50,8 +50,8 @@ export function argInt(args, i) {
    drift apart on a typo. */
 export const NS = {
   ACT: 'a', // betting actions
-  LOBBY: 'j', // sit down / leave before the game starts
-  GAME: 'g', // start, next hand, undo, pause
-  WIN: 'w', // winner selection flow
-  HOST: 'h', // host menu: roles, settings
+  LOBBY: 'j', // sit down / leave
+  GAME: 'g', // start, next hand, pause
+  CARDS: 'c', // "my cards" — answered privately to whoever pressed
+  HOST: 'h', // host panels: kick, re-buy, hand over
 };

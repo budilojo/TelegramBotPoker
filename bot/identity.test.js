@@ -148,23 +148,6 @@ test('a non-host cannot start the game', async () => {
   assert.match(t.answer().text, /только хост/i);
 });
 
-test('a non-host cannot change roles, even with the host\'s own panel button', async () => {
-  const cast = CAST();
-  const t = new Table();
-  await t.seat(cast);
-  await t.cmd(cast.ivan, '/roles'); // host opens the panel
-
-  // The panel is a group message: Макс can see and press it.
-  await t.panel(cast.max, 'Дима');
-
-  assert.equal(t.room.players.find((p) => p.id === '303').role, 'player');
-  assert.match(t.answer().text, /только хост/i);
-
-  // …and the host pressing the same button does work.
-  await t.panel(cast.ivan, 'Дима');
-  assert.equal(t.room.players.find((p) => p.id === '303').role, 'dealer');
-});
-
 test('a non-host cannot kick, and the host cannot kick themselves out', async () => {
   const cast = CAST();
   const t = new Table();
@@ -183,60 +166,84 @@ test('a non-host cannot kick, and the host cannot kick themselves out', async ()
   assert.equal(hostButton, undefined, 'the host is not offered as a target at all');
 });
 
-/* ---------------------------------------------------------- dealer rights */
-
-test('with a dealer assigned, another player cannot close the pot', async () => {
+test('a non-host cannot re-buy chips for anybody, themselves included', async () => {
   const cast = CAST();
   const t = new Table();
   await t.seat(cast);
-  await t.cmd(cast.ivan, '/roles');
-  await t.panel(cast.ivan, 'Саша'); // Саша becomes the dealer
-  assert.equal(t.room.players.find((p) => p.id === '404').role, 'dealer');
+  await t.cmd(cast.ivan, '/rebuy'); // the host opens the panel; everyone can see it
 
-  await t.press(cast.ivan, 'Начать игру');
-  await t.runToShowdown(cast);
-  assert.equal(t.room.hand.phase, 'showdown');
+  await t.panel(cast.max, 'Макс');
+  assert.equal(t.room.players.find((p) => p.id === '202').stack, 10000, 'no free chips');
+  assert.match(t.answer().text, /только хост/i);
 
-  const stacksBefore = t.room.players.map((p) => p.stack);
-  const pick = t.button('Макс');
-  assert.ok(pick, 'the winner buttons are on screen for everyone to see');
-
-  // Макс is neither host nor dealer: he may not award himself the pot.
-  await t.pressData(cast.max, pick.callback_data);
-  assert.deepEqual(t.room.players.map((p) => p.stack), stacksBefore);
-  assert.match(t.answer().text, /Победителя определяет Саша/);
-
-  // The dealer can.
-  await t.pressData(cast.sasha, pick.callback_data);
-  assert.deepEqual(t.room.hand.pots[0].winners, ['202']);
+  // Typing the command is no way around it either.
+  await t.cmd(cast.max, '/rebuy');
+  assert.match(t.lastPost(), /только хост/i);
 });
 
-test('the dealer is not dealt in and risks no chips', async () => {
-  const cast = CAST();
-  const t = new Table();
-  await t.seat(cast);
-  await t.cmd(cast.ivan, '/roles');
-  await t.panel(cast.ivan, 'Саша');
-  await t.press(cast.ivan, 'Начать игру');
-
-  const sasha = t.room.players.find((p) => p.id === '404');
-  assert.equal(sasha.inHand, false);
-  assert.equal(sasha.stack, 10000, 'the dealer posted no blind and lost nothing');
-  assert.equal(t.room.players.filter((p) => p.inHand).length, 3);
-});
-
-test('with no dealer, any seated player may close the pot — but not a stranger', async () => {
+test('a non-host cannot pause, finish, undo or cancel the game', async () => {
   const cast = CAST();
   const t = new Table();
   await t.begin(cast);
-  await t.runToShowdown(cast);
+  const handNo = t.room.handNo;
 
-  const pick = t.button('Дима');
-  await t.pressData(user(9999, 'Прохожий'), pick.callback_data);
-  assert.deepEqual(t.room.hand.pots[0].winners, [], 'a non-member decided nothing');
+  for (const c of ['/pause', '/finish', '/undo', '/cancel']) {
+    await t.cmd(cast.dima, c);
+    assert.match(t.lastPost(), /только хост/i, `${c}: the refusal is spoken`);
+  }
+  assert.equal(t.room.status, 'playing');
+  assert.equal(t.room.handNo, handNo);
+});
 
-  await t.pressData(cast.max, pick.callback_data);
-  assert.deepEqual(t.room.hand.pots[0].winners, ['303']);
+/* ------------------------------------------------ typed moves, same rule */
+
+test('a typed /fold from somebody who is not on the clock moves nothing', async () => {
+  const cast = CAST();
+  const t = new Table();
+  await t.begin(cast);
+
+  const actorId = t.actor();
+  const intruder = Object.values(cast).find((u) => String(u.id) !== actorId);
+  const stacksBefore = t.room.players.map((p) => p.stack);
+
+  await t.cmd(intruder, '/fold');
+  await t.cmd(intruder, '/raise 5000');
+  await t.cmd(intruder, '/allin');
+
+  assert.deepEqual(t.room.players.map((p) => p.stack), stacksBefore, 'no chips moved');
+  assert.equal(t.actor(), actorId, 'the clock did not move');
+  assert.equal(t.room.players.find((p) => p.id === String(intruder.id)).folded, false,
+    'and the intruder did not even fold themselves out of turn');
+  assert.match(t.lastPost(), /Сейчас ходит/, 'the refusal is spoken, not silent');
+});
+
+test('a stranger typing moves at the table is told they are not seated', async () => {
+  const cast = CAST();
+  const t = new Table();
+  await t.begin(cast);
+  const before = t.room.hand.actorId;
+
+  await t.cmd(user(9999, 'Прохожий'), '/call');
+  assert.equal(t.room.hand.actorId, before);
+  assert.match(t.lastPost(), /не за столом/i);
+  assert.equal(t.room.players.length, 4, 'and typing did not seat them');
+});
+
+test('an anonymous admin cannot type a move either', async () => {
+  const cast = CAST();
+  const t = new Table();
+  await t.begin(cast);
+  const actor = t.actorOf(cast);
+  const before = t.room.players.map((p) => p.stack);
+
+  // The actor's own admin account, posting anonymously: still refused —
+  // the bot cannot tell which admin it is.
+  await t.cmd(actor, '/call', { sender_chat: { id: t.chatId, type: 'supergroup' } });
+  await t.cmd(ANON_USER, '/call');
+
+  assert.deepEqual(t.room.players.map((p) => p.stack), before);
+  assert.equal(t.actor(), String(actor.id));
+  assert.match(t.lastPost(), /Анонимные админы/);
 });
 
 /* ------------------------------------------------- one account, one seat */

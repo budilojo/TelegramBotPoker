@@ -1,7 +1,7 @@
 'use strict';
 /**
- * The table message. A pure function `room -> { text, keyboard }` with no
- * Telegram imports, which is what makes the snapshot tests possible.
+ * Every message the bot writes. Pure functions `room -> { text, keyboard }`
+ * with no Telegram imports, which is what makes the snapshot tests possible.
  *
  * Layout notes that are not obvious:
  *
@@ -9,15 +9,24 @@
  *   Everything inside it is padded by VISUAL width (emoji and CJK take two
  *   cells), and the "who is on the clock" marker is a plain ASCII glyph —
  *   an emoji there would shift that one row and break the whole column.
+ *   Cards are never put inside <pre>: suits are emoji and would do the same.
  * - Buttons are visible to everybody in the group. They are NOT a permission:
  *   every press is re-checked against `from.id` on the server.
+ * - The group message never contains a card that is not public: the board,
+ *   and at showdown the hands of the players who reached it. Hole cards go to
+ *   the private chat, or to the "🂠 Мои карты" popup that Telegram shows only
+ *   to the person who pressed it.
+ * - Command hints are wrapped in <code>. Telegram turns a bare `/allin` in a
+ *   bot's message into a link that SENDS the command on tap — a stray tap on
+ *   the hint line would shove somebody's stack. <code> is copied, not sent.
  */
-import { legalActions, canDeal, results } from '../server/game.js';
+import { legalActions, results } from '../server/game.js';
 import { NS, encode } from './cb.js';
 import {
   num, signed, esc, padEnd, padStart, hhmm, STREET_RU, ACTION_RU,
 } from './fmt.js';
-import { roleOf, dealers, openPots, preview, startBlocker } from './room.js';
+import { startBlocker } from './room.js';
+import { cardsText, holeOf } from './cards.js';
 
 const NAME_W = 10;
 const STACK_W = 8;
@@ -27,43 +36,49 @@ function potRaise(legal, f) {
   return Math.round(legal.myBet + legal.toCall + (legal.potTotal + legal.toCall) * f);
 }
 
+/** Players the table still shows: a removed player is only in the final results. */
+const visible = (room) => room.players.filter((p) => !p.kicked);
+
 /* ------------------------------------------------------------------ table */
 
-export function renderRoom(room) {
+/**
+ * @param opts.botUsername  for the "open private chat" deep link
+ */
+export function renderRoom(room, opts = {}) {
   if (room.status === 'finished') return finishedView(room);
-  if (room.status === 'lobby') return lobbyView(room);
+  if (room.status === 'lobby') return lobbyView(room, opts);
   const h = room.hand;
-  if (!h) return lobbyView(room);
+  if (!h) return lobbyView(room, opts);
   if (h.phase === 'complete') return completeView(room);
-  if (h.phase === 'showdown') {
-    return room.ui.winner?.review ? reviewView(room) : winnerView(room);
-  }
   return bettingView(room);
 }
 
+/** `t.me/<bot>?start=cards` — opens the private chat with the Start button. */
+export const dmLink = (botUsername) => (botUsername ? `https://t.me/${botUsername}?start=cards` : null);
+
 /* ------------------------------------------------------------------ lobby */
 
-function lobbyView(room) {
+function lobbyView(room, { botUsername = '' } = {}) {
   const s = room.settings;
-  const seated = room.players.filter((p) => roleOf(p) === 'player');
-  const dl = dealers(room);
+  const seated = visible(room);
 
   const lines = [
-    '♠️ <b>НОВЫЙ СТОЛ</b>',
+    '♠️ <b>НОВЫЙ СТОЛ</b> · техасский холдем',
     '',
     `Стек ${num(s.startingStack)} · блайнды ${num(s.smallBlind)}/${num(s.bigBlind)}` +
       (s.blindMode === 'levels' ? ` · уровни по ${s.levelMinutes} мин` : ''),
     '',
   ];
 
-  if (room.players.length === 0) {
+  if (seated.length === 0) {
     lines.push('<i>За столом пока никого.</i>');
   } else {
-    const rows = room.players.map((p) => {
+    const rows = seated.map((p) => {
       const tags = [];
       if (p.id === room.hostId) tags.push('хост');
-      if (roleOf(p) === 'dealer') tags.push('дилер');
       if (p.left) tags.push('вышел');
+      else if (p.sittingOut) tags.push('встал');
+      else if (p.dm !== 'ok') tags.push('нет лички');
       return `${padEnd(p.name, NAME_W + 2)}${padStart(num(p.stack), STACK_W)}${tags.length ? '  ' + tags.join(', ') : ''}`;
     });
     lines.push(`<pre>${esc(rows.join('\n'))}</pre>`);
@@ -74,41 +89,59 @@ function lobbyView(room) {
   lines.push(
     blocker
       ? `<i>${esc(blocker)}</i>`
-      : `<i>${seated.filter(canDeal).length} за столом${dl.length ? `, дилер: ${esc(dl[0].name)}` : ''}. Хост может начинать.</i>`
+      : `<i>${seated.filter((p) => !p.sittingOut && !p.left).length} за столом. Хост может начинать.</i>`
   );
-  if (room.notice) lines.push(`\n<i>${esc(room.notice)}</i>`);
+  const noDm = seated.filter((p) => !p.left && !p.sittingOut && p.dm !== 'ok');
+  if (noDm.length) {
+    lines.push(
+      '',
+      `🔑 Карты приходят в личку. ${esc(noDm.map((p) => p.name).join(', '))} — ` +
+        'нажмите «Карты в личку» и Start. Без этого карты можно смотреть кнопкой «🂠 Мои карты».'
+    );
+  }
+  if (room.notice) lines.push('', `<i>${esc(room.notice)}</i>`);
 
   const kb = [
     [btn('Сесть за стол', NS.LOBBY, 'sit', room.seq), btn('Встать', NS.LOBBY, 'leave', room.seq)],
     [btn('▶️ Начать игру', NS.GAME, 'start', room.seq)],
   ];
+  const link = dmLink(botUsername);
+  if (link) kb.push([{ text: '🔑 Карты в личку', url: link }]);
   return { text: lines.join('\n'), keyboard: kb };
 }
 
 /* ---------------------------------------------------------------- betting */
 
-function header(room, extra = '') {
+function header(room) {
   const h = room.hand;
   const s = room.settings;
-  // On an all-in runout the engine never advances the street — the rest of
-  // the board is dealt as a formality. Printing "ПРЕФЛОП" while everyone is
-  // turning cards over on a full board would be a lie.
-  const stage = h.phase === 'showdown' ? 'ВСКРЫТИЕ' : STREET_RU[h.street] || h.street.toUpperCase();
-  const parts = [`♠️ <b>РАЗДАЧА #${h.no}</b>`, stage];
+  const parts = [`♠️ <b>РАЗДАЧА #${h.no}</b>`, STREET_RU[h.street] || h.street.toUpperCase()];
   if (s.blindMode === 'levels') parts.push(`Ур. ${room.level.index + 1}`);
   // The hand's start time, not the clock: a header that ticks every minute
   // would make every redraw a real edit and burn the chat's rate limit.
   parts.push(hhmm(h.startedAt || Date.now()));
+  return parts.join(' · ');
+}
+
+function boardLine(room) {
+  const b = room.hand.board || [];
+  if (!b.length) return '🂠 <i>Карты розданы — смотрите в личке у бота.</i>';
+  return `🂠 <b>${cardsText(b)}</b>`;
+}
+
+function potLine(room) {
+  const h = room.hand;
+  const s = room.settings;
   const btnName = room.players.find((p) => p.id === h.dealerId)?.name;
   const sub = [
-    `<b>БАНК  ${num(potNow(room))}</b>`,
+    `<b>БАНК ${num(potNow(room))}</b>`,
     // Queued blinds are shown, not announced once and forgotten: they land at
     // the next deal and everyone should be able to see that coming.
     `блайнды ${num(s.smallBlind)}/${num(s.bigBlind)}` +
       (room.pendingBlinds ? ` → ${num(room.pendingBlinds.sb)}/${num(room.pendingBlinds.bb)}` : ''),
   ];
   if (btnName) sub.push(`D ${esc(btnName)}`);
-  return [parts.join(' · '), '', sub.join(' · ') + extra].join('\n');
+  return sub.join(' · ');
 }
 
 function potNow(room) {
@@ -116,30 +149,25 @@ function potNow(room) {
 }
 
 /** One row per player: marker, name, stack, status. */
-function playerRows(room, { showStatus = true } = {}) {
+function playerRows(room) {
   const h = room.hand;
   const rows = [];
   for (const p of room.players) {
-    if (!p.inHand && roleOf(p) === 'dealer') continue;
-    if (!p.inHand && !p.committed) {
-      // Sitting out / waiting for the next hand — shown greyed at the bottom.
-      continue;
-    }
+    if (!p.inHand) continue;
     const isActor = h && h.actorId === p.id;
     rows.push(
-      (isActor ? '› ' : '  ') +
+      (
+        (isActor ? '› ' : '  ') +
         padEnd(p.name, NAME_W) +
         padStart(num(p.stack), STACK_W) +
-        (showStatus ? '  ' + statusOf(room, p, isActor) : '')
+        '  ' + statusOf(room, p, isActor)
+      ).trimEnd()
     );
   }
-  const bench = room.players.filter(
-    (p) => !p.inHand && !p.committed && roleOf(p) !== 'dealer'
-  );
-  for (const p of bench) {
+  for (const p of visible(room).filter((x) => !x.inHand)) {
     rows.push(
       '  ' + padEnd(p.name, NAME_W) + padStart(num(p.stack), STACK_W) + '  ' +
-        (p.left ? 'вышел' : p.sittingOut ? 'пропуск' : 'ждёт')
+        (p.left ? 'вышел' : p.sittingOut ? 'пропуск' : p.stack <= 0 ? 'без фишек' : 'ждёт')
     );
   }
   return rows;
@@ -161,28 +189,66 @@ function statusOf(room, p, isActor) {
   return '';
 }
 
+/** Players in this hand whose cards could not be delivered privately. */
+function undelivered(room) {
+  const h = room.hand;
+  return room.players.filter((p) => p.inHand && !p.folded && h.holes?.[p.id] && p.dm === 'fail');
+}
+
 function bettingView(room) {
   const h = room.hand;
   const actor = room.players.find((p) => p.id === h.actorId);
   const legal = actor ? legalActions(room, actor.id) : null;
 
-  const lines = [header(room), '', `<pre>${esc(playerRows(room).join('\n'))}</pre>`];
+  const lines = [
+    header(room),
+    '',
+    boardLine(room),
+    '',
+    potLine(room),
+    `<pre>${esc(playerRows(room).join('\n'))}</pre>`,
+  ];
 
   if (room.status === 'paused') {
-    lines.push('', '⏸ <b>Пауза.</b> Хост продолжит игру.');
-    return { text: lines.join('\n'), keyboard: [[btn('▶️ Продолжить', NS.GAME, 'resume', room.seq)]] };
+    lines.push('⏸ <b>Пауза.</b> Хост продолжит игру.');
+    return {
+      text: lines.join('\n'),
+      keyboard: [[btn('▶️ Продолжить', NS.GAME, 'resume', room.seq)], [peekButton()]],
+    };
   }
 
   if (legal) {
     const bits = [];
-    if (legal.currentBet > 0) bits.push(`Ставка ${num(legal.currentBet)}`);
+    if (legal.currentBet > 0) bits.push(`ставка ${num(legal.currentBet)}`);
     if (legal.toCall > 0) bits.push(`коллировать ${num(legal.callAmount)}`);
     else bits.push('можно чекнуть');
-    lines.push('', `▶️ <b>${esc(actor.name)}</b> · ${bits.join(' · ')}`);
+    lines.push(`▶️ <b>${esc(actor.name)}</b> · ${bits.join(' · ')}`);
+    lines.push(`<code>${esc(commandHints(legal))}</code>`);
+  }
+  const lost = undelivered(room);
+  if (lost.length) {
+    lines.push(
+      '',
+      `⚠️ Не дошло в личку: ${esc(lost.map((p) => p.name).join(', '))} — смотрите кнопкой «🂠 Мои карты».`
+    );
   }
   if (room.notice) lines.push('', `<i>${esc(room.notice)}</i>`);
 
-  return { text: lines.join('\n'), keyboard: actionKeyboard(room, actor, legal) };
+  const kb = actionKeyboard(room, actor, legal);
+  kb.push([peekButton()]);
+  return { text: lines.join('\n'), keyboard: kb };
+}
+
+/** The typed equivalents of the buttons, with plain digits — they get copied. */
+export function commandHints(legal) {
+  const c = [];
+  if (legal.canCheck) c.push('/check');
+  if (legal.canCall) c.push('/call');
+  if (legal.canBet) c.push(`/bet ${legal.minTotal}…${legal.maxTotal}`);
+  if (legal.canRaise) c.push(`/raise ${legal.minTotal}…${legal.maxTotal}`);
+  if ((legal.canBet || legal.canRaise) && legal.maxTotal > legal.currentBet) c.push('/allin');
+  if (legal.toCall > 0) c.push('/fold');
+  return c.join(' · ');
 }
 
 /**
@@ -257,137 +323,80 @@ export function actionKeyboard(room, actor, legal) {
   return rows;
 }
 
-/* --------------------------------------------------------------- showdown */
+/**
+ * Read-only and private, so it carries no live seq: an old copy of the table
+ * still answers correctly, because the answer is computed at press time from
+ * whoever pressed.
+ */
+const peekButton = () => btn('🂠 Мои карты', NS.CARDS, 'peek', 0);
+
+/* ---------------------------------------------------------- hand complete */
 
 function potLabel(pot) {
   return pot.sideNo === 0 ? 'MAIN POT' : `SIDE POT ${pot.sideNo}`;
 }
 
-function winnerView(room) {
-  const h = room.hand;
-  const w = room.ui.winner;
-  const pot = h.pots[w.potIndex];
-  const steps = openPots(room);
-  const at = steps.indexOf(w.potIndex);
-
-  const lines = [
-    header(room, ''),
-    '',
-    `<pre>${esc(playerRows(room).join('\n'))}</pre>`,
-    '',
-    `🏆 <b>${potLabel(pot)} · ${num(pot.amount)}</b>` +
-      (steps.length > 1 ? `   (банк ${at + 1} из ${steps.length})` : ''),
-    'Кто забрал? Можно отметить нескольких — банк разделится.',
-  ];
-
-  const refunds = h.pots.filter((p) => p.eligible.length === 1);
-  if (refunds.length) {
-    lines.push(
-      '',
-      ...refunds.map(
-        (p) =>
-          `<i>${potLabel(p)} ${num(p.amount)} — ВОЗВРАТ ${esc(nameOf(room, p.eligible[0]))}</i>`
-      )
-    );
-  }
-  if (!dealers(room).length) lines.push('', '<i>Дилер не назначен — победителя отмечает любой за столом.</i>');
-  else lines.push('', `<i>Победителя определяет ${esc(dealers(room)[0].name)}.</i>`);
-
-  // Folded players are never offered — the one dealer mistake that is
-  // impossible to make here.
-  const rows = [];
-  const cands = pot.eligible.map((id) => ({ id, seat: room.players.findIndex((p) => p.id === id) }));
-  for (let i = 0; i < cands.length; i += 2) {
-    rows.push(
-      cands.slice(i, i + 2).map(({ id, seat }) => {
-        const on = pot.winners.includes(id);
-        return btn(
-          `${on ? '✅ ' : ''}${nameOf(room, id)}`,
-          NS.WIN, 'pick', room.seq, w.potIndex, seat
-        );
-      })
-    );
-  }
-  const nav = [];
-  if (at > 0) nav.push(btn('← Назад', NS.WIN, 'back', room.seq));
-  nav.push(btn(at + 1 < steps.length ? 'Далее →' : 'К распределению →', NS.WIN, 'next', room.seq));
-  rows.push(nav);
-  rows.push([btn('↩️ Отменить', NS.GAME, 'undo', room.seq)]);
-  return { text: lines.join('\n'), keyboard: rows };
-}
-
-function reviewView(room) {
-  const h = room.hand;
-  const lines = [
-    `♠️ <b>РАЗДАЧА #${h.no} · РАСПРЕДЕЛЕНИЕ</b>`,
-    '',
-  ];
-
-  for (const pot of h.pots) {
-    const names = pot.winners.map((id) => nameOf(room, id));
-    const tag = pot.eligible.length === 1 ? ' (возврат)' : '';
-    lines.push(`${potLabel(pot)} · ${num(pot.amount)} → ${esc(names.join(', ') || '—')}${tag}`);
-  }
-
-  // These numbers come from the engine's own `distribution()` — the same call
-  // that will move the chips — so the preview cannot disagree with the result.
-  const pay = preview(room);
-  lines.push('', '<b>На руки:</b>');
-  lines.push(
-    `<pre>${esc(
-      pay.map((x) => padEnd(x.name, NAME_W + 2) + padStart('+' + num(x.amount), STACK_W)).join('\n')
-    )}</pre>`
-  );
-  lines.push('', '<i>Фишки двигаются только после подтверждения.</i>');
-
-  return {
-    text: lines.join('\n'),
-    keyboard: [
-      [btn('← Назад', NS.WIN, 'back', room.seq)],
-      [btn('✅ Подтвердить', NS.WIN, 'ok', room.seq)],
-    ],
-  };
-}
-
 function completeView(room) {
   const h = room.hand;
-  const last = room.history[0];
-  const lines = [
-    `♠️ <b>РАЗДАЧА #${h.no} ЗАВЕРШЕНА</b> · ${hhmm(h.endedAt || Date.now())}`,
-    '',
-    `<b>БАНК  ${num(last ? last.pot : 0)}</b>`,
-    '',
-  ];
-  const pay = h.payouts || [];
-  if (pay.length) {
-    lines.push(
-      `<pre>${esc(
-        pay.map((x) => padEnd(x.name, NAME_W + 2) + padStart('+' + num(x.amount), STACK_W)).join('\n')
-      )}</pre>`
-    );
+  const last = room.history.find((x) => x.no === h.no);
+  const shown = h.shown || null;
+  const title = h.aborted
+    ? `♠️ <b>РАЗДАЧА #${h.no} ПРЕРВАНА</b>`
+    : shown
+      ? `♠️ <b>РАЗДАЧА #${h.no} · ВСКРЫТИЕ</b>`
+      : `♠️ <b>РАЗДАЧА #${h.no} ЗАВЕРШЕНА</b>`;
+  const lines = [`${title} · ${hhmm(h.endedAt || Date.now())}`, ''];
+
+  if (h.board?.length) lines.push(`🂠 <b>${cardsText(h.board)}</b>`, '');
+
+  if (h.aborted) {
+    lines.push('<i>Игру завершили посреди раздачи — поставленные фишки вернулись владельцам.</i>');
+  } else {
+    const pay = h.payouts || [];
+    for (const x of pay) {
+      const hand = shown?.[x.playerId]?.name;
+      lines.push(
+        `🏆 <b>${esc(x.name)}</b> +${num(x.amount)}` +
+          (hand ? ` · ${esc(hand)}` : shown ? '' : ' — остальные сбросили')
+      );
+    }
+
+    if (shown) {
+      // Only the hands that reached the showdown. A folded hand is never
+      // shown — not here, not anywhere.
+      lines.push('');
+      for (const p of room.players) {
+        const s = shown[p.id];
+        if (!s) continue;
+        lines.push(`${esc(p.name)}: ${cardsText(s.cards)} — ${esc(s.name)}`);
+      }
+      if (h.pots.length > 1) {
+        lines.push('');
+        for (const pot of h.pots) {
+          const names = pot.winners.map((id) => nameOf(room, id));
+          const tag = pot.eligible.length === 1 ? ' (возврат)' : '';
+          lines.push(`${potLabel(pot)} ${num(pot.amount)} → ${esc(names.join(' + '))}${tag}`);
+        }
+      }
+    }
   }
-  lines.push('', '<b>Стеки:</b>');
+
+  lines.push('', h.aborted ? 'Стеки:' : `<b>Банк ${num(last ? last.pot : 0)}</b> · стеки:`);
   lines.push(
     `<pre>${esc(
-      room.players
-        .filter((p) => roleOf(p) !== 'dealer')
+      visible(room)
         .map((p) => padEnd(p.name, NAME_W + 2) + padStart(num(p.stack), STACK_W) +
           '  ' + signed(p.stack - p.stats.buyIn))
         .join('\n')
     )}</pre>`
   );
-  if (room.notice) lines.push('', `<i>${esc(room.notice)}</i>`);
+  if (room.notice) lines.push(`<i>${esc(room.notice)}</i>`);
 
-  const dl = dealers(room);
-  lines.push('', dl.length ? `<i>Следующую раздачу сдаёт ${esc(dl[0].name)}.</i>` : '');
-
-  return {
-    text: lines.join('\n').trimEnd(),
-    keyboard: [
-      [btn('🃏 Следующая раздача', NS.GAME, 'next', room.seq)],
-      [btn('↩️ Отменить результат', NS.GAME, 'undo', room.seq)],
-    ],
-  };
+  const kb = [];
+  if (room.status === 'paused') kb.push([btn('▶️ Продолжить', NS.GAME, 'resume', room.seq)]);
+  else kb.push([btn('🃏 Следующая раздача', NS.GAME, 'next', room.seq)]);
+  kb.push([peekButton()]);
+  return { text: lines.join('\n').trimEnd(), keyboard: kb };
 }
 
 function finishedView(room) {
@@ -397,15 +406,17 @@ function finishedView(room) {
 /* ---------------------------------------------------------------- results */
 
 export function renderResults(room) {
-  // The engine already derives net, role and host from the same numbers it
-  // paid out with; re-deriving them here would be a second source of truth.
-  // Only the ordering differs: for an end-of-evening table, who is up matters
-  // more than who has the biggest pile.
+  // The engine already derives net and host from the same numbers it paid
+  // out with; re-deriving them here would be a second source of truth. Only
+  // the ordering differs: at the end of the evening, who is up matters more
+  // than who has the biggest pile.
+  const byId = new Map(room.players.map((p) => [p.id, p]));
   const rows = results(room)
     .map((r) => ({
       name: r.name,
-      role: r.role,
       isHost: r.isHost,
+      kicked: !!byId.get(r.id)?.kicked,
+      left: !!byId.get(r.id)?.left,
       stack: r.stack,
       net: r.net,
       hands: r.handsPlayed,
@@ -427,7 +438,8 @@ export function renderResults(room) {
     .map((r) => {
       const tags = [];
       if (r.isHost) tags.push('хост');
-      if (r.role === 'dealer') tags.push('дилер');
+      if (r.kicked) tags.push('удалён');
+      else if (r.left) tags.push('вышел');
       const t = tags.length ? ` (${tags.join(', ')})` : '';
       return `${esc(r.name)}${t}: раздач ${r.hands}, банков ${r.pots}, крупнейший ${num(r.biggest)}`;
     })
@@ -439,49 +451,53 @@ export function renderResults(room) {
     '',
     `<pre>${esc(body)}</pre>`,
     '',
-    `<i>${esc(extra)}</i>`,
+    `<i>${extra}</i>`,
     '',
-    `<i>Сумма P/L: ${signed(sum)} — должна быть 0.</i>`,
+    `<i>Раздач сыграно: ${room.handNo}. Сумма P/L: ${signed(sum)} — должна быть 0.</i>`,
+  ].join('\n');
+}
+
+/* ------------------------------------------------------ private messages */
+
+/** The private message with somebody's hole cards. Nothing else goes in it. */
+export function renderHole(room, userId) {
+  const cards = holeOf(room, userId);
+  if (!cards) return null;
+  const where = room.title ? ` · ${esc(room.title)}` : '';
+  return [
+    `🂠 <b>Раздача #${room.hand.no}</b>${where}`,
+    '',
+    `<b>${cardsText(cards)}</b>`,
+    '',
+    '<i>Ходить — в группе: кнопками под столом или командами /call, /raise 300, /fold.</i>',
   ].join('\n');
 }
 
 /* ------------------------------------------------------- host side panels */
 
-export function renderRoles(room) {
-  const rows = room.players.map((p, seat) => [
-    btn(
-      `${roleOf(p) === 'dealer' ? '🃏' : '🎲'} ${p.name} — ${roleOf(p) === 'dealer' ? 'дилер' : 'игрок'}` +
-        (p.pendingRole ? ` → ${p.pendingRole === 'dealer' ? 'дилер' : 'игрок'}` : ''),
-      NS.HOST, 'role', room.seq, seat
-    ),
-  ]);
-  rows.push([btn('Закрыть', NS.HOST, 'close', room.seq)]);
-  return {
-    text:
-      '<b>Роли</b>\n\nДилер раздаёт карты, не сидит за столом и не рискует фишками — ' +
-      'и именно он отмечает, кто забрал банк.\nНажатие переключает роль. Дилер в комнате один.',
-    keyboard: rows,
-  };
-}
-
 export function renderKick(room) {
   const rows = room.players
     .map((p, seat) => ({ p, seat }))
-    .filter(({ p }) => p.id !== room.hostId)
+    .filter(({ p }) => p.id !== room.hostId && !p.kicked)
     .map(({ p, seat }) => [btn(`✖️ ${p.name}`, NS.HOST, 'kick', room.seq, seat)]);
   rows.push([btn('Закрыть', NS.HOST, 'close', room.seq)]);
-  return { text: '<b>Удалить из игры</b>\n\nФишки в банке остаются в банке.', keyboard: rows };
+  return {
+    text:
+      '<b>Удалить из игры</b>\n\nФишки в банке остаются в банке, а результат игрока — в итогах вечера. ' +
+      'Если он в олл-ине, его рука доиграет.',
+    keyboard: rows,
+  };
 }
 
 /** Handing the room over — a host who is leaving should not take it with them. */
 export function renderTransfer(room) {
   const rows = room.players
     .map((p, seat) => ({ p, seat }))
-    .filter(({ p }) => p.id !== room.hostId)
+    .filter(({ p }) => p.id !== room.hostId && !p.kicked && !p.left)
     .map(({ p, seat }) => [btn(`👑 ${p.name}`, NS.HOST, 'host', room.seq, seat)]);
   rows.push([btn('Закрыть', NS.HOST, 'close', room.seq)]);
   return {
-    text: '<b>Передать права хоста</b>\n\nХост управляет настройками, ролями и завершением игры.',
+    text: '<b>Передать права хоста</b>\n\nХост управляет настройками, докупками и завершением игры.',
     keyboard: rows,
   };
 }
@@ -492,9 +508,12 @@ export function renderTransfer(room) {
  */
 export function renderRebuy(room) {
   const step = room.settings.startingStack;
-  const rows = room.players.map((p, seat) => [
-    btn(`${p.name}: ${num(p.stack)} → ${num(p.stack + step)}`, NS.HOST, 'rebuy', room.seq, seat),
-  ]);
+  const rows = room.players
+    .map((p, seat) => ({ p, seat }))
+    .filter(({ p }) => !p.kicked)
+    .map(({ p, seat }) => [
+      btn(`${p.name}: ${num(p.stack)} → ${num(p.stack + step)}`, NS.HOST, 'rebuy', room.seq, seat),
+    ]);
   rows.push([btn('Закрыть', NS.HOST, 'close', room.seq)]);
   return {
     text:

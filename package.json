@@ -2,7 +2,7 @@
   "name": "chip-table",
   "version": "1.0.0",
   "private": true,
-  "description": "Virtual poker chips for live games with real cards — web app + Telegram bot",
+  "description": "Poker chips for live games with real cards (web app) and full Texas hold'em in a Telegram group (bot)",
   "type": "module",
   "main": "server/index.js",
   "scripts": {
