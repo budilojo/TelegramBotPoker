@@ -14,7 +14,7 @@
     "test:bot": "node --test --test-timeout=25000 --disable-warning=ExperimentalWarning bot/*.test.js",
     "icons": "node tools/make-icons.mjs",
     "preview": "node --disable-warning=ExperimentalWarning tools/preview.mjs",
-    "e2e": "node --disable-warning=ExperimentalWarning tools/e2e.mjs",
+    "e2e": "node --disable-warning=ExperimentalWarning tools/e2e.mjs && node --disable-warning=ExperimentalWarning tools/e2e-durak.mjs",
     "cards": "node tools/make-cards.mjs",
     "layout": "node --disable-warning=ExperimentalWarning tools/layout-check.mjs"
   },

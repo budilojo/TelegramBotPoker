@@ -1,0 +1,75 @@
+/* ==========================================================================
+   THE HUB — «Во что играем?»: big cards for the games, the lobbies open in
+   the group. Same room, same palette as the poker table.
+   ========================================================================== */
+
+.back-link {
+  align-self: flex-start;
+  color: var(--accent);
+  font-weight: 800;
+  font-size: 14px;
+  padding: 6px 2px;
+  margin: -4px 0 -8px;
+}
+
+.game-cards { display: flex; flex-direction: column; gap: 12px; }
+.game-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 96px;
+  padding: 16px;
+  border-radius: 22px;
+  text-align: left;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: transform 0.12s var(--ease);
+}
+.game-card:active { transform: scale(0.98); }
+.game-card.g-poker { background: radial-gradient(120% 140% at 0% 0%, #1f8656 0%, #11583a 55%, #0b3d28 100%); }
+.game-card.g-durak { background: radial-gradient(120% 140% at 0% 0%, #257a8c 0%, #145060 55%, #0c3440 100%); }
+.gc-icon {
+  flex: none;
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  font-size: 34px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.gc-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.gc-title { font-size: 21px; font-weight: 900; letter-spacing: -0.01em; }
+.gc-blurb { font-size: 14px; color: rgba(255, 255, 255, 0.78); font-weight: 600; }
+.gc-players {
+  align-self: flex-start;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
+}
+.gc-go { flex: none; font-size: 24px; font-weight: 900; color: rgba(255, 255, 255, 0.8); }
+
+.lobby-list { display: flex; flex-direction: column; gap: 8px; }
+.lrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+.lrow.mine { border-color: rgba(46, 224, 140, 0.35); }
+.lr-icon { flex: none; font-size: 26px; width: 34px; text-align: center; }
+.lr-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lr-title { font-weight: 800; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lr-host { color: var(--muted); font-weight: 700; }
+.lr-sub { font-size: 13px; color: var(--text-2); font-weight: 600; }
+.lr-names { font-size: 12px; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.btn.sm { height: 42px; padding: 0 14px; font-size: 14px; border-radius: 13px; flex: none; }

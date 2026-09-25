@@ -51,7 +51,8 @@ export function durakView(room, viewerId, { now = Date.now(), botUsername = '' }
   const seat = (id) => room.players.findIndex((p) => p.id === id);
   const playing = !!d && d.phase === 'play';
   const passed = playing ? new Set(d.bout.passed) : new Set();
-  const waitingOn = playing ? new Set(waitingThrowers(d)) : new Set();
+  // Throwers hold the game up only once everything is covered (or being taken).
+  const waitingOn = playing && (allCovered(d) || d.bout.taking) ? new Set(waitingThrowers(d)) : new Set();
 
   const players = room.players.map((p, i) => {
     const inDeal = !!d && d.order.includes(p.id) && !d.aborted;

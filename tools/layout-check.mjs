@@ -24,6 +24,9 @@ import { startServer } from '../bot/server.js';
 import { TelegramStub } from '../bot/tg-stub.js';
 import { signInitData } from '../bot/webapp-auth.js';
 import * as R from '../bot/room.js';
+import * as D from '../bot/games/durak/rules.js';
+import { shuffled36 } from '../bot/games/durak/cards.js';
+import { seededRng } from '../bot/deck.js';
 import { legalActions } from '../server/game.js';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -79,6 +82,50 @@ for (let n = 2; n <= 8; n++) {
   scenes.push({ name: `${n}p-showdown`, room: b });
 }
 
+/*
+ * Durak, 2 to 6 players, three worst cases: a full bout (six pairs on the
+ * table, three of them covered) with long names on every seat; a take with
+ * a hand of twenty cards (two rows) and every plate lit; and the end of a
+ * game with the score.
+ */
+const DK_NAMES = ['Иван', 'Константин', 'Александра', 'Lev', 'Ёж', 'Макс'];
+function durakTable(n, seed) {
+  const chatId = String(chat--);
+  const room = app.createGame('durak', { chatId, title: 'Проверка', host: { id: 101, tgId: 101, name: DK_NAMES[0] } });
+  for (let i = 1; i < n; i++) D.addPlayer(room, { id: 101 + i, name: DK_NAMES[i], dm: 'ok' });
+  D.startGame(room, '101', { deck: () => shuffled36(seededRng(seed)) });
+  return room;
+}
+/** Rewrite the position on the table: the view reads it, the layout must survive it. */
+function spread(room, { pairs = 6, covered = 3, heroCards = 6, taking = false, attacker = '102', defender = null } = {}) {
+  const d = room.deal;
+  const pool = shuffled36(seededRng(99));
+  d.table = Array.from({ length: pairs }, (_, i) => ({ a: pool[i], by: attacker, d: i < covered ? pool[10 + i] : null, dby: i < covered ? defender || '103' : null }));
+  d.hands['101'] = pool.slice(16, 16 + heroCards);
+  while (d.hands['101'].length < heroCards) d.hands['101'].push(pool[d.hands['101'].length % 36]);
+  d.attacker = d.order.includes(attacker) ? attacker : d.order[1];
+  d.defender = defender && d.order.includes(defender) ? defender : d.order.find((id) => id !== d.attacker && id !== '101') || '101';
+  d.bout.taking = taking;
+  d.bout.passed = [];
+  d.bout.startHand = 6;
+}
+for (let n = 2; n <= 6; n++) {
+  const a = durakTable(n, n);
+  spread(a, { defender: n > 2 ? '103' : '101' });
+  scenes.push({ name: `${n}d-bout`, room: a, durak: true });
+  const b = durakTable(n, n + 10);
+  spread(b, { pairs: 4, covered: 1, heroCards: 20, taking: true, defender: n > 2 ? '103' : '101' });
+  if (n > 2) b.deal.bout.passed = [b.deal.order.at(-1)];
+  scenes.push({ name: `${n}d-take`, room: b, durak: true });
+  const c = durakTable(n, n + 20);
+  c.deal.phase = 'over';
+  c.deal.fool = c.deal.order[1];
+  c.history.push({ no: 1, fool: c.deal.order[1], draw: false });
+  for (const p of c.players) p.stats.games = 1;
+  c.players[1].stats.fool = 1;
+  scenes.push({ name: `${n}d-over`, room: c, durak: true });
+}
+
 const web = startServer({ hub, port: PORT, root: path.join(ROOT, 'miniapp'), log: () => {} });
 await new Promise((r) => web.server.once('listening', r));
 app.syncClocks();
@@ -120,6 +167,60 @@ function measure() {
   };
 }
 
+/** The same, for the durak table: its seats, its middle, your hand. */
+function measureDurak() {
+  const box = (el) => {
+    const r = el.getBoundingClientRect();
+    return { l: r.left, t: r.top, r: r.right, b: r.bottom, what: el.className || el.tagName };
+  };
+  const glyphs = (el) => {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const r = range.getBoundingClientRect();
+    return { l: r.left, t: r.top, r: r.right, b: r.bottom, what: `${el.className}:${el.textContent.trim().slice(0, 14)}` };
+  };
+  const seats = [...document.querySelectorAll('.dk-seat')].map((s) => ({
+    seat: s.dataset.seat,
+    parts: [...s.querySelectorAll('.av, .info, .plate, .dk-backs img, .dk-count')].map(box)
+      .concat([...s.querySelectorAll('.nm')].map(glyphs)),
+  }));
+  const center = [...document.querySelectorAll('.dk-deck, .dk-discard, .dk-pair img')].map(box)
+    .concat([...document.querySelectorAll('.dk-line')].filter((e) => e.textContent.trim()).map(glyphs));
+  const hand = [...document.querySelectorAll('.dk-card img, .dk-role, .dk-sc')].map(box);
+  return {
+    seats,
+    center,
+    hand,
+    top: box(document.querySelector('.top')),
+    hero: box(document.querySelector('.hero')),
+    felt: box(document.querySelector('.dk-felt')),
+    vw: innerWidth,
+    sw: document.documentElement.scrollWidth,
+  };
+}
+
+function problemsDurak(m) {
+  const out = problems(m);
+  const EPS = 2;
+  for (const c of m.center) {
+    if (c.b > m.felt.b + 1 || c.t < m.felt.t - 1) out.push(`${c.what} out of the felt`);
+    if (c.l < -1 || c.r > m.vw + 1) out.push(`${c.what} off screen`);
+  }
+  for (const x of m.hand) if (x.l < -1 || x.r > m.vw + 1) out.push(`hand ${x.what} off screen`);
+  if (m.sw > m.vw) out.push(`page wider than the screen (${m.sw} > ${m.vw})`);
+  // Cards in the middle must not sit on each other (pairs are one card over its pair).
+  const cards = m.center.filter((c) => /card/.test(c.what));
+  for (let i = 0; i < cards.length; i++) {
+    for (let j = i + 1; j < cards.length; j++) {
+      const a = cards[i];
+      const b = cards[j];
+      const same = /att/.test(a.what) && /def/.test(b.what) && j === i + 1; // a pair overlaps by design
+      if (!same && area(a, b) > EPS * 40) out.push(`${a.what} × ${b.what}`);
+    }
+  }
+  return out;
+}
+
 const area = (a, b) => Math.max(0, Math.min(a.r, b.r) - Math.max(a.l, b.l)) * Math.max(0, Math.min(a.b, b.b) - Math.max(a.t, b.t));
 
 function problems(m) {
@@ -154,16 +255,19 @@ if (SHOTS) fs.mkdirSync(OUT, { recursive: true });
 const browser = await chromium.launch();
 let failures = 0;
 const rows = [];
+// ONLY=durak or ONLY=poker — one game's layouts, for a quicker look.
+const only = process.env.ONLY;
+const picked = scenes.filter((sc) => !only || (only === 'durak') === !!sc.durak);
 for (const [w, hgt] of VIEWPORTS) {
   const cells = [];
-  for (const sc of scenes) {
+  for (const sc of picked) {
     const page = await browser.newPage({ viewport: { width: w, height: hgt }, deviceScaleFactor: 1 });
     const initData = signInitData({ auth_date: Math.floor(Date.now() / 1000), user: { id: 101, first_name: 'Иван' }, start_param: sc.room.code }, TOKEN);
     await page.route('https://telegram.org/**', (r) => r.fulfill({ contentType: 'text/javascript', body: sdk(initData, sc.room.code) }));
     await page.goto(`http://localhost:${PORT}/`);
-    await page.waitForSelector('.table');
+    await page.waitForSelector(sc.durak ? '.dk-felt' : '.table');
     await page.waitForTimeout(60);
-    const found = problems(await page.evaluate(measure));
+    const found = sc.durak ? problemsDurak(await page.evaluate(measureDurak)) : problems(await page.evaluate(measure));
     if (process.env.DEBUG && found.length) {
       console.log(await page.evaluate(() => {
         const t = document.querySelector('.table');
@@ -189,7 +293,7 @@ for (const [w, hgt] of VIEWPORTS) {
 }
 await browser.close();
 await web.close();
-console.log(`\n           ${scenes.map((s) => s.name[0]).join('')}   (2..8 players, betting/showdown pairs)`);
+console.log(`\n           ${picked.map((s) => s.name[0]).join('')}   (poker 2..8: betting/showdown · durak 2..6: bout/take/over)`);
 console.log(rows.join('\n'));
 console.log(failures ? `\n${failures} layouts with overlaps` : '\nno overlaps');
 process.exit(failures ? 1 : 0);
