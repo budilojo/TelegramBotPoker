@@ -199,7 +199,8 @@ input { font: inherit; color: inherit; }
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 .pot small { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; color: var(--gold); }
-.pot b { font-size: 20px; font-weight: 800; }
+.pot b { font-size: 20px; font-weight: 800; transition: color 0.3s, text-shadow 0.3s; }
+.pot b.up { color: #fff6d8; text-shadow: 0 0 12px rgba(242, 201, 107, 0.7); }
 .board { display: flex; gap: 4px; }
 .slot {
   width: var(--card-w);
@@ -214,11 +215,6 @@ input { font: inherit; color: inherit; }
   border-radius: 6px;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
 }
-.card.deal { animation: flip-in 0.45s var(--ease) both; }
-@keyframes flip-in {
-  from { transform: perspective(400px) rotateY(90deg) translateY(-6px); opacity: 0; }
-  to { transform: none; opacity: 1; }
-}
 .bet-line { font-size: 12px; color: rgba(255, 255, 255, 0.72); font-weight: 600; min-height: 15px; text-align: center; }
 .result-line {
   font-size: 13px;
@@ -226,9 +222,8 @@ input { font: inherit; color: inherit; }
   color: var(--gold);
   text-align: center;
   line-height: 1.25;
-  animation: rise 0.4s var(--ease) both;
+  white-space: pre-line;
 }
-@keyframes rise { from { opacity: 0; transform: translateY(6px); } }
 
 /* ---------------------------------------------------------------- seats */
 
@@ -293,7 +288,8 @@ input { font: inherit; color: inherit; }
   text-overflow: ellipsis;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
-.stk { font-size: 13px; font-weight: 800; color: var(--text-2); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
+.stk { font-size: 13px; font-weight: 800; color: var(--text-2); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); transition: color 0.3s, transform 0.3s var(--ease); }
+.stk.up { color: var(--gold); transform: scale(1.12); text-shadow: 0 0 10px rgba(242, 201, 107, 0.6); }
 .plate {
   margin-top: 3px;
   font-size: 10.5px;
@@ -309,9 +305,12 @@ input { font: inherit; color: inherit; }
 .plate.turn { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
 .plate.bet, .plate.raise, .plate.call, .plate.sb, .plate.bb { background: var(--gold); color: var(--gold-ink); border-color: transparent; }
 .plate.sb, .plate.bb { background: rgba(242, 201, 107, 0.2); color: var(--gold); border-color: rgba(242, 201, 107, 0.35); }
-.plate.allin { background: var(--allin); color: #fff; border-color: transparent; }
+.plate.allin { background: var(--allin); color: #fff; border-color: transparent; animation: allin-throb 1.6s ease-in-out infinite; }
+@keyframes allin-throb { 50% { box-shadow: 0 0 14px rgba(255, 77, 94, 0.75); } }
 .plate.fold, .plate.out, .plate.wait, .plate.broke, .plate.left { color: var(--muted); }
-.plate.win { background: var(--gold); color: var(--gold-ink); border-color: transparent; animation: rise 0.5s var(--ease) both; }
+/* "НЕ ПОКАЗАЛ" is the longest word a plate says: keep it inside a seat at the screen edge */
+.plate.in { font-size: 9.5px; letter-spacing: 0; padding: 3px 6px; color: var(--muted); }
+.plate.win { background: var(--gold); color: var(--gold-ink); border-color: transparent; font-size: 12px; box-shadow: 0 0 14px rgba(242, 201, 107, 0.55); }
 .minis { display: flex; margin-top: 3px; height: 26px; }
 .minis img { width: 19px; aspect-ratio: 200 / 280; border-radius: 3px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5); }
 .minis img + img { margin-left: -7px; }
@@ -373,7 +372,19 @@ input { font: inherit; color: inherit; }
 }
 .hero-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .hero-name { font-weight: 700; color: var(--text-2); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hero-stack { font-size: 24px; font-weight: 800; }
+.hero-stack-row { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.hero-stack { font-size: 24px; font-weight: 800; transform-origin: left center; transition: color 0.3s, transform 0.3s var(--ease), text-shadow 0.3s; }
+.hero-stack.up { color: var(--gold); transform: scale(1.05); text-shadow: 0 0 16px rgba(242, 201, 107, 0.55); }
+.gain {
+  font-size: 17px;
+  font-weight: 900;
+  color: var(--gold-ink);
+  background: linear-gradient(180deg, #ffe39a, var(--gold));
+  padding: 2px 9px;
+  border-radius: 999px;
+  box-shadow: 0 0 16px rgba(242, 201, 107, 0.6);
+  white-space: nowrap;
+}
 .hero-hand { color: var(--gold); font-weight: 700; font-size: 13.5px; min-height: 17px; }
 .hero-state { font-size: 13px; color: var(--muted); font-weight: 600; }
 .your-turn {
@@ -388,9 +399,13 @@ input { font: inherit; color: inherit; }
   font-weight: 900;
   font-size: 12.5px;
   letter-spacing: 0.06em;
-  animation: rise 0.3s var(--ease) both, glow 1.3s ease-in-out infinite;
+  animation: glow 1.3s ease-in-out infinite;
+  transition: background 0.3s, color 0.3s;
 }
 @keyframes glow { 50% { box-shadow: 0 0 16px var(--accent-glow); } }
+.your-turn.urgent { background: var(--danger); color: #fff; animation: glow-red 0.7s ease-in-out infinite, nudge 0.7s ease-in-out infinite; }
+@keyframes glow-red { 50% { box-shadow: 0 0 18px rgba(255, 95, 95, 0.8); } }
+@keyframes nudge { 0%, 100% { transform: none; } 20% { transform: translateX(-2px); } 40% { transform: translateX(2px); } 60% { transform: none; } }
 
 /* ---------------------------------------------------------------- panel */
 
@@ -621,6 +636,48 @@ input { font: inherit; color: inherit; }
 .res-row .pl { font-weight: 900; min-width: 70px; text-align: right; }
 .pl.up { color: var(--accent); }
 .pl.down { color: var(--danger); }
+
+/* -------------------------------------------------------------- effects */
+
+/* Things in flight — chips, mucked cards, a winner's sparks — live above the table and vanish. */
+#fx { position: fixed; inset: 0; pointer-events: none; z-index: 35; overflow: hidden; }
+#fx > * { position: absolute; will-change: transform, opacity; }
+.fx-chip {
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--c) 0 38%, #fff 39% 46%, var(--c) 47% 100%);
+  border: 2px dashed rgba(255, 255, 255, 0.85);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55);
+  --c: #d9a93a;
+}
+.fx-chip.c1 { --c: #d23c4b; }
+.fx-chip.c2 { --c: #2c6fd1; }
+.fx-card { width: calc(var(--card-w) * 0.62); margin: calc(var(--card-w) * -0.43) 0 0 calc(var(--card-w) * -0.31); }
+.fx-burst {
+  width: 60px;
+  height: 60px;
+  margin: -30px 0 0 -30px;
+  border-radius: 50%;
+  border: 3px solid var(--gold);
+  box-shadow: 0 0 24px rgba(242, 201, 107, 0.8), inset 0 0 18px rgba(242, 201, 107, 0.5);
+}
+.fx-spark {
+  width: 7px;
+  height: 7px;
+  margin: -3.5px 0 0 -3.5px;
+  border-radius: 50%;
+  background: #ffe39a;
+  box-shadow: 0 0 8px 2px rgba(242, 201, 107, 0.9);
+}
+.fx-edge {
+  inset: 0;
+  left: 0 !important;
+  top: 0 !important;
+  box-shadow: inset 0 0 0 3px rgba(46, 224, 140, 0.55), inset 0 0 60px rgba(46, 224, 140, 0.35);
+  border-radius: 0;
+}
 
 /* ---------------------------------------------------------------- toast */
 

@@ -64,6 +64,175 @@ const haptic = {
   err: () => tg?.HapticFeedback?.notificationOccurred?.('error'),
 };
 
+/* ----------------------------------------------------------------- motion */
+
+/*
+ * The whole screen is rebuilt from every state the server sends, so motion
+ * cannot live in the DOM. It lives here, keyed by WHAT is moving (this hand's
+ * second board card, this seat's stack): a rebuilt element picks up the same
+ * animation where the old one left off instead of restarting or snapping.
+ */
+const REDUCED = !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
+const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+const $fx = document.getElementById('fx');
+
+/** Numbers that roll to their new value: stacks, the pot. */
+const counters = new Map(); // key -> { value, from, to, t0, dur, delay }
+let raf = 0;
+
+/** The value to print for `key` right now; starts rolling toward `target` if it moved. */
+function countTo(key, target, { up = {}, down = {} } = {}) {
+  let c = counters.get(key);
+  if (!c) {
+    counters.set(key, { value: target, to: target });
+    return target;
+  }
+  if (c.to !== target) {
+    const o = target > c.value ? up : down;
+    Object.assign(c, { from: c.value, to: target, t0: performance.now(), dur: o.dur ?? 400, delay: o.delay ?? 0 });
+    if (REDUCED) c.value = target;
+    else if (!raf) raf = requestAnimationFrame(rollCounters);
+  }
+  return c.value;
+}
+
+function rollCounters(now) {
+  raf = 0;
+  let busy = false;
+  for (const [key, c] of counters) {
+    if (c.value === c.to) continue;
+    const p = clamp((now - c.t0 - c.delay) / c.dur, 0, 1);
+    c.value = p >= 1 ? c.to : c.from + (c.to - c.from) * easeOut(p);
+    const rising = c.to > c.from && p > 0 && p < 1;
+    for (const el of document.querySelectorAll(`[data-ctr="${key}"]`)) {
+      el.textContent = fmt(c.value);
+      el.classList.toggle('up', rising);
+    }
+    if (c.value !== c.to) busy = true;
+  }
+  if (busy) raf = requestAnimationFrame(rollCounters);
+}
+
+/** A counting number element. */
+const counter = (tag, key, target, opts) => h(tag, { 'data-ctr': key }, fmt(countTo(key, target, opts)));
+
+/** One-shot animations, keyed so a rebuilt element continues instead of replaying. */
+const started = new Map(); // key -> start time
+let queued = [];
+
+/** Animate `el` once per `key`; `frames` may be a function of the laid-out page. */
+function animateOnce(el, key, frames, opts) {
+  if (!REDUCED && el) queued.push({ el, key, frames, opts });
+  return el;
+}
+
+/**
+ * Run after the screen is in the DOM: positions exist, and animations attach
+ * to live nodes. `still`: the first picture after opening the table shows
+ * things as they are — a hand dealt a minute ago is not dealt again.
+ */
+function flushAnimations({ still = false } = {}) {
+  const now = performance.now();
+  for (const { el, key, frames, opts } of queued) {
+    if (!el.isConnected) continue;
+    let t0 = started.get(key);
+    if (t0 == null) started.set(key, (t0 = still ? -Infinity : now));
+    const elapsed = now - t0;
+    if (elapsed >= (opts.delay || 0) + opts.duration) continue;
+    const a = el.animate(typeof frames === 'function' ? frames(el) : frames, { easing: EASE, fill: 'backwards', ...opts });
+    a.currentTime = elapsed;
+  }
+  // Forget only what is no longer on screen: forgetting a key that is would play it again.
+  if (started.size > 400) {
+    const onScreen = new Set(queued.map((q) => q.key));
+    for (const k of started.keys()) if (!onScreen.has(k)) started.delete(k);
+  }
+  queued = [];
+}
+
+/** Centre of an element, in viewport pixels. */
+function centerOf(el) {
+  const r = el.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+}
+
+/** Offset from `el` to `target`, for "fly in from there" keyframes. */
+function offsetTo(el, target) {
+  if (!target) return { dx: 0, dy: -40 };
+  const a = centerOf(el);
+  const b = centerOf(target);
+  return { dx: b.x - a.x, dy: b.y - a.y };
+}
+
+/** Something drawn on the effects layer, above the table, gone when it has played. */
+function spawn(tag, at, frames, opts, attrs = null) {
+  if (REDUCED || !$fx) return null;
+  const el = h(tag, attrs);
+  el.style.left = `${at.x}px`;
+  el.style.top = `${at.y}px`;
+  $fx.append(el);
+  const a = el.animate(frames, { easing: EASE, fill: 'both', ...opts });
+  a.onfinish = () => el.remove();
+  a.oncancel = () => el.remove();
+  return el;
+}
+
+/** Chips flying from one place to another in a little arc. */
+function flyChips(fromEl, toEl, { n = 4, delay = 0, dur = 620, stagger = 60 } = {}) {
+  if (!fromEl || !toEl) return;
+  const a = centerOf(fromEl);
+  const b = centerOf(toEl);
+  for (let i = 0; i < n; i++) {
+    const jx = (Math.random() - 0.5) * 22;
+    const jy = (Math.random() - 0.5) * 12;
+    const mx = (b.x - a.x) / 2 + jx;
+    const my = (b.y - a.y) / 2 - 26 + jy;
+    spawn(`div.fx-chip.c${i % 3}`, a, [
+      { transform: 'translate(0, 0) scale(0.5)', opacity: 0 },
+      { transform: `translate(${mx}px, ${my}px) scale(1)`, opacity: 1, offset: 0.45 },
+      { transform: `translate(${b.x - a.x}px, ${b.y - a.y}px) scale(0.85)`, opacity: 1, offset: 0.88 },
+      { transform: `translate(${b.x - a.x}px, ${b.y - a.y}px) scale(0.3)`, opacity: 0 },
+    ], { duration: dur, delay: delay + i * stagger, easing: 'cubic-bezier(0.3, 0.7, 0.4, 1)' });
+  }
+}
+
+/** A player folds: their two cards slide into the middle and vanish. */
+function muck(fromEl, toEl) {
+  if (!fromEl || !toEl) return;
+  const a = centerOf(fromEl);
+  const b = centerOf(toEl);
+  [-1, 1].forEach((side, i) => {
+    spawn('img.card.fx-card', { x: a.x + side * 6, y: a.y + 14 }, [
+      { transform: `rotate(${side * 8}deg)`, opacity: 0.95 },
+      { transform: `translate(${b.x - a.x}px, ${b.y - a.y}px) rotate(${side * 40 + 90}deg) scale(0.6)`, opacity: 0 },
+    ], { duration: 520, delay: i * 50, easing: 'cubic-bezier(0.5, 0, 0.75, 0)' }, { src: '/cards/back.svg', alt: '' });
+  });
+}
+
+/** A gold ring and sparks around a winner. */
+function celebrate(el, { sparks = 0, delay = 0 } = {}) {
+  if (!el) return;
+  const c = centerOf(el);
+  spawn('div.fx-burst', c, [
+    { transform: 'scale(0.3)', opacity: 0.95 },
+    { transform: 'scale(2.6)', opacity: 0 },
+  ], { duration: 900, delay });
+  for (let i = 0; i < sparks; i++) {
+    const ang = (i / sparks) * Math.PI * 2 + Math.random() * 0.4;
+    const dist = 38 + Math.random() * 34;
+    spawn('div.fx-spark', c, [
+      { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+      { transform: `translate(${Math.cos(ang) * dist}px, ${Math.sin(ang) * dist}px) scale(0.2)`, opacity: 0 },
+    ], { duration: 750 + Math.random() * 250, delay: delay + Math.random() * 120, easing: 'cubic-bezier(0.1, 0.8, 0.3, 1)' });
+  }
+}
+
+/** Your turn: the edges of the screen breathe green once. */
+function edgeGlow() {
+  spawn('div.fx-edge', { x: 0, y: 0 }, [{ opacity: 0 }, { opacity: 1, offset: 0.3 }, { opacity: 0 }], { duration: 1100 });
+}
+
 let toastTimer = null;
 function toast(text, ms = 2600) {
   $toast.textContent = text;
@@ -173,7 +342,10 @@ function onState(wasConnected) {
   // Your turn: say it with the body, not only with pixels.
   const myTurnNow = s.hand && s.hand.actorSeat === mySeat && mySeat >= 0;
   const myTurnBefore = p?.hand && p.hand.actorSeat === p.me.seat && p.hand.no === s.hand?.no;
-  if (myTurnNow && !myTurnBefore) haptic.turn();
+  if (myTurnNow && !myTurnBefore) {
+    haptic.turn();
+    turnId++;
+  }
 
   // You won something.
   const won = s.hand?.result?.winners?.some((w) => w.seat === mySeat);
@@ -190,6 +362,56 @@ function onState(wasConnected) {
   render();
   if (openSheet && sheetRenderers[openSheet]) sheetRenderers[openSheet]();
   if (!wasConnected) reportVisibility();
+  if (p) motionFor(p, s, { myTurnStarted: myTurnNow && !myTurnBefore });
+}
+
+let turnId = 0;
+
+/** Where a seat's chips live on screen: the hero panel for you, the seat otherwise. */
+function stackEl(seat) {
+  if (seat === state?.me?.seat) return document.querySelector('.hero-stack');
+  return document.querySelector(`.seat[data-seat="${seat}"] .stk`);
+}
+
+/**
+ * What just happened, told with motion: chips into the pot, cards into the
+ * muck, the pot pushed to whoever won it. Worked out from the difference
+ * between the previous state and this one — the server sends states, not events.
+ */
+function motionFor(p, s, { myTurnStarted }) {
+  if (REDUCED || s.room.status === 'lobby') return;
+  const hd = s.hand;
+  const ph = p.hand;
+  const potEl = document.querySelector('.pot');
+  if (myTurnStarted) edgeGlow();
+  if (!hd || !ph || ph.no !== hd.no) return;
+
+  // Chips went in: they came from whoever was on the clock.
+  const chipsIn = hd.pot > ph.pot && ph.phase === 'betting' && ph.actorSeat != null;
+  if (chipsIn) {
+    const mover = s.players.find((x) => x.seat === ph.actorSeat);
+    flyChips(stackEl(ph.actorSeat), potEl, { n: mover?.allIn ? 7 : 3 });
+  }
+
+  // Folds: two cards into the middle.
+  for (const x of s.players) {
+    const was = p.players.find((y) => y.seat === x.seat);
+    if (was?.inHand && !was.folded && x.folded && x.seat !== s.me.seat) {
+      muck(document.querySelector(`.seat[data-seat="${x.seat}"]`), document.querySelector('.board'));
+    }
+  }
+
+  // The pot goes to the winners — once, when the result is first known.
+  const paidBefore = ph.phase === 'complete' && ph.result && !ph.revealing;
+  const paidNow = hd.phase === 'complete' && hd.result && !hd.revealing;
+  if (paidNow && !paidBefore && hd.result.kind !== 'aborted') {
+    for (const w of hd.result.winners) {
+      const target = stackEl(w.seat);
+      const lead = chipsIn ? 520 : 120; // the last call lands in the pot first
+      flyChips(potEl, target, { n: 6, delay: lead, stagger: 55 });
+      celebrate(w.seat === s.me.seat ? target : target?.closest('.seat')?.querySelector('.av'), { sparks: w.seat === s.me.seat ? 14 : 0, delay: lead + 420 });
+    }
+  }
 }
 
 let dismissedFlow = null;
@@ -216,6 +438,7 @@ function render() {
   else renderTable();
   if (!connected) $app.append(h('div.conn', 'Нет связи — переподключаемся…'));
   tickClocks();
+  flushAnimations({ still: !prev });
 }
 
 /* ----------------------------------------------------------------- lobby */
@@ -230,7 +453,9 @@ function renderLobby() {
     const p = seated[i];
     slots.push(
       p
-        ? h(`div.lseat${p.isMe ? '.me' : ''}`, h('div.av', { style: { '--h': p.hue } }, initial(p.name), p.isHost ? h('span.host-mark', '👑') : null), h('div.nm', p.name))
+        ? animateOnce(
+          h(`div.lseat${p.isMe ? '.me' : ''}`, h('div.av', { style: { '--h': p.hue } }, initial(p.name), p.isHost ? h('span.host-mark', '👑') : null), h('div.nm', p.name)),
+          `lseat:${p.name}`, [{ transform: 'scale(0.4)', opacity: 0, offset: 0 }], { duration: 450, delay: i * 45 })
         : h('div.lseat.empty', h('div.av', '+'), h('div.nm', 'свободно'))
     );
   }
@@ -310,6 +535,20 @@ function plateText(p, s) {
   }
 }
 
+/** Stacks fall fast when chips go in, and roll up slowly — once the chips arrive — when a pot comes back. */
+const STACK_MOTION = { up: { dur: 1400, delay: 520 }, down: { dur: 350 } };
+const stackKey = (p) => `stk:${p.seat}:${p.name}`;
+
+/** Where each seat is in the dealing order this hand: the deal goes round the table twice. */
+let dealOrder = new Map();
+function dealIn(el, hd, seat, k) {
+  const i = dealOrder.get(seat) ?? 0;
+  return animateOnce(el, `deal:${hd.no}:${seat}:${k}`, (node) => {
+    const { dx, dy } = offsetTo(node, document.querySelector('.board'));
+    return [{ transform: `translate(${dx}px, ${dy}px) rotate(${k ? 28 : -28}deg) scale(0.45)`, opacity: 0, offset: 0 }, { opacity: 1, offset: 0.2 }];
+  }, { duration: 520, delay: (k * dealOrder.size + i) * 75 });
+}
+
 function seatEl(p, pos, s) {
   const h0 = s.hand;
   const win = h0?.result?.winners?.find((w) => w.seat === p.seat);
@@ -325,30 +564,31 @@ function seatEl(p, pos, s) {
 
   let minis = null;
   if (p.cards) {
-    minis = h('div.minis.shown', p.cards.map((c) => cardImg(c, isNewShown(p) ? 'deal' : '')));
+    // Shown at the showdown: the backs turn over.
+    minis = h('div.minis.shown', p.cards.map((c, k) => animateOnce(cardImg(c), `show:${h0.no}:${p.seat}:${k}`,
+      [{ transform: 'perspective(300px) rotateY(90deg) scale(0.9)', offset: 0 }], { duration: 460, delay: k * 110 })));
   } else if (p.inHand && !p.folded && !(h0?.phase === 'complete' && p.mucked)) {
-    minis = h('div.minis', backImg(), backImg());
+    minis = h('div.minis', [0, 1].map((k) => dealIn(backImg(), h0, p.seat, k)));
   }
 
+  const text = plateText(p, s);
   const plate = win
-    ? h('div.plate.win', `+${fmt(win.amount)}`)
-    : plateText(p, s)
-      ? h(`div.plate.${p.status}`, plateText(p, s))
+    ? animateOnce(h('div.plate.win', `+${fmt(win.amount)}`), `winplate:${h0.no}:${p.seat}`,
+      [{ transform: 'translateY(10px) scale(0.3)', opacity: 0, offset: 0 }, { transform: 'scale(1.25)', opacity: 1, offset: 0.6 }],
+      { duration: 700, delay: 560 })
+    : text
+      ? animateOnce(h(`div.plate.${p.status}`, text), `plate:${h0?.no}:${h0?.street}:${p.seat}:${text}`,
+        [{ transform: 'scale(0.55)', opacity: 0, offset: 0 }], { duration: 320 })
       : null;
 
-  return h(`div.${cls}`, { style: { left: `${pos.x}%`, top: `${pos.y}%` } },
+  return h(`div.${cls}`, { 'data-seat': p.seat, style: { left: `${pos.x}%`, top: `${pos.y}%` } },
     av,
     h('div.nm', p.name),
-    h('div.stk.num', fmt(p.stack)),
+    counter('div.stk.num', stackKey(p), p.stack, STACK_MOTION),
     plate,
     minis,
     p.handName ? h('div.hand-tag', p.handName) : null,
   );
-}
-
-function isNewShown(p) {
-  const before = prev?.players?.find((x) => x.seat === p.seat);
-  return !before?.cards;
 }
 
 function ringSvg(deadline, total) {
@@ -391,7 +631,8 @@ function renderTable() {
   if (s.room.cards === 'live') meta.push(s.room.dealerName ? ` · 🃏 ${s.room.dealerName}` : ' · 🃏 настоящие карты');
 
   const top = h('div.top',
-    h(`div.stage${stageCls ? '.' + stageCls : ''}`, stage),
+    animateOnce(h(`div.stage${stageCls ? '.' + stageCls : ''}`, stage), `stage:${hd?.no}:${stage}`,
+      [{ transform: 'scale(0.55)', opacity: 0, offset: 0 }], { duration: 420 }),
     h('div.top-meta', meta),
     h('button.icon-btn', { onclick: openMenu, 'aria-label': 'Меню' }, '⋯'),
   );
@@ -402,6 +643,7 @@ function renderTable() {
   const heroAtTable = meIdx >= 0;
   const others = heroAtTable ? [...ring.slice(meIdx + 1), ...ring.slice(0, meIdx)] : ring;
   const pos = positions(others.length, heroAtTable);
+  dealOrder = new Map([...others, ...(heroAtTable ? [ring[meIdx]] : [])].map((p, i) => [p.seat, i]));
 
   const table = h('div.table',
     h('div.felt'),
@@ -412,15 +654,21 @@ function renderTable() {
   $app.append(top, table, heroEl(s), panelEl(s));
 }
 
+/** A board card lands: dealt from above and turned face up. The flop comes one card after another. */
+function boardCard(el, hd, i) {
+  return animateOnce(el, `board:${hd.no}:${i}`,
+    [{ transform: 'translateY(-26px) perspective(500px) rotateY(100deg) scale(0.8)', opacity: 0, offset: 0 }, { opacity: 1, offset: 0.35 }],
+    { duration: 560, delay: i < 3 ? i * 170 : 0 });
+}
+
 function centerEl(s) {
   const hd = s.hand;
   const board = h('div.board');
-  const prevBoard = prev?.hand?.no === hd?.no ? prev.hand.board : [];
   if (hd) {
     if (hd.live) {
-      for (let i = 0; i < 5; i++) board.append(i < hd.boardSlots ? backImg() : h('div.slot'));
+      for (let i = 0; i < 5; i++) board.append(i < hd.boardSlots ? boardCard(backImg(), hd, i) : h('div.slot'));
     } else {
-      hd.board.forEach((c) => board.append(cardImg(c, prevBoard.includes(c) ? '' : 'deal')));
+      hd.board.forEach((c, i) => board.append(boardCard(cardImg(c), hd, i)));
       for (let i = hd.board.length; i < 5; i++) board.append(h('div.slot'));
     }
   }
@@ -430,12 +678,17 @@ function centerEl(s) {
   else if (hd?.phase === 'showdown' && hd.live) {
     const d = s.winnerFlow;
     line = h('div.result-line', d?.decider ? `${d.decider} определяет победителя…` : 'Отметьте победителя');
-  } else if (hd?.phase === 'complete' && hd.result) line = resultLine(s);
+  } else if (hd?.phase === 'complete' && hd.result) {
+    line = animateOnce(resultLine(s), `result:${hd.no}`, [{ transform: 'translateY(8px) scale(0.9)', opacity: 0, offset: 0 }], { duration: 450, delay: 250 });
+  }
   else if (hd?.currentBet) line = h('div.bet-line', `Ставка ${fmt(hd.currentBet)}`);
   else line = h('div.bet-line', '');
 
+  // Once the result is known the pot is pushed to the winners: it drains while their stacks fill.
+  const paid = hd?.phase === 'complete' && hd.result && !hd.revealing;
   return h('div.center',
-    h('div.pot', h('small', 'POT'), h('b.num', fmt(hd?.pot || 0))),
+    h('div.pot', h('small', 'POT'),
+      counter('b.num', `pot:${hd?.no ?? 0}`, paid ? 0 : hd?.pot || 0, { up: { dur: 500, delay: 320 }, down: { dur: 900, delay: 350 } })),
     board,
     line,
   );
@@ -469,34 +722,42 @@ function heroEl(s) {
   const myTurn = hd && hd.actorSeat === me.seat;
   let cards;
   if (hd && hd.live && mine.inHand) {
-    cards = h('div.hero-cards', backImg(), backImg());
+    cards = h('div.hero-cards', [0, 1].map((k) => dealIn(backImg(), hd, me.seat, k)));
   } else if (me.cards?.length) {
-    const fresh = prev?.hand?.no !== hd?.no;
-    cards = h('div.hero-cards', me.cards.map((c) => cardImg(c, fresh ? 'deal' : '')));
+    cards = h('div.hero-cards', me.cards.map((c, k) => dealIn(cardImg(c), hd, me.seat, k)));
   } else {
     cards = h('div.hero-cards.none', mine.status === 'out' ? 'Вы пропускаете раздачи' : 'Ждём следующую раздачу');
   }
 
   const info = h('div.hero-info');
-  if (myTurn) info.append(h('div.your-turn', 'ВАШ ХОД', hd.deadline ? h('span.num', { 'data-count': hd.deadline }) : null));
+  if (myTurn) {
+    const urgent = hd.deadline && hd.deadline - serverNow() < 10_000;
+    info.append(animateOnce(h(`div.your-turn${urgent ? '.urgent' : ''}`, 'ВАШ ХОД', hd.deadline ? h('span.num', { 'data-count': hd.deadline }) : null),
+      `yt:${turnId}`, [{ transform: 'scale(0.5)', opacity: 0, offset: 0 }, { transform: 'scale(1.12)', opacity: 1, offset: 0.6 }], { duration: 420 }));
+  }
   info.append(h('div.hero-name', mine.name));
-  info.append(h('div.hero-stack.num', fmt(mine.stack)));
+  // Your balance, and what the last pot added to it — rolling up as the chips arrive.
+  const won = hd?.phase === 'complete' && !hd.revealing ? hd.result?.winners?.find((w) => w.seat === mine.seat) : null;
+  info.append(h('div.hero-stack-row',
+    counter('div.hero-stack.num', stackKey(mine), mine.stack, STACK_MOTION),
+    won ? animateOnce(h('span.gain.num', `+${fmt(won.amount)}`), `gain:${hd.no}`,
+      [{ transform: 'translate(-10px, 12px) scale(0.3)', opacity: 0, offset: 0 }, { transform: 'scale(1.3)', opacity: 1, offset: 0.55 }],
+      { duration: 750, delay: 480 }) : null));
   const handName = hd?.live ? (mine.inHand ? 'Ваши карты — у вас на руках' : '') : me.handName || '';
   info.append(h('div.hero-hand', handName));
   const note = heroNote(s, mine);
   if (note) info.append(h('div.hero-state', note));
 
-  const cls = ['hero', myTurn && 'turn', mine.folded && hd?.phase !== 'complete' && 'folded'].filter(Boolean).join('.');
+  const folded = mine.folded && hd?.phase !== 'complete';
+  if (folded) animateOnce(cards, `fold:${hd.no}`, [{ transform: 'translateY(0)', opacity: 1, filter: 'none', offset: 0 }, { transform: 'translateY(-14px) rotate(-4deg)', opacity: 0.7, offset: 0.4 }], { duration: 480 });
+  const cls = ['hero', myTurn && 'turn', folded && 'folded'].filter(Boolean).join('.');
   return h(`div.${cls}`, cards, info);
 }
 
 function heroNote(s, mine) {
   const hd = s.hand;
   if (!hd) return '';
-  if (hd.phase === 'complete') {
-    const w = hd.result?.winners?.find((x) => x.seat === mine.seat);
-    return w ? `Вы забрали ${fmt(w.amount)}` : '';
-  }
+  if (hd.phase === 'complete') return ''; // a win is the gold "+N" next to the balance
   if (mine.folded) return 'Вы сбросили — ждём конца раздачи';
   if (mine.allIn) return 'Вы в олл-ине — ходить больше не нужно';
   if (mine.bet) return `Ваша ставка ${fmt(mine.bet)}`;
@@ -548,6 +809,8 @@ function panelEl(s) {
           `CALL ${fmt(L.callAmount)}`, L.isCallAllIn ? h('small', 'это весь стек') : null));
       }
       if (L.canBet || L.canRaise) panel.append(h('button.btn.gold', { onclick: openRaise }, L.canBet ? 'BET' : 'RAISE'));
+      [...panel.children].forEach((b, i) => animateOnce(b, `btn:${turnId}:${i}`,
+        [{ transform: 'translateY(18px) scale(0.92)', opacity: 0, offset: 0 }], { duration: 380, delay: 60 + i * 60 }));
       if (busy) panel.classList.add('busy');
       return panel;
     }
@@ -567,8 +830,9 @@ function panelEl(s) {
   if (hd?.phase === 'complete') {
     if (hd.revealing) return note('Открываем борд…');
     if (s.canNext) {
-      panel.append(h('button.btn.primary.wide.lg', { onclick: () => { haptic.tap(); send({ t: 'next' }); } },
-        'Следующая раздача', s.autoNextAt ? h('small', { 'data-count': s.autoNextAt, 'data-prefix': 'сама через ' }) : null));
+      panel.append(animateOnce(h('button.btn.primary.wide.lg', { onclick: () => { haptic.tap(); send({ t: 'next' }); } },
+        'Следующая раздача', s.autoNextAt ? h('small', { 'data-count': s.autoNextAt, 'data-prefix': 'сама через ' }) : null),
+      `next:${hd.no}`, [{ transform: 'translateY(18px)', opacity: 0, offset: 0 }], { duration: 420, delay: 900 }));
       if (busy) panel.classList.add('busy');
       return panel;
     }
@@ -603,6 +867,7 @@ function tickClocks() {
     const left = Math.max(0, Number(el.dataset.count) - now);
     const sec = Math.ceil(left / 1000);
     el.textContent = `${el.dataset.prefix || ''}${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+    el.closest('.your-turn')?.classList.toggle('urgent', left > 0 && left < 10_000);
   }
   for (const svg of document.querySelectorAll('svg.ring')) {
     const total = Number(svg.dataset.total) || 1;
