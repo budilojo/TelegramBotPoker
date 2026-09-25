@@ -80,8 +80,19 @@ export function dealHoles(room, deck = shuffled()) {
   }
 }
 
+/**
+ * Борд — как у живого дилера: перед флопом, тёрном и ривером одна карта
+ * сжигается (Robert's Rules, «burn and turn»). На случайность это не
+ * влияет — колода и так тасована честно, — но процедура официальная. Сожжённые
+ * карты не видит никто: они остаются в колоде, а колода закрывается после
+ * раздачи.
+ */
 function dealBoardTo(h, size) {
-  while (h.board.length < size) h.board.push(h.deck[h.cursor++]);
+  while (h.board.length < size) {
+    if (h.board.length === 0 || h.board.length >= 3) h.cursor++; // burn
+    const street = h.board.length === 0 ? 3 : 1;
+    for (let i = 0; i < street && h.board.length < size; i++) h.board.push(h.deck[h.cursor++]);
+  }
 }
 
 /**

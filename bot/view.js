@@ -96,11 +96,13 @@ function plateOf(room, p, isActor) {
 function visibleShown(room) {
   const h = room.hand;
   if (!h || h.phase !== 'complete' || !h.shown) return {};
-  // An all-in board is run out first, face-down hands and all; the hands
-  // turn over together with the river. Your own two cards you always see.
-  if (room.ui?.reveal?.handNo === h.no) return {};
+  // TDA, "Face Up for All-Ins": once a player is all-in and the betting is
+  // over, every hand is turned face up — before the rest of the board is
+  // dealt. While the board runs out the hands carry no name: "Флеш до A"
+  // would tell the table what the river is.
+  const revealing = room.ui?.reveal?.handNo === h.no;
   const out = {};
-  for (const [id, s] of Object.entries(h.shown)) out[id] = { cards: s.cards, name: s.name };
+  for (const [id, s] of Object.entries(h.shown)) out[id] = revealing ? { cards: s.cards } : { cards: s.cards, name: s.name };
   return out;
 }
 

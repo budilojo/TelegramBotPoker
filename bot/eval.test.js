@@ -149,7 +149,7 @@ test('rank: группирует ровные руки в один дележ и
     groups.map((g) => [...g.ids].sort()),
     [['p3'], ['p1', 'p2'], ['p4']]
   );
-  assert.equal(groups[0].name, 'Сет 7');
+  assert.equal(groups[0].name, 'Тройка 7');
   assert.equal(groups[1].name, 'Две пары A/K', 'две одинаковые руки — одна группа, банк делится');
   for (let i = 1; i < groups.length; i++) {
     assert.ok(compare(groups[i - 1].score, groups[i].score) > 0, 'строго по убыванию');

@@ -49,8 +49,11 @@ export function stack(holes = {}, board = '', { seed = 7 } = {}) {
       put(i, a);
       put(n + i, b);
     });
+    // A card is burnt before the flop, the turn and the river (see cards.js):
+    // flop at 2n+1..2n+3, turn at 2n+5, river at 2n+7.
+    const at = [1, 2, 3, 5, 7];
     String(board).trim().split(/\s+/).filter(Boolean).map(parseCard)
-      .forEach((c, k) => put(2 * n + k, c));
+      .forEach((c, k) => put(2 * n + at[k], c));
     const rest = shuffled(seededRng(seed)).filter((c) => !used.has(c));
     for (let i = 0; i < 52; i++) if (deck[i] == null) deck[i] = rest.shift();
     return deck;

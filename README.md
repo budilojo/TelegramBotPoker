@@ -119,7 +119,7 @@ bot/
   render.js      тексты для Telegram: карточка, «ваш ход», итоги
   outbox.js      лимиты Telegram, склейка правок, ошибки правки
   store.js       SQLite (node:sqlite): столы и кто нажал Start
-  *.test.js      175 тестов на стабе Telegram и фальшивых часах
+  *.test.js      194 теста на стабе Telegram и фальшивых часах (rules.test.js — официальные правила)
 miniapp/
   index.html, style.css, app.js   стол в Telegram Mini App, без сборки
   cards/         52 карты + рубашка, SVG

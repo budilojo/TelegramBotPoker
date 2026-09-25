@@ -567,8 +567,12 @@ function planFor(s) {
   // Did the last board card arrive with the result? Then it lands first.
   const lastCardNow = !!prev && prev.hand?.no === hd.no && (prev.hand.board?.length ?? 0) < hd.board.length;
   const flip = lastCardNow ? 700 : 0;
+  // All-in: the hands were turned face up before the board ran out (TDA), so
+  // there is nothing left to turn over — the winning five light up sooner.
+  const handsWereUp = !!prev && prev.hand?.no === hd.no && prev.players.some((x) => x.cards && !x.isMe);
+  const best = flip + (handsWereUp ? 400 : 800);
   if (!prev) plan = { flip: 0, best: 0, pay: 0 }; // opened on a finished hand: it is all there already
-  else if (showdown) plan = { flip, best: flip + 800, pay: flip + 1900 };
+  else if (showdown) plan = { flip, best, pay: best + 1100 };
   else plan = { flip: 0, best: 0, pay: 150 };
   plans.set(hd.no, plan);
   if (plans.size > 30) plans.delete(plans.keys().next().value);

@@ -98,7 +98,7 @@ export function best5(cards) {
 }
 
 const CATEGORY_RU = [
-  'Старшая карта', 'Пара', 'Две пары', 'Сет', 'Стрит',
+  'Старшая карта', 'Пара', 'Две пары', 'Тройка', 'Стрит',
   'Флеш', 'Фулл-хаус', 'Каре', 'Стрит-флеш',
 ];
 
@@ -113,7 +113,8 @@ export function describe(score) {
     case CATEGORY.FULL_HOUSE: return `Фулл-хаус ${R(rest[0])}/${R(rest[1])}`;
     case CATEGORY.FLUSH: return `Флеш до ${R(rest[0])}`;
     case CATEGORY.STRAIGHT: return `Стрит до ${R(rest[0])}`;
-    case CATEGORY.TRIPS: return `Сет ${R(rest[0])}`;
+    // Three of a kind. «Сет» is only the pocket-pair kind; the ranking calls them all a тройка.
+    case CATEGORY.TRIPS: return `Тройка ${R(rest[0])}`;
     case CATEGORY.TWO_PAIR: return `Две пары ${R(rest[0])}/${R(rest[1])}`;
     case CATEGORY.PAIR: return `Пара ${R(rest[0])}`;
     default: return `Старшая ${R(rest[0])}`;

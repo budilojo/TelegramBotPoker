@@ -260,10 +260,11 @@ test('undo takes back the host\'s own admin action — never a bet', async () =>
   await t.begin(cast);
   const dima = () => t.room.players.find((p) => p.id === '303');
   await t.send(cast.ivan, { t: 'rebuy', seat: t.room.players.indexOf(dima()) }); // a tap on the wrong name
-  assert.equal(dima().stats.buyIn, 20000);
+  assert.equal(dima().topUp, 10000, 'mid-hand, a re-buy waits for the next deal (table stakes)');
 
   await t.send(cast.ivan, { t: 'undo' });
-  assert.equal(dima().stats.buyIn, 10000, 'the re-buy was taken back');
+  assert.equal(dima().topUp || 0, 0, 'the re-buy was taken back: nothing is waiting for the next deal');
+  assert.equal(dima().stats.buyIn, 10000);
   assert.match(t.state(cast.max).room.notice, /Отменено: докупка: Дима/, 'and everybody is told');
 
   await t.act(t.actorOf(cast), 'call');

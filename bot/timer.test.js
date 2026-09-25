@@ -343,7 +343,7 @@ async function allInPreflop(cast, opts = {}) {
   return { t, took: Date.now() - started };
 }
 
-test('an all-in board is run out street by street; hands, stacks and result come with the river', async () => {
+test('face up for all-ins: hands open first, the board runs out street by street, the result comes with the river', async () => {
   const cast = THREE();
   const { t, took } = await allInPreflop(cast);
   const [q, n9, n4, n3, n8] = t.room.hand.board.map(cardCode);
@@ -352,10 +352,10 @@ test('an all-in board is run out street by street; hands, stacks and result come
   assert.ok(took < 1000, `handling the move must not sleep through the reveal (${took} ms)`);
   assert.equal(st().hand.revealing, true);
   assert.deepEqual(st().hand.board, [], 'nothing out yet');
-  assert.equal(st().players[0].cards, null, 'the hands stay face down while the board runs out');
-  assert.equal(st().players[1].cards, null);
-  assert.deepEqual(t.state(cast.ivan).me.cards, ['AS', 'AH'], 'your own two cards you always see');
-  assert.equal(t.state(cast.ivan).players[1].cards, null, 'but not the other all-in hand');
+  assert.deepEqual(st().players[0].cards, ['AS', 'AH'], 'TDA: the hands are turned face up before the board');
+  assert.deepEqual(st().players[1].cards, ['KD', 'KC']);
+  assert.equal(st().players[0].handName, null, 'but nameless: a name would give the river away');
+  assert.deepEqual(t.state(cast.ivan).players[1].cards, ['KD', 'KC'], 'the all-in players see each other too');
   assert.equal(st().hand.result, null, 'no result before the board is out');
   assert.equal(st().players[0].stack, 0, 'and no stack gives the river away');
   assert.equal(st().players[1].stack, 8000);
@@ -365,12 +365,12 @@ test('an all-in board is run out street by street; hands, stacks and result come
   assert.deepEqual(st().hand.board, [q, n9, n4], 'the flop');
   await t.advance(1500);
   assert.deepEqual(st().hand.board, [q, n9, n4, n3], 'the turn');
-  assert.equal(st().players[1].cards, null, 'turn: still face down');
+  assert.equal(st().players[0].handName, null, 'turn: still no names');
   await t.advance(1500);
   assert.deepEqual(st().hand.board, [q, n9, n4, n3, n8], 'the river — with the result');
   assert.equal(st().hand.revealing, false);
-  assert.deepEqual(st().players[0].cards, ['AS', 'AH'], 'now the hands turn over');
-  assert.deepEqual(st().players[1].cards, ['KD', 'KC']);
+  assert.equal(st().players[0].handName, 'Пара A', 'the names come with the river');
+  assert.equal(st().players[1].handName, 'Пара K');
   const win = st().hand.result.winners[0];
   assert.equal(win.seat, 0);
   assert.equal(st().players[0].stack, 4050);
@@ -385,14 +385,9 @@ test('an all-in board is run out street by street; hands, stacks and result come
   const states = t.page(cast.dima).inbox.filter((m) => m.t === 'state').map((m) => JSON.stringify(m.state));
   const firstRiver = states.findIndex((x) => x.includes(`"${n8}"`));
   const firstResult = states.findIndex((x) => x.includes('"winners"'));
-  const firstAce = states.findIndex((x) => x.includes('"AS"'));
-  const firstKing = states.findIndex((x) => x.includes('"KD"'));
+  const firstName = states.findIndex((x) => x.includes('"Пара A"'));
   assert.equal(firstRiver, firstResult, 'the river and the result arrive in the same state');
-  assert.equal(firstAce, firstRiver, 'and the hands with them, not before');
-  assert.equal(firstKing, firstRiver);
-  const ivanStates = t.page(cast.ivan).inbox.filter((m) => m.t === 'state').map((m) => JSON.stringify(m.state));
-  assert.equal(ivanStates.findIndex((x) => x.includes('"KD"')), ivanStates.findIndex((x) => x.includes(`"${n8}"`)),
-    'the other all-in player sees the kings only with the river too');
+  assert.equal(firstName, firstRiver, 'and the names of the hands with them, not before');
 });
 
 test('while the board turns over, your own hand name does not run ahead of the table', async () => {

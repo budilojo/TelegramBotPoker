@@ -14,7 +14,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Table, user, stack, FakeClock } from './harness.js';
+import { Table, user, stack, FakeClock, seededDecks } from './harness.js';
 import { BOARD_SIZE } from './cards.js';
 import { cardCode } from './view.js';
 import { rank } from './eval.js';
@@ -206,7 +206,7 @@ test('the best hand takes the pot — the bot reads the cards, nobody picks', as
 
   assert.deepEqual(t.room.hand.pots.map((p) => p.winners), [['101']], 'a set of nines beats kings');
   const r = t.state(cast.max).hand.result;
-  assert.deepEqual(r.winners, [{ seat: 0, amount: 150, hand: 'Сет 9', best: ['9C', '9D', 'AS', '9H', 'JD'] }]);
+  assert.deepEqual(r.winners, [{ seat: 0, amount: 150, hand: 'Тройка 9', best: ['9C', '9D', 'AS', '9H', 'JD'] }]);
   const stackOf = (id) => t.room.players.find((p) => p.id === id).stack;
   assert.deepEqual(['101', '202', '303'].map(stackOf), [10100, 9950, 9950]);
 });
@@ -329,7 +329,8 @@ test('a restart mid-hand keeps the cards and deals the same turn it would have',
   await t.runToShowdown(cast, 3);
   assert.equal(t.room.hand.street, 'flop');
   const holes = JSON.stringify(t.room.hand.holes);
-  const nextCard = t.room.hand.deck[t.room.hand.cursor];
+  // The card after the next one: a card is burnt before the turn.
+  const nextCard = t.room.hand.deck[t.room.hand.cursor + 1];
   const maxCards = t.state(cast.max).me.cards;
 
   const clock = new FakeClock();
@@ -367,52 +368,64 @@ test('a restart mid-hand keeps the cards and deals the same turn it would have',
 test('many random hands through the Mini App: cards and chips stay sound', async () => {
   const cast = CAST();
   const rnd = seededRng(4242);
-  const t = new Table();
-  await t.seat(cast, { blinds: [25, 50], stack: 3000 });
-  let TOTAL = t.chips();
-  await t.send(cast.ivan, { t: 'start' });
-
   let hands = 0;
   let rebuys = 0;
-  let guard = 0;
-  while (t.room.status !== 'finished' && hands < 40 && guard++ < 3000) {
-    const h = t.room.hand;
-    if (h.phase === 'complete') {
-      assert.equal(t.chips(), TOTAL, `chips leaked in hand ${h.no}`);
-      hands++;
-      // Pot-sized raises bust people fast; the host re-buys them, as at a
-      // real table — and the total grows by exactly the re-buys.
-      for (const [seat, p] of t.room.players.entries()) {
-        if (p.stack > 0) continue;
-        await t.send(cast.ivan, { t: 'rebuy', seat });
-        TOTAL += t.room.settings.startingStack;
-        rebuys++;
-      }
-      assert.equal(t.chips(), TOTAL, 'a re-buy adds exactly one starting stack');
-      await t.send(Object.values(cast)[rnd(4)], { t: 'next' });
-      continue;
-    }
-    const dealt = [...Object.values(h.holes).flat(), ...h.board];
-    assert.equal(new Set(dealt).size, dealt.length, 'a card was dealt twice');
-    assert.equal(h.board.length, BOARD_SIZE[h.street]);
-    assert.ok(t.room.players.every((p) => p.stack >= 0));
+  let games = 0;
+  // A random evening can end early and honestly — three players all-in, one
+  // takes it all. Then a new game starts: the point is many hands, not one
+  // lucky path through the deck.
+  while (hands < 30 && games++ < 8) {
+    const t = new Table({ chatId: -1009000 - games, deck: seededDecks(games) });
+    await t.seat(cast, { blinds: [25, 50], stack: 3000 });
+    let TOTAL = t.chips();
+    await t.send(cast.ivan, { t: 'start' });
 
-    const who = t.actorOf(cast);
-    const l = t.state(who).legal;
-    const moves = [];
-    if (l.canCheck) moves.push(['check'], ['check']);
-    if (l.canCall) moves.push(['call'], ['call']);
-    if (l.toCall > 0) moves.push(['fold']);
-    for (const p of l.presets) {
-      if (p.kind === 'size') moves.push([l.canBet ? 'bet' : 'raise', p.total]);
-      else if (rnd(6) === 0) moves.push(['allin']); // rare, or the evening ends in four hands
+    let guard = 0;
+    while (t.room.status !== 'finished' && hands < 40 && guard++ < 3000) {
+      const h = t.room.hand;
+      if (h.phase === 'complete') {
+        assert.equal(t.chips(), TOTAL, `chips leaked in hand ${h.no}`);
+        hands++;
+        // Pot-sized raises bust people fast; the host re-buys them, as at a
+        // real table — and the total grows by exactly the re-buys.
+        for (const [seat, p] of t.room.players.entries()) {
+          if (p.stack > 0) continue;
+          await t.send(cast.ivan, { t: 'rebuy', seat });
+          TOTAL += t.room.settings.startingStack;
+          rebuys++;
+        }
+        assert.equal(t.chips(), TOTAL, 'a re-buy adds exactly one starting stack');
+        await t.send(Object.values(cast)[rnd(4)], { t: 'next' });
+        continue;
+      }
+      const dealt = [...Object.values(h.holes).flat(), ...h.board];
+      assert.equal(new Set(dealt).size, dealt.length, 'a card was dealt twice');
+      assert.equal(h.board.length, BOARD_SIZE[h.street]);
+      assert.ok(t.room.players.every((p) => p.stack >= 0));
+
+      const who = t.actorOf(cast);
+      const l = t.state(who).legal;
+      const moves = [];
+      if (l.canCheck) moves.push(['check'], ['check']);
+      if (l.canCall) moves.push(['call'], ['call']);
+      if (l.toCall > 0) moves.push(['fold']);
+      for (const p of l.presets) {
+        if (p.kind === 'size') moves.push([l.canBet ? 'bet' : 'raise', p.total]);
+        else if (rnd(6) === 0) moves.push(['allin']); // rare, or the evening ends in four hands
+      }
+      const [move, amount] = moves[rnd(moves.length)];
+      // Half the time, send the seq the page was drawn with — as the real page does.
+      await t.act(who, move, amount, rnd(2) ? { seq: t.state(who).seq } : {});
     }
-    const [move, amount] = moves[rnd(moves.length)];
-    // Half the time, send the seq the page was drawn with — as the real page does.
-    await t.act(who, move, amount, rnd(2) ? { seq: t.state(who).seq } : {});
+    if (t.room.status === 'finished') {
+      const alive = t.room.players.filter((p) => p.stack > 0);
+      assert.equal(alive.length, 1, 'a game only ends with one player holding every chip');
+      assert.equal(alive[0].stack, TOTAL);
+    } else if (t.room.hand.phase === 'complete') {
+      assert.equal(t.chips(), TOTAL);
+    }
+    assert.equal(t.errors.length, 0, t.errors.map((e) => e.message || e).join('; '));
   }
   assert.ok(hands >= 30, `expected a long session, got ${hands} hands`);
   assert.ok(rebuys > 0, 'the re-buy path was exercised');
-  if (t.room.hand.phase === 'complete') assert.equal(t.chips(), TOTAL);
-  assert.equal(t.errors.length, 0, t.errors.map((e) => e.message || e).join('; '));
 });

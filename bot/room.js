@@ -375,7 +375,7 @@ export function bumpLevel(room, userId) {
 const SNAPSHOT_KEYS = [
   'stack', 'inHand', 'folded', 'allIn', 'bet', 'committed', 'acted',
   'raiseLocked', 'lastAction', 'lastAmount', 'waiting', 'sittingOut', 'kicked', 'left', 'timeouts',
-  'role', 'pendingRole',
+  'role', 'pendingRole', 'topUp',
 ];
 
 function pushUndo(room, label) {
@@ -464,7 +464,48 @@ export function startBlocker(room) {
  * out. If the blinds alone put everybody all-in, `syncCards` runs the board
  * and the showdown right here — there is nobody left to act.
  */
+/**
+ * Table stakes (Robert's Rules): only chips on the table when the hand
+ * starts can play in it. Chips the host adds mid-hand wait for the next deal.
+ */
+function landTopUps(room) {
+  for (const p of room.players) {
+    if (!p.topUp) continue;
+    p.stack += p.topUp;
+    p.stats.buyIn += p.topUp;
+    p.topUp = 0;
+  }
+}
+
+/**
+ * TDA, "Button in Heads-up": when play gets down to two, the button may have
+ * to move so that nobody takes the big blind twice in a row. The engine moves
+ * the button to the next player dealt in; if that would put last hand's big
+ * blind in it again, last hand's big blind gets the button instead.
+ */
+function fixHeadsUpButton(room) {
+  const last = room.hand;
+  if (!last?.bbId) return;
+  const next = room.players.filter(canDeal);
+  if (next.length !== 2) return;
+  const prevBB = next.find((p) => p.id === last.bbId);
+  if (!prevBB) return;
+  const other = next.find((p) => p !== prevBB);
+  // Where the engine would put the button: the next player dealt in after the old one.
+  const n = room.players.length;
+  const from = room.players.findIndex((p) => p.id === room.dealerId);
+  let button = null;
+  for (let i = 1; i <= n && !button; i++) {
+    const p = room.players[(((from + i) % n) + n) % n];
+    if (canDeal(p)) button = p;
+  }
+  // Heads-up the button is the small blind, so the other one is the big blind.
+  if (button && button !== prevBB) room.dealerId = other.id; // → the engine hands the button to prevBB
+}
+
 function deal(room, deckFn) {
+  landTopUps(room);
+  fixHeadsUpButton(room);
   const r = startHand(room);
   if (r.error) return r;
   room.hand.voluntary = 0; // moves people made themselves this hand
@@ -572,8 +613,10 @@ export function act(room, userId, action, amount, seq) {
   }
 
   const h = room.hand;
+  const street = h.street;
   const r = applyAction(room, String(userId), action, amount);
   if (r.error) return r;
+  noteActed(room, street, String(userId));
   room.notice = null; // a notice is news, not furniture: the next action clears it
   const p = findPlayer(room, userId);
   if (p) p.timeouts = 0; // they are here
@@ -582,8 +625,37 @@ export function act(room, userId, action, amount, seq) {
   return r;
 }
 
+/** Who has acted on this street of their own accord — posting a blind is not acting. */
+function noteActed(room, street, id) {
+  const h = room.hand;
+  if (!h) return;
+  if (h.actedOn?.street !== street) h.actedOn = { street, ids: [] };
+  if (!h.actedOn.ids.includes(id)) h.actedOn.ids.push(id);
+}
+
+/**
+ * TDA, "Re-Opening the Bet": an all-in for less than a full raise does not
+ * re-open the betting for a player who has already acted — unless, when the
+ * action gets back to them, they face at least a full raise in total (two or
+ * three short all-ins can add up to one). A player who has only posted a
+ * blind has not acted yet, and keeps every option.
+ *
+ * The engine locks at the first short all-in, counts a posted blind as an
+ * action, and never looks again (ENGINE-NOTE.md, A and C); this looks again.
+ */
+function reopenBetting(room) {
+  const h = room.hand;
+  if (!h || h.phase !== 'betting') return;
+  const acted = h.actedOn?.street === h.street ? h.actedOn.ids : [];
+  for (const p of room.players) {
+    if (!p.raiseLocked) continue;
+    if (!acted.includes(p.id) || h.currentBet - p.bet >= h.minRaise) p.raiseLocked = false;
+  }
+}
+
 /** Everything that follows a move, whoever or whatever made it. */
 function afterMove(room) {
+  reopenBetting(room);
   room.ui.armedAllIn = null;
   room.ui.pendingBet = null;
   syncCards(room);
@@ -754,8 +826,10 @@ export function timeoutMove(room, key, now) {
   const p = findPlayer(room, h.actorId);
   const l = legalActions(room, p.id);
   const action = l?.canCheck ? 'check' : 'fold';
+  const street = h.street;
   const r = applyAction(room, p.id, action);
   if (r.error) return r;
+  noteActed(room, street, p.id);
 
   h.timeouts = (h.timeouts || 0) + 1;
   p.timeouts = (p.timeouts || 0) + 1;
@@ -866,6 +940,14 @@ export function adjustStack(room, userId, targetId, delta) {
   if (!Number.isFinite(d) || d === 0) return { error: 'BAD_AMOUNT' };
   if (p.stack + d < 0) return { error: 'NOT_ENOUGH_CHIPS' };
   pushUndo(room, `докупка: ${p.name}`);
+  const inPlay = !!room.hand && room.hand.phase !== 'complete' && p.inHand;
+  if (inPlay && d > 0) {
+    // Table stakes: not into a hand that is already being played.
+    p.topUp = (p.topUp || 0) + d;
+    room.notice = `${p.name}: +${num(d)} со следующей раздачи`;
+    touch(room);
+    return { ok: true, deferred: true };
+  }
   p.stack += d;
   p.stats.buyIn += d; // a top-up is not winnings — keep P/L honest
   room.notice = `${p.name}: стек ${d > 0 ? '+' : '−'}${num(Math.abs(d))}`;
