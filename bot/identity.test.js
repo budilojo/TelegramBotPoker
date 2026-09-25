@@ -93,6 +93,15 @@ test('the signed room wins over whatever room the page asks for', async () => {
   assert.equal(t.open(user(203, 'Дима'), { initData: initDataFor(user(203, 'Дима'), { startParam: 'nosuchroom' }) }).error, 'NO_ROOM');
 });
 
+test('opened without a room (from @BotFather or the bot profile), the app says where tables come from', async () => {
+  const t = new Table();
+  await t.seat({ ivan: user(101, 'Иван') });
+  const r = t.open(user(202, 'Макс'), { initData: initDataFor(user(202, 'Макс'), { startParam: '' }) });
+  assert.equal(r.error, 'NO_ROOM');
+  assert.match(r.text, /из группы.*\/newgame/, 'not "the game was deleted" — there never was one');
+  assert.equal(t.room.players.length, 1);
+});
+
 /* ----------------------------------------- nobody acts for anybody else */
 
 test('a player who is not on the clock cannot move — and is told so', async () => {

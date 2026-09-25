@@ -86,6 +86,8 @@ export class Hub {
     }
     // The signed start_param wins over anything in the page's own URL.
     const code = String(auth.startParam || wanted || '').trim();
+    // Opened without a room: from @BotFather's link or the bot's profile.
+    if (!code) return { error: 'NO_ROOM', text: 'Стол открывается из группы: напишите там /newgame и нажмите «Открыть стол».' };
     const room = this.app.roomByCode(code);
     if (!room) return { error: 'NO_ROOM', text: 'Стол не найден — возможно, игру уже удалили.' };
 
