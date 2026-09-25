@@ -96,15 +96,11 @@ function plateOf(room, p, isActor) {
 function visibleShown(room) {
   const h = room.hand;
   if (!h || h.phase !== 'complete' || !h.shown) return {};
-  const revealing = room.ui?.reveal?.handNo === h.no;
+  // An all-in board is run out first, face-down hands and all; the hands
+  // turn over together with the river. Your own two cards you always see.
+  if (room.ui?.reveal?.handNo === h.no) return {};
   const out = {};
-  for (const [id, s] of Object.entries(h.shown)) {
-    const p = findPlayer(room, id);
-    // While the board is still being turned over, only all-in hands are on
-    // their backs — a winner who is not all-in shows at the end, not before.
-    if (revealing && !p?.allIn) continue;
-    out[id] = revealing ? { cards: s.cards } : { cards: s.cards, name: s.name };
-  }
+  for (const [id, s] of Object.entries(h.shown)) out[id] = { cards: s.cards, name: s.name };
   return out;
 }
 
@@ -136,7 +132,13 @@ export function resultOf(room) {
   const shown = h.shown || {};
   return {
     kind: byFold ? 'fold' : h.live ? 'dealer' : 'showdown',
-    winners: [...won].map(([id, amount]) => ({ seat: seat(id), amount, hand: shown[id]?.name ?? null })),
+    winners: [...won].map(([id, amount]) => ({
+      seat: seat(id),
+      amount,
+      hand: shown[id]?.name ?? null,
+      // The five cards that won: the winner's shown cards and the board — nothing new.
+      best: !byFold && shown[id]?.best ? shown[id].best.map(cardCode) : null,
+    })),
     refunds: [...back].map(([id, amount]) => ({ seat: seat(id), amount })),
     pots: (h.pots || []).map((pot, i) => ({
       label: i === 0 ? 'MAIN POT' : `SIDE POT ${i}`,

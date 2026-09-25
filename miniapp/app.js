@@ -48,8 +48,11 @@ function h(tag, attrs, ...kids) {
   return el;
 }
 
-const NBSP = ' ';
-const fmt = (n) => String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, NBSP);
+/** 1000000 -> "1.000.000": the same grouping as the bot's messages in the group. */
+const fmt = (n) => {
+  const v = Math.round(Number(n) || 0);
+  return (v < 0 ? '−' : '') + String(Math.abs(v)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+};
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const cardImg = (code, cls = '') => h(`img.card${cls ? '.' + cls : ''}`, { src: `/cards/${code}.svg`, alt: code, draggable: 'false' });
 const backImg = (cls = '') => cardImg('back', cls);
@@ -172,7 +175,8 @@ function spawn(tag, at, frames, opts, attrs = null) {
   el.style.left = `${at.x}px`;
   el.style.top = `${at.y}px`;
   $fx.append(el);
-  const a = el.animate(frames, { easing: EASE, fill: 'both', ...opts });
+  // 'forwards', not 'both': an effect waiting for its turn must not sit on screen.
+  const a = el.animate(frames, { easing: EASE, fill: 'forwards', ...opts });
   a.onfinish = () => el.remove();
   a.oncancel = () => el.remove();
   return el;
@@ -350,7 +354,7 @@ function onState(wasConnected) {
   // You won something.
   const won = s.hand?.result?.winners?.some((w) => w.seat === mySeat);
   const wonBefore = p?.hand?.no === s.hand?.no && p?.hand?.result?.winners?.some((w) => w.seat === mySeat);
-  if (won && !wonBefore) haptic.win();
+  if (won && !wonBefore) setTimeout(haptic.win, (planFor(s)?.pay ?? 0) + 400); // not before the cards say so
 
   if (s.room.notice && s.room.notice !== p?.room?.notice) toast(s.room.notice, 3200);
 
@@ -359,6 +363,7 @@ function onState(wasConnected) {
   if (openSheet === 'winner' && !s.winnerFlow) closeSheet();
   if (s.winnerFlow?.primary && s.winnerFlow.canDecide && openSheet !== 'winner' && !winnerDismissed(s)) openWinner();
 
+  trackFinale(s, p);
   render();
   if (openSheet && sheetRenderers[openSheet]) sheetRenderers[openSheet]();
   if (!wasConnected) reportVisibility();
@@ -407,11 +412,33 @@ function motionFor(p, s, { myTurnStarted }) {
   if (paidNow && !paidBefore && hd.result.kind !== 'aborted') {
     for (const w of hd.result.winners) {
       const target = stackEl(w.seat);
-      const lead = chipsIn ? 520 : 120; // the last call lands in the pot first
+      const lead = Math.max(planFor(s)?.pay ?? 120, chipsIn ? 520 : 120); // the last call lands in the pot first
       flyChips(potEl, target, { n: 6, delay: lead, stagger: 55 });
       celebrate(w.seat === s.me.seat ? target : target?.closest('.seat')?.querySelector('.av'), { sparks: w.seat === s.me.seat ? 14 : 0, delay: lead + 420 });
     }
   }
+}
+
+/*
+ * The hand that ends the game is played out on the table like any other —
+ * board, hands, the winning five, the chips — and only then do the results
+ * of the evening take over. Only for a finale you watched happen: opening
+ * the app on a game that ended an hour ago goes straight to the results.
+ */
+let finale = null; // { no, until }
+function trackFinale(s, p) {
+  const hd = s.hand;
+  if (s.room.status !== 'finished' || !hd || hd.phase !== 'complete') return;
+  if (p && p.room.status !== 'finished' && hd.result?.kind !== 'aborted') finale = { no: hd.no, until: null };
+  if (finale?.no === hd.no && finale.until == null && hd.result && !hd.revealing) {
+    finale.until = performance.now() + (planFor(s)?.pay ?? 0) + 3400;
+    setTimeout(render, finale.until - performance.now() + 30);
+  }
+}
+function inFinale() {
+  const hd = state.hand;
+  if (!finale || !hd || hd.no !== finale.no) return false;
+  return hd.revealing || finale.until == null || performance.now() < finale.until;
 }
 
 let dismissedFlow = null;
@@ -434,7 +461,7 @@ function render() {
     return;
   }
   if (state.room.status === 'lobby') renderLobby();
-  else if (state.room.status === 'finished') renderResults();
+  else if (state.room.status === 'finished' && !inFinale()) renderResults();
   else renderTable();
   if (!connected) $app.append(h('div.conn', 'Нет связи — переподключаемся…'));
   tickClocks();
@@ -535,8 +562,62 @@ function plateText(p, s) {
   }
 }
 
+/*
+ * The end of a hand, in order: the last card lands, the hands turn over, the
+ * winning five light up — and only then do the chips go to the winner. Worked
+ * out once per hand, on the state that first carries the result, so every
+ * redraw after it keeps the same clock.
+ */
+const plans = new Map();
+function planFor(s) {
+  const hd = s.hand;
+  if (!hd || hd.phase !== 'complete' || !hd.result || hd.revealing) return null;
+  let plan = plans.get(hd.no);
+  if (plan) return plan;
+  const showdown = hd.result.winners.some((w) => w.best);
+  // Did the last board card arrive with the result? Then it lands first.
+  const lastCardNow = !!prev && prev.hand?.no === hd.no && (prev.hand.board?.length ?? 0) < hd.board.length;
+  const flip = lastCardNow ? 700 : 0;
+  if (!prev) plan = { flip: 0, best: 0, pay: 0 }; // opened on a finished hand: it is all there already
+  else if (showdown) plan = { flip, best: flip + 800, pay: flip + 1900 };
+  else plan = { flip: 0, best: 0, pay: 150 };
+  plans.set(hd.no, plan);
+  if (plans.size > 30) plans.delete(plans.keys().next().value);
+  return plan;
+}
+
+/** The winning five of every winner — board cards and their own — as card codes. */
+function bestOf(s) {
+  const hd = s.hand;
+  const all = new Set();
+  const bySeat = new Map();
+  if (hd?.phase === 'complete' && !hd.revealing) {
+    for (const w of hd.result?.winners || []) {
+      if (!w.best) continue;
+      bySeat.set(w.seat, new Set(w.best));
+      for (const c of w.best) all.add(c);
+    }
+  }
+  return { all, bySeat, judged: all.size > 0 };
+}
+
+/** A card at the showdown: part of the winning five lifts up in gold, the rest go dark. */
+function judge(img, isBest, key, plan) {
+  if (isBest) {
+    img.classList.add('best');
+    animateOnce(img, `best:${key}`, [{ translate: '0 0', boxShadow: '0 3px 8px rgba(0, 0, 0, 0.35)', offset: 0 }], { duration: 600, delay: plan.best });
+  } else {
+    img.classList.add('dim');
+    animateOnce(img, `dim:${key}`, [{ filter: 'none', offset: 0 }], { duration: 500, delay: plan.best });
+  }
+  return img;
+}
+
 /** Stacks fall fast when chips go in, and roll up slowly — once the chips arrive — when a pot comes back. */
-const STACK_MOTION = { up: { dur: 1400, delay: 520 }, down: { dur: 350 } };
+function stackMotion(s) {
+  const plan = planFor(s);
+  return { up: { dur: 1400, delay: plan ? plan.pay + 450 : 520 }, down: { dur: 350 } };
+}
 const stackKey = (p) => `stk:${p.seat}:${p.name}`;
 
 /** Where each seat is in the dealing order this hand: the deal goes round the table twice. */
@@ -552,11 +633,17 @@ function dealIn(el, hd, seat, k) {
 function seatEl(p, pos, s) {
   const h0 = s.hand;
   const win = h0?.result?.winners?.find((w) => w.seat === p.seat);
+  const plan = planFor(s) || { flip: 0, best: 0, pay: 0 };
+  const best = bestOf(s);
   const away = ['out', 'left', 'broke', 'wait'].includes(p.status);
   const cls = ['seat', p.isActor && 'turn', (p.folded || p.status === 'fold') && 'folded', away && 'away', win && 'win']
     .filter(Boolean).join('.');
 
   const av = h('div.av', { style: { '--h': p.hue } }, initial(p.name));
+  if (win) {
+    animateOnce(av, `winav:${h0.no}:${p.seat}`,
+      [{ borderColor: 'rgba(0, 0, 0, 0.5)', boxShadow: '0 4px 10px rgba(0, 0, 0, 0.45)', offset: 0 }], { duration: 500, delay: plan.best });
+  }
   if (p.isActor && h0?.deadline && s.room.settings.turnSeconds) {
     av.append(ringSvg(h0.deadline, s.room.settings.turnSeconds));
   }
@@ -565,8 +652,11 @@ function seatEl(p, pos, s) {
   let minis = null;
   if (p.cards) {
     // Shown at the showdown: the backs turn over.
-    minis = h('div.minis.shown', p.cards.map((c, k) => animateOnce(cardImg(c), `show:${h0.no}:${p.seat}:${k}`,
-      [{ transform: 'perspective(300px) rotateY(90deg) scale(0.9)', offset: 0 }], { duration: 460, delay: k * 110 })));
+    minis = h('div.minis.shown', p.cards.map((c, k) => {
+      const img = animateOnce(cardImg(c), `show:${h0.no}:${p.seat}:${k}`,
+        [{ transform: 'perspective(300px) rotateY(90deg) scale(0.9)', offset: 0 }], { duration: 460, delay: plan.flip + k * 110 });
+      return best.judged ? judge(img, !!best.bySeat.get(p.seat)?.has(c), `${h0.no}:s${p.seat}:${c}`, plan) : img;
+    }));
   } else if (p.inHand && !p.folded && !(h0?.phase === 'complete' && p.mucked)) {
     minis = h('div.minis', [0, 1].map((k) => dealIn(backImg(), h0, p.seat, k)));
   }
@@ -575,19 +665,22 @@ function seatEl(p, pos, s) {
   const plate = win
     ? animateOnce(h('div.plate.win', `+${fmt(win.amount)}`), `winplate:${h0.no}:${p.seat}`,
       [{ transform: 'translateY(10px) scale(0.3)', opacity: 0, offset: 0 }, { transform: 'scale(1.25)', opacity: 1, offset: 0.6 }],
-      { duration: 700, delay: 560 })
+      { duration: 700, delay: plan.pay + 400 })
     : text
       ? animateOnce(h(`div.plate.${p.status}`, text), `plate:${h0?.no}:${h0?.street}:${p.seat}:${text}`,
-        [{ transform: 'scale(0.55)', opacity: 0, offset: 0 }], { duration: 320 })
+        [{ transform: 'scale(0.55)', opacity: 0, offset: 0 }], { duration: 320, delay: h0?.phase === 'complete' ? plan.flip : 0 })
       : null;
 
-  return h(`div.${cls}`, { 'data-seat': p.seat, style: { left: `${pos.x}%`, top: `${pos.y}%` } },
+  // Seats in the top half hang from their avatar and grow downwards, so shown
+  // cards never climb into the top bar; the lower ones stay centred.
+  return h(`div.${cls}${pos.y < 40 ? '.hang' : ''}`, { 'data-seat': p.seat, style: { left: `${pos.x}%`, top: `${pos.y}%` } },
     av,
     h('div.nm', p.name),
-    counter('div.stk.num', stackKey(p), p.stack, STACK_MOTION),
+    counter('div.stk.num', stackKey(p), p.stack, stackMotion(s)),
     plate,
     minis,
-    p.handName ? h('div.hand-tag', p.handName) : null,
+    p.handName ? animateOnce(h('div.hand-tag', p.handName), `tag:${h0.no}:${p.seat}`,
+      [{ transform: 'translateY(-5px)', opacity: 0, offset: 0 }], { duration: 400, delay: plan.flip + 350 }) : null,
   );
 }
 
@@ -668,7 +761,12 @@ function centerEl(s) {
     if (hd.live) {
       for (let i = 0; i < 5; i++) board.append(i < hd.boardSlots ? boardCard(backImg(), hd, i) : h('div.slot'));
     } else {
-      hd.board.forEach((c, i) => board.append(boardCard(cardImg(c), hd, i)));
+      const best = bestOf(s);
+      const plan = planFor(s);
+      hd.board.forEach((c, i) => {
+        const img = boardCard(cardImg(c), hd, i);
+        board.append(best.judged && plan ? judge(img, best.all.has(c), `${hd.no}:b:${c}`, plan) : img);
+      });
       for (let i = hd.board.length; i < 5; i++) board.append(h('div.slot'));
     }
   }
@@ -679,7 +777,8 @@ function centerEl(s) {
     const d = s.winnerFlow;
     line = h('div.result-line', d?.decider ? `${d.decider} определяет победителя…` : 'Отметьте победителя');
   } else if (hd?.phase === 'complete' && hd.result) {
-    line = animateOnce(resultLine(s), `result:${hd.no}`, [{ transform: 'translateY(8px) scale(0.9)', opacity: 0, offset: 0 }], { duration: 450, delay: 250 });
+    line = animateOnce(resultLine(s), `result:${hd.no}`, [{ transform: 'translateY(8px) scale(0.9)', opacity: 0, offset: 0 }],
+      { duration: 450, delay: Math.max(250, planFor(s)?.best ?? 0) });
   }
   else if (hd?.currentBet) line = h('div.bet-line', `Ставка ${fmt(hd.currentBet)}`);
   else line = h('div.bet-line', '');
@@ -688,7 +787,8 @@ function centerEl(s) {
   const paid = hd?.phase === 'complete' && hd.result && !hd.revealing;
   return h('div.center',
     h('div.pot', h('small', 'POT'),
-      counter('b.num', `pot:${hd?.no ?? 0}`, paid ? 0 : hd?.pot || 0, { up: { dur: 500, delay: 320 }, down: { dur: 900, delay: 350 } })),
+      counter('b.num', `pot:${hd?.no ?? 0}`, paid ? 0 : hd?.pot || 0,
+        { up: { dur: 500, delay: 320 }, down: { dur: 900, delay: (planFor(s)?.pay ?? 100) + 250 } })),
     board,
     line,
   );
@@ -724,7 +824,12 @@ function heroEl(s) {
   if (hd && hd.live && mine.inHand) {
     cards = h('div.hero-cards', [0, 1].map((k) => dealIn(backImg(), hd, me.seat, k)));
   } else if (me.cards?.length) {
-    cards = h('div.hero-cards', me.cards.map((c, k) => dealIn(cardImg(c), hd, me.seat, k)));
+    const best = bestOf(s);
+    const plan = planFor(s);
+    cards = h('div.hero-cards', me.cards.map((c, k) => {
+      const img = dealIn(cardImg(c), hd, me.seat, k);
+      return best.judged && plan ? judge(img, !!best.bySeat.get(me.seat)?.has(c), `${hd.no}:me:${c}`, plan) : img;
+    }));
   } else {
     cards = h('div.hero-cards.none', mine.status === 'out' ? 'Вы пропускаете раздачи' : 'Ждём следующую раздачу');
   }
@@ -739,10 +844,10 @@ function heroEl(s) {
   // Your balance, and what the last pot added to it — rolling up as the chips arrive.
   const won = hd?.phase === 'complete' && !hd.revealing ? hd.result?.winners?.find((w) => w.seat === mine.seat) : null;
   info.append(h('div.hero-stack-row',
-    counter('div.hero-stack.num', stackKey(mine), mine.stack, STACK_MOTION),
+    counter('div.hero-stack.num', stackKey(mine), mine.stack, stackMotion(s)),
     won ? animateOnce(h('span.gain.num', `+${fmt(won.amount)}`), `gain:${hd.no}`,
       [{ transform: 'translate(-10px, 12px) scale(0.3)', opacity: 0, offset: 0 }, { transform: 'scale(1.3)', opacity: 1, offset: 0.55 }],
-      { duration: 750, delay: 480 }) : null));
+      { duration: 750, delay: (planFor(s)?.pay ?? 80) + 400 }) : null));
   const handName = hd?.live ? (mine.inHand ? 'Ваши карты — у вас на руках' : '') : me.handName || '';
   info.append(h('div.hero-hand', handName));
   const note = heroNote(s, mine);
@@ -829,10 +934,15 @@ function panelEl(s) {
 
   if (hd?.phase === 'complete') {
     if (hd.revealing) return note('Открываем борд…');
+    if (s.room.status === 'finished') {
+      panel.append(animateOnce(h('button.btn.gold.wide.lg', { onclick: () => { finale = null; render(); } }, '🏁 Итоги вечера'),
+        `finale:${hd.no}`, [{ transform: 'translateY(18px)', opacity: 0, offset: 0 }], { duration: 420, delay: (planFor(s)?.pay ?? 0) + 900 }));
+      return panel;
+    }
     if (s.canNext) {
       panel.append(animateOnce(h('button.btn.primary.wide.lg', { onclick: () => { haptic.tap(); send({ t: 'next' }); } },
         'Следующая раздача', s.autoNextAt ? h('small', { 'data-count': s.autoNextAt, 'data-prefix': 'сама через ' }) : null),
-      `next:${hd.no}`, [{ transform: 'translateY(18px)', opacity: 0, offset: 0 }], { duration: 420, delay: 900 }));
+      `next:${hd.no}`, [{ transform: 'translateY(18px)', opacity: 0, offset: 0 }], { duration: 420, delay: (planFor(s)?.pay ?? 0) + 900 }));
       if (busy) panel.classList.add('busy');
       return panel;
     }

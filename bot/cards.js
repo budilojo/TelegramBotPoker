@@ -127,8 +127,12 @@ export function syncCards(room) {
  *   - каждый, кто выиграл хотя бы один спорный банк — без показа банк не
  *     забирают;
  *   - каждый, кто в олл-ине, — олл-ин вскрывается всегда;
+ *   - вскрытие олл-ина, где против олл-ина остался максимум один игрок с
+ *     фишками (торговаться больше не с кем — например, олл-ин один на
+ *     один), — показывают все: как «face up for all-ins» в правилах TDA;
  *   - остальные проигравшие сбрасывают молча (`mucked`): ни карт, ни
- *     названия комбинации в группе нет. Название тоже выдаёт руку.
+ *     названия комбинации в группе нет. Название тоже выдаёт руку. Так
+ *     бывает, когда за сайд-пот ещё торговались двое с фишками.
  * Возврат лишних фишек (банк с одним претендентом) выигрышем не считается.
  */
 function resolveShowdown(room) {
@@ -149,10 +153,11 @@ function resolveShowdown(room) {
   });
 
   const live = room.players.filter((p) => p.inHand && !p.folded);
+  const allInShowdown = live.some((p) => p.allIn) && live.filter((p) => !p.allIn).length <= 1;
   const shown = {};
   const mucked = [];
   for (const p of live) {
-    if (!winners.has(p.id) && !p.allIn) {
+    if (!winners.has(p.id) && !p.allIn && !allInShowdown) {
       mucked.push(p.id);
       continue;
     }

@@ -7,16 +7,16 @@
  * they can contain HTML-special characters, emoji and control codes.
  */
 
-/** 7550 -> "7 550". Used everywhere money is shown. */
+/** 1000000 -> "1.000.000". Used everywhere chips are shown — the Mini App does the same. */
 export function num(n) {
   const v = Math.round(Number(n) || 0);
   const s = String(Math.abs(v));
   const parts = [];
   for (let i = s.length; i > 0; i -= 3) parts.unshift(s.slice(Math.max(0, i - 3), i));
-  return (v < 0 ? '−' : '') + parts.join(' ');
+  return (v < 0 ? '−' : '') + parts.join('.');
 }
 
-/** Signed, for the P/L column: +1 200 / −450 / 0. */
+/** Signed, for the P/L column: +1.200 / −450 / 0. */
 export function signed(n) {
   const v = Math.round(Number(n) || 0);
   if (v === 0) return '0';

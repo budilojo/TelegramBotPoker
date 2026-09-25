@@ -286,7 +286,7 @@ test('an all-in loser is shown; a loser who is not all-in mucks', async () => {
 
   const st = t.state(cast.max);
   const row = (name) => st.players.find((p) => p.name === name);
-  assert.deepEqual(st.hand.result.winners, [{ seat: 1, amount: 3000, hand: 'Пара A' }]);
+  assert.deepEqual(st.hand.result.winners, [{ seat: 1, amount: 3000, hand: 'Пара A', best: ['AS', 'AH', '7H', '9D', 'JC'] }]);
   assert.deepEqual(row('Иван').cards, ['KD', 'KC'], 'all-in: the hand is tabled, win or lose');
   assert.equal(row('Дима').cards, null);
   assert.equal(row('Дима').mucked, true);
@@ -319,9 +319,11 @@ test('chips nobody called come back as a refund, not as a won pot', async () => 
   await t.act(cast.dima, 'fold');
 
   const r = t.state(cast.dima).hand.result;
-  assert.deepEqual(r.winners, [{ seat: 0, amount: 650, hand: 'Пара A' }]);
+  assert.deepEqual(r.winners, [{ seat: 0, amount: 650, hand: 'Пара A', best: ['AS', 'AH', 'KD', 'QH', 'JC'] }]);
   assert.deepEqual(r.refunds, [{ seat: 1, amount: 1700 }], 'getting your own chips back is not a win');
-  assert.equal(t.state(cast.dima).players[1].mucked, true, 'and a refund does not force the hand open');
+  // Heads-up against an all-in, nobody is left to bet: both hands are opened.
+  assert.equal(t.state(cast.dima).players[1].mucked, false);
+  assert.deepEqual(t.state(cast.dima).players[1].cards, ['7C', '2D']);
 });
 
 /* ------------------------------------------- the all-in board, one street at a time */
@@ -341,7 +343,7 @@ async function allInPreflop(cast, opts = {}) {
   return { t, took: Date.now() - started };
 }
 
-test('an all-in board is turned over street by street; stacks and result come with the river', async () => {
+test('an all-in board is run out street by street; hands, stacks and result come with the river', async () => {
   const cast = THREE();
   const { t, took } = await allInPreflop(cast);
   const [q, n9, n4, n3, n8] = t.room.hand.board.map(cardCode);
@@ -350,7 +352,10 @@ test('an all-in board is turned over street by street; stacks and result come wi
   assert.ok(took < 1000, `handling the move must not sleep through the reveal (${took} ms)`);
   assert.equal(st().hand.revealing, true);
   assert.deepEqual(st().hand.board, [], 'nothing out yet');
-  assert.deepEqual(st().players[0].cards, ['AS', 'AH'], 'the all-in hands are tabled first');
+  assert.equal(st().players[0].cards, null, 'the hands stay face down while the board runs out');
+  assert.equal(st().players[1].cards, null);
+  assert.deepEqual(t.state(cast.ivan).me.cards, ['AS', 'AH'], 'your own two cards you always see');
+  assert.equal(t.state(cast.ivan).players[1].cards, null, 'but not the other all-in hand');
   assert.equal(st().hand.result, null, 'no result before the board is out');
   assert.equal(st().players[0].stack, 0, 'and no stack gives the river away');
   assert.equal(st().players[1].stack, 8000);
@@ -360,17 +365,34 @@ test('an all-in board is turned over street by street; stacks and result come wi
   assert.deepEqual(st().hand.board, [q, n9, n4], 'the flop');
   await t.advance(1500);
   assert.deepEqual(st().hand.board, [q, n9, n4, n3], 'the turn');
+  assert.equal(st().players[1].cards, null, 'turn: still face down');
   await t.advance(1500);
   assert.deepEqual(st().hand.board, [q, n9, n4, n3, n8], 'the river — with the result');
   assert.equal(st().hand.revealing, false);
-  assert.equal(st().hand.result.winners[0].seat, 0);
+  assert.deepEqual(st().players[0].cards, ['AS', 'AH'], 'now the hands turn over');
+  assert.deepEqual(st().players[1].cards, ['KD', 'KC']);
+  const win = st().hand.result.winners[0];
+  assert.equal(win.seat, 0);
   assert.equal(st().players[0].stack, 4050);
+
+  // The winning five: the two aces and the three best board cards — all already face up.
+  assert.equal(win.best.length, 5);
+  assert.ok(win.best.includes('AS') && win.best.includes('AH'));
+  for (const c of win.best) assert.ok(['AS', 'AH', q, n9, n4, n3, n8].includes(c), `${c} is on the table`);
+  assert.deepEqual([...win.best].sort(), ['AH', 'AS', q, n9, n8].sort(), 'aces with Q, 9, 8 kickers');
 
   // Nothing ever reached a phone ahead of the table.
   const states = t.page(cast.dima).inbox.filter((m) => m.t === 'state').map((m) => JSON.stringify(m.state));
   const firstRiver = states.findIndex((x) => x.includes(`"${n8}"`));
   const firstResult = states.findIndex((x) => x.includes('"winners"'));
+  const firstAce = states.findIndex((x) => x.includes('"AS"'));
+  const firstKing = states.findIndex((x) => x.includes('"KD"'));
   assert.equal(firstRiver, firstResult, 'the river and the result arrive in the same state');
+  assert.equal(firstAce, firstRiver, 'and the hands with them, not before');
+  assert.equal(firstKing, firstRiver);
+  const ivanStates = t.page(cast.ivan).inbox.filter((m) => m.t === 'state').map((m) => JSON.stringify(m.state));
+  assert.equal(ivanStates.findIndex((x) => x.includes('"KD"')), ivanStates.findIndex((x) => x.includes(`"${n8}"`)),
+    'the other all-in player sees the kings only with the river too');
 });
 
 test('while the board turns over, your own hand name does not run ahead of the table', async () => {

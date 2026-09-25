@@ -29,7 +29,7 @@ import {
   canDeal,
   clone,
 } from '../server/game.js';
-import { cleanName } from './fmt.js';
+import { cleanName, num } from './fmt.js';
 import { dealHoles, syncCards } from './cards.js';
 import { shuffled } from './deck.js';
 
@@ -344,7 +344,7 @@ function advanceLevel(room) {
   room.level.elapsedMs = 0;
   room.level.runningSince = room.status === 'playing' ? Date.now() : null;
   queueBlinds(room, next.sb, next.bb);
-  room.notice = `Уровень ${room.level.index + 1}: блайнды ${next.sb}/${next.bb} со следующей раздачи`;
+  room.notice = `Уровень ${room.level.index + 1}: блайнды ${num(next.sb)}/${num(next.bb)} со следующей раздачи`;
   return true;
 }
 
@@ -762,7 +762,7 @@ export function timeoutMove(room, key, now) {
   const what = action === 'check' ? 'чек' : 'фолд';
   if (p.timeouts >= TIMEOUTS_TO_SIT_OUT) {
     p.sittingOut = true;
-    room.notice = `${p.name}: время вышло — ${what}. Второй раз подряд — пропускает раздачи; /join, чтобы вернуться.`;
+    room.notice = `${p.name}: время вышло — ${what}. Второй раз подряд — пропускает раздачи, пока не нажмёт «Вернуться за стол».`;
   } else {
     room.notice = `${p.name}: время вышло — ${what}.`;
   }
@@ -815,7 +815,7 @@ export function autoNextHand(room, key, now, opts = {}) {
     // Do not retry every ten seconds into an empty table: wait for a person
     // to press "next hand" (or /next) once people are back.
     room.autoNextHalted = room.hand?.no ?? null;
-    room.notice = 'Автораздача остановлена: за столом меньше двух игроков. /join — вернуться, /next — раздать.';
+    room.notice = 'Автораздача остановлена: за столом меньше двух игроков. Вернитесь за стол и нажмите «Следующая раздача».';
     touch(room);
   }
   return r;
@@ -835,7 +835,7 @@ function afterHandMaybeOver(room) {
   if ((h.timeouts || 0) > 0 && !(h.voluntary || 0) && room.status === 'playing') {
     room.status = 'paused';
     setLevelClock(room, false);
-    room.notice = 'За всю раздачу никто не сходил сам — пауза. Хост продолжит: /resume.';
+    room.notice = 'За всю раздачу никто не сходил сам — пауза. Хост продолжит игру.';
   }
 }
 
@@ -868,7 +868,7 @@ export function adjustStack(room, userId, targetId, delta) {
   pushUndo(room, `докупка: ${p.name}`);
   p.stack += d;
   p.stats.buyIn += d; // a top-up is not winnings — keep P/L honest
-  room.notice = `${p.name}: стек ${d > 0 ? '+' : '−'}${Math.abs(d)}`;
+  room.notice = `${p.name}: стек ${d > 0 ? '+' : '−'}${num(Math.abs(d))}`;
   touch(room);
   return { ok: true };
 }
@@ -950,9 +950,9 @@ export function updateSettings(room, userId, patch = {}) {
       ? `Таймер хода: ${turnSeconds} с. Не успел — чек или фолд; следующая раздача сама через ${AUTO_NEXT_MS / 1000} с.`
       : 'Таймер хода выключен. Следующую раздачу запускают вручную.'
     : inLobby
-      ? `Настройки: стек ${stack}, блайнды ${room.settings.smallBlind}/${room.settings.bigBlind}`
+      ? `Настройки: стек ${num(stack)}, блайнды ${num(room.settings.smallBlind)}/${num(room.settings.bigBlind)}`
       : blindsMoved
-        ? `Блайнды со следующей раздачи: ${sb}/${bb}`
+        ? `Блайнды со следующей раздачи: ${num(sb)}/${num(bb)}`
         : `Уровни блайндов: по ${minutes} мин`;
   touch(room);
   return { ok: true };

@@ -18,7 +18,7 @@ import {
 import { renderCard, renderTurnPing, renderResults } from './render.js';
 import { presets } from './view.js';
 import { legalActions } from '../server/game.js';
-import { padEnd, visualWidth } from './fmt.js';
+import { padEnd, visualWidth, num, signed } from './fmt.js';
 import { stack } from './harness.js';
 
 /** Wall-clock differs per run and per timezone; nothing else may. */
@@ -72,7 +72,7 @@ function liveFixture() {
 const HEAD = [
   '♠️ <b>Покерная комната</b>',
   'Игроков: <b>4/8</b>',
-  'Стек 10 000 · блайнды 250/500',
+  'Стек 10.000 · блайнды 250/500',
   '🤖 Карты раздаёт бот',
   '',
 ];
@@ -86,7 +86,7 @@ test('snapshot: lobby — who is in, and the one button that opens the table', (
     [
       '♠️ <b>Покерная комната</b>',
       'Игроков: <b>4/8</b> — Иван, Макс, Дима, Саша',
-      'Стек 10 000 · блайнды 250/500',
+      'Стек 10.000 · блайнды 250/500',
       '🤖 Карты раздаёт бот',
       '',
       '⏳ <b>Ожидание игроков</b>',
@@ -103,7 +103,7 @@ test('snapshot: a lonely host is told what is missing', () => {
     [
       '♠️ <b>Покерная комната</b>',
       'Игроков: <b>1/8</b> — Иван',
-      'Стек 10 000 · блайнды 25/50',
+      'Стек 10.000 · блайнды 25/50',
       '🤖 Карты раздаёт бот',
       '',
       '⏳ <b>Ожидание игроков</b>',
@@ -140,7 +140,7 @@ test('snapshot: the flop is the table\'s business — the card names the street 
     [
       '♠️ <b>Покерная комната</b>',
       'Игроков: <b>4/8</b>',
-      'Стек 10 000 · блайнды 250/500 · ⏱ 60 с на ход',
+      'Стек 10.000 · блайнды 250/500 · ⏱ 60 с на ход',
       '🤖 Карты раздаёт бот',
       '',
       '▶️ Идёт игра · раздача #1 · ФЛОП',
@@ -157,9 +157,9 @@ test('snapshot: showdown with side pots — every pot\'s winner, with the hand t
     [
       ...HEAD,
       '▶️ Идёт игра · раздача #1 · ЗАВЕРШЕНА',
-      '🏆 <b>Иван</b> +4 000 · Пара A',
-      '🏆 <b>Макс</b> +9 000 · Пара K',
-      '🏆 <b>Дима</b> +12 000 · Пара Q',
+      '🏆 <b>Иван</b> +4.000 · Пара A',
+      '🏆 <b>Макс</b> +9.000 · Пара K',
+      '🏆 <b>Дима</b> +12.000 · Пара Q',
     ].join('\n')
   );
 });
@@ -208,7 +208,7 @@ test('snapshot: real cards — the dealer is named, is not counted as a player, 
     [
       '♠️ <b>Покерная комната</b>',
       'Игроков: <b>3/8</b>',
-      'Стек 10 000 · блайнды 250/500',
+      'Стек 10.000 · блайнды 250/500',
       '🃏 Настоящие карты · дилер Саша',
       '',
       '▶️ Идёт игра · раздача #1 · ВСКРЫТИЕ',
@@ -222,7 +222,7 @@ test('snapshot: real cards — the dealer is named, is not counted as a player, 
   assert.equal(confirmWinners(room, '4', room.seq).error, undefined);
   assert.deepEqual(renderCard(room, { link: LINK }).text.split('\n').slice(5), [
     '▶️ Идёт игра · раздача #1 · ЗАВЕРШЕНА',
-    '🏆 <b>Макс</b> +1 500',
+    '🏆 <b>Макс</b> +1.500',
   ]);
 });
 
@@ -278,7 +278,7 @@ test('snapshot: "your turn" when checking is free — and no clock', () => {
   assert.equal(bb.id, room.hand.bbId);
   assert.equal(
     renderTurnPing(room, bb),
-    ['👉 <b>Ваш ход</b> · Покер по пятницам', 'Раздача #1 · ПРЕФЛОП · можно чекнуть · банк 2 000'].join('\n')
+    ['👉 <b>Ваш ход</b> · Покер по пятницам', 'Раздача #1 · ПРЕФЛОП · можно чекнуть · банк 2.000'].join('\n')
   );
   assert.doesNotMatch(renderTurnPing(room, bb), /[♠♥♦♣]/, 'no cards on a lock screen');
 });
@@ -291,14 +291,14 @@ test('snapshot: final results balance to zero', () => {
     [
       '🏁 <b>ИТОГИ</b>',
       '',
-      '<pre>Макс           9 000   +5 000',
-      'Иван           4 000   +3 000',
-      'Дима          12 000   +2 000',
-      'Саша               0  −10 000</pre>',
+      '<pre>Макс           9.000   +5.000',
+      'Иван           4.000   +3.000',
+      'Дима          12.000   +2.000',
+      'Саша               0  −10.000</pre>',
       '',
-      '<i>Макс: раздач 1, банков 1, крупнейший 9 000',
-      'Иван (хост): раздач 1, банков 1, крупнейший 4 000',
-      'Дима: раздач 1, банков 1, крупнейший 12 000',
+      '<i>Макс: раздач 1, банков 1, крупнейший 9.000',
+      'Иван (хост): раздач 1, банков 1, крупнейший 4.000',
+      'Дима: раздач 1, банков 1, крупнейший 12.000',
       'Саша: раздач 1, банков 0, крупнейший 0</i>',
       '',
       '<i>Раздач сыграно: 1. Сумма P/L: 0 — должна быть 0.</i>',
@@ -316,11 +316,24 @@ test('results of a real-cards evening name the dealer, who is not a row of the t
   const text = renderResults(room);
   assert.match(text, /<i>Дилер: Саша<\/i>/);
   assert.doesNotMatch(text.split('<i>Дилер')[0], /Саша/, 'a dealer who never played has no P/L line');
-  assert.match(text, /Макс\s+11 000\s+\+1 000/);
+  assert.match(text, /Макс\s+11\.000\s+\+1\.000/);
   assert.match(text, /Сумма P\/L: 0 —/);
 });
 
 /* ----------------------------------------------------------- the details */
+
+test('chips are grouped with dots: 1.000.000', () => {
+  assert.equal(num(1000000), '1.000.000');
+  assert.equal(num(10000), '10.000');
+  assert.equal(num(1500), '1.500');
+  assert.equal(num(999), '999');
+  assert.equal(num(0), '0');
+  assert.equal(num(-1500), '−1.500');
+  assert.equal(num(1234.6), '1.235', 'whole chips only');
+  assert.equal(signed(2500), '+2.500');
+  assert.equal(signed(-10000), '−10.000');
+});
+
 
 test('a hostile display name cannot inject markup', () => {
   const room = createRoom({ chatId: -2, host: { id: 1, name: '<b>hack</b>' } });

@@ -206,7 +206,7 @@ test('the best hand takes the pot — the bot reads the cards, nobody picks', as
 
   assert.deepEqual(t.room.hand.pots.map((p) => p.winners), [['101']], 'a set of nines beats kings');
   const r = t.state(cast.max).hand.result;
-  assert.deepEqual(r.winners, [{ seat: 0, amount: 150, hand: 'Сет 9' }]);
+  assert.deepEqual(r.winners, [{ seat: 0, amount: 150, hand: 'Сет 9', best: ['9C', '9D', 'AS', '9H', 'JD'] }]);
   const stackOf = (id) => t.room.players.find((p) => p.id === id).stack;
   assert.deepEqual(['101', '202', '303'].map(stackOf), [10100, 9950, 9950]);
 });
