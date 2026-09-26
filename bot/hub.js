@@ -47,11 +47,15 @@ export class Hub {
   /**
    * @param app       the bot's App: rooms, groups, clocks, and the after-*
    *                  hooks that keep the group card and the timers in step
-   * @param botToken  to verify initData
+   * @param botToken    to verify initData
+   * @param adminToken  токен админ-бота: приложение, открытое кнопкой из его
+   *                    лички, подписано ЕГО токеном, а не игровым. Такой
+   *                    странице открыт ровно один экран — админка.
    */
-  constructor(app, { botToken, maxAgeSec } = {}) {
+  constructor(app, { botToken, adminToken = null, maxAgeSec } = {}) {
     this.app = app;
     this.botToken = botToken;
+    this.adminToken = adminToken || null;
     this.maxAgeSec = maxAgeSec;
     /** room code -> Set<session> */
     this.byRoom = new Map();
@@ -67,14 +71,30 @@ export class Hub {
    * @returns {{session}|{error, text}}
    */
   open({ initData, room: wanted } = {}, send) {
-    const auth = checkInitData(initData, this.botToken, { now: this.app.clock.now(), maxAgeSec: this.maxAgeSec });
+    const opts = { now: this.app.clock.now(), maxAgeSec: this.maxAgeSec };
+    let auth = checkInitData(initData, this.botToken, opts);
+    // Подпись админ-бота — вторая дверь, и ведёт она только в админку.
+    let viaAdmin = false;
+    if (!auth.ok && this.adminToken) {
+      const second = checkInitData(initData, this.adminToken, opts);
+      if (second.ok) {
+        auth = second;
+        viaAdmin = true;
+      }
+    }
     if (!auth.ok) {
       return { error: 'AUTH', text: auth.reason === 'EXPIRED' ? 'Сессия устарела — откройте стол заново.' : 'Откройте стол из Telegram.' };
     }
-    this.app.noteSeen(auth.user.id);
+    // Владелец, зашедший посмотреть цифры, — не игрок: в «сколько людей
+    // открывало приложение» он не попадает, иначе цифры врут про себя.
+    if (!viaAdmin) this.app.noteSeen(auth.user.id);
     const asked = String(wanted || '').trim();
     // The signed start_param wins over anything in the page's own URL.
     const code = String(auth.startParam || asked || '').trim();
+
+    // Страница из лички админ-бота не садится за стол и не открывает хаб:
+    // тот бот про игры ничего не знает, и его подпись на это не даёт права.
+    if (viaAdmin && code !== ADMIN_CODE) return { error: 'NO_ROOM', text: 'Стол не найден — возможно, игру уже удалили.' };
 
     if (code === ADMIN_CODE) {
       // Не админу отвечаем ровно тем же, чем на выдуманный код: знать, что

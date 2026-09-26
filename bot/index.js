@@ -26,6 +26,7 @@ import { Bot } from 'grammy';
 import { App } from './app.js';
 import { Store } from './store.js';
 import { Hub } from './hub.js';
+import { AdminBot } from './admin-bot.js';
 import { startServer } from './server.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -62,6 +63,8 @@ const WEBAPP_URL = (process.env.WEBAPP_URL || '').replace(/\/+$/, '');
 const MINIAPP = (process.env.MINIAPP || '').trim();
 /** Кто видит админку: список Telegram-id через запятую. */
 const ADMINS = (process.env.ADMINS || '').split(',').map((x) => x.trim()).filter(Boolean);
+/** Токен отдельного админ-бота (необязателен: без него админка живёт только экраном). */
+const ADMIN_TOKEN = (process.env.ADMIN_BOT_TOKEN || '').trim();
 
 const bot = new Bot(TOKEN);
 const store = new Store(DB_PATH);
@@ -91,16 +94,57 @@ try {
   store.close();
   process.exit(1);
 }
+/**
+ * Админ-бот создаётся ниже, а ошибки начинают случаться сразу — поэтому
+ * ссылка объявлена заранее и письмо уходит, только когда бот появился.
+ */
+let adminBot = null;
+const onError = (err) => {
+  console.error('[bot]', err?.description || err?.message || err);
+  // Письмо не должно превращать одну ошибку в две: свои он глотает сам.
+  adminBot?.onAppError(err)?.catch?.(() => {});
+};
+
 const app = new App({
   api: bot.api,
   store,
+  onError,
   minIntervalMs: DRAW_INTERVAL_MS,
   botUsername: me.username,
   webappUrl: WEBAPP_URL,
   miniAppName: MINIAPP,
   admins: ADMINS,
 });
-const hub = new Hub(app, { botToken: TOKEN });
+/**
+ * Второй бот — админский. Живёт в том же процессе: ему нужны и цифры из
+ * базы, и то, что происходит прямо сейчас в памяти. Отвечает только тем, чей
+ * id стоит в ADMINS, и молчит всем остальным.
+ */
+let adminApi = null;
+let adminMe = null;
+if (ADMIN_TOKEN && !ADMINS.length) {
+  console.warn('[bot] ADMIN_BOT_TOKEN задан, а ADMINS пуст — админ-бот не ответит никому. Впишите свой Telegram-id в ADMINS.');
+}
+if (ADMIN_TOKEN) {
+  adminApi = new Bot(ADMIN_TOKEN);
+  try {
+    adminMe = await adminApi.api.getMe();
+  } catch (err) {
+    const code = err?.error_code ?? err?.error?.error_code;
+    console.error(
+      code === 401
+        ? 'Telegram не принял токен админ-бота (401). Возьмите его заново: @BotFather → /mybots → админ-бот → API Token,\n' +
+            'и впишите в .env строкой ADMIN_BOT_TOKEN=… Игра при этом работает и без него.'
+        : `Админ-бот не запустился: ${String(err?.description ?? err?.message ?? err)}. Игра работает без него.`
+    );
+    adminApi = null;
+  }
+}
+if (adminApi) {
+  adminBot = new AdminBot({ api: adminApi.api, app, webappUrl: WEBAPP_URL, botUsername: adminMe.username, onError: (e) => console.error('[админ]', e?.description || e?.message || e) });
+}
+
+const hub = new Hub(app, { botToken: TOKEN, adminToken: ADMIN_TOKEN || null });
 app.attachHub(hub);
 
 const restored = app.load();
@@ -164,6 +208,15 @@ bot.use(async (ctx) => {
   await app.handleUpdate(ctx.update);
 });
 
+if (adminApi) {
+  adminApi.use(async (ctx) => {
+    await adminBot.handleUpdate(ctx.update);
+  });
+  adminApi.catch((err) => console.error('[админ] необработанная ошибка:', err?.error?.description ?? err?.message ?? err));
+  // Свой поллинг: падение одного бота не должно уронить другого.
+  adminApi.start({ allowed_updates: ['message'], drop_pending_updates: true, onStart: () => console.log(`[админ] @${adminMe.username} · в списке: ${ADMINS.length}`) }).catch((err) => console.error('[админ]', err?.message ?? err));
+}
+
 bot.catch((err) => {
   console.error('[bot] необработанная ошибка:', err?.error?.description ?? err?.message ?? err);
 });
@@ -176,6 +229,7 @@ async function shutdown(signal) {
   console.log(`[bot] ${signal} — останавливаюсь`);
   try {
     await bot.stop();
+    if (adminApi) await adminApi.stop();
     app.stop(); // turn timers and the automatic deal come back from the database
     await web.close();
     await app.settle(); // flush any redraw that was still coalescing
@@ -200,6 +254,8 @@ await bot.start({
     // Redraw every live table: the game must continue from exactly where it
     // stopped — same hand, same cards, same player on the clock.
     await app.resume();
+    // Владелец узнаёт о перезапуске сам — это же и проверка, что бот поднялся.
+    if (adminBot) await adminBot.notify(`🟢 Бот перезапущен · игр восстановлено: ${restored}`);
   },
   drop_pending_updates: false,
 });

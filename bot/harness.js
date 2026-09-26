@@ -11,6 +11,7 @@
  */
 import { App } from './app.js';
 import { Hub } from './hub.js';
+import { AdminBot } from './admin-bot.js';
 import { TelegramStub, cmdUpdate, pressUpdate, dmUpdate, user } from './tg-stub.js';
 import { NullStore } from './store.js';
 import { dealOrder } from './cards.js';
@@ -22,6 +23,8 @@ import { freshDeck36, isCard, shuffled36 } from './games/durak/cards.js';
 export { user };
 
 export const TEST_TOKEN = '123456:test-token-for-the-harness';
+/** Токен второго, админского бота: у него своя подпись и своя личка. */
+export const ADMIN_TEST_TOKEN = '654321:test-token-for-the-admin-bot';
 
 /**
  * A stacked deck, for tests that need to know who wins.
@@ -179,8 +182,14 @@ export class Table {
       api: this.tg, store, minIntervalMs, botUsername, deck, durakDeck, clock, runoutStepMs, miniAppName, webappUrl, admins,
       onError: (e) => this.errors.push(e),
     });
-    this.hub = new Hub(this.app, { botToken: TEST_TOKEN });
+    this.hub = new Hub(this.app, { botToken: TEST_TOKEN, adminToken: ADMIN_TEST_TOKEN });
     this.app.attachHub(this.hub);
+    /** Админ-бот: своя личка (adminTg), тот же App. */
+    this.adminTg = new TelegramStub();
+    this.adminBot = new AdminBot({
+      api: this.adminTg, app: this.app, webappUrl, botUsername: 'AdminStubBot',
+      onError: (e) => this.errors.push(e),
+    });
     /** userId -> { session, inbox: [] } */
     this.pages = new Map();
     this.date = 1_700_000_000; // Telegram message clock, in seconds
@@ -233,6 +242,25 @@ export class Table {
   async start(from, payload = '') {
     this.tg.dmOpen.add(String(from.id));
     return this.dm(from, payload ? `/start ${payload}` : '/start');
+  }
+
+  /** Написать админ-боту в личку (Start у него уже нажат). */
+  async admin(from, text) {
+    this.adminTg.dmOpen.add(String(from.id));
+    await this.adminBot.handleUpdate(dmUpdate(from, text));
+    await this.app.settle();
+    return this;
+  }
+
+  /** Последнее, что админ-бот написал этому человеку. */
+  lastAdmin(u) {
+    const all = this.adminTg.dms(u.id);
+    return all[all.length - 1] ?? null;
+  }
+
+  /** Всё, что админ-бот когда-либо написал этому человеку, одной строкой. */
+  adminSaid(u) {
+    return this.adminTg.dms(u.id).join('\n');
   }
 
   async raw(update) {
