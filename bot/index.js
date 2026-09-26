@@ -64,7 +64,31 @@ const MINIAPP = (process.env.MINIAPP || '').trim();
 const bot = new Bot(TOKEN);
 const store = new Store(DB_PATH);
 
-const me = await bot.api.getMe();
+/**
+ * Первый разговор с Telegram: он же проверка токена. Показать тут стек —
+ * значит оставить человека с сорока строками про grammy вместо одной
+ * строки про то, что он вставил не тот токен.
+ */
+let me;
+try {
+  me = await bot.api.getMe();
+} catch (err) {
+  const code = err?.error_code ?? err?.error?.error_code;
+  const what = String(err?.description ?? err?.message ?? err);
+  if (code === 401) {
+    console.error(
+      'Telegram не принял токен (401). Скорее всего, он скопирован не целиком или отозван.\n' +
+        'Возьмите его заново: @BotFather → /mybots → ваш бот → API Token,\n' +
+        `и впишите в файл .env строкой BOT_TOKEN=… (сейчас там токен бота №${String(TOKEN).split(':')[0]}).`
+    );
+  } else if (/Network|fetch|ENOTFOUND|ETIMEDOUT|ECONNREFUSED/i.test(what)) {
+    console.error('Нет связи с Telegram. Проверьте интернет (и VPN, если он включён) и запустите снова.');
+  } else {
+    console.error(`Telegram отказал при запуске: ${what}`);
+  }
+  store.close();
+  process.exit(1);
+}
 const app = new App({
   api: bot.api,
   store,
@@ -94,6 +118,22 @@ const web = startServer({
   root: path.join(__dirname, '..', 'miniapp'),
   log: (...a) => console.error('[web]', ...a),
   onListen: () => console.log(`[bot] стол: http://localhost:${PORT}${WEBAPP_URL ? ` → ${WEBAPP_URL}` : ''}`),
+});
+
+/**
+ * Занятый порт — самая частая осечка при втором запуске, и без этого она
+ * выглядит как стек про EADDRINUSE. Говорим, что делать.
+ */
+web.server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(
+      `Порт ${PORT} занят — похоже, бот уже запущен в другом окне.\n` +
+        'Закройте его (Ctrl+C в том окне) или выполните:  pkill -f bot/index.js'
+    );
+  } else {
+    console.error(`Не удалось открыть стол на порту ${PORT}: ${err.message}`);
+  }
+  process.exit(1);
 });
 
 /** The "/" menu: the games are played in the Mini App, the chat only needs these. */

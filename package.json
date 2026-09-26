@@ -7,10 +7,11 @@
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
+    "go": "node --disable-warning=ExperimentalWarning tools/start.mjs",
     "dev": "node --watch server/index.js",
     "bot": "node --disable-warning=ExperimentalWarning bot/index.js",
     "bot:dev": "node --watch --disable-warning=ExperimentalWarning bot/index.js",
-    "test": "node --test --test-timeout=25000 --disable-warning=ExperimentalWarning server/*.test.js bot/*.test.js",
+    "test": "node --test --test-timeout=25000 --disable-warning=ExperimentalWarning server/*.test.js bot/*.test.js tools/*.test.js",
     "test:bot": "node --test --test-timeout=25000 --disable-warning=ExperimentalWarning bot/*.test.js",
     "icons": "node tools/make-icons.mjs",
     "preview": "node --disable-warning=ExperimentalWarning tools/preview.mjs",
