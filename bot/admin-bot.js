@@ -31,9 +31,12 @@ const HELP = [
   '/stats — цифры: люди, партии, группы',
   '/now — что идёт прямо сейчас',
   '/stop &lt;код&gt; — завершить игру и выложить итоги',
+  '/pause &lt;текст&gt; — обслуживание: игра замирает, у всех экран с текстом',
+  '/resume — снять обслуживание, часы пойдут с того же места',
+  '/stopall да — завершить ВСЕ игры с итогами в группы',
   '/health — как себя чувствует бот',
   '',
-  'Кнопка под /stats открывает те же цифры экраном, с графиками.',
+  'Кнопка под /stats открывает пульт экраном: сессии, рассылки, обслуживание.',
 ].join('\n');
 
 export class AdminBot {
@@ -121,6 +124,12 @@ export class AdminBot {
           return void (await this.send(who.user.tgId, this.nowText()));
         case 'stop':
           return void (await this.stop(who.user, cmd.rest));
+        case 'pause':
+          return void (await this.pause(who.user, cmd.rest));
+        case 'resume':
+          return void (await this.resume(who.user));
+        case 'stopall':
+          return void (await this.stopAll(who.user, cmd.rest));
         case 'health':
           return void (await this.send(who.user.tgId, this.healthText()));
         default:
@@ -134,7 +143,49 @@ export class AdminBot {
   /** Кнопка на экран с графиками. В личке `web_app` разрешён — регистрировать приложение не нужно. */
   screenButton() {
     if (!this.webappUrl) return null;
-    return [[{ text: '📊 Открыть экраном', web_app: { url: `${this.webappUrl}/?room=admin` } }]];
+    return [[{ text: '📊 Открыть пульт', web_app: { url: `${this.webappUrl}/?room=admin` } }]];
+  }
+
+  /* -------------------------------------------------------- обслуживание */
+
+  /**
+   * «Всё стоп». Часы замирают: время на ход не тратится, пока идёт
+   * обслуживание, — иначе простой съел бы чужой ход.
+   */
+  async pause(user, rest) {
+    const was = this.app.down;
+    const m = this.app.setMaintenance(true, rest);
+    const live = this.app.liveNow();
+    await this.send(
+      user.tgId,
+      `⏸ <b>${was ? 'Обслуживание продолжается' : 'Обслуживание включено'}</b>\n` +
+        `Игры замерли: ${num(live.playing)} идёт, ${num(live.lobbies)} лобби. Время на ход не тратится.\n` +
+        `Игрокам: <i>${esc(m.text || this.app.downText)}</i>\n\n` +
+        'Снять — /resume. Завершить все игры с итогами — /stopall да.'
+    );
+  }
+
+  async resume(user) {
+    if (!this.app.down) return void (await this.send(user.tgId, 'Обслуживание и так не включено.'));
+    this.app.setMaintenance(false);
+    await this.send(user.tgId, '▶️ <b>Обслуживание снято</b>\nЧасы пошли с того же места, столы на месте.');
+  }
+
+  /**
+   * Завершить всё. Требует слова «да» рядом: одна опечатка не должна
+   * закрывать чужие игры.
+   */
+  async stopAll(user, rest) {
+    if (String(rest || '').trim().toLowerCase() !== 'да') {
+      const live = this.app.liveNow();
+      return void (await this.send(
+        user.tgId,
+        `Это завершит ВСЕ игры (${num(live.playing + live.lobbies)}) и выложит итоги в группы. ` +
+          'Отменить будет нельзя. Если правда надо: <code>/stopall да</code>'
+      ));
+    }
+    const n = await this.app.stopAll();
+    await this.send(user.tgId, n ? `🏁 Завершено игр: ${num(n)}. Итоги ушли в группы.` : 'Живых игр не было.');
   }
 
   /* --------------------------------------------------------------- тексты */
@@ -159,6 +210,9 @@ export class AdminBot {
       `Игр в памяти: ${num(this.app.rooms.size)} · групп: ${num(this.app.groups.size)}`,
       `Адрес: ${this.app.webappUrl ? esc(this.app.webappUrl) : '<i>не задан</i>'}`,
     ];
+    if (this.app.down) lines.unshift('⏸ <b>Идёт обслуживание</b> — игра стоит. Снять: /resume', '');
+    const cast = this.app.casts?.busy ? this.app.casts.store.broadcast(this.app.casts.busy) : null;
+    if (cast) lines.push(`Рассылка идёт: ${num(cast.sent)} из ${num(cast.total)}`);
     if (this.errors.last) lines.push('', `Последняя ошибка: <code>${esc(this.errors.last)}</code>`);
     return lines.join('\n');
   }
@@ -224,8 +278,9 @@ export function renderStats(s, live) {
  * какую игру снимать, хватает группы и кода.
  */
 export function renderNow(app) {
+  const head = app.down ? `⏸ <b>Идёт обслуживание</b> — игры замерли. Снять: /resume\n\n` : '';
   const rooms = [...app.rooms.values()].filter((r) => r.status !== 'finished');
-  if (!rooms.length) return '💤 Сейчас никто не играет.';
+  if (!rooms.length) return `${head}💤 Сейчас никто не играет.`;
   const playing = rooms.filter((r) => r.status === 'playing' || r.status === 'paused');
   const lobbies = rooms.filter((r) => !playing.includes(r));
   const line = (r) => {
@@ -235,6 +290,7 @@ export function renderNow(app) {
     return `${g.icon} <b>${g.title}</b>${where} · ${s.seated}/${s.max}${s.detail ? ` · ${esc(s.detail)}` : ''}\n   <code>${esc(r.code)}</code>`;
   };
   const out = [];
+  if (head) out.push(head.trim(), '');
   if (playing.length) out.push(`▶️ <b>Идут: ${num(playing.length)}</b>`, ...playing.map(line));
   if (lobbies.length) {
     if (out.length) out.push('');

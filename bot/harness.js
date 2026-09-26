@@ -12,6 +12,7 @@
 import { App } from './app.js';
 import { Hub } from './hub.js';
 import { AdminBot } from './admin-bot.js';
+import { Broadcaster } from './broadcast.js';
 import { TelegramStub, cmdUpdate, pressUpdate, dmUpdate, user } from './tg-stub.js';
 import { NullStore } from './store.js';
 import { dealOrder } from './cards.js';
@@ -184,6 +185,9 @@ export class Table {
     });
     this.hub = new Hub(this.app, { botToken: TEST_TOKEN, adminToken: ADMIN_TEST_TOKEN });
     this.app.attachHub(this.hub);
+    /** Рассылки — как в проде: через игрового бота. */
+    this.casts = this.app.casts = new Broadcaster({ app: this.app, onDone: (row) => this.castsDone.push(row) });
+    this.castsDone = [];
     /** Админ-бот: своя личка (adminTg), тот же App. */
     this.adminTg = new TelegramStub();
     this.adminBot = new AdminBot({
@@ -329,6 +333,11 @@ export class Table {
   openHub(u, { room = null, group = this.group } = {}) {
     if (!group) throw new Error('сначала /play');
     return this.open(u, { initData: initDataFor(u, { startParam: `g_${group.code}`, clock: this.clock }), room });
+  }
+
+  /** Открыть админку — как кнопка «Открыть пульт» из лички. */
+  openAdmin(u) {
+    return this.open(u, { initData: initDataFor(u, { startParam: 'admin', clock: this.clock }) });
   }
 
   /** Open the Mini App on a given room, as its card's button does. */

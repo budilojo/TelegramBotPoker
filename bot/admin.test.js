@@ -18,7 +18,7 @@ const THREE = () => ({ ivan: user(101, 'Иван'), max: user(202, 'Макс'), 
 /** Стол с настоящей базой: считать события в NullStore нечем. */
 const withStats = (opts = {}) => new Table({ store: new Store(':memory:'), admins: ['101'], ...opts });
 
-const openAdmin = (t, u) => t.open(u, { initData: initDataFor(u, { startParam: 'admin', clock: t.clock }) });
+const openAdmin = (t, u) => t.openAdmin(u);
 
 /* ------------------------------------------------------------ доступ */
 
@@ -198,7 +198,7 @@ test('«сейчас в игре» берётся из памяти, а не и�
 
 /* -------------------------------------------------- ничего лишнего */
 
-test('в состоянии админки нет ни имён игроков, ни карт, ни кодов комнат', async () => {
+test('в состоянии админки нет ни имён игроков, ни карт', async () => {
   const cast = THREE();
   const t = withStats();
   t.useDurakDeck(durakStack({ 202: '6D 7S 8S 9S 10S JS', 303: '7H 8H 9H 10H JH QH', 101: '7C 8C 9C 10C JC QC' }, { trump: 'AD' }));
@@ -221,8 +221,11 @@ test('в состоянии админки нет ни имён игроков, 
   for (const card of Object.values(room.deal.hands).flat()) {
     assert.ok(!json.includes(`"${card}"`), `в цифрах есть карта ${card}`);
   }
-  assert.ok(!json.includes(room.code), 'и код комнаты тоже не нужен');
-  assert.ok(!json.includes(String(t.chatId)), 'и id чата');
+  // Код комнаты — единственное, что теперь на экране есть: им игра и
+  // завершается со вкладки «Сейчас» (docs/admin.md, раздел 2). Имя игрока и
+  // карта не добавили бы к этому ничего, кроме нарушенного обещания.
+  assert.ok(json.includes(room.code), 'код нужен: им завершают зависшую игру');
+  assert.ok(!json.includes(String(t.chatId)), 'а id чата — нет');
   assert.equal(t.state(admin).stats.today.rounds, 1, 'а цифры при этом настоящие');
   t.app.store.close();
 });

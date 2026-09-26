@@ -17,6 +17,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { App } from '../bot/app.js';
 import { Hub } from '../bot/hub.js';
+import { Broadcaster } from '../bot/broadcast.js';
 import { startServer } from '../bot/server.js';
 import { TelegramStub } from '../bot/tg-stub.js';
 import { Store } from '../bot/store.js';
@@ -37,6 +38,7 @@ const api = new TelegramStub();
 const app = new App({ api, store: new Store(':memory:'), botUsername: 'All_InPoker_bot', minIntervalMs: 0, runoutStepMs: 0, webappUrl: `http://localhost:${PORT}`, admins: ['101'] });
 const hub = new Hub(app, { botToken: TOKEN });
 app.attachHub(hub);
+app.casts = new Broadcaster({ app });
 
 const PEOPLE = [
   [101, 'Иван'], [102, 'Артём'], [103, 'Макс'], [104, 'Дима'], [105, 'Саша'], [106, 'Лена'],
@@ -65,10 +67,12 @@ function play(room, until, pick) {
 }
 
 const scenes = [];
-function scene(name, room, viewer, { width = 390, height = 780, click = null, start = room.code, tap = [], scroll = 0 } = {}) {
+function scene(name, room, viewer, { width = 390, height = 780, click = null, start = room.code, tap = [], scroll = 0, tab = null, before = null } = {}) {
   const user = { id: viewer, first_name: PEOPLE.find(([id]) => id === viewer)?.[1] ?? 'Гость' };
   const initData = signInitData({ auth_date: Math.floor(Date.now() / 1000), user, ...(start ? { start_param: start } : {}) }, TOKEN);
-  scenes.push({ name, code: start, initData, width, height, click, tap, scroll });
+  // `before` — то, что надо сделать с ботом ровно перед этой страницей
+  // (включить обслуживание): иначе оно попало бы на все остальные снимки.
+  scenes.push({ name, code: start, initData, width, height, click, tap, scroll, tab, before });
 }
 
 const deck6 = stack({ 101: 'As Kh', 102: 'Qs Qd', 103: '9c 9d', 104: '7h 2c', 105: 'Jd 10d', 106: '5s 4s' }, '10s Jh Qc 3d 8s');
@@ -273,6 +277,16 @@ function playOut(room) {
   }
   scene('21-admin', r, 101, { start: 'admin', height: 900 });
   scene('22-admin-charts', r, 101, { start: 'admin', height: 900, scroll: 1200 });
+  // Правдоподобная личка: кому бот может написать, и одна ушедшая рассылка.
+  for (let i = 0; i < 128; i++) app.store.setDm(String(2000 + i), i % 11 ? 'ok' : 'fail');
+  app.store.setAds('2005', 'off');
+  const sent = app.store.addBroadcast({ at: now - 2 * day, text: 'Завели дурака — заходите играть! Подкидной и переводной, от 2 до 6 человек.', audience: 'all', total: 116, createdAt: now - 2 * day });
+  app.store.patchBroadcast(sent.id, { status: 'done', sent: 113, failed: 3, done_at: now - 2 * day });
+  scene('23-admin-now', r, 101, { start: 'admin', height: 900, tab: 'Сейчас' });
+  scene('24-admin-cast', r, 101, { start: 'admin', height: 900, tab: 'Рассылка' });
+  scene('25-admin-tools', r, 101, { start: 'admin', height: 900, tab: 'Пульт' });
+  // Последним: обслуживание включается перед самим снимком и на другие не попадает.
+  scene('26-maintenance', r, 102, { before: () => app.setMaintenance(true, 'Обновляемся. Вернёмся через пять минут.') });
 }
 
 app.syncClocks(); // turn deadlines, as the running bot would have them
@@ -304,11 +318,16 @@ if (serve) {
   fs.mkdirSync(OUT, { recursive: true });
   const browser = await chromium.launch();
   for (const s of scenes) {
+    s.before?.();
     const page = await browser.newPage({ viewport: { width: s.width, height: s.height }, deviceScaleFactor: 2 });
     await page.route('https://telegram.org/**', (route) =>
       route.fulfill({ contentType: 'text/javascript', body: sdkStub(s.initData) }));
     await page.goto(`http://localhost:${PORT}/`);
     await page.waitForSelector('.top, .lobby, .fatal', { timeout: 5000 });
+    if (s.tab) {
+      await page.locator('.tab', { hasText: s.tab }).click();
+      await page.waitForTimeout(80);
+    }
     if (s.click) {
       await page.getByRole('button', { name: s.click, exact: false }).first().click();
       await page.waitForSelector('.sheet');

@@ -42,9 +42,13 @@ CREATE TABLE IF NOT EXISTS meta (
   key   TEXT PRIMARY KEY,
   value TEXT
 );
+-- Столбец ads: 'off' — человек нажал «не присылать такое». Пусто — согласен.
+-- Игровые сообщения («ваш ход», итоги) он получает всё равно: это его игра,
+-- а не реклама.
 CREATE TABLE IF NOT EXISTS users (
   user_id    TEXT PRIMARY KEY,
   dm         TEXT NOT NULL,
+  ads        TEXT,
   updated_at INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS groups (
@@ -77,9 +81,31 @@ CREATE TABLE IF NOT EXISTS events (
   n       INTEGER
 );
 CREATE INDEX IF NOT EXISTS events_by_day ON events (day);
+
+-- Рассылки: текст, кому, когда и что из этого получилось. Столбец cursor —
+-- последний получатель, которому письмо уже ушло: по нему рассылка
+-- продолжается после перезапуска, и никто не получает письмо дважды.
+CREATE TABLE IF NOT EXISTS broadcasts (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  created_at INTEGER NOT NULL,
+  at         INTEGER NOT NULL,
+  text       TEXT NOT NULL,
+  btn_text   TEXT,
+  btn_url    TEXT,
+  audience   TEXT NOT NULL,
+  status     TEXT NOT NULL,
+  total      INTEGER NOT NULL DEFAULT 0,
+  sent       INTEGER NOT NULL DEFAULT 0,
+  failed     INTEGER NOT NULL DEFAULT 0,
+  cursor     TEXT,
+  started_at INTEGER,
+  done_at    INTEGER,
+  note       TEXT
+);
+CREATE INDEX IF NOT EXISTS broadcasts_by_at ON broadcasts (status, at);
 `;
 
-export const SCHEMA_VERSION = '2';
+export const SCHEMA_VERSION = '3';
 
 export class Store {
   /** @param file path, or ':memory:' for tests */
@@ -102,10 +128,25 @@ export class Store {
       del: this.db.prepare('DELETE FROM rooms WHERE code = ?'),
       delChat: this.db.prepare('DELETE FROM rooms WHERE chat_id = ?'),
       rekey: this.db.prepare('UPDATE rooms SET chat_id = ? WHERE chat_id = ?'),
-      getDm: this.db.prepare('SELECT dm FROM users WHERE user_id = ?'),
+      getUser: this.db.prepare('SELECT dm, ads FROM users WHERE user_id = ?'),
       putDm: this.db.prepare(
         'INSERT INTO users (user_id, dm, updated_at) VALUES (?, ?, ?) ' +
           'ON CONFLICT(user_id) DO UPDATE SET dm = excluded.dm, updated_at = excluded.updated_at'
+      ),
+      putAds: this.db.prepare(
+        "INSERT INTO users (user_id, dm, ads, updated_at) VALUES (?, 'ok', ?, ?) " +
+          'ON CONFLICT(user_id) DO UPDATE SET ads = excluded.ads, updated_at = excluded.updated_at'
+      ),
+      getMeta: this.db.prepare('SELECT value FROM meta WHERE key = ?'),
+      putMeta: this.db.prepare('INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'),
+      addCast: this.db.prepare(
+        'INSERT INTO broadcasts (created_at, at, text, btn_text, btn_url, audience, status, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+      ),
+      getCast: this.db.prepare('SELECT * FROM broadcasts WHERE id = ?'),
+      allCasts: this.db.prepare('SELECT * FROM broadcasts ORDER BY at DESC LIMIT ?'),
+      dueCasts: this.db.prepare("SELECT * FROM broadcasts WHERE status IN ('scheduled', 'sending') ORDER BY at"),
+      patchCast: this.db.prepare(
+        'UPDATE broadcasts SET status = ?, total = ?, sent = ?, failed = ?, cursor = ?, started_at = ?, done_at = ?, note = ? WHERE id = ?'
       ),
       addEvent: this.db.prepare('INSERT INTO events (at, day, kind, game, chat_id, code, n) VALUES (?, ?, ?, ?, ?, ?, ?)'),
       addSeen: this.db.prepare('INSERT OR IGNORE INTO seen (user_id, day) VALUES (?, ?)'),
@@ -126,6 +167,12 @@ export class Store {
    * did, and nothing is thrown away on the way.
    */
   upgrade() {
+    // v2 → v3: отписка от рассылок. Столбец добавляется на месте, строки не
+    // трогаются — «нажал Start» и «отписался» это разные вещи, и первое при
+    // обновлении не должно потеряться.
+    const userCols = this.db.prepare("SELECT name FROM pragma_table_info('users')").all().map((c) => c.name);
+    if (userCols.length && !userCols.includes('ads')) this.db.exec('ALTER TABLE users ADD COLUMN ads TEXT');
+
     const cols = this.db.prepare("SELECT name FROM pragma_table_info('rooms')").all().map((c) => c.name);
     if (!cols.length || cols.includes('code')) return;
     const rows = this.db.prepare('SELECT chat_id, data, status, updated_at FROM rooms').all();
@@ -157,7 +204,17 @@ export class Store {
    * ('ok') or that a delivery bounced ('fail'). Unknown is `null`.
    */
   getDm(userId) {
-    return this.q.getDm.get(String(userId))?.dm ?? null;
+    return this.q.getUser.get(String(userId))?.dm ?? null;
+  }
+
+  /** Согласен ли человек получать рассылки. Отписка сильнее всего остального. */
+  adsAllowed(userId) {
+    return this.q.getUser.get(String(userId))?.ads !== 'off';
+  }
+
+  /** «Не присылать такое» — один тап, и больше ни одной рассылки. */
+  setAds(userId, value) {
+    this.q.putAds.run(String(userId), value, Date.now());
   }
 
   setDm(userId, status) {
@@ -221,6 +278,83 @@ export class Store {
       }
     }
     return out;
+  }
+
+  /* -------------------------------------------------------------- настройки */
+
+  /**
+   * Настройка, которая должна пережить перезапуск, — режим обслуживания.
+   * Если бы он жил в памяти, он снимался бы сам в самый неподходящий момент.
+   */
+  getSetting(key, fallback = null) {
+    const row = this.q.getMeta.get(`s:${key}`);
+    if (!row?.value) return fallback;
+    try {
+      return JSON.parse(row.value);
+    } catch {
+      return fallback;
+    }
+  }
+
+  setSetting(key, value) {
+    this.q.putMeta.run(`s:${key}`, JSON.stringify(value ?? null));
+  }
+
+  /* --------------------------------------------------------------- рассылки */
+
+  /**
+   * Получатели рассылки, по возрастанию id — чтобы отправку можно было
+   * продолжить с того места, где её прервал перезапуск.
+   *
+   * Только те, у кого личка с ботом открыта: Telegram не даёт боту написать
+   * первым, и адресов «всех пользователей Telegram» ни у кого нет. Минус
+   * отписавшиеся — отписка сильнее любой аудитории.
+   *
+   * @param audience 'all' | 'week' (заходили за 7 дней) | 'sleep' (не заходили)
+   */
+  audience(kind = 'all', { now = Date.now(), after = null, limit = 0 } = {}) {
+    const week = ymdBack(now, 6);
+    const where = ["dm = 'ok'", "(ads IS NULL OR ads <> 'off')"];
+    if (kind === 'week') where.push('user_id IN (SELECT user_id FROM seen WHERE day >= ?)');
+    else if (kind === 'sleep') where.push('user_id NOT IN (SELECT user_id FROM seen WHERE day >= ?)');
+    const args = kind === 'all' ? [] : [week];
+    if (after != null) {
+      where.push('user_id > ?');
+      args.push(String(after));
+    }
+    const tail = limit ? ' LIMIT ?' : '';
+    if (limit) args.push(limit);
+    return this.db
+      .prepare(`SELECT user_id FROM users WHERE ${where.join(' AND ')} ORDER BY user_id${tail}`)
+      .all(...args)
+      .map((r) => String(r.user_id));
+  }
+
+  /** Новая рассылка. Возвращает её вместе с id. */
+  addBroadcast({ at, text, btnText = null, btnUrl = null, audience = 'all', total = 0, createdAt = Date.now() }) {
+    const r = this.q.addCast.run(createdAt, at, text, btnText, btnUrl, audience, 'scheduled', total);
+    return this.broadcast(Number(r.lastInsertRowid));
+  }
+
+  broadcast(id) {
+    return this.q.getCast.get(Number(id)) ?? null;
+  }
+
+  broadcasts(limit = 20) {
+    return this.q.allCasts.all(limit);
+  }
+
+  /** Всё, что ещё должно уйти, — для восстановления после перезапуска. */
+  pendingBroadcasts() {
+    return this.q.dueCasts.all();
+  }
+
+  patchBroadcast(id, patch = {}) {
+    const cur = this.broadcast(id);
+    if (!cur) return null;
+    const n = { ...cur, ...patch };
+    this.q.patchCast.run(n.status, n.total, n.sent, n.failed, n.cursor ?? null, n.started_at ?? null, n.done_at ?? null, n.note ?? null, Number(id));
+    return this.broadcast(id);
   }
 
   /* ---------------------------------------------------------- статистика */
@@ -313,12 +447,57 @@ export class Store {
 export class NullStore {
   constructor() {
     this.dm = new Map();
+    this.ads = new Map();
+    this.settings = new Map();
+    /** Рассылки живут в памяти: тесты, которым они нужны, берут настоящий Store. */
+    this.casts = new Map();
+    this.nextCast = 1;
   }
   getDm(userId) {
     return this.dm.get(String(userId)) ?? null;
   }
   setDm(userId, status) {
     this.dm.set(String(userId), status);
+  }
+  adsAllowed(userId) {
+    return this.ads.get(String(userId)) !== 'off';
+  }
+  setAds(userId, value) {
+    this.ads.set(String(userId), value);
+  }
+  getSetting(key, fallback = null) {
+    return this.settings.has(key) ? this.settings.get(key) : fallback;
+  }
+  setSetting(key, value) {
+    this.settings.set(key, value);
+  }
+  audience(kind = 'all', { after = null, limit = 0 } = {}) {
+    const all = [...this.dm.entries()]
+      .filter(([id, dm]) => dm === 'ok' && this.adsAllowed(id) && (after == null || id > String(after)))
+      .map(([id]) => id)
+      .sort();
+    return limit ? all.slice(0, limit) : all;
+  }
+  addBroadcast({ at, text, btnText = null, btnUrl = null, audience = 'all', total = 0, createdAt = Date.now() }) {
+    const id = this.nextCast++;
+    const row = { id, created_at: createdAt, at, text, btn_text: btnText, btn_url: btnUrl, audience, status: 'scheduled', total, sent: 0, failed: 0, cursor: null, started_at: null, done_at: null, note: null };
+    this.casts.set(id, row);
+    return row;
+  }
+  broadcast(id) {
+    return this.casts.get(Number(id)) ?? null;
+  }
+  broadcasts(limit = 20) {
+    return [...this.casts.values()].sort((a, b) => b.at - a.at).slice(0, limit);
+  }
+  pendingBroadcasts() {
+    return [...this.casts.values()].filter((c) => c.status === 'scheduled' || c.status === 'sending').sort((a, b) => a.at - b.at);
+  }
+  patchBroadcast(id, patch = {}) {
+    const cur = this.broadcast(id);
+    if (!cur) return null;
+    Object.assign(cur, patch);
+    return cur;
   }
   save() {}
   loadAll() {

@@ -23,14 +23,17 @@
 import { checkInitData } from './webapp-auth.js';
 import { GAMES, GAME_LIST, gameOf } from './games/index.js';
 import { HUB_PREFIX, MAX_LIVE_PER_GROUP } from './app.js';
+import { AUDIENCES, ERRORS as CAST_ERRORS } from './broadcast.js';
 
 const CORE_ERRORS = {
   BAD_REQUEST: 'Не понял запрос.',
+  NO_CASTS: 'Рассылка не настроена на этом сервере.',
   NO_ROOM: 'Эта игра уже закончилась или она не из этой группы.',
   BAD_GAME: 'Такой игры нет.',
   TOO_MANY_GAMES: `В группе уже ${MAX_LIVE_PER_GROUP} незаконченных игр — завершите какую-нибудь.`,
   NOT_FROM_HUB: 'Список игр группы открывается кнопкой «Выбрать игру» из /game.',
   NOT_YOUR_GROUP: 'Этой группы нет среди ваших — напишите в ней /game.',
+  DOWN: 'Идёт обслуживание — игра пока стоит.',
 };
 
 /** Error codes in words a person can act on — the core's and every game's. */
@@ -42,6 +45,8 @@ const COMMON = new Set(['visible']);
 const HUB_ACTIONS = new Set(['create', 'join', 'home']);
 /** Код, по которому открывается админка. Пускает не он, а список в `.env`. */
 const ADMIN_CODE = 'admin';
+/** Что страница админки может попросить. Всё остальное — отказ. */
+const ADMIN_ACTIONS = new Set(['refresh', 'maintenance', 'stopAll', 'stop', 'cast', 'castTest', 'castCancel']);
 
 export class Hub {
   /**
@@ -61,6 +66,8 @@ export class Hub {
     this.byRoom = new Map();
     /** group code -> Set<session> — pages on a group's hub */
     this.byGroup = new Map();
+    /** Открытые страницы админки: им нужно досылать состояние, а не ждать «Обновить». */
+    this.adminPages = new Set();
     this.nextId = 1;
   }
 
@@ -101,6 +108,7 @@ export class Hub {
       // админка существует, ему незачем.
       if (!this.app.isAdmin(auth.user.id)) return { error: 'NO_ROOM', text: 'Стол не найден — возможно, игру уже удалили.' };
       const session = { id: this.nextId++, user: auth.user, kind: 'admin', group: null, code: null, send, visible: true };
+      this.adminPages.add(session);
       this.pushAdmin(session);
       return { session };
     }
@@ -149,9 +157,13 @@ export class Hub {
   }
 
   detach(session) {
-    // У «моих групп» и админки нет своего списка подписчиков: их состояние
-    // собирается по запросу, рассылать его некуда.
-    if (session.kind === 'home' || session.kind === 'admin') return;
+    if (session.kind === 'admin') {
+      this.adminPages.delete(session);
+      return;
+    }
+    // У «моих групп» нет своего списка подписчиков: состояние собирается по
+    // запросу, рассылать его некуда.
+    if (session.kind === 'home') return;
     const map = session.kind === 'hub' ? this.byGroup : this.byRoom;
     const key = session.kind === 'hub' ? session.group : session.code;
     const set = map.get(key);
@@ -179,6 +191,17 @@ export class Hub {
     this.pushHub(session);
   }
 
+  /** Это же состояние заново — что бы страница ни смотрела. */
+  resend(session) {
+    if (session.kind === 'admin') return this.pushAdmin(session);
+    if (session.kind === 'home') return this.pushHome(session);
+    if (session.kind === 'hub') return this.pushHub(session);
+    if (this.app.down) return void session.send({ t: 'state', state: this.downState() });
+    const room = this.app.roomByCode(session.code);
+    if (!room) return void session.send({ t: 'gone', text: 'Игру удалили.' });
+    return this.push(session, room);
+  }
+
   /** Is this person looking at this table right now? (Then no "your turn" ping.) */
   isPresent(code, userId) {
     for (const s of this.byRoom.get(code) || []) if (s.user.id === String(userId) && s.visible) return true;
@@ -195,7 +218,24 @@ export class Hub {
 
   /* ------------------------------------------------------------ broadcasting */
 
+  /**
+   * Пока идёт обслуживание, игрок видит экран «вернёмся через несколько
+   * минут», а не ошибку и не пустой стол: игра никуда не пропала. Админка —
+   * единственное, что обслуживание не выключает, иначе его нельзя было бы
+   * снять.
+   */
+  downState() {
+    return {
+      kind: 'down',
+      now: this.app.clock.now(),
+      bot: this.app.botUsername,
+      text: this.app.downText,
+      since: this.app.maintenance.since || null,
+    };
+  }
+
   push(session, room) {
+    if (this.app.down) return void session.send({ t: 'state', state: this.downState() });
     try {
       const state = gameOf(room).view(room, session.user.id, { now: this.app.clock.now(), botUsername: this.app.botUsername });
       if (session.group) state.hub = true; // it came from the group's hub: offer the way back
@@ -207,6 +247,12 @@ export class Hub {
 
   /** The hub of a group, for one person. Skipped when nothing on it changed. */
   pushHub(session) {
+    if (this.app.down) {
+      // Сбросить «что уже отправлено»: иначе после обслуживания хаб решит,
+      // что ничего не изменилось, и страница останется на экране паузы.
+      session.lastHub = null;
+      return void session.send({ t: 'state', state: this.downState() });
+    }
     const group = this.app.groupByCode(session.group);
     if (!group) return;
     try {
@@ -222,6 +268,7 @@ export class Hub {
 
   /** «My groups» — for a page opened without a group. */
   pushHome(session) {
+    if (this.app.down) return void session.send({ t: 'state', state: this.downState() });
     this.detach(session);
     session.kind = 'home';
     session.group = null;
@@ -234,20 +281,10 @@ export class Hub {
     session.send({ t: 'state', state: { kind: 'home', now: this.app.clock.now(), bot: this.app.botUsername, me: { name: session.user.name }, groups } });
   }
 
-  /** Цифры для админки. Собираются по запросу — их некому рассылать. */
+  /** Всё, что видит владелец: цифры, живые сессии, обслуживание, рассылки. */
   pushAdmin(session) {
     try {
-      session.send({
-        t: 'state',
-        state: {
-          kind: 'admin',
-          now: this.app.clock.now(),
-          bot: this.app.botUsername,
-          me: { name: session.user.name },
-          live: this.app.liveNow(),
-          stats: this.app.store.stats(this.app.clock.now()),
-        },
-      });
+      session.send({ t: 'state', state: adminView(this.app) });
     } catch (err) {
       this.app.log(err);
     }
@@ -259,6 +296,24 @@ export class Hub {
     for (const set of this.byRoom.values()) for (const s of set) ids.add(s.user.id);
     for (const set of this.byGroup.values()) for (const s of set) ids.add(s.user.id);
     return ids.size;
+  }
+
+  /** Каждой открытой странице — её состояние заново. Для режима обслуживания. */
+  broadcastAll() {
+    for (const [code, set] of this.byRoom) {
+      const room = this.app.roomByCode(code);
+      for (const s of set) {
+        if (this.app.down) s.send({ t: 'state', state: this.downState() });
+        else if (room) this.push(s, room);
+      }
+    }
+    for (const set of this.byGroup.values()) for (const s of set) this.pushHub(s);
+    this.pushAdmins();
+  }
+
+  /** Досылать цифры открытым админкам: обслуживание и рассылки меняются редко. */
+  pushAdmins() {
+    for (const s of this.adminPages) this.pushAdmin(s);
   }
 
   /** Everyone at this table gets THEIR OWN view of it — and the group's hubs a fresh list. */
@@ -310,6 +365,22 @@ export class Hub {
    */
   async handle(session, msg) {
     if (!msg || typeof msg !== 'object' || typeof msg.t !== 'string') return this.refuse(session, 'BAD_REQUEST');
+    // «Дай состояние заново» — это может попросить любая страница: во время
+    // обслуживания она сама переспрашивает, снято ли оно.
+    if (msg.t === 'refresh' && session.kind !== 'admin') return this.resend(session);
+    if (COMMON.has(msg.t)) {
+      // «Я на экране» / «свернули» — не ход, а хозяйственное сообщение: его
+      // принимаем всегда, иначе страница получит отказ просто за то, что её
+      // открыли во время обслуживания.
+      session.visible = !!msg.visible;
+      return;
+    }
+    if (this.app.down && session.kind !== 'admin') {
+      // Пока идёт обслуживание, ни одного хода не принимается — ни за столом,
+      // ни в хабе. Отказ объясняется, как любой другой.
+      this.refuse(session, 'DOWN', `⏸ Идёт обслуживание. ${this.app.downText}`);
+      return void this.resend(session);
+    }
     if (session.kind === 'hub') return this.handleHub(session, msg);
     if (session.kind === 'home') return this.handleHome(session, msg);
     if (session.kind === 'admin') {
@@ -317,8 +388,7 @@ export class Hub {
         session.visible = !!msg.visible;
         return;
       }
-      if (msg.t !== 'refresh') return this.refuse(session, 'BAD_REQUEST');
-      return this.pushAdmin(session);
+      return this.handleAdmin(session, msg);
     }
 
     const app = this.app;
@@ -345,6 +415,68 @@ export class Hub {
       refuse: (code, text) => this.refuse(session, code, text),
       push: () => this.push(session, room),
     });
+  }
+
+  /**
+   * Пульт владельца. Пускает сюда не сообщение, а `kind: 'admin'`, который
+   * поставлен при входе по списку из `.env`: подделать его страница не может.
+   */
+  async handleAdmin(session, msg) {
+    const app = this.app;
+    if (!ADMIN_ACTIONS.has(msg.t)) return this.refuse(session, 'BAD_REQUEST');
+
+    switch (msg.t) {
+      case 'refresh':
+        return this.pushAdmin(session);
+
+      case 'maintenance': {
+        app.setMaintenance(!!msg.on, msg.text);
+        return this.pushAdmin(session);
+      }
+
+      case 'stopAll': {
+        const n = await app.stopAll();
+        session.send({ t: 'notice', text: n ? `Завершено игр: ${n}. Итоги ушли в группы.` : 'Живых игр не было.' });
+        return this.pushAdmin(session);
+      }
+
+      case 'stop': {
+        const room = app.roomByCode(String(msg.code || ''));
+        if (!room || room.status === 'finished') return this.refuse(session, 'NO_ROOM');
+        const r = gameOf(room).endGame(room, room.hostId);
+        if (r.error) return this.refuse(session, r.error);
+        await app.finishUp(room);
+        session.send({ t: 'notice', text: 'Игра завершена, итоги ушли в группу.' });
+        return this.pushAdmin(session);
+      }
+
+      case 'cast': {
+        if (!app.casts) return this.refuse(session, 'NO_CASTS');
+        const r = app.casts.plan({ text: msg.text, btnText: msg.btnText, btnUrl: msg.btnUrl, audience: msg.audience, at: Number(msg.at) || 0 });
+        if (r.error) return this.refuse(session, r.error, r.text || CAST_ERRORS[r.error]);
+        session.send({ t: 'notice', text: r.at > app.clock.now() + 60_000 ? 'Рассылка запланирована.' : 'Рассылка пошла.' });
+        return this.pushAdmin(session);
+      }
+
+      case 'castTest': {
+        if (!app.casts) return this.refuse(session, 'NO_CASTS');
+        const r = await app.casts.test(session.user.id, { text: msg.text, btnText: msg.btnText, btnUrl: msg.btnUrl, audience: msg.audience || 'all' });
+        if (r.error) return this.refuse(session, r.error, r.text || CAST_ERRORS[r.error]);
+        session.send({ t: 'notice', text: 'Письмо ушло вам в личку игрового бота.' });
+        return;
+      }
+
+      case 'castCancel': {
+        if (!app.casts) return this.refuse(session, 'NO_CASTS');
+        const r = app.casts.cancel(Number(msg.id));
+        if (r.error) return this.refuse(session, r.error, CAST_ERRORS[r.error]);
+        session.send({ t: 'notice', text: 'Рассылка отменена.' });
+        return this.pushAdmin(session);
+      }
+
+      default:
+        return this.refuse(session, 'BAD_REQUEST');
+    }
   }
 
   /** «My groups»: step into one of them — only one of this person's own. */
@@ -436,5 +568,50 @@ export function hubView(app, group, user, { home = false } = {}) {
     me: { name: user.name },
     games: GAME_LIST.map((g) => ({ id: g.id, title: g.title, icon: g.icon, blurb: g.blurb, min: g.minPlayers, max: g.maxPlayers })),
     lobbies,
+  };
+}
+
+/**
+ * Пульт целиком, одним состоянием: цифры, живые сессии, обслуживание,
+ * рассылки.
+ *
+ * Ни одного имени игрока и ни одной карты здесь нет — как и в цифрах. Чтобы
+ * понять, какую игру снимать, хватает названия группы и кода; обещание «никто
+ * не видит чужих карт» не знает исключений, в том числе для владельца.
+ */
+export function adminView(app) {
+  const now = app.clock.now();
+  const rooms = [...app.rooms.values()].filter((r) => r.status !== 'finished');
+  const sessions = rooms
+    .map((room) => {
+      const g = gameOf(room);
+      const s = g.summary(room);
+      const group = app.groups.get(String(room.chatId));
+      return {
+        code: room.code,
+        game: g.id,
+        icon: g.icon,
+        title: g.title,
+        group: group?.title || room.title || '',
+        status: room.status,
+        seated: s.seated,
+        max: s.max,
+        detail: s.detail || '',
+        watching: app.hub?.byRoom.get(room.code)?.size || 0,
+        started: room.startedAt || room.createdAt || null,
+      };
+    })
+    .sort((a, b) => (b.started || 0) - (a.started || 0));
+
+  return {
+    kind: 'admin',
+    now,
+    bot: app.botUsername,
+    me: null, // на этом экране даже своё имя ни к чему
+    live: app.liveNow(),
+    stats: app.store.stats(now),
+    down: { on: app.down, text: app.maintenance.text || '', since: app.maintenance.since || null },
+    sessions,
+    casts: app.casts ? { list: app.casts.list(10), sizes: app.casts.sizes(), audiences: AUDIENCES, sending: app.casts.busy } : null,
   };
 }

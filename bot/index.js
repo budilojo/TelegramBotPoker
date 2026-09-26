@@ -27,6 +27,7 @@ import { App } from './app.js';
 import { Store } from './store.js';
 import { Hub } from './hub.js';
 import { AdminBot } from './admin-bot.js';
+import { Broadcaster, castReport } from './broadcast.js';
 import { startServer } from './server.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -146,6 +147,8 @@ if (adminApi) {
 
 const hub = new Hub(app, { botToken: TOKEN, adminToken: ADMIN_TOKEN || null });
 app.attachHub(hub);
+// Рассылки идут через игрового бота: у админ-бота игроки Start не нажимали.
+app.casts = new Broadcaster({ app, onDone: (row) => adminBot?.notify(castReport(row)) });
 
 const restored = app.load();
 console.log(
@@ -254,8 +257,16 @@ await bot.start({
     // Redraw every live table: the game must continue from exactly where it
     // stopped — same hand, same cards, same player on the clock.
     await app.resume();
+    // Что накопилось, пока бот лежал: свежее уходит, скисшее отменяется.
+    const casts = app.casts.resume();
+    if (casts.sending || casts.stale) console.log(`[bot] рассылки: к отправке ${casts.sending}, отменено просроченных ${casts.stale}`);
     // Владелец узнаёт о перезапуске сам — это же и проверка, что бот поднялся.
-    if (adminBot) await adminBot.notify(`🟢 Бот перезапущен · игр восстановлено: ${restored}`);
+    if (adminBot) {
+      await adminBot.notify(
+        `🟢 Бот перезапущен · игр восстановлено: ${restored}` +
+          (app.down ? `\n\n⏸ <b>Обслуживание включено</b> — игра стоит. Снять: /resume` : '')
+      );
+    }
   },
   drop_pending_updates: false,
 });

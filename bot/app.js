@@ -49,6 +49,12 @@ const HELP_DM = [
   'Или /game здесь — откроются игры ваших групп.',
 ].join('\n');
 
+/** callback_data кнопки «не присылать такое» под каждой рассылкой. */
+export const ADS_OFF = 'ads:off';
+
+/** Что видит игрок, пока идёт обслуживание, если владелец не написал своего. */
+export const MAINTENANCE_TEXT = 'Обновляемся. Столы никуда не делись — вернёмся через несколько минут.';
+
 const WELCOME_DM = '✅ Готово: если приложение будет закрыто, когда до вас дойдёт ход, — напомню здесь.';
 
 /** Games a group may have going at once. Past this the hub asks to finish one. */
@@ -101,7 +107,14 @@ export class App {
      * тот, кто запускает бота, и подделать это сообщением нельзя.
      */
     this.admins = new Set([...admins].map((x) => String(x).trim()).filter(Boolean));
+    /**
+     * Режим обслуживания. Лежит в базе, а не в памяти: перезапуск не должен
+     * снимать его сам — иначе он кончится в самый неподходящий момент.
+     */
+    this.maintenance = this.store.getSetting?.('maintenance', null) || { on: false, text: '', since: 0 };
     this.hub = null; // set by attachHub()
+    /** Рассылки (bot/broadcast.js) — ставится снаружи; без неё админка просто без вкладки. */
+    this.casts = null;
     this.log = onError || ((err) => console.error('[bot]', err?.description || err?.message || err));
     this.outbox = new Outbox(api, { minIntervalMs, onError: this.log, timers: clock });
     /** @type {Map<string, object>} room code -> room (a group may have several) */
@@ -173,6 +186,51 @@ export class App {
 
   isAdmin(userId) {
     return this.admins.has(String(userId));
+  }
+
+  /* ---------------------------------------------------------- обслуживание */
+
+  /** Идёт ли обслуживание: тогда игра стоит вся, кроме админки. */
+  get down() {
+    return !!this.maintenance.on;
+  }
+
+  /** Текст, который видит игрок. Свой, если задан, иначе общий. */
+  get downText() {
+    return this.maintenance.text || MAINTENANCE_TEXT;
+  }
+
+  /**
+   * Включить или снять обслуживание. Включение замораживает часы (время на
+   * ход не тратится), снятие — пускает их с того же места.
+   */
+  setMaintenance(on, text = '') {
+    if (!on && !this.maintenance.on) return this.maintenance;
+    this.maintenance = { on: !!on, text: String(text || '').slice(0, 300), since: this.clock.now() };
+    try {
+      this.store.setSetting?.('maintenance', this.maintenance);
+    } catch (err) {
+      this.log(err);
+    }
+    this.syncClocks();
+    this.hub?.broadcastAll();
+    return this.maintenance;
+  }
+
+  /**
+   * Завершить все живые игры с итогами в группы. Для «выключаю сервер
+   * надолго»: честные итоги лучше стола, который никогда не оживёт.
+   */
+  async stopAll() {
+    let n = 0;
+    for (const room of [...this.rooms.values()]) {
+      if (room.status === 'finished') continue;
+      const r = gameOf(room).endGame(room, room.hostId);
+      if (r.error) continue;
+      await this.finishUp(room);
+      n += 1;
+    }
+    return n;
   }
 
   /** Человек открыл приложение. Второй раз за день ничего не добавит. */
@@ -531,6 +589,7 @@ export class App {
    * new ones, dropping ones nobody needs.
    */
   syncClocks() {
+    if (this.down) return this.freezeClocks();
     const now = this.clock.now();
     const live = new Set();
     for (const room of this.rooms.values()) {
@@ -546,6 +605,25 @@ export class App {
         this.handles.delete(id);
       }
     }
+  }
+
+  /**
+   * Обслуживание: часы паркуются, таймеры снимаются. Остаток времени на ход
+   * запоминается — за время обслуживания ничьё время не тратится. Бот не
+   * ходит за игрока, и простой сервера тем более не должен.
+   */
+  freezeClocks() {
+    const now = this.clock.now();
+    for (const room of this.rooms.values()) {
+      for (const t of [room.turn, room.autoNext]) {
+        if (t && t.deadline != null) {
+          t.remaining = Math.max(0, t.deadline - now);
+          t.deadline = null;
+        }
+      }
+    }
+    for (const cur of this.handles.values()) this.clock.clearTimeout(cur.h);
+    this.handles.clear();
   }
 
   arm(id, timer, fire) {
@@ -648,6 +726,10 @@ export class App {
       return void (await this.outbox.post(user.tgId, WELCOME_DM));
     }
     if (cmd?.cmd === 'admin' && this.isAdmin(user.id)) return this.sendAdmin(user);
+    // Владельцу обслуживание не мешает: ему как раз и надо его снять.
+    if (this.down && !this.isAdmin(user.id)) {
+      return void (await this.outbox.post(user.tgId, `⏸ <b>Идёт обслуживание</b>\n${esc(this.downText)}`));
+    }
     if (['game', 'play', 'games', 'newgame'].includes(cmd?.cmd)) return this.sendMyGames(user);
     return void (await this.outbox.post(user.tgId, HELP_DM));
   }
@@ -709,6 +791,13 @@ export class App {
     const chatId = String(msg.chat.id);
     const who = identify(msg.from, msg.sender_chat);
 
+    if (this.down) {
+      // Обслуживание: ни одной новой игры и ни одной карточки. Ответить всё
+      // равно надо — иначе похоже, что бот умер.
+      if (['game', 'play', 'games', 'newgame', 'poker', 'table', 'finish', 'cancel'].includes(cmd.cmd)) {
+        return void (await this.reply(chatId, `⏸ <b>Идёт обслуживание</b>\n${esc(this.downText)}`, msg));
+      }
+    }
     if (cmd.cmd === 'start' || cmd.cmd === 'help') return void (await this.reply(chatId, HELP));
     if (!who.ok) return void (await this.reply(chatId, who.text, msg));
 
@@ -821,6 +910,13 @@ export class App {
   async onCallback(cq) {
     const who = identify(cq.from);
     if (!who.ok) return this.outbox.answer(cq.id, who.text, { alert: true });
+    // «🔕 Не присылать такое» под рассылкой — единственная кнопка, которая
+    // работает и во время обслуживания: отписка не может ждать.
+    if (cq.data === ADS_OFF) {
+      this.store.setAds(who.user.id, 'off');
+      return this.outbox.answer(cq.id, 'Больше не пришлю. Сообщения про вашу игру останутся.', { alert: true });
+    }
+    if (this.down) return this.outbox.answer(cq.id, `⏸ Идёт обслуживание. ${this.downText}`, { alert: true });
     const room = this.room(cq.message?.chat?.id ?? '');
     const link = room ? this.tableLink(room) : null;
     if (link && this.miniAppName) return this.outbox.answer(cq.id, '', { url: link });
