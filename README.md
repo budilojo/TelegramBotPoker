@@ -133,6 +133,7 @@ docs/
 tools/
   start.mjs      `npm run go`: туннель + бот, адрес сам попадает в .env
   envfile.js     правка одной строки в .env, не трогая остальное
+  say.js         рамка вокруг того, что нельзя пролистать
   bots.mjs       боты для проверки стола
   make-icons.mjs генерация PNG-иконок из кода
   make-cards.mjs генерация SVG-карт

@@ -18,6 +18,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setEnvValue, getEnvValue } from './envfile.js';
+import { banner } from './say.js';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ENV_FILE = path.join(ROOT, '.env');
@@ -27,15 +28,6 @@ const WAIT_URL_MS = 60_000;
 
 const say = (...a) => console.log('[старт]', ...a);
 const bad = (...a) => console.error('[старт]', ...a);
-
-/** Рамка вокруг того, что человек должен прочитать, а не пролистать. */
-function banner(lines) {
-  const width = Math.max(...lines.map((l) => [...l].length));
-  const edge = '─'.repeat(width + 2);
-  console.log(`\n┌${edge}┐`);
-  for (const l of lines) console.log(`│ ${l}${' '.repeat(width - [...l].length)} │`);
-  console.log(`└${edge}┘\n`);
-}
 
 /* --------------------------------------------------------------- проверки */
 
@@ -142,35 +134,52 @@ process.once('SIGTERM', stop);
 
 /* ------------------------------------------- проверка, что стол виден извне */
 
-/** Стол отвечает на /health — значит, туннель и бот сошлись. */
-async function reachable(tries = 12) {
-  for (let i = 0; i < tries; i++) {
-    await new Promise((r) => setTimeout(r, i ? 2000 : 1500));
+/** Ждём, пока по адресу начнёт отвечать стол (а не Cloudflare с ошибкой). */
+async function reachable(where, seconds) {
+  const until = Date.now() + seconds * 1000;
+  for (let first = true; Date.now() < until && !stopping; first = false) {
+    await new Promise((r) => setTimeout(r, first ? 800 : 2000));
     try {
-      const res = await fetch(`${url}/health`, { signal: AbortSignal.timeout(4000) });
+      const res = await fetch(`${where}/health`, { signal: AbortSignal.timeout(4000) });
       if (res.ok && (await res.json())?.ok) return true;
     } catch {
-      /* туннель ещё поднимается */
+      /* ещё поднимается */
     }
   }
   return false;
 }
 
-if (await reachable()) {
+/** Всё поднялось: сказать адрес, а потом проверить, виден ли стол снаружи. */
+async function ready() {
+  if (stopping) return;
   const lines = ['✅ Стол открыт. Не закрывайте это окно, пока играете.', ''];
   if (wasUrl !== url) {
-    lines.push('Адрес сменился — впишите его у @BotFather:', '');
-    lines.push(`  ${url}`, '');
+    lines.push('Адрес сменился — впишите его у @BotFather:', '', `  ${url}`, '');
     lines.push(`  /myapps → ${miniApp || 'ваше приложение'} → Edit Web App URL`, '');
   }
   lines.push('Потом в группе: /game → «🎮 Выбрать игру».');
   banner(lines);
-} else {
+
+  // Снаружи туннель отвечает не сразу: Cloudflare сам пишет «it may take some
+  // time to be reachable». Поэтому адрес сказан выше, а это — вдогонку.
+  if (await reachable(url, 90)) return say('проверил: стол виден снаружи, всё готово.');
+  if (stopping) return;
   banner([
-    '⚠️ Туннель поднялся, но стол снаружи не отвечает.',
+    '⚠️ Бот работает, но снаружи стол пока не отвечает.',
     '',
-    'Проверьте, не занят ли порт другим ботом:',
-    '  pkill -f bot/index.js',
-    'и запустите снова: npm run go',
+    'Откройте в браузере и посмотрите сами:',
+    `  ${url}/health`,
+    '',
+    'Если там «ok» — всё в порядке, играйте.',
+    'Если ошибка Cloudflare — Ctrl+C и запустите npm run go заново.',
   ]);
+}
+
+// Сначала короткая проверка: поднялся ли сам бот. Она отвечает на вопрос,
+// можно ли вообще говорить человеку «всё готово».
+if (await reachable(`http://localhost:${PORT}`, 25)) {
+  await ready();
+} else if (!stopping) {
+  bad(`бот не отвечает на http://localhost:${PORT} — смотрите его сообщения выше.`);
+  stop();
 }
