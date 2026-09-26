@@ -63,6 +63,7 @@ export function connect() {
       // lets a page back only into its own group's games (or its own groups).
       const st = net.state;
       if (startCode.startsWith('g_')) net.inside = st.kind === 'hub' ? null : st.room?.code || null;
+      else if (startCode === 'admin') net.inside = null;
       else if (!startCode) net.inside = st.kind === 'hub' ? `g_${st.group.code}` : st.kind === 'home' ? null : st.room?.code || null;
       setBusy(false);
       bus.onState(wasConnected);

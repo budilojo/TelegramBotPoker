@@ -169,14 +169,14 @@ export class Table {
   constructor({
     chatId = -1001234, minIntervalMs = 0, store = new NullStore(), botUsername = 'ChipTableBot', deck = seededDecks(1),
     clock = new FakeClock(), runoutStepMs = 0, miniAppName = 'table', webappUrl = 'https://poker.example',
-    durakDeck = durakDecks(1), tg = null,
+    durakDeck = durakDecks(1), tg = null, admins = [],
   } = {}) {
     this.chatId = chatId;
     this.tg = tg || new TelegramStub();
     this.errors = [];
     this.clock = clock;
     this.app = new App({
-      api: this.tg, store, minIntervalMs, botUsername, deck, durakDeck, clock, runoutStepMs, miniAppName, webappUrl,
+      api: this.tg, store, minIntervalMs, botUsername, deck, durakDeck, clock, runoutStepMs, miniAppName, webappUrl, admins,
       onError: (e) => this.errors.push(e),
     });
     this.hub = new Hub(this.app, { botToken: TEST_TOKEN });

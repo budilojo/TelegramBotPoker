@@ -125,6 +125,7 @@ bot/
   *.test.js      262 теста на стабе Telegram и фальшивых часах (rules.test.js и durak.rules.test.js — официальные правила)
 miniapp/
   app.js, ui.js, net.js, hub.js   оболочка Mini App, общее, связь, хаб — без сборки
+  admin.js       экран с цифрами: кто играет, сколько людей и партий
   games/         poker.js, durak.js — столы игр
   cards/         52 карты + рубашка, SVG
 docs/

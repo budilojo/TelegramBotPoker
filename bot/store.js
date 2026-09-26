@@ -21,6 +21,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
+import { ymd, ymdBack } from './fmt.js';
 
 // A row without a code (only a hand-written INSERT can make one) still gets a
 // unique key, so it can never collide with — or overwrite — a real table.
@@ -52,6 +53,30 @@ CREATE TABLE IF NOT EXISTS groups (
   data       TEXT NOT NULL,
   updated_at INTEGER NOT NULL
 );
+
+-- Кто в какой день открывал приложение. Одна строка на человека в день, а не
+-- на каждое открытие: для «сколько людей» и «вернулись ли» этого хватает, а
+-- база не растёт от того, что кто-то весь вечер сворачивает и разворачивает.
+CREATE TABLE IF NOT EXISTS seen (
+  user_id TEXT NOT NULL,
+  day     TEXT NOT NULL,
+  PRIMARY KEY (user_id, day)
+);
+
+-- Что происходило с играми. Ни имён, ни карт, ни текста — только «когда,
+-- какая игра, в какой группе, сколько человек». По этим строкам считается
+-- всё, что видно в админке.
+CREATE TABLE IF NOT EXISTS events (
+  id      INTEGER PRIMARY KEY AUTOINCREMENT,
+  at      INTEGER NOT NULL,
+  day     TEXT NOT NULL,
+  kind    TEXT NOT NULL,
+  game    TEXT,
+  chat_id TEXT,
+  code    TEXT,
+  n       INTEGER
+);
+CREATE INDEX IF NOT EXISTS events_by_day ON events (day);
 `;
 
 export const SCHEMA_VERSION = '2';
@@ -82,6 +107,8 @@ export class Store {
         'INSERT INTO users (user_id, dm, updated_at) VALUES (?, ?, ?) ' +
           'ON CONFLICT(user_id) DO UPDATE SET dm = excluded.dm, updated_at = excluded.updated_at'
       ),
+      addEvent: this.db.prepare('INSERT INTO events (at, day, kind, game, chat_id, code, n) VALUES (?, ?, ?, ?, ?, ?, ?)'),
+      addSeen: this.db.prepare('INSERT OR IGNORE INTO seen (user_id, day) VALUES (?, ?)'),
       putGroup: this.db.prepare(
         'INSERT INTO groups (chat_id, code, data, updated_at) VALUES (?, ?, ?, ?) ' +
           'ON CONFLICT(chat_id) DO UPDATE SET code = excluded.code, data = excluded.data, updated_at = excluded.updated_at'
@@ -196,6 +223,79 @@ export class Store {
     return out;
   }
 
+  /* ---------------------------------------------------------- статистика */
+
+  /**
+   * Заметить, что человек открыл приложение. Второй раз за тот же день
+   * ничего не пишет.
+   */
+  noteSeen(userId, at = Date.now()) {
+    this.q.addSeen.run(String(userId), ymd(at));
+  }
+
+  /**
+   * Заметить, что случилось с игрой: `created`, `round` (сдана раздача или
+   * партия), `finished`. Ни одного поля, по которому можно узнать человека
+   * или его карты, здесь нет и быть не должно.
+   */
+  addEvent({ at = Date.now(), kind, game = null, chatId = null, code = null, n = null }) {
+    this.q.addEvent.run(at, ymd(at), String(kind), game, chatId == null ? null : String(chatId), code, n == null ? null : Math.round(n));
+  }
+
+  /** Числа для админки. Всё обезличенно: только счётчики. */
+  stats(now = Date.now(), { days = 14 } = {}) {
+    const one = (sql, ...args) => this.db.prepare(sql).get(...args)?.n ?? 0;
+    const today = ymd(now);
+    const yesterday = ymdBack(now, 1);
+    const weekAgo = ymdBack(now, 6); // сегодня плюс шесть прошлых = неделя
+
+    const byGame = (since) => {
+      const out = {};
+      for (const r of this.db
+        .prepare("SELECT game, COUNT(*) AS rounds, COUNT(DISTINCT code) AS games FROM events WHERE kind = 'round' AND day >= ? GROUP BY game")
+        .all(since)) {
+        out[r.game || 'poker'] = { rounds: r.rounds, games: r.games };
+      }
+      return out;
+    };
+    const period = (since) => ({
+      created: one("SELECT COUNT(*) AS n FROM events WHERE kind = 'created' AND day >= ?", since),
+      finished: one("SELECT COUNT(*) AS n FROM events WHERE kind = 'finished' AND day >= ?", since),
+      games: one("SELECT COUNT(DISTINCT code) AS n FROM events WHERE kind = 'round' AND day >= ?", since),
+      rounds: one("SELECT COUNT(*) AS n FROM events WHERE kind = 'round' AND day >= ?", since),
+      byGame: byGame(since),
+    });
+
+    return {
+      day: today,
+      people: {
+        total: one('SELECT COUNT(DISTINCT user_id) AS n FROM seen'),
+        today: one('SELECT COUNT(DISTINCT user_id) AS n FROM seen WHERE day = ?', today),
+        week: one('SELECT COUNT(DISTINCT user_id) AS n FROM seen WHERE day >= ?', weekAgo),
+        fresh: one('SELECT COUNT(*) AS n FROM (SELECT user_id FROM seen GROUP BY user_id HAVING MIN(day) = ?)', today),
+        yesterday: one('SELECT COUNT(DISTINCT user_id) AS n FROM seen WHERE day = ?', yesterday),
+        // Из вчерашних вернулись сегодня — единственная метрика, по которой
+        // видно, игра это на вечер или на неделю.
+        returned: one('SELECT COUNT(*) AS n FROM seen a JOIN seen b ON a.user_id = b.user_id WHERE a.day = ? AND b.day = ?', yesterday, today),
+      },
+      groups: {
+        total: one('SELECT COUNT(DISTINCT chat_id) AS n FROM events'),
+        week: one('SELECT COUNT(DISTINCT chat_id) AS n FROM events WHERE day >= ?', weekAgo),
+      },
+      today: period(today),
+      week: period(weekAgo),
+      // Хвост по дням — чтобы на экране была не одна цифра, а линия.
+      days: Array.from({ length: days }, (_, i) => {
+        const d = ymdBack(now, days - 1 - i);
+        return {
+          day: d,
+          people: one('SELECT COUNT(DISTINCT user_id) AS n FROM seen WHERE day = ?', d),
+          rounds: one("SELECT COUNT(*) AS n FROM events WHERE kind = 'round' AND day = ?", d),
+        };
+      }),
+    };
+  }
+
   close() {
     try {
       this.db.close();
@@ -223,6 +323,19 @@ export class NullStore {
   save() {}
   loadAll() {
     return [];
+  }
+  noteSeen() {}
+  addEvent() {}
+  stats(now = Date.now()) {
+    const period = { created: 0, finished: 0, games: 0, rounds: 0, byGame: {} };
+    return {
+      day: ymd(now),
+      people: { total: 0, today: 0, week: 0, fresh: 0, yesterday: 0, returned: 0 },
+      groups: { total: 0, week: 0 },
+      today: { ...period },
+      week: { ...period },
+      days: [],
+    };
   }
   remove() {}
   removeChat() {}

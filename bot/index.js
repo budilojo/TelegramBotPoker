@@ -60,6 +60,8 @@ const PORT = Number(process.env.PORT || 8080);
 const WEBAPP_URL = (process.env.WEBAPP_URL || '').replace(/\/+$/, '');
 /** Short name of the Mini App registered with @BotFather (/newapp). */
 const MINIAPP = (process.env.MINIAPP || '').trim();
+/** Кто видит админку: список Telegram-id через запятую. */
+const ADMINS = (process.env.ADMINS || '').split(',').map((x) => x.trim()).filter(Boolean);
 
 const bot = new Bot(TOKEN);
 const store = new Store(DB_PATH);
@@ -96,12 +98,16 @@ const app = new App({
   botUsername: me.username,
   webappUrl: WEBAPP_URL,
   miniAppName: MINIAPP,
+  admins: ADMINS,
 });
 const hub = new Hub(app, { botToken: TOKEN });
 app.attachHub(hub);
 
 const restored = app.load();
-console.log(`[bot] @${me.username} · восстановлено игр: ${restored} · база: ${DB_PATH}`);
+console.log(
+  `[bot] @${me.username} · восстановлено игр: ${restored} · база: ${DB_PATH}` +
+    (ADMINS.length ? ` · админов: ${ADMINS.length}` : '')
+);
 if (!WEBAPP_URL) {
   console.warn('[bot] WEBAPP_URL не задан: стол не откроется. Нужен публичный HTTPS-адрес этого сервера — см. bot/README.md.');
 } else if (!/^https:\/\//.test(WEBAPP_URL)) {

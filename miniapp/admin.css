@@ -1,0 +1,92 @@
+/* ==========================================================================
+   АДМИНКА — цифры по игре. Только числа: ни имён, ни карт.
+   Палитра общая с игрой; данные — единственное, чему тут можно быть громким.
+   ========================================================================== */
+
+.admin .sub { font-variant-numeric: tabular-nums; }
+
+/* Плитки: одно число, подпись под ним. Числу — вес, подписи — тишина. */
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tile {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  min-width: 0;
+}
+.tile-n {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+.tile.good .tile-n { color: var(--accent); }
+.tile-l { margin-top: 3px; font-size: 12.5px; font-weight: 700; color: var(--text-2); }
+.tile-note { margin-top: 2px; font-size: 11.5px; color: var(--muted); font-weight: 600; }
+
+/* Строка игры: имя, число, полоска доли. */
+.game-row + .game-row { margin-top: 12px; }
+.gr-head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.gr-name { font-weight: 800; font-size: 14.5px; }
+.gr-n { font-size: 12.5px; color: var(--muted); font-weight: 700; white-space: nowrap; }
+.gr-bar { margin-top: 6px; height: 8px; border-radius: 4px; background: var(--panel-hi); overflow: hidden; }
+.gr-bar i { display: block; height: 100%; border-radius: 4px; background: var(--accent); }
+
+/*
+ * График по дням. Одна величина на график — поэтому легенды нет, заголовок
+ * над ним и так говорит, что нарисовано.
+ *
+ * Столбик тонкий и не занимает всю свою ячейку: воздух между соседями делает
+ * зазор, а не обводка. Верх скруглён, низ квадратный — он стоит на базовой
+ * линии, и она общая для всех.
+ */
+.chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 104px;
+  padding-top: 16px; /* место подписи над самым высоким столбиком */
+}
+.chart .bar {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.chart .bar i {
+  display: block;
+  width: 100%;
+  max-width: 14px;
+  border-radius: 4px 4px 0 0;
+  background: var(--accent);
+  transition: height 0.3s var(--ease);
+}
+.chart.people .bar i { background: var(--gold); }
+/* Пустой день — тонкая риска у базовой линии, чтобы было видно: ноль, а не пропуск. */
+.chart .bar i[style*="height: 0%"] { height: 1px !important; background: var(--line-hi); }
+.chart .bar b {
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-2);
+}
+.chart .bar:active i { filter: brightness(1.3); }
+.chart-foot {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 359px) {
+  .tiles { grid-template-columns: 1fr; }
+}

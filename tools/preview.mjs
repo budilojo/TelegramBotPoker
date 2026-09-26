@@ -19,6 +19,7 @@ import { App } from '../bot/app.js';
 import { Hub } from '../bot/hub.js';
 import { startServer } from '../bot/server.js';
 import { TelegramStub } from '../bot/tg-stub.js';
+import { Store } from '../bot/store.js';
 import { signInitData } from '../bot/webapp-auth.js';
 import { stack } from '../bot/harness.js';
 import * as R from '../bot/room.js';
@@ -33,7 +34,7 @@ const TOKEN = `0:${crypto.randomBytes(16).toString('hex')}`;
 const serve = process.argv.includes('--serve');
 
 const api = new TelegramStub();
-const app = new App({ api, botUsername: 'All_InPoker_bot', minIntervalMs: 0, runoutStepMs: 0, webappUrl: `http://localhost:${PORT}` });
+const app = new App({ api, store: new Store(':memory:'), botUsername: 'All_InPoker_bot', minIntervalMs: 0, runoutStepMs: 0, webappUrl: `http://localhost:${PORT}`, admins: ['101'] });
 const hub = new Hub(app, { botToken: TOKEN });
 app.attachHub(hub);
 
@@ -64,10 +65,10 @@ function play(room, until, pick) {
 }
 
 const scenes = [];
-function scene(name, room, viewer, { width = 390, height = 780, click = null, start = room.code, tap = [] } = {}) {
+function scene(name, room, viewer, { width = 390, height = 780, click = null, start = room.code, tap = [], scroll = 0 } = {}) {
   const user = { id: viewer, first_name: PEOPLE.find(([id]) => id === viewer)?.[1] ?? 'Гость' };
   const initData = signInitData({ auth_date: Math.floor(Date.now() / 1000), user, ...(start ? { start_param: start } : {}) }, TOKEN);
-  scenes.push({ name, code: start, initData, width, height, click, tap });
+  scenes.push({ name, code: start, initData, width, height, click, tap, scroll });
 }
 
 const deck6 = stack({ 101: 'As Kh', 102: 'Qs Qd', 103: '9c 9d', 104: '7h 2c', 105: 'Jd 10d', 106: '5s 4s' }, '10s Jh Qc 3d 8s');
@@ -251,6 +252,29 @@ function playOut(room) {
   }
 }
 
+// 18. Админка: цифры за две недели, накрученные правдоподобно.
+{
+  const chatId = String(chat--);
+  const r = durak(3, { chatId });
+  const day = 86_400_000;
+  const now = Date.now();
+  const store = app.store;
+  for (let back = 13; back >= 0; back--) {
+    const at = now - back * day;
+    // К концу двух недель людей и партий заметно больше, чем в начале.
+    const people = Math.round(3 + (13 - back) * 1.6 + (back % 3 === 0 ? 2 : 0));
+    for (let i = 0; i < people; i++) store.noteSeen(String(1000 + ((i * 7 + back) % 40)), at);
+    const rounds = Math.round(2 + (13 - back) * 2.2 + (back % 4 === 0 ? 5 : 0));
+    for (let i = 0; i < rounds; i++) {
+      store.addEvent({ at, kind: 'round', game: i % 3 ? 'durak' : 'poker', chatId: `-100${i % 5}`, code: `r${back}-${i % 6}`, n: 3 });
+    }
+    if (back % 2 === 0) store.addEvent({ at, kind: 'created', game: 'durak', chatId: `-100${back % 5}`, code: `c${back}` });
+    if (back % 3 === 0) store.addEvent({ at, kind: 'finished', game: 'poker', chatId: `-100${back % 5}`, code: `f${back}` });
+  }
+  scene('21-admin', r, 101, { start: 'admin', height: 900 });
+  scene('22-admin-charts', r, 101, { start: 'admin', height: 900, scroll: 1200 });
+}
+
 app.syncClocks(); // turn deadlines, as the running bot would have them
 const web = startServer({ hub, port: PORT, root: path.join(ROOT, 'miniapp'), log: () => {} });
 await new Promise((r) => web.server.once('listening', r));
@@ -290,6 +314,7 @@ if (serve) {
       await page.waitForSelector('.sheet');
     }
     for (const card of s.tap) await page.locator(`.dk-card[data-card="${card}"]`).click();
+    if (s.scroll) await page.evaluate((y) => document.querySelector('.lobby')?.scrollTo(0, y), s.scroll);
     await page.waitForTimeout(700); // let the deal animations settle
     await page.screenshot({ path: path.join(OUT, `${s.name}.png`) });
     await page.close();

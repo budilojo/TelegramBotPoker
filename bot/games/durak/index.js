@@ -143,13 +143,19 @@ export default {
         if (fail(D.leave(room, uid))) return;
         return app.afterChange(room);
 
-      case 'start':
-        if (fail(D.startGame(room, uid, app.dealOpts(room)))) return;
-        return app.afterAction(room);
+      // Через afterDeal, а не afterAction: сдача партии — это то же событие,
+      // что раздача в покере, и считается ядром в одном месте.
+      case 'start': {
+        const r = D.startGame(room, uid, app.dealOpts(room));
+        if (fail(r)) return;
+        return app.afterDeal(room, r);
+      }
 
-      case 'next':
-        if (fail(D.nextGame(room, uid, app.dealOpts(room)))) return;
-        return app.afterAction(room);
+      case 'next': {
+        const r = D.nextGame(room, uid, app.dealOpts(room));
+        if (fail(r)) return;
+        return app.afterDeal(room, r);
+      }
 
       case 'attack':
         if (!card) return refuse('NOT_YOUR_CARD');

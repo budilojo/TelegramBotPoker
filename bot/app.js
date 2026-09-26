@@ -85,7 +85,7 @@ export class App {
    */
   constructor({
     api, store = new NullStore(), minIntervalMs = 1000, botUsername = '', onError = null, deck = null, durakDeck = null,
-    clock = REAL_CLOCK, runoutStepMs = 1500, webappUrl = '', miniAppName = '',
+    clock = REAL_CLOCK, runoutStepMs = 1500, webappUrl = '', miniAppName = '', admins = [],
   } = {}) {
     this.api = api;
     this.store = store;
@@ -96,6 +96,11 @@ export class App {
     this.runoutStepMs = runoutStepMs;
     this.webappUrl = String(webappUrl || '').replace(/\/+$/, '');
     this.miniAppName = miniAppName;
+    /**
+     * Кто видит админку. Список приходит из `.env`, а не из чата: файл правит
+     * тот, кто запускает бота, и подделать это сообщением нельзя.
+     */
+    this.admins = new Set([...admins].map((x) => String(x).trim()).filter(Boolean));
     this.hub = null; // set by attachHub()
     this.log = onError || ((err) => console.error('[bot]', err?.description || err?.message || err));
     this.outbox = new Outbox(api, { minIntervalMs, onError: this.log, timers: clock });
@@ -162,6 +167,56 @@ export class App {
     } catch (err) {
       this.log(err);
     }
+  }
+
+  /* ------------------------------------------------------------ статистика */
+
+  isAdmin(userId) {
+    return this.admins.has(String(userId));
+  }
+
+  /** Человек открыл приложение. Второй раз за день ничего не добавит. */
+  noteSeen(userId) {
+    try {
+      this.store.noteSeen(userId, this.clock.now());
+    } catch (err) {
+      this.log(err);
+    }
+  }
+
+  /**
+   * Что случилось с игрой: `created`, `round` (сдана раздача или партия),
+   * `finished`. В строку не попадает ни имени, ни карты — только когда, какая
+   * игра, в какой группе и сколько человек.
+   */
+  note(kind, room) {
+    try {
+      this.store.addEvent({
+        at: this.clock.now(),
+        kind,
+        game: room.game,
+        chatId: room.chatId,
+        code: room.code,
+        n: room.players.filter((p) => !p.kicked && !p.left).length,
+      });
+    } catch (err) {
+      this.log(err);
+    }
+  }
+
+  /** Что происходит прямо сейчас — это не из базы, а из памяти. */
+  liveNow() {
+    const rooms = [...this.rooms.values()].filter((r) => r.status !== 'finished');
+    const playing = rooms.filter((r) => r.status === 'playing' || r.status === 'paused');
+    const byGame = {};
+    for (const r of playing) byGame[r.game] = (byGame[r.game] || 0) + 1;
+    return {
+      playing: playing.length,
+      lobbies: rooms.length - playing.length,
+      groups: new Set(rooms.map((r) => r.chatId)).size,
+      online: this.hub?.people ?? 0,
+      byGame,
+    };
   }
 
   /* ---------------------------------------------------------- persistence */
@@ -393,6 +448,7 @@ export class App {
     room.game = g.id;
     room.createdAt = Math.max(room.createdAt || 0, ...this.roomsOf(chatId).map((r) => (r.createdAt || 0) + 1));
     this.rooms.set(room.code, room);
+    this.note('created', room);
     return room;
   }
 
@@ -434,6 +490,7 @@ export class App {
   /** A hand was dealt (or the game ended instead). */
   async afterDeal(room, r) {
     if (r?.finished) return this.finishUp(room);
+    this.note('round', room); // раздача в покере, партия в дураке
     // Blinds alone can put everybody all-in: then the board is turned over at
     // once, and that may even end the game on the spot.
     const revealing = gameOf(room).beginShow?.(this, room);
@@ -590,8 +647,19 @@ export class App {
       }
       return void (await this.outbox.post(user.tgId, WELCOME_DM));
     }
+    if (cmd?.cmd === 'admin' && this.isAdmin(user.id)) return this.sendAdmin(user);
     if (['game', 'play', 'games', 'newgame'].includes(cmd?.cmd)) return this.sendMyGames(user);
     return void (await this.outbox.post(user.tgId, HELP_DM));
+  }
+
+  /**
+   * Кнопка в админку. Не админу `/admin` отвечает обычной справкой — о том,
+   * что команда вообще есть, знать ему незачем.
+   */
+  async sendAdmin(user) {
+    const btn = this.webappUrl ? { text: '📊 Админка', web_app: { url: `${this.webappUrl}/?room=admin` } } : null;
+    const text = btn ? '📊 Цифры по игре — открывайте:' : 'Адрес мини-приложения не настроен (WEBAPP_URL).';
+    await this.outbox.post(user.tgId, text, btn ? [[btn]] : null);
   }
 
   /**
@@ -829,6 +897,7 @@ export class App {
     // The card says the game is over; the results go below it as their own
     // message — the one message of the evening worth a notification.
     const g = gameOf(room);
+    this.note('finished', room);
     this.outbox.cancel(room.chatId, room.code);
     g.onFinish?.(room);
     this.hub?.broadcast(room);

@@ -99,6 +99,24 @@ export function padStart(s, width) {
   return ' '.repeat(Math.max(0, width - visualWidth(t))) + t;
 }
 
+/**
+ * 2026-09-26 — a day in the table's timezone, and the key statistics are
+ * grouped by. Sortable as a string, which is what the queries rely on.
+ */
+export function ymd(ts, tz = process.env.TZ || undefined) {
+  const d = new Date(ts);
+  try {
+    // en-CA formats as YYYY-MM-DD; no locale-dependent order to guess at.
+    return new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+  } catch {
+    const p2 = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+  }
+}
+
+/** The day `n` days before `ts`, same format. */
+export const ymdBack = (ts, n, tz) => ymd(ts - n * 86_400_000, tz);
+
 /** 14:31 in the table's timezone. */
 export function hhmm(ts, tz = process.env.TZ || undefined) {
   const d = new Date(ts);

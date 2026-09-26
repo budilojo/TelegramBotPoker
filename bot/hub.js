@@ -40,6 +40,8 @@ export const ERRORS = Object.assign({}, ...Object.values(GAMES).map((g) => g.err
 const COMMON = new Set(['visible']);
 /** What a page may say on a group's hub. */
 const HUB_ACTIONS = new Set(['create', 'join', 'home']);
+/** Код, по которому открывается админка. Пускает не он, а список в `.env`. */
+const ADMIN_CODE = 'admin';
 
 export class Hub {
   /**
@@ -69,9 +71,19 @@ export class Hub {
     if (!auth.ok) {
       return { error: 'AUTH', text: auth.reason === 'EXPIRED' ? 'Сессия устарела — откройте стол заново.' : 'Откройте стол из Telegram.' };
     }
+    this.app.noteSeen(auth.user.id);
     const asked = String(wanted || '').trim();
     // The signed start_param wins over anything in the page's own URL.
     const code = String(auth.startParam || asked || '').trim();
+
+    if (code === ADMIN_CODE) {
+      // Не админу отвечаем ровно тем же, чем на выдуманный код: знать, что
+      // админка существует, ему незачем.
+      if (!this.app.isAdmin(auth.user.id)) return { error: 'NO_ROOM', text: 'Стол не найден — возможно, игру уже удалили.' };
+      const session = { id: this.nextId++, user: auth.user, kind: 'admin', group: null, code: null, send, visible: true };
+      this.pushAdmin(session);
+      return { session };
+    }
     // Opened without a group or a room — from the bot's profile or a button in
     // private. Telegram does not say which group; the bot knows which groups
     // this person plays in, and shows those (one — straight to its games).
@@ -117,7 +129,9 @@ export class Hub {
   }
 
   detach(session) {
-    if (session.kind === 'home') return;
+    // У «моих групп» и админки нет своего списка подписчиков: их состояние
+    // собирается по запросу, рассылать его некуда.
+    if (session.kind === 'home' || session.kind === 'admin') return;
     const map = session.kind === 'hub' ? this.byGroup : this.byRoom;
     const key = session.kind === 'hub' ? session.group : session.code;
     const set = map.get(key);
@@ -200,6 +214,33 @@ export class Hub {
     session.send({ t: 'state', state: { kind: 'home', now: this.app.clock.now(), bot: this.app.botUsername, me: { name: session.user.name }, groups } });
   }
 
+  /** Цифры для админки. Собираются по запросу — их некому рассылать. */
+  pushAdmin(session) {
+    try {
+      session.send({
+        t: 'state',
+        state: {
+          kind: 'admin',
+          now: this.app.clock.now(),
+          bot: this.app.botUsername,
+          me: { name: session.user.name },
+          live: this.app.liveNow(),
+          stats: this.app.store.stats(this.app.clock.now()),
+        },
+      });
+    } catch (err) {
+      this.app.log(err);
+    }
+  }
+
+  /** Сколько разных людей сейчас смотрят в приложение. */
+  get people() {
+    const ids = new Set();
+    for (const set of this.byRoom.values()) for (const s of set) ids.add(s.user.id);
+    for (const set of this.byGroup.values()) for (const s of set) ids.add(s.user.id);
+    return ids.size;
+  }
+
   /** Everyone at this table gets THEIR OWN view of it — and the group's hubs a fresh list. */
   broadcast(room) {
     for (const s of this.byRoom.get(room.code) || []) this.push(s, room);
@@ -251,6 +292,14 @@ export class Hub {
     if (!msg || typeof msg !== 'object' || typeof msg.t !== 'string') return this.refuse(session, 'BAD_REQUEST');
     if (session.kind === 'hub') return this.handleHub(session, msg);
     if (session.kind === 'home') return this.handleHome(session, msg);
+    if (session.kind === 'admin') {
+      if (COMMON.has(msg.t)) {
+        session.visible = !!msg.visible;
+        return;
+      }
+      if (msg.t !== 'refresh') return this.refuse(session, 'BAD_REQUEST');
+      return this.pushAdmin(session);
+    }
 
     const app = this.app;
     const room = app.roomByCode(session.code);
