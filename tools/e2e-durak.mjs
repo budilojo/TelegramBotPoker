@@ -1,5 +1,5 @@
 /**
- * Durak played by real browsers, the whole way: `/play` in the group → the
+ * Durak played by real browsers, the whole way: `/game` in the group → the
  * hub in the Mini App → «Дурак» → «Создать лобби» → a friend joins from the
  * hub, another by the lobby's card → the host starts → a whole game played
  * by TAPPING cards and buttons → the durak on every screen and in the group
@@ -64,14 +64,14 @@ async function until(cond, what, ms = 4000) {
   }
 }
 
-/* ---------------------------------------------------- the group: /play */
+/* ---------------------------------------------------- the group: /game */
 
-await app.handleUpdate(cmdUpdate(CHAT, ivan, '/play', { message_id: 1 }));
+await app.handleUpdate(cmdUpdate(CHAT, ivan, '/game', { message_id: 1 }));
 await app.settle();
 const group = app.groups.get(String(CHAT));
 const hubCard = api.live(CHAT);
 assert.equal(hubCard.markup.inline_keyboard[0][0].url, `https://t.me/All_InPoker_bot/table?startapp=g_${group.code}`);
-step(`/play: карточка «Во что играем?», кнопка ведёт в хаб группы g_${group.code}`);
+step(`/game: карточка «Во что играем?», кнопка ведёт в хаб группы g_${group.code}`);
 
 const sdkStub = (initData) => `
   window.Telegram = { WebApp: {
@@ -247,13 +247,13 @@ assert.match(posts.at(-1).text, /ИТОГИ · ДУРАК/);
 for (const page of pages.values()) await page.waitForSelector('h1:has-text("Итоги")');
 step('/finish: итоги в группе одним сообщением, у всех — экран итогов');
 
-// In the whole evening: the /play card, the lobby card, the results.
+// In the whole evening: the /game card, the lobby card, the results.
 const all = api.calls.filter((c) => c.method === 'sendMessage' && c.chatId === String(CHAT));
 assert.equal(all.length, 3, all.map((c) => c.text.slice(0, 20)).join(' | '));
 for (const c of api.calls.filter((x) => x.method === 'sendMessage' || x.method === 'editMessageText')) {
   assert.ok(!/(?:10|[6-9ВДКТ])[♠♥♦♣]/.test(c.text), `карта в Telegram: ${c.text}`);
 }
-step('за вечер в группе три сообщения: /play, карточка, итоги — и ни одной карты');
+step('за вечер в группе три сообщения: /game, карточка, итоги — и ни одной карты');
 
 /* -------------------------------------------- perevodnoy: «Перевести» */
 

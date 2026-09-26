@@ -257,7 +257,7 @@ test('one group, several games: each has its own card, and one moving does not t
   assert.equal(s.lobbies.find((l) => l.game === 'poker').status, 'playing');
 });
 
-test('/newgame still makes poker — refused only while a poker table is live, with /play for more', async () => {
+test('/newgame still makes poker — refused only while a poker table is live, with /game for more', async () => {
   const cast = THREE();
   const t = new Table();
   await t.cmd(cast.ivan, '/play');
@@ -266,7 +266,7 @@ test('/newgame still makes poker — refused only while a poker table is live, w
   await t.cmd(cast.max, '/newgame');
   assert.equal(t.room.game, 'poker', 'a durak lobby does not block poker');
   await t.cmd(cast.dima, '/newgame');
-  assert.match(t.lastPost(), /Стол уже есть.*\/play/s);
+  assert.match(t.lastPost(), /Стол уже есть.*\/game/s);
   assert.equal(t.app.roomsOf(t.chatId).length, 2);
 });
 
@@ -369,7 +369,7 @@ test('a hub code nobody knows says what to do', () => {
   const t = new Table();
   const r = t.open(user(101, 'Иван'), { initData: initDataFor(user(101, 'Иван'), { startParam: 'g_nosuchgroup' }) });
   assert.equal(r.error, 'NO_ROOM');
-  assert.match(r.text, /\/play/);
+  assert.match(r.text, /\/game/);
 });
 
 /* ---------------------------------------------------------- the database */
@@ -428,4 +428,70 @@ test('a restart brings back the hub of every group and every game in it', async 
   const s = inbox.at(-1).state;
   assert.deepEqual(s.lobbies.map((l) => l.game).sort(), ['durak', 'poker']);
   store.close();
+});
+
+/* ---------------------------------------------------------------- /game */
+
+test('/game is the command: the same card «Во что играем?», and it is in the menu', async () => {
+  const t = new Table();
+  await t.cmd(user(101, 'Иван'), '/game');
+  const card = t.tg.live(t.chatId);
+  assert.match(card.text, /Во что играем\?/);
+  assert.equal(card.markup.inline_keyboard[0][0].url, `https://t.me/ChipTableBot/table?startapp=g_${t.group.code}`);
+});
+
+test('the app opened without a group (profile, private chat) goes to the games of your one group', async () => {
+  const t = new Table();
+  const ivan = user(101, 'Иван');
+  await t.cmd(ivan, '/game');
+  const r = t.open(ivan, { initData: initDataFor(ivan, { clock: t.clock }) });
+  assert.ok(r.session, 'no NO_ROOM for somebody the bot has seen in a group');
+  assert.equal(t.state(ivan).kind, 'hub');
+  assert.equal(t.state(ivan).group.title, 'Покер по пятницам');
+  await t.send(ivan, { t: 'create', game: 'durak' });
+  assert.equal(t.state(ivan).game, 'durak', 'and plays from there as from the group card');
+});
+
+test('several groups: the app lists only YOUR groups, and steps only into those', async () => {
+  const t = new Table({ chatId: -100301 });
+  const ivan = user(101, 'Иван');
+  const max = user(202, 'Макс');
+  await t.cmd(ivan, '/game');
+  const a = t.group;
+  t.chatId = -100302;
+  await t.cmd(ivan, '/newgame'); // he is in this group too — by a poker table
+  t.chatId = -100303;
+  await t.cmd(max, '/game'); // Макс's group; Иван was never seen there
+  const other = t.group;
+
+  t.open(ivan, { initData: initDataFor(ivan, { clock: t.clock }) });
+  const home = t.state(ivan);
+  assert.equal(home.kind, 'home');
+  assert.equal(home.groups.length, 2);
+  assert.ok(!home.groups.some((g) => g.code === other.code), 'never a group he is not in');
+
+  await t.send(ivan, { t: 'group', code: other.code });
+  assert.equal(t.lastError(ivan).code, 'NOT_YOUR_GROUP');
+  await t.send(ivan, { t: 'group', code: a.code });
+  assert.equal(t.state(ivan).kind, 'hub');
+  assert.equal(t.state(ivan).home, true, 'with the way back to «my groups»');
+  await t.send(ivan, { t: 'home' });
+  assert.equal(t.state(ivan).kind, 'home');
+
+  // Nor by asking for it in the page's own URL.
+  t.close(ivan);
+  assert.equal(t.open(ivan, { initData: initDataFor(ivan, { clock: t.clock }), room: `g_${other.code}` }).error, 'NO_ROOM');
+});
+
+test('/game in the private chat answers with a button that opens your groups\' games', async () => {
+  const t = new Table();
+  const ivan = user(101, 'Иван');
+  await t.start(ivan);
+  await t.dm(ivan, '/game');
+  assert.match(t.lastDm(ivan), /в группе/, 'no group yet: where games come from');
+  await t.cmd(ivan, '/game');
+  await t.dm(ivan, '/game');
+  const m = [...t.tg.messages.values()].filter((x) => x.chatId === '101').at(-1);
+  assert.match(m.text, /Игры ваших групп/);
+  assert.deepEqual(m.markup.inline_keyboard[0][0].web_app, { url: 'https://poker.example/' });
 });

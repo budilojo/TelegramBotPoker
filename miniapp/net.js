@@ -59,7 +59,11 @@ export function connect() {
       net.prev = net.state;
       net.state = msg.state;
       clockOffset = net.state.now - Date.now();
-      if (startCode.startsWith('g_')) net.inside = net.state.kind === 'hub' ? null : net.state.room?.code || null;
+      // Where this page is now — asked for again after a reconnect. The server
+      // lets a page back only into its own group's games (or its own groups).
+      const st = net.state;
+      if (startCode.startsWith('g_')) net.inside = st.kind === 'hub' ? null : st.room?.code || null;
+      else if (!startCode) net.inside = st.kind === 'hub' ? `g_${st.group.code}` : st.kind === 'home' ? null : st.room?.code || null;
       setBusy(false);
       bus.onState(wasConnected);
     } else if (msg.t === 'error') {
@@ -68,7 +72,7 @@ export function connect() {
       toast(msg.text || 'Не получилось');
     } else if (msg.t === 'notice') {
       bus.onNotice(msg.text);
-    } else if (msg.t === 'fatal' || (msg.t === 'gone' && !startCode.startsWith('g_'))) {
+    } else if (msg.t === 'fatal' || (msg.t === 'gone' && startCode && !startCode.startsWith('g_'))) {
       net.fatal = msg.text || 'Стол недоступен.';
       bus.render();
     } else if (msg.t === 'gone') {

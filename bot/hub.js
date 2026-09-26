@@ -29,7 +29,8 @@ const CORE_ERRORS = {
   NO_ROOM: 'Эта игра уже закончилась или она не из этой группы.',
   BAD_GAME: 'Такой игры нет.',
   TOO_MANY_GAMES: `В группе уже ${MAX_LIVE_PER_GROUP} незаконченных игр — завершите какую-нибудь.`,
-  NOT_FROM_HUB: 'Список игр группы открывается кнопкой «Выбрать игру» из /play.',
+  NOT_FROM_HUB: 'Список игр группы открывается кнопкой «Выбрать игру» из /game.',
+  NOT_YOUR_GROUP: 'Этой группы нет среди ваших — напишите в ней /game.',
 };
 
 /** Error codes in words a person can act on — the core's and every game's. */
@@ -38,7 +39,7 @@ export const ERRORS = Object.assign({}, ...Object.values(GAMES).map((g) => g.err
 /** What a page may say whatever it is looking at. */
 const COMMON = new Set(['visible']);
 /** What a page may say on a group's hub. */
-const HUB_ACTIONS = new Set(['create', 'join']);
+const HUB_ACTIONS = new Set(['create', 'join', 'home']);
 
 export class Hub {
   /**
@@ -71,15 +72,32 @@ export class Hub {
     const asked = String(wanted || '').trim();
     // The signed start_param wins over anything in the page's own URL.
     const code = String(auth.startParam || asked || '').trim();
-    // Opened without a room: from @BotFather's link or the bot's profile.
+    // Opened without a group or a room — from the bot's profile or a button in
+    // private. Telegram does not say which group; the bot knows which groups
+    // this person plays in, and shows those (one — straight to its games).
     if (!code) {
-      return { error: 'NO_ROOM', text: 'Игры открываются из группы: напишите там /play (или /newgame для покера) и нажмите кнопку.' };
+      const mine = this.app.groupsOf(auth.user.id);
+      if (!mine.length) {
+        return { error: 'NO_ROOM', text: 'Игры открываются из группы: напишите там /game (или /newgame для покера) и нажмите кнопку.' };
+      }
+      const session = { id: this.nextId++, user: auth.user, kind: 'home', group: null, code: null, send, visible: true, home: true };
+      if (mine.length === 1) {
+        session.group = mine[0].code;
+        this.enterHub(session);
+      } else this.pushHome(session);
+      return { session };
     }
 
     if (code.startsWith(HUB_PREFIX)) {
       const group = this.app.groupByCode(code.slice(HUB_PREFIX.length));
-      if (!group) return { error: 'NO_ROOM', text: 'Игры группы не найдены — напишите /play в группе ещё раз.' };
-      const session = { id: this.nextId++, user: auth.user, kind: 'hub', group: group.code, code: null, send, visible: true };
+      if (!group) return { error: 'NO_ROOM', text: 'Игры группы не найдены — напишите /game в группе ещё раз.' };
+      // No signed start_param (a button in private): the page may come back to
+      // one of its own groups after a reconnect, and keeps its «my groups».
+      const home = !auth.startParam;
+      if (home && !this.app.groupsOf(auth.user.id).some((g) => g.code === group.code)) {
+        return { error: 'NO_ROOM', text: 'Игры группы не найдены — напишите /game в группе ещё раз.' };
+      }
+      const session = { id: this.nextId++, user: auth.user, kind: 'hub', group: group.code, code: null, send, visible: true, home };
       // Back to the room it was in before a reconnect — if it is of this group.
       const inside = this.app.roomByCode(asked);
       if (inside && inside.chatId === group.chatId) this.enterRoom(session, inside);
@@ -99,6 +117,7 @@ export class Hub {
   }
 
   detach(session) {
+    if (session.kind === 'home') return;
     const map = session.kind === 'hub' ? this.byGroup : this.byRoom;
     const key = session.kind === 'hub' ? session.group : session.code;
     const set = map.get(key);
@@ -157,7 +176,7 @@ export class Hub {
     const group = this.app.groupByCode(session.group);
     if (!group) return;
     try {
-      const view = hubView(this.app, group, session.user);
+      const view = hubView(this.app, group, session.user, { home: !!session.home && this.app.groupsOf(session.user.id).length > 1 });
       const json = JSON.stringify(view);
       if (json === session.lastHub) return;
       session.lastHub = json;
@@ -165,6 +184,20 @@ export class Hub {
     } catch (err) {
       this.app.log(err);
     }
+  }
+
+  /** «My groups» — for a page opened without a group. */
+  pushHome(session) {
+    this.detach(session);
+    session.kind = 'home';
+    session.group = null;
+    session.code = null;
+    const groups = this.app.groupsOf(session.user.id).map((g) => ({
+      code: g.code,
+      title: g.title || 'Группа',
+      live: this.app.liveRooms(g.chatId).length,
+    }));
+    session.send({ t: 'state', state: { kind: 'home', now: this.app.clock.now(), bot: this.app.botUsername, me: { name: session.user.name }, groups } });
   }
 
   /** Everyone at this table gets THEIR OWN view of it — and the group's hubs a fresh list. */
@@ -217,6 +250,7 @@ export class Hub {
   async handle(session, msg) {
     if (!msg || typeof msg !== 'object' || typeof msg.t !== 'string') return this.refuse(session, 'BAD_REQUEST');
     if (session.kind === 'hub') return this.handleHub(session, msg);
+    if (session.kind === 'home') return this.handleHome(session, msg);
 
     const app = this.app;
     const room = app.roomByCode(session.code);
@@ -244,6 +278,19 @@ export class Hub {
     });
   }
 
+  /** «My groups»: step into one of them — only one of this person's own. */
+  handleHome(session, msg) {
+    if (COMMON.has(msg.t)) {
+      session.visible = !!msg.visible;
+      return;
+    }
+    if (msg.t !== 'group') return this.refuse(session, 'BAD_REQUEST');
+    const group = this.app.groupsOf(session.user.id).find((g) => g.code === String(msg.code || ''));
+    if (!group) return this.refuse(session, 'NOT_YOUR_GROUP');
+    session.group = group.code;
+    return this.enterHub(session);
+  }
+
   /** The group's hub: create a lobby, or step into one. */
   async handleHub(session, msg) {
     const app = this.app;
@@ -254,6 +301,10 @@ export class Hub {
       return;
     }
     if (!HUB_ACTIONS.has(msg.t)) return this.refuse(session, 'BAD_REQUEST');
+    if (msg.t === 'home') {
+      if (!session.home) return this.refuse(session, 'BAD_REQUEST');
+      return this.pushHome(session);
+    }
 
     if (msg.t === 'join') {
       const room = app.roomByCode(String(msg.code || ''));
@@ -287,7 +338,7 @@ export class Hub {
  * already open in this group. No cards, no stacks — the same things the
  * group cards say to everybody.
  */
-export function hubView(app, group, user) {
+export function hubView(app, group, user, { home = false } = {}) {
   const uid = String(user.id);
   const lobbies = app.liveRooms(group.chatId).reverse().map((room) => {
     const g = gameOf(room);
@@ -311,7 +362,8 @@ export function hubView(app, group, user) {
   return {
     kind: 'hub',
     bot: app.botUsername,
-    group: { title: group.title || '' },
+    group: { title: group.title || '', code: group.code },
+    home, // opened without a group: «← Мои группы»
     me: { name: user.name },
     games: GAME_LIST.map((g) => ({ id: g.id, title: g.title, icon: g.icon, blurb: g.blurb, min: g.minPlayers, max: g.maxPlayers })),
     lobbies,

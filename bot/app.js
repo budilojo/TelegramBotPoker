@@ -4,7 +4,7 @@
  * played in the Mini App (see hub.js) and their rules live in their own
  * modules (games/); the Telegram side is the lobby and the notifications:
  *
- *   - in the group: `/play` posts the hub card («🎮 Во что играем?») that
+ *   - in the group: `/game` posts the hub card («🎮 Во что играем?») that
  *     opens the Mini App for THIS group; every game has ONE card of its own —
  *     posted once, then only ever edited (edits do not ring anybody's phone) —
  *     with the button that opens it; and the results at the end. A group may
@@ -31,9 +31,8 @@ import { GAMES, GAME_LIST, gameOf } from './games/index.js';
 const HELP = [
   '🎮 <b>Игры в Telegram</b> — покер и дурак в мини-приложении.',
   '',
-  '<b>/play</b> — выбрать игру. Бот пришлёт карточку с кнопкой — в приложении выберите',
+  '<b>/game</b> — во что играем. Бот пришлёт карточку с кнопкой — в приложении выберите',
   '«Покер» или «Дурак» и создайте лобби; друзья присоединятся по его карточке.',
-  '<b>/newgame</b> — сразу покерный стол, как раньше.',
   '',
   '/table — показать карточки игр внизу чата',
   '/finish — завершить свою игру и показать итоги (хост)',
@@ -46,7 +45,8 @@ const HELP_DM = [
   '🎮 <b>Покер и дурак в Telegram</b>',
   '',
   'Сюда приходят напоминания «ваш ход» — только когда приложение у вас закрыто.',
-  'Сама игра — в группе: напишите там /play и выберите игру.',
+  'Сама игра — в группе: напишите там /game и выберите игру.',
+  'Или /game здесь — откроются игры ваших групп.',
 ].join('\n');
 
 const WELCOME_DM = '✅ Готово: если приложение будет закрыто, когда до вас дойдёт ход, — напомню здесь.';
@@ -144,7 +144,7 @@ export class App {
   }
 
   /** The group's hub record — created the first time somebody asks for it. */
-  ensureGroup(chatId, title = '') {
+  ensureGroup(chatId, title = '', { save = true } = {}) {
     const id = String(chatId);
     let g = this.groups.get(id);
     if (!g) {
@@ -152,7 +152,7 @@ export class App {
       this.groups.set(id, g);
     }
     if (title) g.title = String(title).slice(0, 64);
-    this.saveGroup(g);
+    if (save) this.saveGroup(g);
     return g;
   }
 
@@ -578,6 +578,7 @@ export class App {
           : 'Стол есть, но адрес мини-приложения не настроен (WEBAPP_URL). Скажите тому, кто запускает бота.';
         return void (await this.outbox.post(user.tgId, text, btn ? [[btn]] : null));
       }
+      if (!cmd.rest) return this.sendMyGames(user, `${WELCOME_DM}\n\n${HELP_DM}`);
       const gm = /^g_([a-z0-9]{4,32})$/.exec(cmd.rest);
       const group = gm ? this.groupByCode(gm[1]) : null;
       if (group) {
@@ -587,9 +588,53 @@ export class App {
           : 'Адрес мини-приложения не настроен (WEBAPP_URL). Скажите тому, кто запускает бота.';
         return void (await this.outbox.post(user.tgId, text, btn ? [[btn]] : null));
       }
-      return void (await this.outbox.post(user.tgId, cmd.rest ? WELCOME_DM : `${WELCOME_DM}\n\n${HELP_DM}`));
+      return void (await this.outbox.post(user.tgId, WELCOME_DM));
     }
+    if (['game', 'play', 'games', 'newgame'].includes(cmd?.cmd)) return this.sendMyGames(user);
     return void (await this.outbox.post(user.tgId, HELP_DM));
+  }
+
+  /**
+   * In private the bot does not know which group you mean — the Mini App
+   * does not either. So the button opens the app without a group, and the
+   * app shows the groups you play in (see hub.js, `groupsOf`).
+   */
+  async sendMyGames(user, lead = null) {
+    const mine = this.groupsOf(user.id);
+    const btn = this.webappUrl && mine.length ? { text: '🎮 Открыть игры', web_app: { url: `${this.webappUrl}/` } } : null;
+    const text = mine.length
+      ? `${lead ? `${lead}\n\n` : ''}🎮 Игры ваших групп — открывайте:`
+      : `${lead ? `${lead}\n\n` : ''}Игры создаются в группе: добавьте меня в группу и напишите там /game.`;
+    await this.outbox.post(user.tgId, text, btn ? [[btn]] : null);
+  }
+
+  /**
+   * The groups this person plays in: they wrote a command there, or they sit
+   * at one of its games. The only groups a page opened without a group may
+   * show — the bot never lists a group to somebody it has not seen in it.
+   */
+  groupsOf(userId) {
+    const id = String(userId);
+    const out = new Map();
+    for (const g of this.groups.values()) if (g.members?.includes(id)) out.set(g.chatId, g);
+    for (const room of this.rooms.values()) {
+      if (out.has(room.chatId) || room.status === 'finished') continue;
+      if (room.players.some((p) => p.id === id && !p.kicked && !p.left)) out.set(room.chatId, this.ensureGroup(room.chatId, room.title));
+    }
+    return [...out.values()];
+  }
+
+  /** Somebody used a command in this group: they are one of its players. */
+  noteMember(chatId, userId, title = '') {
+    const g = this.ensureGroup(chatId, title, { save: false });
+    const id = String(userId);
+    g.members = g.members || [];
+    if (!g.members.includes(id)) {
+      g.members.push(id);
+      if (g.members.length > 200) g.members.shift();
+    }
+    this.saveGroup(g);
+    return g;
   }
 
   async onCommand(cmd, msg) {
@@ -600,8 +645,10 @@ export class App {
     if (!who.ok) return void (await this.reply(chatId, who.text, msg));
 
     const user = who.user;
+    this.noteMember(chatId, user.id, msg.chat.title);
 
     switch (cmd.cmd) {
+      case 'game':
       case 'play':
       case 'games': {
         const group = this.ensureGroup(chatId, msg.chat.title);
@@ -616,7 +663,7 @@ export class App {
           return void (await this.reply(
             chatId,
             `Стол уже есть, хост — ${esc(nameOf(table, table.hostId))}. /table — показать его. ` +
-              'Новый — после /finish или /cancel. Ещё одна игра — /play.',
+              'Новый — после /finish или /cancel. Ещё одна игра — /game.',
             msg
           ));
         }
@@ -637,7 +684,7 @@ export class App {
         const live = this.liveRooms(chatId);
         if (!live.length) {
           const last = this.room(chatId);
-          if (!last) return void (await this.reply(chatId, 'Игр нет. /play — выбрать игру, /newgame — покер.', msg));
+          if (!last) return void (await this.reply(chatId, 'Игр нет. /game — выбрать игру.', msg));
           await this.newCard(last);
           return;
         }
@@ -665,7 +712,7 @@ export class App {
           return;
         }
         await this.dropGame(room);
-        await this.reply(chatId, room.game === 'poker' ? 'Стол удалён. /newgame — создать новый.' : `${gameOf(room).icon} ${gameOf(room).title}: игра удалена. /play — новая игра.`);
+        await this.reply(chatId, room.game === 'poker' ? 'Стол удалён. /newgame — создать новый.' : `${gameOf(room).icon} ${gameOf(room).title}: игра удалена. /game — новая игра.`);
         return;
       }
 

@@ -16,9 +16,9 @@ import * as durak from './games/durak.js';
 const SCREENS = { hub, poker, durak };
 
 /** Which module draws this state. Rooms saved before the hub carry no `game`: poker. */
-const screenOf = (s) => (s?.kind === 'hub' ? 'hub' : s?.game === 'durak' ? 'durak' : 'poker');
+const screenOf = (s) => (s?.kind === 'hub' || s?.kind === 'home' ? 'hub' : s?.game === 'durak' ? 'durak' : 'poker');
 /** A different screen (another room, or the hub) starts without a "before". */
-const placeOf = (s) => (s ? `${screenOf(s)}:${s.kind === 'hub' ? '' : s.room?.code}` : '');
+const placeOf = (s) => (s ? `${s.kind || screenOf(s)}:${s.kind === 'hub' ? s.group?.code : s.kind === 'home' ? '' : s.room?.code}` : '');
 
 let prevSame = null;
 

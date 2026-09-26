@@ -98,13 +98,12 @@ const web = startServer({
 
 /** The "/" menu: the games are played in the Mini App, the chat only needs these. */
 const GROUP_COMMANDS = [
-  ['play', 'выбрать игру: покер или дурак'],
-  ['newgame', 'сразу покерный стол'],
+  ['game', 'во что играем: покер, дурак'],
   ['table', 'показать игры внизу чата'],
   ['finish', 'завершить свою игру (хост)'],
   ['help', 'как играть'],
 ];
-const PRIVATE_COMMANDS = [['help', 'как играть']];
+const PRIVATE_COMMANDS = [['game', 'игры моих групп'], ['help', 'как играть']];
 const asCommands = (list) => list.map(([command, description]) => ({ command, description }));
 try {
   await bot.api.setMyCommands(asCommands(GROUP_COMMANDS), { scope: { type: 'all_group_chats' } });

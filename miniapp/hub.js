@@ -1,6 +1,6 @@
 /**
  * The first screen of a group's hub: what to play, and what is already open
- * in this group. Opened by «🎮 Выбрать игру» under /play (`startapp=g_<code>`).
+ * in this group. Opened by «🎮 Выбрать игру» under /game (`startapp=g_<code>`).
  *
  * Big cards for the games, a short settings sheet, «Создать лобби». The
  * lobby gets its own card in the group, and this page steps into it.
@@ -20,7 +20,9 @@ const STATUS = { lobby: 'ждут игроков', playing: 'идёт игра',
 
 export function render() {
   const s = state;
+  if (s.kind === 'home') return renderHome(s);
   const box = h('div.lobby.hub',
+    s.home ? h('button.back-link', { onclick: () => send({ t: 'home' }, { lock: false }) }, '← Мои группы') : null,
     h('div',
       h('h1', '🎮 Во что играем?'),
       h('div.sub', s.group.title || 'Игры этой группы')),
@@ -37,6 +39,20 @@ export function render() {
       : h('div.hint', 'Пока ничего не открыто — выберите игру выше и создайте лобби. Друзья присоединятся по его карточке в группе или отсюда.'),
   );
   $app.append(box);
+}
+
+/** Opened without a group (the bot's profile, a button in private): your groups. */
+function renderHome(s) {
+  $app.append(h('div.lobby.hub',
+    h('div', h('h1', '🎮 Ваши группы'), h('div.sub', 'Где играем?')),
+    h('div.lobby-list', s.groups.map((g) => h('div.lrow',
+      h('div.lr-icon', '👥'),
+      h('div.lr-body',
+        h('div.lr-title', g.title),
+        h('div.lr-sub', g.live ? `открыто игр: ${g.live}` : 'сейчас ничего не открыто')),
+      h('button.btn.sm.primary', { onclick: () => { haptic.tap(); send({ t: 'group', code: g.code }); } }, 'Открыть')))),
+    h('div.hint', 'Здесь группы, где вы писали боту или играли. Новая группа — добавьте бота и напишите там /game.'),
+  ));
 }
 
 function lobbyRow(l) {

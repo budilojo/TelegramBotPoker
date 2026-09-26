@@ -66,7 +66,7 @@ function play(room, until, pick) {
 const scenes = [];
 function scene(name, room, viewer, { width = 390, height = 780, click = null, start = room.code, tap = [] } = {}) {
   const user = { id: viewer, first_name: PEOPLE.find(([id]) => id === viewer)?.[1] ?? 'Гость' };
-  const initData = signInitData({ auth_date: Math.floor(Date.now() / 1000), user, start_param: start }, TOKEN);
+  const initData = signInitData({ auth_date: Math.floor(Date.now() / 1000), user, ...(start ? { start_param: start } : {}) }, TOKEN);
   scenes.push({ name, code: start, initData, width, height, click, tap });
 }
 
@@ -209,6 +209,16 @@ const deal3 = { 102: '6D 7S 8C 10S KH JS', 103: '7H 9S 10C JH QH 8D', 101: '7C 9
   playOut(f);
   D.endGame(f, '101');
   scene('19-durak-results', f, 101);
+}
+
+// 17. Opened from the bot's profile: the groups Иван plays in.
+{
+  const a = app.ensureGroup(String(chat--), 'Покер по пятницам');
+  const b = app.ensureGroup(String(chat--), 'Дача 🏕');
+  a.members = ['101'];
+  b.members = ['101'];
+  const r = durak(2, { chatId: a.chatId });
+  scene('20-my-groups', r, 101, { start: '' });
 }
 
 function shuffledFor(room, seed) {
