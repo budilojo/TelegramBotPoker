@@ -126,12 +126,23 @@ ssh root@IP-вашего-сервера
 
 ### Шаг 4. Запустить установку
 
-Прямо на сервере:
+**Репозиторий приватный**, поэтому скачать скрипт по прямой ссылке нельзя —
+её отдаст только публичный репозиторий. Скопируйте его со своего Мака:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/budilojo/TelegramBotPoker/claude/bold-carson-kjswyx/deploy/install.sh -o install.sh
+# на Маке, в папке проекта
+scp deploy/install.sh root@IP-сервера:/root/install.sh
+```
+
+Потом на сервере:
+
+```bash
+ssh root@IP-сервера
 sudo bash install.sh ваш-домен.ру
 ```
+
+> Если репозиторий публичный, скрипт можно взять и прямой ссылкой:
+> `curl -fsSL https://raw.githubusercontent.com/budilojo/TelegramBotPoker/claude/bold-carson-kjswyx/deploy/install.sh -o install.sh`
 
 Репозиторий приватный, поэтому скрипт остановится и покажет **ключ** — строку,
 начинающуюся с `ssh-ed25519`. Её надо один раз отдать GitHub:
