@@ -80,7 +80,9 @@ KEY=/home/$USER/.ssh/id_ed25519
 if [ ! -f "$KEY" ]; then
   sudo -u "$USER" mkdir -p /home/$USER/.ssh
   sudo -u "$USER" ssh-keygen -t ed25519 -N '' -f "$KEY" -C "worldcard-server"
-  sudo -u "$USER" ssh-keyscan -t ed25519 github.com >> /home/$USER/.ssh/known_hosts 2>/dev/null
+  # Перенаправление `>>` выполняет оболочка, а она тут root: без sh -c файл
+  # известных хостов достаётся root, и дописать в него worldcard уже не сможет.
+  sudo -u "$USER" sh -c "ssh-keyscan -t ed25519 github.com >> /home/$USER/.ssh/known_hosts" 2>/dev/null
 fi
 if ! sudo -u "$USER" git ls-remote "$REPO" >/dev/null 2>&1; then
   echo
