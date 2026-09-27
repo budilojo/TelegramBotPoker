@@ -238,3 +238,74 @@ test('журнал помнит, откуда очки', () => {
   assert.equal(log[0].delta, 20);
   store.close();
 });
+
+/* ------------------------------------------------------------------ экран */
+
+test('экран рейтинга: список, своя строка, переключатели и карточка игрока', async () => {
+  const store = new Store(':memory:');
+  const t = new Table({ store });
+  const ivan = user(101, 'Иван');
+  await t.start(ivan);
+  await t.cmd(ivan, '/play');
+
+  // Полсотни чужих партий: Иван в список не влезает.
+  for (let i = 0; i < 60; i++) {
+    apply(store, { game: 'durak', round: `x${i}`, places: people(1000 + i, 2000 + i), loserId: 2000 + i, at: t.clock.now() });
+  }
+  apply(store, { game: 'durak', round: 'ivan', places: [{ id: 101, name: 'Иван' }, { id: 303, name: 'Дима' }], loserId: 303, at: t.clock.now() });
+
+  t.openHub(ivan);
+  await t.send(ivan, { t: 'rating' });
+  const s = t.state(ivan);
+  assert.equal(s.kind, 'rating');
+  assert.equal(s.game, 'durak');
+  assert.equal(s.period, 'month', 'по умолчанию — месяц: у новичка должен быть шанс');
+  assert.equal(s.top.length, 50, 'в списке первые пятьдесят');
+  assert.ok(s.top.every((r, i) => i === 0 || r.points <= s.top[i - 1].points), 'список идёт сверху вниз');
+  assert.ok(s.mine, 'своя строка приходит всегда, даже когда в список не попал');
+  assert.equal(s.mine.points, 20);
+  assert.ok(s.mine.place > 1 && s.mine.total > 50, `своё место среди всех: ${s.mine.place} из ${s.mine.total}`);
+
+  // Ни карт, ни ставок, ни чатов — на этом экране только места и очки.
+  const json = JSON.stringify(s);
+  for (const bad of ['cards', 'stack', 'chatId', 'hands']) assert.ok(!json.includes(bad), `в рейтинге есть ${bad}`);
+
+  await t.send(ivan, { t: 'pick', period: 'all' });
+  assert.equal(t.state(ivan).period, 'all');
+  await t.send(ivan, { t: 'pick', game: 'poker' });
+  assert.equal(t.state(ivan).game, 'poker');
+  assert.equal(t.state(ivan).top.length, 0, 'в покер ещё не играли');
+  assert.equal(t.state(ivan).mine, null, 'и своей строки нет — врать не о чем');
+
+  await t.send(ivan, { t: 'pick', game: 'durak' });
+  await t.send(ivan, { t: 'who', id: '303' });
+  const who = t.state(ivan).who;
+  assert.equal(who.name, 'Дима');
+  assert.equal(who.fools, 1, 'он оставался дураком');
+  assert.equal(who.last[0].sign, '−10', 'и видно, за что');
+
+  await t.send(ivan, { t: 'back' });
+  assert.equal(t.state(ivan).kind, 'hub', '«Назад» возвращает в игры группы');
+  t.app.stop();
+  store.close();
+});
+
+test('страница не может попросить у рейтинга ничего лишнего', async () => {
+  const store = new Store(':memory:');
+  const t = new Table({ store });
+  const ivan = user(101, 'Иван');
+  await t.start(ivan);
+  await t.cmd(ivan, '/play');
+  t.openHub(ivan);
+  await t.send(ivan, { t: 'rating' });
+
+  await t.send(ivan, { t: 'stopAll' });
+  assert.equal(t.lastError(ivan)?.code, 'BAD_REQUEST', 'чужое действие на этом экране — отказ');
+  assert.equal(t.state(ivan).kind, 'rating', 'и экран не поехал');
+
+  // Несуществующая игра не подменяет список: остаётся то, что было.
+  await t.send(ivan, { t: 'pick', game: 'шашки' });
+  assert.equal(t.state(ivan).game, 'durak');
+  t.app.stop();
+  store.close();
+});

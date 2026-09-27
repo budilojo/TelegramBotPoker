@@ -67,12 +67,12 @@ function play(room, until, pick) {
 }
 
 const scenes = [];
-function scene(name, room, viewer, { width = 390, height = 780, click = null, start = room.code, tap = [], scroll = 0, tab = null, before = null } = {}) {
+function scene(name, room, viewer, { width = 390, height = 780, click = null, press = null, start = room.code, tap = [], scroll = 0, tab = null, before = null } = {}) {
   const user = { id: viewer, first_name: PEOPLE.find(([id]) => id === viewer)?.[1] ?? 'Гость' };
   const initData = signInitData({ auth_date: Math.floor(Date.now() / 1000), user, ...(start ? { start_param: start } : {}) }, TOKEN);
   // `before` — то, что надо сделать с ботом ровно перед этой страницей
   // (включить обслуживание): иначе оно попало бы на все остальные снимки.
-  scenes.push({ name, code: start, initData, width, height, click, tap, scroll, tab, before });
+  scenes.push({ name, code: start, initData, width, height, click, press, tap, scroll, tab, before });
 }
 
 const deck6 = stack({ 101: 'As Kh', 102: 'Qs Qd', 103: '9c 9d', 104: '7h 2c', 105: 'Jd 10d', 106: '5s 4s' }, '10s Jh Qc 3d 8s');
@@ -289,6 +289,28 @@ function playOut(room) {
   scene('26-maintenance', r, 102, { before: () => app.setMaintenance(true, 'Обновляемся. Вернёмся через пять минут.') });
 }
 
+// 25. Рейтинг: он постоянный, поэтому для снимка нужна история, а не текущий
+// стол. Очки проставлены прямо в базу — как их проставили бы сыгранные вечера.
+{
+  const chatId = String(chat--);
+  const g = app.ensureGroup(chatId, 'Свои');
+  const open = durak(3, { chatId });
+  const day = Date.now();
+  const cast = [
+    [102, 'Артём', 8], [103, 'Макс', 6], [104, 'Дима', 5], [105, 'Саша', 3], [106, 'Лена', 2], [101, 'Иван', 4],
+  ];
+  let n = 0;
+  for (const [id, name, wins] of cast) {
+    for (let i = 0; i < wins; i++) {
+      app.store.rate({ userId: id, game: 'durak', round: `pre${n++}`, place: 1, of: 4, delta: 20, name, win: true, at: day - i * 3_600_000 });
+    }
+    app.store.rate({ userId: id, game: 'durak', round: `pre${n++}`, place: 4, of: 4, delta: -10, name, fool: true, at: day - 7_200_000 });
+  }
+  // Обслуживание включалось для снимка 26 — снять, иначе рейтинга не видно.
+  scene('27-rating', open, 101, { start: `g_${g.code}`, press: 'Рейтинг', before: () => app.setMaintenance(false) });
+  scene('28-rating-who', open, 101, { start: `g_${g.code}`, press: ['Рейтинг', 'Артём'] });
+}
+
 app.syncClocks(); // turn deadlines, as the running bot would have them
 const web = startServer({ hub, port: PORT, root: path.join(ROOT, 'miniapp'), log: () => {} });
 await new Promise((r) => web.server.once('listening', r));
@@ -331,6 +353,16 @@ if (serve) {
     if (s.click) {
       await page.getByRole('button', { name: s.click, exact: false }).first().click();
       await page.waitForSelector('.sheet');
+    }
+    // `press` — нажать и остаться: экран сменится, шторки не будет.
+    for (const label of [].concat(s.press || [])) {
+      try {
+        await page.getByRole('button', { name: label, exact: false }).first().click({ timeout: 4000 });
+      } catch (err) {
+        console.log(`[${s.name}] «${label}» не нашлось. На экране:\n${(await page.evaluate(() => document.body.innerText)).slice(0, 400)}`);
+        throw err;
+      }
+      await page.waitForTimeout(220);
     }
     for (const card of s.tap) await page.locator(`.dk-card[data-card="${card}"]`).click();
     if (s.scroll) await page.evaluate((y) => document.querySelector('.lobby')?.scrollTo(0, y), s.scroll);

@@ -33,6 +33,9 @@ export function render() {
         h('div.gc-blurb', g.blurb),
         h('div.gc-players', `${g.min}–${g.max} игроков`)),
       h('div.gc-go', '→')))),
+    h('button.rt-open', { onclick: () => { haptic.tap(); send({ t: 'rating' }, { lock: false }); } },
+      h('span', '🏆 Рейтинг'),
+      h('small', 'кто чего стоит — за месяц и за всё время')),
     h('div.section-label', 'Открытые игры в группе'),
     s.lobbies.length
       ? h('div.lobby-list', s.lobbies.map(lobbyRow))
@@ -51,6 +54,9 @@ function renderHome(s) {
         h('div.lr-title', g.title),
         h('div.lr-sub', g.live ? `открыто игр: ${g.live}` : 'сейчас ничего не открыто')),
       h('button.btn.sm.primary', { onclick: () => { haptic.tap(); send({ t: 'group', code: g.code }); } }, 'Открыть')))),
+    h('button.rt-open', { onclick: () => { haptic.tap(); send({ t: 'rating' }, { lock: false }); } },
+      h('span', '🏆 Рейтинг'),
+      h('small', 'кто чего стоит — за месяц и за всё время')),
     h('div.hint', 'Здесь группы, где вы писали боту или играли. Новая группа — добавьте бота и напишите там /game.'),
   ));
 }

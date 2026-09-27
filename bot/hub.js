@@ -24,6 +24,8 @@ import { checkInitData } from './webapp-auth.js';
 import { GAMES, GAME_LIST, gameOf } from './games/index.js';
 import { HUB_PREFIX, MAX_LIVE_PER_GROUP } from './app.js';
 import { AUDIENCES, ERRORS as CAST_ERRORS } from './broadcast.js';
+import { GAME_RU, PER_DAY, sign } from './rating.js';
+import { ym } from './fmt.js';
 
 const CORE_ERRORS = {
   BAD_REQUEST: 'Не понял запрос.',
@@ -42,7 +44,7 @@ export const ERRORS = Object.assign({}, ...Object.values(GAMES).map((g) => g.err
 /** What a page may say whatever it is looking at. */
 const COMMON = new Set(['visible']);
 /** What a page may say on a group's hub. */
-const HUB_ACTIONS = new Set(['create', 'join', 'home']);
+const HUB_ACTIONS = new Set(['create', 'join', 'home', 'rating']);
 /** Код, по которому открывается админка. Пускает не он, а список в `.env`. */
 const ADMIN_CODE = 'admin';
 /** Что страница админки может попросить. Всё остальное — отказ. */
@@ -163,7 +165,7 @@ export class Hub {
     }
     // У «моих групп» нет своего списка подписчиков: состояние собирается по
     // запросу, рассылать его некуда.
-    if (session.kind === 'home') return;
+    if (session.kind === 'home' || session.kind === 'rating') return;
     const map = session.kind === 'hub' ? this.byGroup : this.byRoom;
     const key = session.kind === 'hub' ? session.group : session.code;
     const set = map.get(key);
@@ -195,6 +197,7 @@ export class Hub {
   resend(session) {
     if (session.kind === 'admin') return this.pushAdmin(session);
     if (session.kind === 'home') return this.pushHome(session);
+    if (session.kind === 'rating') return this.pushRating(session);
     if (session.kind === 'hub') return this.pushHub(session);
     if (this.app.down) return void session.send({ t: 'state', state: this.downState() });
     const room = this.app.roomByCode(session.code);
@@ -383,6 +386,7 @@ export class Hub {
     }
     if (session.kind === 'hub') return this.handleHub(session, msg);
     if (session.kind === 'home') return this.handleHome(session, msg);
+    if (session.kind === 'rating') return this.handleRating(session, msg);
     if (session.kind === 'admin') {
       if (COMMON.has(msg.t)) {
         session.visible = !!msg.visible;
@@ -479,12 +483,61 @@ export class Hub {
     }
   }
 
+  /**
+   * Рейтинг. Своего списка подписчиков у него нет — как и у «моих групп»:
+   * он не меняется сам по себе, его собирают по запросу.
+   */
+  enterRating(session, { game = 'durak', period = 'month' } = {}) {
+    this.detach(session);
+    session.kind = 'rating';
+    session.code = null;
+    session.rating = { game: GAMES[game] ? game : 'durak', period: period === 'all' ? 'all' : 'month', who: null };
+    this.pushRating(session);
+  }
+
+  pushRating(session) {
+    if (this.app.down) return void session.send({ t: 'state', state: this.downState() });
+    try {
+      session.send({ t: 'state', state: ratingView(this.app, session.user, { ...session.rating, back: session.group ? 'hub' : 'home' }) });
+    } catch (err) {
+      this.app.log(err);
+      this.refuse(session, 'NO_RATING', 'Рейтинг сейчас не отдаётся — попробуйте позже.');
+    }
+  }
+
+  handleRating(session, msg) {
+    if (COMMON.has(msg.t)) {
+      session.visible = !!msg.visible;
+      return;
+    }
+    switch (msg.t) {
+      case 'pick':
+        // Игра и срок — единственное, что страница здесь решает.
+        if (msg.game != null) session.rating.game = GAMES[String(msg.game)] ? String(msg.game) : session.rating.game;
+        if (msg.period != null) session.rating.period = msg.period === 'all' ? 'all' : 'month';
+        session.rating.who = null;
+        return this.pushRating(session);
+      case 'who':
+        // Карточка игрока: места и очки. Ни карт, ни ставок здесь нет.
+        session.rating.who = msg.id == null ? null : String(msg.id);
+        return this.pushRating(session);
+      case 'refresh':
+        return this.pushRating(session);
+      case 'back':
+        if (session.group && this.app.groupByCode(session.group)) return this.enterHub(session);
+        return this.pushHome(session);
+      default:
+        return this.refuse(session, 'BAD_REQUEST');
+    }
+  }
+
   /** «My groups»: step into one of them — only one of this person's own. */
   handleHome(session, msg) {
     if (COMMON.has(msg.t)) {
       session.visible = !!msg.visible;
       return;
     }
+    if (msg.t === 'rating') return this.enterRating(session, msg);
     if (msg.t !== 'group') return this.refuse(session, 'BAD_REQUEST');
     const group = this.app.groupsOf(session.user.id).find((g) => g.code === String(msg.code || ''));
     if (!group) return this.refuse(session, 'NOT_YOUR_GROUP');
@@ -506,6 +559,7 @@ export class Hub {
       if (!session.home) return this.refuse(session, 'BAD_REQUEST');
       return this.pushHome(session);
     }
+    if (msg.t === 'rating') return this.enterRating(session, msg);
 
     if (msg.t === 'join') {
       const room = app.roomByCode(String(msg.code || ''));
@@ -568,6 +622,62 @@ export function hubView(app, group, user, { home = false } = {}) {
     me: { name: user.name },
     games: GAME_LIST.map((g) => ({ id: g.id, title: g.title, icon: g.icon, blurb: g.blurb, min: g.minPlayers, max: g.maxPlayers })),
     lobbies,
+  };
+}
+
+/**
+ * Рейтинг одним состоянием: список, своя строка и, если открыли карточку
+ * человека, его карточка.
+ *
+ * Своя строка отдаётся ВСЕГДА, даже когда человека нет в первой полусотне:
+ * без неё список — чужая доска почёта, а не твой рейтинг. Ни карт, ни ставок,
+ * ни того, с кем именно играли, здесь нет: только места и очки.
+ */
+export function ratingView(app, user, { game = 'durak', period = 'month', who = null, back = 'hub' } = {}) {
+  const now = app.clock.now();
+  const month = period === 'month' ? ym(now) : null;
+  const store = app.store;
+  const uid = String(user.id);
+  const top = store.ratingTop(game, { month, limit: 50 }).map((r, i) => ({
+    place: i + 1,
+    userId: String(r.userId),
+    name: r.name || 'Игрок',
+    points: r.points,
+    played: r.played,
+    wins: r.wins,
+    fools: r.fools,
+    me: String(r.userId) === uid,
+  }));
+  const card = (id) => {
+    const r = store.ratingOf(id, game, { month });
+    if (!r) return null;
+    return {
+      userId: String(id),
+      name: r.name || 'Игрок',
+      points: r.points,
+      place: r.place,
+      total: r.total,
+      played: r.played,
+      wins: r.wins,
+      fools: r.fools,
+      // Последние партии — откуда взялись очки. Без этого число не объяснить.
+      last: store.ratingLog(id, game, 5).map((x) => ({ place: x.place, of: x.of, delta: x.delta, sign: sign(x.delta), at: x.at })),
+    };
+  };
+  return {
+    kind: 'rating',
+    now,
+    bot: app.botUsername,
+    me: { name: user.name },
+    back,
+    game,
+    period,
+    month,
+    perDay: PER_DAY,
+    games: GAME_LIST.map((g) => ({ id: g.id, title: GAME_RU[g.id] || g.title, icon: g.icon })),
+    top,
+    mine: card(uid),
+    who: who && who !== uid ? card(who) : null,
   };
 }
 

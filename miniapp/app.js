@@ -10,18 +10,20 @@
 import { tg, $app, h, tickClocks, flushAnimations, closeSheet } from './ui.js';
 import { net, bus, connect, send, serverNow, initData, isOpen } from './net.js';
 import * as hub from './hub.js';
+import * as rating from './rating.js';
 import * as admin from './admin.js';
 import * as down from './down.js';
 import * as poker from './games/poker.js';
 import * as durak from './games/durak.js';
 
-const SCREENS = { hub, admin, down, poker, durak };
+const SCREENS = { hub, rating, admin, down, poker, durak };
 
 /** Which module draws this state. Rooms saved before the hub carry no `game`: poker. */
 const screenOf = (s) =>
   s?.kind === 'down' ? 'down'
     : s?.kind === 'admin' ? 'admin'
-      : s?.kind === 'hub' || s?.kind === 'home' ? 'hub'
+      : s?.kind === 'rating' ? 'rating'
+        : s?.kind === 'hub' || s?.kind === 'home' ? 'hub'
         : s?.game === 'durak' ? 'durak' : 'poker';
 /** A different screen (another room, or the hub) starts without a "before". */
 const placeOf = (s) => (s ? `${s.kind || screenOf(s)}:${s.kind === 'hub' ? s.group?.code : s.kind === 'home' ? '' : s.room?.code}` : '');
