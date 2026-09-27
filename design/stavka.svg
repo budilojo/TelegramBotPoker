@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Стол покера, 360×780 — экран телефона, в котором живёт игра.
+  Шторка: ставка, 360×780 — экран телефона, в котором живёт игра.
 
   Собрано генератором tools/make-design.mjs по макету владельца. Группы
   названы по-русски, текст настоящий, цвета из docs/design.md. Перетащите в
@@ -25,6 +25,7 @@
 </defs>
 <g clip-path="url(#ekran)">
 <rect x="0" y="0" width="360" height="780" rx="0" fill="#0A1216"/>
+<g filter="url(#razmytie)" opacity="0.85">
 <g id="Верх">
 <rect x="12" y="16" width="92" height="32" rx="16" fill="#13212A" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
 <text x="30" y="37" font-size="12.5" font-weight="700" fill="#F2F7F5" text-anchor="start">Флоп</text>
@@ -234,6 +235,39 @@
 <rect x="244" y="704" width="104" height="60" rx="14" fill="#F2C96B"/>
 <text x="296" y="735.04" font-size="14" font-weight="800" fill="#2A1F06" text-anchor="middle">Рейз</text>
 <text x="296" y="750" font-size="11" font-weight="700" fill="#2A1F06" text-anchor="middle">900</text>
+</g>
+</g>
+<rect x="0" y="0" width="360" height="780" rx="0" fill="#03090C" opacity="0.62"/>
+<g id="Шторка">
+<rect x="0" y="430" width="360" height="350" rx="26" fill="#182B35" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+<rect x="160" y="444" width="40" height="5" rx="3" fill="rgba(255,255,255,0.28)"/>
+<text x="20" y="484" font-size="11" font-weight="800" fill="#A9BCC0" text-anchor="start" letter-spacing="2.5">СДЕЛАТЬ СТАВКУ</text>
+<text x="20" y="548" font-size="52" font-weight="800" fill="#F2C96B" text-anchor="start">600</text>
+<text x="20" y="578" font-size="13" font-weight="600" fill="#A9BCC0" text-anchor="start">Выберите размер ставки</text>
+<g id="Ползунок">
+<rect x="20" y="600" width="320" height="8" rx="4" fill="rgba(255,255,255,0.14)"/>
+<rect x="20" y="600" width="116" height="8" rx="4" fill="#2EE08C"/>
+<circle cx="136" cy="604" r="15" fill="#FFFFFF"/>
+<text x="20" y="626" font-size="12" font-weight="700" fill="#6E858B" text-anchor="start">100</text>
+<text x="340" y="626" font-size="12" font-weight="700" fill="#6E858B" text-anchor="end">2 000</text>
+</g>
+<g id="Размер 1/2 банка">
+<rect x="20" y="630" width="104" height="60" rx="14" fill="rgba(46,224,140,0.10)" stroke="#2EE08C" stroke-width="2"/>
+<text x="72" y="655" font-size="13" font-weight="800" fill="#F2F7F5" text-anchor="middle">1/2 банка</text>
+<text x="72" y="675" font-size="13" font-weight="800" fill="#2EE08C" text-anchor="middle">600</text>
+</g>
+<g id="Размер Банк">
+<rect x="128" y="630" width="104" height="60" rx="14" fill="#13212A" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+<text x="180" y="655" font-size="13" font-weight="800" fill="#A9BCC0" text-anchor="middle">Банк</text>
+<text x="180" y="675" font-size="13" font-weight="800" fill="#6E858B" text-anchor="middle">1 200</text>
+</g>
+<g id="Размер Олл-ин">
+<rect x="236" y="630" width="104" height="60" rx="14" fill="#13212A" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+<text x="288" y="655" font-size="13" font-weight="800" fill="#A9BCC0" text-anchor="middle">Олл-ин</text>
+<text x="288" y="675" font-size="13" font-weight="800" fill="#6E858B" text-anchor="middle">4 720</text>
+</g>
+<rect x="20" y="706" width="320" height="58" rx="16" fill="#2EE08C"/>
+<text x="180" y="740.76" font-size="16" font-weight="800" fill="#0A2016" text-anchor="middle">Сделать ставку 600</text>
 </g>
 </g>
 </svg>

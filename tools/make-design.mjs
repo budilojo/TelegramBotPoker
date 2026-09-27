@@ -151,6 +151,10 @@ function page(title, ...kids) {
   <linearGradient id="zoloto" x1="0" y1="0" x2="0" y2="1">
     <stop offset="0%" stop-color="#F2C96B" stop-opacity="0.16"/><stop offset="100%" stop-color="#F2C96B" stop-opacity="0.04"/>
   </linearGradient>
+  <filter id="razmytie" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="7"/></filter>
+  <linearGradient id="zolotoFon" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#F2C96B" stop-opacity="0.14"/><stop offset="100%" stop-color="#F2C96B" stop-opacity="0.05"/>
+  </linearGradient>
   <clipPath id="ekran"><rect width="${W}" height="${H}"/></clipPath>
 </defs>
 <g clip-path="url(#ekran)">
@@ -225,7 +229,7 @@ function durak() {
 
 /* =================================================== 2. СТОЛ ПОКЕРА */
 
-function poker() {
+function pokerBody() {
   const seat = (name, stack, act, cx, cy, { actFill = C.panel, actInk = C.mid, actStroke = null } = {}) => g(`Место ${name}`,
     back(cx - 20, cy - 34, { w: 20, rot: -8 }),
     back(cx - 4, cy - 34, { w: 20, rot: 8 }),
@@ -235,7 +239,7 @@ function poker() {
     text(cx, cy + 58, stack, { size: 13, weight: 800, fill: C.ink, anchor: 'middle' }),
     act ? chip(cx - 34, cy + 70, 68, 22, act, { fill: actFill, ink: actInk, stroke: actStroke }) : null);
 
-  return page('Стол покера',
+  return [
     g('Верх',
       rect(12, 16, 92, 32, { r: 16, fill: C.panel, stroke: 'rgba(255,255,255,0.10)' }),
       text(30, 37, 'Флоп', { size: 12.5, weight: 700, fill: C.ink }),
@@ -285,7 +289,84 @@ function poker() {
     g('Действия',
       button(12, 704, 104, 60, 'Сбросить', { fill: 'rgba(232,87,76,0.12)', ink: C.red, stroke: C.red, sub: '300', size: 14 }),
       button(128, 704, 104, 60, 'Колл', { fill: C.green, ink: C.greenInk, sub: '300', size: 14 }),
-      button(244, 704, 104, 60, 'Рейз', { fill: C.gold, ink: '#2A1F06', sub: '900', size: 14 })));
+      button(244, 704, 104, 60, 'Рейз', { fill: C.gold, ink: '#2A1F06', sub: '900', size: 14 })),
+  ];
+}
+
+const poker = () => page('Стол покера', ...pokerBody());
+
+/* ============================================= 6. ИТОГИ ПАРТИИ */
+
+function results() {
+  const row = (y, place, name, what, ratingLine, delta, kind) => {
+    const border = kind === 'win' ? C.green : kind === 'last' ? C.gold : 'rgba(255,255,255,0.07)';
+    const fill = kind === 'win' ? 'rgba(46,224,140,0.07)' : kind === 'last' ? 'rgba(242,201,107,0.07)' : C.panel;
+    const badge = kind === 'win' ? C.green : kind === 'last' ? C.gold : '#2A3B45';
+    const badgeInk = kind === 'plain' ? C.mid : '#0D1A12';
+    return g(`Строка ${name}`,
+      rect(12, y, 336, 88, { r: 18, fill, stroke: border, sw: kind === 'plain' ? 1 : 2 }),
+      circle(46, y + 44, 19, { fill: badge }),
+      text(46, y + 50, String(place), { size: 16, weight: 800, fill: badgeInk, anchor: 'middle' }),
+      avatar(100, y + 44, 25),
+      text(136, y + 34, name, { size: 16, weight: 800, fill: C.ink }),
+      text(136, y + 53, what, { size: 11.5, weight: 600, fill: C.mid }),
+      text(136, y + 70, ratingLine, { size: 11, weight: 700, fill: kind === 'last' ? C.gold : C.green }),
+      text(338, y + 50, delta, { size: 19, weight: 800, anchor: 'end',
+        fill: delta.startsWith('+') ? C.green : kind === 'last' ? C.gold : C.ink }));
+  };
+
+  return page('Итоги партии',
+    g('Заголовок',
+      text(180, 52, 'ИГРА ЗАВЕРШЕНА', { size: 11, weight: 800, fill: C.gold, anchor: 'middle', spacing: '3' }),
+      text(180, 104, 'Вы победили!', { size: 34, weight: 800, fill: C.ink, anchor: 'middle' }),
+      text(180, 132, 'Спасибо за игру. Отличная партия!', { size: 13.5, weight: 600, fill: C.mid, anchor: 'middle' })),
+
+    row(164, 1, 'Алексей', 'Собрал стрит', '+20 очков · 3-е место в рейтинге', '+3 450', 'win'),
+    row(264, 2, 'Ирина', 'Собрала две пары', '+12 очков · 5-е место', '+1 200', 'plain'),
+    row(364, 3, 'Максим', 'Собрал пару', '+6 очков · 9-е место', '−800', 'plain'),
+    row(464, 4, 'Ольга', 'Без комбинации', '−10 очков · 14-е место', '−3 850', 'last'),
+
+    g('Как считали',
+      text(180, 592, 'Фишки — по правилам стола, очки — по рейтингу.', { size: 11.5, weight: 600, fill: C.low, anchor: 'middle' }),
+      text(180, 610, 'Партия доиграна до конца, поэтому зачтена.', { size: 11.5, weight: 600, fill: C.low, anchor: 'middle' })),
+
+    g('Кнопки',
+      button(12, 686, 162, 62, 'Закрыть', { fill: 'transparent', ink: C.mid, stroke: 'rgba(255,255,255,0.18)', size: 16, r: 18 }),
+      button(186, 686, 162, 62, 'Сыграть ещё', { fill: C.green, ink: C.greenInk, size: 16, r: 18 })));
+}
+
+/* ========================================== 7. ШТОРКА: СТАВКА */
+
+function bet() {
+  const preset = (x, top, sum, on) => g(`Размер ${top}`,
+    rect(x, 630, 104, 60, { r: 14, fill: on ? 'rgba(46,224,140,0.10)' : C.panel, stroke: on ? C.green : 'rgba(255,255,255,0.12)', sw: on ? 2 : 1 }),
+    text(x + 52, 655, top, { size: 13, weight: 800, fill: on ? C.ink : C.mid, anchor: 'middle' }),
+    text(x + 52, 675, sum, { size: 13, weight: 800, fill: on ? C.green : C.low, anchor: 'middle' }));
+
+  return page('Шторка: ставка',
+    `<g filter="url(#razmytie)" opacity="0.85">\n${pokerBody().join('\n')}\n</g>`,
+    rect(0, 0, W, H, { fill: '#03090C', opacity: 0.62 }),
+
+    g('Шторка',
+      rect(0, 430, W, 350, { r: 26, fill: C.sheet, stroke: 'rgba(255,255,255,0.08)' }),
+      rect(160, 444, 40, 5, { r: 3, fill: 'rgba(255,255,255,0.28)' }),
+
+      text(20, 484, 'СДЕЛАТЬ СТАВКУ', { size: 11, weight: 800, fill: C.mid, spacing: '2.5' }),
+      text(20, 548, '600', { size: 52, weight: 800, fill: C.gold }),
+      text(20, 578, 'Выберите размер ставки', { size: 13, weight: 600, fill: C.mid }),
+
+      g('Ползунок',
+        rect(20, 600, 320, 8, { r: 4, fill: 'rgba(255,255,255,0.14)' }),
+        rect(20, 600, 116, 8, { r: 4, fill: C.green }),
+        circle(136, 604, 15, { fill: '#FFFFFF' }),
+        text(20, 626, '100', { size: 12, weight: 700, fill: C.low }),
+        text(340, 626, '2 000', { size: 12, weight: 700, fill: C.low, anchor: 'end' })),
+
+      preset(20, '1/2 банка', '600', true),
+      preset(128, 'Банк', '1 200', false),
+      preset(236, 'Олл-ин', '4 720', false),
+
+      button(20, 706, 320, 58, 'Сделать ставку 600', { fill: C.green, ink: C.greenInk, size: 16, r: 16 })));
 }
 
 /* ========================================================= 3. ХАБ */
@@ -449,6 +530,8 @@ const files = {
   'hub.svg': hub(),
   'reyting.svg': rating(),
   'lobby-poker.svg': lobby(),
+  'itogi.svg': results(),
+  'stavka.svg': bet(),
 };
 
 fs.mkdirSync(OUT, { recursive: true });

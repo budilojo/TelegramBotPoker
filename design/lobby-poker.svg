@@ -17,6 +17,10 @@
   <linearGradient id="zoloto" x1="0" y1="0" x2="0" y2="1">
     <stop offset="0%" stop-color="#F2C96B" stop-opacity="0.16"/><stop offset="100%" stop-color="#F2C96B" stop-opacity="0.04"/>
   </linearGradient>
+  <filter id="razmytie" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="7"/></filter>
+  <linearGradient id="zolotoFon" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#F2C96B" stop-opacity="0.14"/><stop offset="100%" stop-color="#F2C96B" stop-opacity="0.05"/>
+  </linearGradient>
   <clipPath id="ekran"><rect width="360" height="780"/></clipPath>
 </defs>
 <g clip-path="url(#ekran)">
