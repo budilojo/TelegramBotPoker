@@ -16,6 +16,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+/**
+ * Рисунки придворных карт, туза пик и рубашки — готовит tools/make-court-art.mjs.
+ * Они вшиты в файл строкой, а не лежат рядом картинками, потому что карта
+ * грузится как `<img src="…svg">`, а SVG внутри <img> не имеет права тянуть
+ * внешние картинки: браузер их просто не покажет.
+ */
+const ART = JSON.parse(fs.readFileSync(new URL('./court-art.json', import.meta.url), 'utf8'));
+const COURT = { J: 'valet', Q: 'dama', K: 'korol' };
+
 const OUT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'miniapp', 'cards');
 
 const W = 200;
@@ -59,15 +68,15 @@ function face(rank, s) {
   const tint = color === RED ? '#fdecee' : '#eef1f5';
   let centre;
   if (rank === 'A') {
-    centre = suit(s, W / 2, H / 2 + 4, 118);
+    // Туз пик — с узором, как в старых колодах; остальные тузы просто крупной мастью.
+    centre = s === 'S'
+      ? `<image href="${ART.tuzPik.data}" x="52" y="92" width="96" height="96" preserveAspectRatio="xMidYMid meet"/>`
+      : suit(s, W / 2, H / 2 + 4, 118);
   } else if (FACE[rank]) {
-    // Court cards: a framed panel with the letter and the suit. Clean, and
-    // unmistakable at a glance — no tiny portraits to squint at.
-    centre =
-      // The panel stays clear of the corner indices (they reach x = 52).
-      `<rect x="60" y="66" width="80" height="148" rx="12" fill="${tint}" stroke="${color}" stroke-opacity=".35" stroke-width="3"/>` +
-      `<text x="${W / 2}" y="${H / 2 + 4}" text-anchor="middle" font-family="${FONT}" font-weight="800" font-size="74" fill="${color}">${FACE[rank]}</text>` +
-      suit(s, W / 2, H / 2 + 44, 36);
+    // Придворные: зеркально-двойная фигура, как на настоящей карте. Поле
+    // подобрано так, чтобы она не налезала на угловой индекс (он достаёт до
+    // x = 52), и одинаково для всех трёх — иначе король встанет выше дамы.
+    centre = `<image href="${ART[COURT[rank]].data}" x="38" y="48" width="124" height="184" preserveAspectRatio="xMidYMid meet"/>`;
   } else {
     centre = suit(s, W / 2, H / 2 + 6, 104);
   }
@@ -80,20 +89,13 @@ function face(rank, s) {
 }
 
 function back() {
-  // Felt green with a fine diamond lattice and a spade in the middle — the
-  // colours of the table, so a face-down card reads as "ours".
+  // Рубашка: свой орнамент в цветах игры. Узор без верха и низа — карта не
+  // читается перевёрнутой, и по ней ничего нельзя угадать.
   return svg(
-    `<defs>` +
-      `<pattern id="p" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">` +
-      `<rect width="16" height="16" fill="#12623f"/>` +
-      `<rect width="8" height="16" fill="#0f5536"/>` +
-      `</pattern>` +
-      `</defs>` +
+    `<defs><clipPath id="c"><rect x="14" y="14" width="${W - 28}" height="${H - 28}" rx="11"/></clipPath></defs>` +
       `<rect x="2" y="2" width="${W - 4}" height="${H - 4}" rx="18" fill="#fff" stroke="#d6dbe1" stroke-width="3"/>` +
-      `<rect x="14" y="14" width="${W - 28}" height="${H - 28}" rx="11" fill="url(#p)"/>` +
-      `<rect x="14" y="14" width="${W - 28}" height="${H - 28}" rx="11" fill="none" stroke="#2ee08c" stroke-opacity=".35" stroke-width="2"/>` +
-      `<circle cx="${W / 2}" cy="${H / 2}" r="34" fill="#0b3f28" stroke="#2ee08c" stroke-opacity=".5" stroke-width="2"/>` +
-      `<path d="${SUIT_PATH.S}" fill="#2ee08c" transform="translate(${W / 2 - 22} ${H / 2 - 22}) scale(.44)"/>`
+      `<image href="${ART.rubashka.data}" x="14" y="14" width="${W - 28}" height="${H - 28}" preserveAspectRatio="xMidYMid slice" clip-path="url(#c)"/>` +
+      `<rect x="14" y="14" width="${W - 28}" height="${H - 28}" rx="11" fill="none" stroke="#7FD8E8" stroke-opacity=".35" stroke-width="2"/>`
   );
 }
 
