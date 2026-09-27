@@ -41,12 +41,21 @@ apt-get install -y -qq curl ca-certificates gnupg git sqlite3 ufw debian-keyring
 MEM_MB=$(free -m | awk '/^Mem:/{print $2}')
 SWAP_MB=$(free -m | awk '/^Swap:/{print $2}')
 DISK_GB=$(df -BG --output=size / | tail -1 | tr -dc '0-9')
-if [ "${MEM_MB:-0}" -lt 1500 ] && [ "${SWAP_MB:-0}" -lt 512 ]; then
+if [ "${MEM_MB:-0}" -ge 1500 ] || [ "${SWAP_MB:-0}" -ge 256 ]; then
+  # Половина образов провайдеров уже идёт с подкачкой на 512 МБ. Её хватает,
+  # и трогать работающую подкачку ради лишних мегабайт — менять надёжное на
+  # чуть большее.
+  [ "${SWAP_MB:-0}" -gt 0 ] && say "Подкачка уже есть (${SWAP_MB} МБ) — оставляю как есть"
+else
   # На диске 10 ГБ два гигабайта подкачки — это пятая часть места. Гигабайта
   # хватает: подкачка нужна сборке, а не игре.
   SWAP_GB=2
   [ "${DISK_GB:-20}" -lt 15 ] && SWAP_GB=1
-  say "Памяти ${MEM_MB} МБ — добавляю ${SWAP_GB} ГБ подкачки"
+  say "Памяти ${MEM_MB} МБ, подкачки ${SWAP_MB} МБ — делаю ${SWAP_GB} ГБ"
+  # Файл может уже существовать и быть включённым: перезаписать его на ходу
+  # нельзя (dd скажет «Text file busy»), поэтому сначала отключаем.
+  swapon --show=NAME --noheadings 2>/dev/null | grep -qx /swapfile && swapoff /swapfile
+  rm -f /swapfile
   fallocate -l ${SWAP_GB}G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=$((SWAP_GB * 1024)) status=none
   chmod 600 /swapfile
   mkswap /swapfile >/dev/null
