@@ -181,7 +181,17 @@ if ! command -v caddy >/dev/null; then
   apt-get install -y -qq caddy
 fi
 mkdir -p /var/log/caddy && chown caddy:caddy /var/log/caddy
-sed "s/ДОМЕН/$DOMAIN/" "$APP/deploy/Caddyfile" > /etc/caddy/Caddyfile
+# www добавляется, только если он куда-то указывает: Caddy просит сертификат
+# на каждое имя в строке, и неразрешимое имя будет впустую жечь попытки
+# Let's Encrypt — ровно то, из-за чего потом не выпускается нужный.
+SITE="$DOMAIN"
+if getent hosts "www.$DOMAIN" >/dev/null 2>&1; then
+  SITE="$DOMAIN, www.$DOMAIN"
+  say "www.$DOMAIN тоже смотрит сюда — беру оба имени"
+fi
+sed "s/ДОМЕН/$SITE/" "$APP/deploy/Caddyfile" > /etc/caddy/Caddyfile
+# Проверить конфиг до перезапуска: сломанный Caddyfile гасит сайт целиком.
+caddy validate --config /etc/caddy/Caddyfile >/dev/null 2>&1 || die "Caddyfile не прошёл проверку — смотрите /etc/caddy/Caddyfile"
 systemctl restart caddy
 
 say "Файрвол: наружу открыты только SSH и сайт"
