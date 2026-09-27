@@ -17,6 +17,7 @@
     "preview": "node --disable-warning=ExperimentalWarning tools/preview.mjs",
     "e2e": "node --disable-warning=ExperimentalWarning tools/e2e.mjs && node --disable-warning=ExperimentalWarning tools/e2e-durak.mjs && node --disable-warning=ExperimentalWarning tools/e2e-admin.mjs",
     "cards": "node tools/make-cards.mjs",
+    "brand": "node --disable-warning=ExperimentalWarning tools/make-avatar.mjs",
     "layout": "node --disable-warning=ExperimentalWarning tools/layout-check.mjs"
   },
   "engines": {
