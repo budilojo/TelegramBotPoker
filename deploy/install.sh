@@ -35,9 +35,14 @@ apt-get install -y -qq curl ca-certificates gnupg git sqlite3 ufw debian-keyring
 # случалось; игре она не нужна — нужна сборке.
 MEM_MB=$(free -m | awk '/^Mem:/{print $2}')
 SWAP_MB=$(free -m | awk '/^Swap:/{print $2}')
+DISK_GB=$(df -BG --output=size / | tail -1 | tr -dc '0-9')
 if [ "${MEM_MB:-0}" -lt 1500 ] && [ "${SWAP_MB:-0}" -lt 512 ]; then
-  say "Памяти ${MEM_MB} МБ — добавляю 2 ГБ подкачки"
-  fallocate -l 2G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=2048 status=none
+  # На диске 10 ГБ два гигабайта подкачки — это пятая часть места. Гигабайта
+  # хватает: подкачка нужна сборке, а не игре.
+  SWAP_GB=2
+  [ "${DISK_GB:-20}" -lt 15 ] && SWAP_GB=1
+  say "Памяти ${MEM_MB} МБ — добавляю ${SWAP_GB} ГБ подкачки"
+  fallocate -l ${SWAP_GB}G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=$((SWAP_GB * 1024)) status=none
   chmod 600 /swapfile
   mkswap /swapfile >/dev/null
   swapon /swapfile
@@ -163,6 +168,18 @@ ufw allow 80/tcp >/dev/null
 ufw allow 443/tcp >/dev/null
 ufw --force enable >/dev/null
 ufw status | head -8
+
+# Логи systemd по умолчанию растут, пока не займут 10% диска. На диске 10 ГБ
+# это гигабайт логов про то, как хорошо всё работало. Двухсот мегабайт хватает
+# на несколько недель — ровно на «посмотреть, что случилось позавчера».
+say "Ограничиваю журнал 200 МБ"
+mkdir -p /etc/systemd/journald.conf.d
+cat > /etc/systemd/journald.conf.d/worldcard.conf <<'JRN'
+[Journal]
+SystemMaxUse=200M
+MaxRetentionSec=3week
+JRN
+systemctl restart systemd-journald
 
 say "Бэкап базы раз в сутки, в 4 утра"
 cat > /etc/cron.d/worldcard-backup <<CRON
