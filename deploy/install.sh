@@ -139,6 +139,12 @@ if [ -t 0 ] && ! grep -q '^BOT_TOKEN=.\+' "$APP/.env"; then
   read -r ADMIN_IN
   [ -n "$ADMIN_IN" ] && sudo -u "$USER" sed -i "s|^ADMINS=.*|ADMINS=$ADMIN_IN|" "$APP/.env"
 
+  # Короткое имя приложения из @BotFather → /newapp. Без него кнопка в группе
+  # ведёт в личку с ботом, и это лишний тап для каждого игрока.
+  printf '  короткое имя мини-приложения (@BotFather → /myapps), пропустить — Enter: '
+  read -r MINIAPP_IN
+  [ -n "$MINIAPP_IN" ] && sudo -u "$USER" sed -i "s|^MINIAPP=.*|MINIAPP=$MINIAPP_IN|" "$APP/.env"
+
   printf '  токен админ-бота (необязательно), пропустить — Enter: '
   read -rs ADMIN_TOKEN_IN
   echo
