@@ -24,7 +24,7 @@
     "node": ">=22.5"
   },
   "devDependencies": {
-    "playwright": "^1.49.0"
+    "playwright": "^1.63.0"
   },
   "dependencies": {
     "express": "^4.19.2",

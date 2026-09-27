@@ -26,13 +26,13 @@ import { signInitData } from '../bot/webapp-auth.js';
 import * as R from '../bot/room.js';
 import * as D from '../bot/games/durak/rules.js';
 import { shuffled36 } from '../bot/games/durak/cards.js';
-import { seededRng } from '../bot/deck.js';
+import { seededRng, shuffled } from '../bot/deck.js';
 import { legalActions } from '../server/game.js';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.LAYOUT_PORT || 8097);
 const TOKEN = `0:${crypto.randomBytes(16).toString('hex')}`;
-const SHOTS = process.argv.includes('--shots');
+const SHOTS = process.argv.includes('--shots') || process.env.SHOTS === '1';
 const OUT = path.join(ROOT, 'preview', 'layout');
 
 const VIEWPORTS = [
@@ -67,16 +67,26 @@ function play(room, until, pick) {
 }
 
 const scenes = [];
+/**
+ * Колода — засеянная, как и у дурака.
+ *
+ * Без этого проверка каждый раз смотрит ДРУГОЙ расклад: на вскрытии у всех
+ * новые комбинации, у них разной длины названия, и налезание то появляется,
+ * то исчезает. Такая проверка ничего не гарантирует и не воспроизводится:
+ * упало у одного — у другого «всё чисто», и чинить нечего.
+ */
+const pokerDeck = (seed) => () => shuffled(seededRng(seed));
+
 for (let n = 2; n <= 8; n++) {
   // In progress: big raises on every plate, the hero to act.
   const a = table(n);
-  R.startGame(a, '101');
+  R.startGame(a, '101', { deck: pokerDeck(100 + n) });
   play(a, (x) => x.hand.actorId === '101' && x.hand.log.length > n, (x, id, l) =>
     l.canRaise && x.hand.currentBet < 20_000_000 ? ['raise', x.hand.currentBet + 4_000_000] : [l.canCheck ? 'check' : 'call']);
   scenes.push({ name: `${n}p-betting`, room: a });
   // Showdown: everybody all-in, every hand shown and named, a result line.
   const b = table(n);
-  R.startGame(b, '101');
+  R.startGame(b, '101', { deck: pokerDeck(200 + n) });
   play(b, () => false, (x, id, l) => (l.canBet || l.canRaise ? ['allin'] : ['call']));
   if (b.status === 'finished') b.status = 'playing'; // somebody busted: keep the table, not the results
   scenes.push({ name: `${n}p-showdown`, room: b });
