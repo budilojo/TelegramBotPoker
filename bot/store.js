@@ -21,7 +21,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
-import { ymd, ymdBack } from './fmt.js';
+import { ym, ymd, ymdBack } from './fmt.js';
 
 // A row without a code (only a hand-written INSERT can make one) still gets a
 // unique key, so it can never collide with — or overwrite — a real table.
@@ -103,9 +103,54 @@ CREATE TABLE IF NOT EXISTS broadcasts (
   note       TEXT
 );
 CREATE INDEX IF NOT EXISTS broadcasts_by_at ON broadcasts (status, at);
+
+-- Рейтинг: у каждой игры свой. Хороший дурак и хороший покерист — разные
+-- умения, складывать их в одно число нечестно.
+--   points       — за всё время; не обнуляется никогда;
+--   month_points — за месяц; столбец month хранит, за какой ('2026-09'),
+--                  и очки обнуляются при первой же записи нового месяца:
+--                  ночная задача для этого не нужна.
+CREATE TABLE IF NOT EXISTS ratings (
+  user_id      TEXT NOT NULL,
+  game         TEXT NOT NULL,
+  name         TEXT,
+  points       INTEGER NOT NULL DEFAULT 0,
+  month        TEXT,
+  month_points INTEGER NOT NULL DEFAULT 0,
+  played       INTEGER NOT NULL DEFAULT 0,
+  wins         INTEGER NOT NULL DEFAULT 0,
+  fools        INTEGER NOT NULL DEFAULT 0,
+  updated_at   INTEGER NOT NULL,
+  PRIMARY KEY (user_id, game)
+);
+CREATE INDEX IF NOT EXISTS ratings_by_points ON ratings (game, points DESC);
+
+-- Откуда у человека очки. Без этого нельзя ни показать «последние партии»,
+-- ни ответить, если он спросит, за что ему столько.
+CREATE TABLE IF NOT EXISTS rating_log (
+  id      INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
+  game    TEXT NOT NULL,
+  round   TEXT NOT NULL,
+  place   INTEGER NOT NULL,
+  of      INTEGER NOT NULL,
+  delta   INTEGER NOT NULL,
+  at      INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS rating_log_by_user ON rating_log (user_id, game, at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS rating_log_once ON rating_log (user_id, game, round);
+
+-- Сколько зачётных партий у этого состава сегодня. Вдвоём за час можно
+-- нарисовать любое число — вот это и не даёт.
+CREATE TABLE IF NOT EXISTS party_day (
+  fingerprint TEXT NOT NULL,
+  day         TEXT NOT NULL,
+  n           INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (fingerprint, day)
+);
 `;
 
-export const SCHEMA_VERSION = '3';
+export const SCHEMA_VERSION = '4';
 
 export class Store {
   /** @param file path, or ':memory:' for tests */
@@ -430,6 +475,108 @@ export class Store {
     };
   }
 
+  /* -------------------------------------------------------------- рейтинг */
+
+  /**
+   * Начислить одному человеку за одну партию.
+   *
+   * Строка журнала уникальна по (человек, игра, партия). Если ту же партию
+   * попробуют засчитать второй раз — перезапуск, повторный вызов, что угодно —
+   * запись не пройдёт и очки не удвоятся; метод вернёт false.
+   *
+   * Ниже нуля рейтинг не опускается: упереться в дно и бросить не за что.
+   */
+  rate({ userId, game, round, place, of, delta, name = null, win = false, fool = false, at = Date.now() }) {
+    const id = String(userId);
+    const month = ym(at);
+    const log = this.db
+      .prepare('INSERT OR IGNORE INTO rating_log (user_id, game, round, place, of, delta, at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(id, String(game), String(round), Math.round(place), Math.round(of), Math.round(delta), at);
+    if (!log.changes) return false;
+    const row = this.db.prepare('SELECT name, points, month, month_points FROM ratings WHERE user_id = ? AND game = ?').get(id, String(game));
+    // Сменился месяц — счёт месяца начинается с нуля сам, без ночной задачи.
+    const wasMonth = row?.month === month ? row.month_points : 0;
+    const points = Math.max(0, (row?.points ?? 0) + delta);
+    const monthPoints = Math.max(0, wasMonth + delta);
+    this.db
+      .prepare(
+        'INSERT INTO ratings (user_id, game, name, points, month, month_points, played, wins, fools, updated_at) ' +
+          'VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?) ' +
+          'ON CONFLICT(user_id, game) DO UPDATE SET name = excluded.name, points = ?, month = ?, month_points = ?, ' +
+          'played = played + 1, wins = wins + ?, fools = fools + ?, updated_at = excluded.updated_at'
+      )
+      .run(id, String(game), name ?? row?.name ?? null, points, month, monthPoints, win ? 1 : 0, fool ? 1 : 0, at,
+        points, month, monthPoints, win ? 1 : 0, fool ? 1 : 0);
+    return true;
+  }
+
+  /** Сколько зачётных партий у этого состава за день. */
+  partyCount(fingerprint, at = Date.now()) {
+    return this.db.prepare('SELECT n FROM party_day WHERE fingerprint = ? AND day = ?').get(String(fingerprint), ymd(at))?.n ?? 0;
+  }
+
+  /** Записать ещё одну зачётную партию этого состава; вернуть, какая по счёту. */
+  countParty(fingerprint, at = Date.now()) {
+    this.db
+      .prepare('INSERT INTO party_day (fingerprint, day, n) VALUES (?, ?, 1) ON CONFLICT(fingerprint, day) DO UPDATE SET n = n + 1')
+      .run(String(fingerprint), ymd(at));
+    return this.partyCount(fingerprint, at);
+  }
+
+  /**
+   * Таблица рейтинга. `month` — за какой месяц ('2026-09'); без него за всё
+   * время. При равенстве очков выше тот, кто сыграл меньше партий: одинаковый
+   * счёт за меньшее число вечеров — лучше.
+   */
+  ratingTop(game, { month = null, limit = 50, offset = 0 } = {}) {
+    const sql = month
+      ? 'SELECT user_id, name, month_points AS points, played, wins, fools FROM ratings ' +
+        'WHERE game = ? AND month = ? AND month_points > 0 ORDER BY month_points DESC, played ASC, user_id LIMIT ? OFFSET ?'
+      : 'SELECT user_id, name, points, played, wins, fools FROM ratings ' +
+        'WHERE game = ? AND played > 0 ORDER BY points DESC, played ASC, user_id LIMIT ? OFFSET ?';
+    const args = month ? [String(game), month, limit, offset] : [String(game), limit, offset];
+    return this.db.prepare(sql).all(...args).map((r) => ({ ...r, userId: String(r.user_id) }));
+  }
+
+  /** Строка одного человека: его очки, место и сколько всего в списке. */
+  ratingOf(userId, game, { month = null } = {}) {
+    const id = String(userId);
+    const row = this.db.prepare('SELECT * FROM ratings WHERE user_id = ? AND game = ?').get(id, String(game));
+    if (!row) return null;
+    const points = month ? (row.month === month ? row.month_points : 0) : row.points;
+    const col = month ? 'month_points' : 'points';
+    const where = month ? 'game = ? AND month = ? AND month_points > 0' : 'game = ? AND played > 0';
+    const args = month ? [String(game), month] : [String(game)];
+    // Место считается ровно тем же порядком, что и список: очки, потом
+    // меньше сыгранных партий. Иначе при равных очках человек видит «2-е
+    // место», а в списке стоит третьим — и правильно не верит ни тому, ни
+    // другому.
+    const above = this.db
+      .prepare(
+        `SELECT COUNT(*) AS n FROM ratings WHERE ${where} AND ` +
+          `(${col} > ? OR (${col} = ? AND (played < ? OR (played = ? AND user_id < ?))))`
+      )
+      .get(...args, points, points, row.played, row.played, id)?.n ?? 0;
+    const total = this.db.prepare(`SELECT COUNT(*) AS n FROM ratings WHERE ${where}`).get(...args)?.n ?? 0;
+    return {
+      userId: id,
+      name: row.name,
+      points,
+      played: row.played,
+      wins: row.wins,
+      fools: row.fools,
+      place: points > 0 || !month ? above + 1 : 0,
+      total,
+    };
+  }
+
+  /** Последние партии человека — откуда взялись очки. */
+  ratingLog(userId, game, limit = 5) {
+    return this.db
+      .prepare('SELECT round, place, of, delta, at FROM rating_log WHERE user_id = ? AND game = ? ORDER BY at DESC, id DESC LIMIT ?')
+      .all(String(userId), String(game), limit);
+  }
+
   close() {
     try {
       this.db.close();
@@ -452,6 +599,10 @@ export class NullStore {
     /** Рассылки живут в памяти: тесты, которым они нужны, берут настоящий Store. */
     this.casts = new Map();
     this.nextCast = 1;
+    /** Рейтинг — тоже в памяти, с теми же правилами: партия считается один раз. */
+    this.rating = new Map();
+    this.rated = new Set();
+    this.parties = new Map();
   }
   getDm(userId) {
     return this.dm.get(String(userId)) ?? null;
@@ -498,6 +649,57 @@ export class NullStore {
     if (!cur) return null;
     Object.assign(cur, patch);
     return cur;
+  }
+  rate({ userId, game, round, place, of, delta, name = null, win = false, fool = false, at = Date.now() }) {
+    const key = `${userId}:${game}`;
+    if (this.rated.has(`${key}:${round}`)) return false;
+    this.rated.add(`${key}:${round}`);
+    const month = ym(at);
+    const r = this.rating.get(key) || { userId: String(userId), game, name, points: 0, month, monthPoints: 0, played: 0, wins: 0, fools: 0, log: [] };
+    if (r.month !== month) {
+      r.month = month;
+      r.monthPoints = 0;
+    }
+    r.name = name ?? r.name;
+    r.points = Math.max(0, r.points + delta);
+    r.monthPoints = Math.max(0, r.monthPoints + delta);
+    r.played += 1;
+    if (win) r.wins += 1;
+    if (fool) r.fools += 1;
+    r.log.unshift({ round: String(round), place, of, delta, at });
+    this.rating.set(key, r);
+    return true;
+  }
+  partyCount(fingerprint, at = Date.now()) {
+    return this.parties.get(`${fingerprint}:${ymd(at)}`) ?? 0;
+  }
+  countParty(fingerprint, at = Date.now()) {
+    const key = `${fingerprint}:${ymd(at)}`;
+    const n = (this.parties.get(key) ?? 0) + 1;
+    this.parties.set(key, n);
+    return n;
+  }
+  ratingTop(game, { month = null, limit = 50, offset = 0 } = {}) {
+    return [...this.rating.values()]
+      .filter((r) => r.game === game && (month ? r.month === month && r.monthPoints > 0 : r.played > 0))
+      .map((r) => ({ userId: r.userId, name: r.name, points: month ? r.monthPoints : r.points, played: r.played, wins: r.wins, fools: r.fools }))
+      .sort((a, b) => b.points - a.points || a.played - b.played || a.userId.localeCompare(b.userId))
+      .slice(offset, offset + limit);
+  }
+  ratingOf(userId, game, { month = null } = {}) {
+    const r = this.rating.get(`${userId}:${game}`);
+    if (!r) return null;
+    const list = this.ratingTop(game, { month, limit: 1e6 });
+    const points = month ? (r.month === month ? r.monthPoints : 0) : r.points;
+    const at = list.findIndex((x) => x.userId === String(userId));
+    return {
+      userId: String(userId), name: r.name, points, played: r.played, wins: r.wins, fools: r.fools,
+      place: at < 0 ? 0 : at + 1,
+      total: list.length,
+    };
+  }
+  ratingLog(userId, game, limit = 5) {
+    return (this.rating.get(`${userId}:${game}`)?.log ?? []).slice(0, limit);
   }
   save() {}
   loadAll() {

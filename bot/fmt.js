@@ -117,6 +117,9 @@ export function ymd(ts, tz = process.env.TZ || undefined) {
 /** The day `n` days before `ts`, same format. */
 export const ymdBack = (ts, n, tz) => ymd(ts - n * 86_400_000, tz);
 
+/** Месяц строкой: 2026-09. По нему рейтинг понимает, что месяц сменился. */
+export const ym = (ts, tz) => ymd(ts, tz).slice(0, 7);
+
 /** 14:31 in the table's timezone. */
 export function hhmm(ts, tz = process.env.TZ || undefined) {
   const d = new Date(ts);

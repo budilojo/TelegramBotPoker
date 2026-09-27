@@ -14,6 +14,7 @@ import * as R from '../../room.js';
 import { tableView } from '../../view.js';
 import { renderCard, renderResults, renderTurnPing } from '../../render.js';
 import { num } from '../../fmt.js';
+import { results as tally } from '../../../server/game.js';
 
 /** What the page may ask for at a poker table, and nothing else. */
 const ACTIONS = new Set([
@@ -172,6 +173,28 @@ export default {
 
   card: (room, opts) => renderCard(room, opts),
   results: (room) => renderResults(room),
+
+  /**
+   * Для рейтинга покерный вечер — одна партия, а не каждая раздача: иначе
+   * очки шли бы за усидчивость. Места по итогу вечера, размер стека на очки
+   * не влияет — иначе один вечер с большими блайндами перевесит десять
+   * обычных. Кто ушёл или удалён, не получает ничего: он не доиграл.
+   */
+  rounds(room) {
+    if (room.status !== 'finished') return [];
+    const byId = new Map(room.players.map((p) => [p.id, p]));
+    const players = tally(room)
+      .filter((r) => r.role !== 'dealer' && r.handsPlayed > 0)
+      .filter((r) => !byId.get(r.id)?.kicked && !byId.get(r.id)?.left)
+      .sort((a, b) => b.net - a.net || b.stack - a.stack);
+    if (players.length < 2) return [];
+    return [{
+      id: room.code,
+      aborted: false,
+      loserId: players.at(-1).id,
+      places: players.map((r) => ({ id: r.id, name: r.name })),
+    }];
+  },
 
   /** Who the table is waiting for — the one player on the clock. */
   waiting(room) {

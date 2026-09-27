@@ -84,6 +84,23 @@ export default {
   results: (room) => renderResults(room),
 
   /**
+   * Партии, которые рейтингу есть смысл считать. В дураке партия — это одна
+   * сдача: у неё есть дурак и есть порядок выхода. Прерванная сюда тоже
+   * попадает — и получает отказ с объяснением, а не тихо пропадает.
+   */
+  rounds(room) {
+    return room.history.map((g) => {
+      const order = [...(g.out || []), ...(g.fool ? [g.fool] : [])];
+      return {
+        id: `${room.code}#${g.no}`,
+        aborted: !!g.aborted,
+        loserId: g.fool || null,
+        places: order.map((id) => ({ id, name: D.findPlayer(room, id)?.name ?? null })),
+      };
+    });
+  },
+
+  /**
    * Who the game is blocked on: the attacker who must open a bout, the
    * defender facing cards, or — once everything is covered or being taken —
    * everybody who may still throw in and has not said "пас".

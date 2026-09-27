@@ -27,6 +27,7 @@ import { Outbox } from './outbox.js';
 import { NullStore } from './store.js';
 import { esc } from './fmt.js';
 import { GAMES, GAME_LIST, gameOf } from './games/index.js';
+import { apply as rateRound } from './rating.js';
 
 const HELP = [
   '🎮 <b>Игры в Telegram</b> — покер и дурак в мини-приложении.',
@@ -536,11 +537,43 @@ export class App {
     return this.roomsOf(chatId).filter((r) => r.status !== 'finished');
   }
 
+  /**
+   * Записать в рейтинг всё, что доиграно и ещё не засчитано.
+   *
+   * Зовётся после каждого хода и в конце игры — это безопасно: партия
+   * засчитывается один раз, и за это отвечает не память процесса, а база
+   * (строка журнала уникальна по человеку, игре и партии). Перезапуск между
+   * концом партии и записью ничего не удвоит и ничего не потеряет.
+   *
+   * Итог каждой партии кладётся в `room.rated` — из него экран итогов берёт
+   * «+20 · 3-е место», а отказ («партия не доиграна») объясняется словами.
+   */
+  rate(room) {
+    const rounds = gameOf(room).rounds?.(room) ?? [];
+    if (!rounds.length) return [];
+    const seen = (room.rated ||= {});
+    const fresh = [];
+    for (const r of rounds) {
+      if (seen[r.id]) continue;
+      let out;
+      try {
+        out = rateRound(this.store, { ...r, game: room.game, round: r.id, at: this.clock.now() });
+      } catch (err) {
+        this.log(err);
+        continue; // рейтинг не должен ронять игру: сыграли — и ладно
+      }
+      seen[r.id] = out;
+      fresh.push({ round: r.id, ...out });
+    }
+    return fresh;
+  }
+
   /** Chips or cards moved: show it — or, if that ended the game, the results. */
   async afterAction(room) {
     // Something the game shows on its own clock (the poker all-in board): it
     // posts the results itself at the end if this was the last hand.
     if (gameOf(room).beginShow?.(this, room)) return this.draw(room);
+    this.rate(room); // в дураке партию заканчивает ход, а не сдача следующей
     if (room.status === 'finished') return this.finishUp(room);
     await this.draw(room);
   }
@@ -993,6 +1026,7 @@ export class App {
     // The card says the game is over; the results go below it as their own
     // message — the one message of the evening worth a notification.
     const g = gameOf(room);
+    this.rate(room);
     this.note('finished', room);
     this.outbox.cancel(room.chatId, room.code);
     g.onFinish?.(room);

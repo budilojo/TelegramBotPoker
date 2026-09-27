@@ -48,7 +48,7 @@ export function createRoom({ chatId, host, title = '', code = newRoomCode(), var
     gameNo: 0,
     lastFool: null, // the durak of the last finished game: the next one is played "under" them
     lastDealer: null,
-    history: [], // { no, fool, draw, aborted }
+    history: [], // { no, fool, draw, aborted, out: [id...] — порядок выхода }
     deal: null,
     turn: null, // { key, deadline, remaining } — the turn timer, when the host switched it on
     seq: 1,
@@ -527,7 +527,9 @@ function endDeal(room, foolId) {
   d.phase = 'over';
   d.fool = foolId;
   d.draw = !foolId;
-  room.history.push({ no: d.no, fool: foolId, draw: !foolId });
+  // Порядок выхода нужен рейтингу: очки идут за место, а не за победу, и
+  // «вышел вторым» — это другое, чем «вышел четвёртым».
+  room.history.push({ no: d.no, fool: foolId, draw: !foolId, out: [...d.out] });
   room.lastFool = foolId;
   room.lastDealer = d.dealer;
   for (const id of d.order) {
