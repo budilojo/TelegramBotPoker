@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Стол дурака, 360×740 — размер экрана телефона, в котором живёт игра.
+
+  Это не обведённая картинка, а собранный макет: каждая группа названа
+  по-русски, цвета взяты из палитры игры (docs/design.md), текст — настоящий
+  текст, а не буквы-картинки. Перетащите файл в Figma — слои откроются
+  такими же, какие здесь: двигайте, красьте, переставляйте.
+
+  Имена групп менять можно; по ним никто не ищет.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="740" viewBox="0 0 360 740" font-family="Inter, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <defs>
+    <radialGradient id="suknoDurak" cx="50%" cy="38%" r="72%">
+      <stop offset="0%" stop-color="#1E6E7E"/>
+      <stop offset="58%" stop-color="#12495A"/>
+      <stop offset="100%" stop-color="#0A2E39"/>
+    </radialGradient>
+    <linearGradient id="rubashka" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1B4A63"/>
+      <stop offset="100%" stop-color="#123549"/>
+    </linearGradient>
+    <clipPath id="krayEkrana"><rect x="0" y="0" width="360" height="740"/></clipPath>
+
+    <!-- Карта лицом: индекс в углу, масть крупно. -->
+    <symbol id="karta" viewBox="0 0 60 84">
+      <rect x="0.5" y="0.5" width="59" height="83" rx="9" fill="#F7F4EC" stroke="#000" stroke-opacity="0.25"/>
+    </symbol>
+    <symbol id="rubashkaKarta" viewBox="0 0 60 84">
+      <rect x="0.5" y="0.5" width="59" height="83" rx="9" fill="url(#rubashka)" stroke="#0A2028"/>
+      <rect x="4" y="4" width="52" height="76" rx="6" fill="none" stroke="#7FD8E8" stroke-opacity="0.45"/>
+      <path d="M8 40 L30 12 L52 40 L30 68 Z" fill="none" stroke="#7FD8E8" stroke-opacity="0.3"/>
+      <circle cx="30" cy="40" r="7" fill="none" stroke="#7FD8E8" stroke-opacity="0.35"/>
+    </symbol>
+  </defs>
+
+  <g clip-path="url(#krayEkrana)">
+    <rect width="360" height="740" fill="#0A1216"/>
+
+    <!-- ================================================= верхняя строка -->
+    <g id="Верх">
+      <rect x="12" y="14" width="62" height="30" rx="15" fill="#13212A" stroke="#6E858B" stroke-opacity="0.45"/>
+      <text x="43" y="34" fill="#A9BCC0" font-size="12" font-weight="700" text-anchor="middle">R7QF</text>
+
+      <text x="180" y="34" fill="#A9BCC0" font-size="12" font-weight="600" text-anchor="middle">подкидной · козырь <tspan fill="#D2342B" font-weight="800">9♦</tspan></text>
+
+      <rect x="316" y="14" width="32" height="30" rx="15" fill="#13212A" stroke="#6E858B" stroke-opacity="0.45"/>
+      <text x="332" y="33" fill="#A9BCC0" font-size="14" font-weight="800" text-anchor="middle">⋯</text>
+    </g>
+
+    <!-- ========================================================= сукно -->
+    <g id="Сукно">
+      <path d="M-20 260 A200 196 0 0 1 380 260 L380 412 A40 40 0 0 1 340 452 L20 452 A40 40 0 0 1 -20 412 Z"
+            fill="url(#suknoDurak)" stroke="#07222B" stroke-width="6"/>
+    </g>
+
+    <!-- ===================================================== соперники -->
+    <g id="Соперники">
+      <g id="Место Макс">
+        <circle cx="84" cy="118" r="23" fill="#13212A" stroke="#52B8FF" stroke-width="3"/>
+        <text x="84" y="126" fill="#F2F7F5" font-size="18" font-weight="800" text-anchor="middle">М</text>
+        <rect x="59" y="147" width="50" height="20" rx="10" fill="#000" fill-opacity="0.38"/>
+        <text x="84" y="161" fill="#F2F7F5" font-size="11" font-weight="700" text-anchor="middle">Макс · 6</text>
+        <rect x="46" y="172" width="76" height="20" rx="10" fill="#52B8FF"/>
+        <text x="84" y="186" fill="#03192A" font-size="11" font-weight="800" text-anchor="middle">отбивается</text>
+      </g>
+      <g id="Место Лиза">
+        <circle cx="180" cy="100" r="23" fill="#13212A" stroke="#2EE08C" stroke-width="3"/>
+        <text x="180" y="108" fill="#F2F7F5" font-size="18" font-weight="800" text-anchor="middle">Л</text>
+        <rect x="155" y="129" width="50" height="20" rx="10" fill="#000" fill-opacity="0.38"/>
+        <text x="180" y="143" fill="#F2F7F5" font-size="11" font-weight="700" text-anchor="middle">Лиза · 4</text>
+        <rect x="152" y="154" width="56" height="20" rx="10" fill="#13212A" stroke="#2EE08C" stroke-opacity="0.6"/>
+        <text x="180" y="168" fill="#2EE08C" font-size="11" font-weight="800" text-anchor="middle">думает</text>
+      </g>
+      <g id="Место Дима">
+        <circle cx="276" cy="118" r="23" fill="#13212A" stroke="#6E858B" stroke-width="2"/>
+        <text x="276" y="126" fill="#F2F7F5" font-size="18" font-weight="800" text-anchor="middle">Д</text>
+        <rect x="251" y="147" width="50" height="20" rx="10" fill="#000" fill-opacity="0.38"/>
+        <text x="276" y="161" fill="#F2F7F5" font-size="11" font-weight="700" text-anchor="middle">Дима · 5</text>
+      </g>
+    </g>
+
+    <!-- ============================== колода: у левого края, козырь рангом -->
+    <g id="Колода">
+      <use href="#rubashkaKarta" x="-34" y="292" width="52" height="73"/>
+      <use href="#rubashkaKarta" x="-30" y="288" width="52" height="73"/>
+      <g transform="translate(46 292) rotate(90)">
+        <use href="#karta" width="52" height="73"/>
+        <text x="7" y="19" fill="#D2342B" font-size="17" font-weight="900">9</text>
+        <text x="7" y="34" fill="#D2342B" font-size="14">♦</text>
+        <text x="44" y="64" fill="#D2342B" font-size="30" text-anchor="end">♦</text>
+      </g>
+      <rect x="20" y="352" width="34" height="22" rx="11" fill="#000" fill-opacity="0.7" stroke="#fff" stroke-opacity="0.15"/>
+      <text x="37" y="367" fill="#F2F7F5" font-size="12" font-weight="900" text-anchor="middle">18</text>
+    </g>
+
+    <!-- ========================================== бита: у правого края -->
+    <g id="Бита">
+      <use href="#rubashkaKarta" x="330" y="296" width="50" height="70" transform="rotate(-6 355 331)"/>
+      <use href="#rubashkaKarta" x="336" y="292" width="50" height="70" transform="rotate(4 361 327)"/>
+      <rect x="296" y="368" width="58" height="20" rx="10" fill="#000" fill-opacity="0.7" stroke="#fff" stroke-opacity="0.15"/>
+      <text x="348" y="382" fill="#A9BCC0" font-size="11" font-weight="800" text-anchor="end">бито 12</text>
+    </g>
+
+    <!-- ============================================ кон: только он в центре -->
+    <g id="Кон">
+      <g id="Пара 1" transform="translate(96 232)">
+        <g transform="rotate(-4)">
+          <use href="#karta" width="52" height="73"/>
+          <text x="7" y="19" fill="#16202A" font-size="17" font-weight="900">7</text>
+          <text x="7" y="34" fill="#16202A" font-size="14">♣</text>
+          <text x="44" y="64" fill="#16202A" font-size="30" text-anchor="end">♣</text>
+        </g>
+        <g transform="translate(16 16) rotate(10)">
+          <use href="#karta" width="52" height="73"/>
+          <text x="7" y="19" fill="#16202A" font-size="17" font-weight="900">10</text>
+          <text x="7" y="34" fill="#16202A" font-size="14">♣</text>
+          <text x="44" y="64" fill="#16202A" font-size="30" text-anchor="end">♣</text>
+        </g>
+      </g>
+      <g id="Пара 2" transform="translate(196 232)">
+        <g transform="rotate(-3)">
+          <use href="#karta" width="52" height="73"/>
+          <text x="7" y="19" fill="#D2342B" font-size="17" font-weight="900">7</text>
+          <text x="7" y="34" fill="#D2342B" font-size="14">♥</text>
+          <text x="44" y="64" fill="#D2342B" font-size="30" text-anchor="end">♥</text>
+        </g>
+        <g transform="translate(16 16) rotate(9)">
+          <use href="#karta" width="52" height="73"/>
+          <text x="7" y="19" fill="#16202A" font-size="17" font-weight="900">В</text>
+          <text x="7" y="34" fill="#16202A" font-size="14">♠</text>
+          <text x="44" y="64" fill="#16202A" font-size="30" text-anchor="end">♠</text>
+        </g>
+      </g>
+      <g id="Пара 3 — ждёт ответа" transform="translate(150 316)">
+        <g transform="rotate(-4)">
+          <use href="#karta" width="52" height="73"/>
+          <text x="7" y="19" fill="#D2342B" font-size="17" font-weight="900">9</text>
+          <text x="7" y="34" fill="#D2342B" font-size="14">♦</text>
+          <text x="44" y="64" fill="#D2342B" font-size="30" text-anchor="end">♦</text>
+        </g>
+        <rect x="16" y="16" width="52" height="73" rx="9" fill="none" stroke="#52B8FF" stroke-width="2" stroke-dasharray="5 4"/>
+      </g>
+      <text x="180" y="432" fill="#F2F7F5" font-size="13" font-weight="800" text-anchor="middle">Макс отбивается</text>
+    </g>
+
+    <!-- ======================================================== кнопки -->
+    <g id="Действия">
+      <rect x="12" y="478" width="162" height="48" rx="14" fill="#13212A" stroke="#6E858B" stroke-opacity="0.45"/>
+      <text x="93" y="501" fill="#F2F7F5" font-size="14" font-weight="900" text-anchor="middle">ПАС</text>
+      <text x="93" y="515" fill="#6E858B" font-size="9" font-weight="700" text-anchor="middle">подкидывать нечего</text>
+
+      <rect x="186" y="478" width="162" height="48" rx="14" fill="#2EE08C"/>
+      <text x="267" y="501" fill="#16202A" font-size="14" font-weight="900" text-anchor="middle">БИТО</text>
+      <text x="267" y="515" fill="#16202A" font-size="9" font-weight="700" text-anchor="middle">кон закрыт</text>
+    </g>
+
+    <!-- ===================================================== своя рука -->
+    <g id="Моя рука">
+      <text x="180" y="558" fill="#52B8FF" font-size="11" font-weight="700" text-anchor="middle">ваш ход · бейте 9♦ или заберите</text>
+      <g transform="translate(22 578) rotate(-10 34 48)">
+        <use href="#karta" width="68" height="95"/>
+        <text x="9" y="25" fill="#16202A" font-size="22" font-weight="900">6</text>
+        <text x="9" y="44" fill="#16202A" font-size="18">♠</text>
+        <text x="58" y="84" fill="#16202A" font-size="38" text-anchor="end">♠</text>
+      </g>
+      <g transform="translate(72 574) rotate(-6 34 48)">
+        <use href="#karta" width="68" height="95"/>
+        <text x="9" y="25" fill="#16202A" font-size="22" font-weight="900">9</text>
+        <text x="9" y="44" fill="#16202A" font-size="18">♠</text>
+        <text x="58" y="84" fill="#16202A" font-size="38" text-anchor="end">♠</text>
+      </g>
+      <g transform="translate(122 570) rotate(-2 34 48)">
+        <use href="#karta" width="68" height="95"/>
+        <text x="9" y="25" fill="#D2342B" font-size="22" font-weight="900">10</text>
+        <text x="9" y="44" fill="#D2342B" font-size="18">♥</text>
+        <text x="58" y="84" fill="#D2342B" font-size="38" text-anchor="end">♥</text>
+      </g>
+      <g transform="translate(172 570) rotate(2 34 48)">
+        <use href="#karta" width="68" height="95"/>
+        <text x="9" y="25" fill="#D2342B" font-size="22" font-weight="900">В</text>
+        <text x="9" y="44" fill="#D2342B" font-size="18">♦</text>
+        <text x="58" y="84" fill="#D2342B" font-size="38" text-anchor="end">♦</text>
+      </g>
+      <g transform="translate(222 574) rotate(6 34 48)">
+        <use href="#karta" width="68" height="95"/>
+        <text x="9" y="25" fill="#16202A" font-size="22" font-weight="900">К</text>
+        <text x="9" y="44" fill="#16202A" font-size="18">♣</text>
+        <text x="58" y="84" fill="#16202A" font-size="38" text-anchor="end">♣</text>
+      </g>
+      <g transform="translate(272 578) rotate(10 34 48)">
+        <use href="#karta" width="68" height="95"/>
+        <text x="9" y="25" fill="#16202A" font-size="22" font-weight="900">Т</text>
+        <text x="9" y="44" fill="#16202A" font-size="18">♠</text>
+        <text x="58" y="84" fill="#16202A" font-size="38" text-anchor="end">♠</text>
+      </g>
+    </g>
+  </g>
+</svg>
