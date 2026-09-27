@@ -8,6 +8,18 @@
 # не выкатываем.
 set -euo pipefail
 
+# Этот скрипт лежит в том же репозитории, который сам же и обновляет. Bash
+# читает файл по мере выполнения — по смещению в байтах, — а `git reset
+# --hard` переписывает его на ходу. Если новая версия скрипта другой длины,
+# дальше можно уехать в середину чужой строки и выполнить мусор. Поэтому
+# первым делом копируем себя во временный файл и работаем уже оттуда.
+if [ "${UPDATE_FROM_COPY:-}" != "1" ]; then
+  COPY="$(mktemp /tmp/worldcard-update.XXXXXX.sh)"
+  cat "$0" > "$COPY"
+  UPDATE_FROM_COPY=1 exec bash "$COPY" "$@"
+fi
+trap 'rm -f "$0"' EXIT
+
 APP=/opt/worldcard
 USER=worldcard
 BRANCH="${1:-claude/bold-carson-kjswyx}"
