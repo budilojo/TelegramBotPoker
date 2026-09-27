@@ -100,6 +100,33 @@ ENV
   chown "$USER:$USER" "$APP/.env"
 fi
 
+# Токен спрашиваем здесь, а не просим вписать руками: набранное в командной
+# строке остаётся в истории, а редактор на сервере — это лишний шанс всё
+# испортить. `read -s` не печатает ввод на экран и в историю не попадает.
+if [ -t 0 ] && ! grep -q '^BOT_TOKEN=.\+' "$APP/.env"; then
+  echo
+  echo "Токен бота от @BotFather. Вставьте и нажмите Enter."
+  echo "На экране он НЕ появится — так и задумано. Пропустить — просто Enter."
+  printf '  токен: '
+  read -rs TOKEN_IN
+  echo
+  if [ -n "$TOKEN_IN" ]; then
+    sudo -u "$USER" sed -i "s|^BOT_TOKEN=.*|BOT_TOKEN=$TOKEN_IN|" "$APP/.env"
+    echo "  записал токен бота №$(echo "$TOKEN_IN" | cut -d: -f1)"
+  fi
+  unset TOKEN_IN
+
+  printf '  ваш Telegram-id (узнать у @userinfobot), пропустить — Enter: '
+  read -r ADMIN_IN
+  [ -n "$ADMIN_IN" ] && sudo -u "$USER" sed -i "s|^ADMINS=.*|ADMINS=$ADMIN_IN|" "$APP/.env"
+
+  printf '  токен админ-бота (необязательно), пропустить — Enter: '
+  read -rs ADMIN_TOKEN_IN
+  echo
+  [ -n "$ADMIN_TOKEN_IN" ] && sudo -u "$USER" sed -i "s|^ADMIN_BOT_TOKEN=.*|ADMIN_BOT_TOKEN=$ADMIN_TOKEN_IN|" "$APP/.env"
+  unset ADMIN_TOKEN_IN
+fi
+
 say "Автозапуск (systemd)"
 install -m 644 "$APP/deploy/worldcard.service" /etc/systemd/system/worldcard.service
 systemctl daemon-reload
@@ -130,21 +157,23 @@ cat > /etc/cron.d/worldcard-backup <<CRON
 CRON
 chmod 644 /etc/cron.d/worldcard-backup
 
+if grep -q '^BOT_TOKEN=.\+' "$APP/.env"; then
+  say "Запускаю бота"
+  systemctl restart worldcard
+  sleep 3
+  systemctl is-active --quiet worldcard && echo "бот работает" || echo "бот не поднялся — journalctl -u worldcard -n 30"
+fi
+
 cat <<DONE
 
 ==============================================================
- Почти всё. Осталось одно — и это то, чего скрипт делать не должен:
+ Готово. Что осталось:
 
- 1) Впишите токен бота:
+ 1) Если токен не вводили — впишите и запустите:
         sudo -u $USER nano $APP/.env
-    Заполните BOT_TOKEN, MINIAPP, ADMINS (и ADMIN_BOT_TOKEN, если нужен),
-    сохраните: Ctrl+O, Enter, Ctrl+X.
-
- 2) Запустите бота:
         sudo systemctl start worldcard
-        systemctl status worldcard
 
- 3) У @BotFather поставьте адрес мини-приложения:
+ 2) У @BotFather поставьте адрес мини-приложения:
         /myapps → ваше приложение → Edit Web App URL → https://$DOMAIN
 
  Проверить, что сайт жив:   curl -I https://$DOMAIN
