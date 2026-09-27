@@ -35,6 +35,25 @@ const FELT = `
     radial-gradient(120% 90% at 30% 8%, #1c7a4f 0%, #11583a 42%, #0b3d28 70%, #071b12 100%);
 `;
 
+/**
+ * Фишка шашек и кубик — чтобы иконка говорила «игры», а не только «карты».
+ * Рисуются геометрией, а не картинкой: на 20 пикселях от картинки всё равно
+ * остаётся пятно, а круг и квадрат с точками читаются.
+ */
+const checker = ({ x, y, d, hue = '#f2c96b' }) => `
+  <div class="chip" style="left:${x}px; top:${y}px; width:${d}px; height:${d}px;
+    background: radial-gradient(70% 70% at 35% 30%, ${hue}, #b8863a 70%, #8a5f22 100%);">
+    <i style="inset:${d * 0.16}px"></i>
+  </div>`;
+
+const die = ({ x, y, d, rot = 0 }) => `
+  <div class="die" style="left:${x}px; top:${y}px; width:${d}px; height:${d}px;
+    border-radius:${d * 0.2}px; transform: rotate(${rot}deg);">
+    ${[[0.26, 0.26], [0.5, 0.5], [0.74, 0.74]]
+      .map(([cx, cy]) => `<b style="left:${cx * d - d * 0.09}px; top:${cy * d - d * 0.09}px; width:${d * 0.18}px; height:${d * 0.18}px"></b>`)
+      .join('')}
+  </div>`;
+
 /** Одна карта: наклон, тень и тонкая тёмная кромка, чтобы белое не сливалось. */
 const put = (code, { x, y, rot, w }) => `
   <div class="card" style="
@@ -60,6 +79,16 @@ const page = ({ w, h, cards, ring = false }) => `<!doctype html>
     position:absolute; inset:0; border-radius:50%;
     box-shadow: inset 0 0 0 5px rgba(242,201,107,.5), inset 0 0 44px rgba(0,0,0,.5);
   }
+  .chip {
+    position:absolute; border-radius:50%;
+    box-shadow: 0 8px 14px rgba(0,0,0,.5), inset 0 -2px 6px rgba(0,0,0,.35);
+  }
+  .chip i { position:absolute; border-radius:50%; border:2px dashed rgba(255,255,255,.45); }
+  .die {
+    position:absolute; background:linear-gradient(160deg,#fff,#e6ebe8);
+    box-shadow: 0 8px 14px rgba(0,0,0,.5);
+  }
+  .die b { position:absolute; border-radius:50%; background:#161a20; }
   .card { position:absolute; transform-origin:50% 100%; filter: drop-shadow(0 10px 18px rgba(0,0,0,.55)); }
   .card svg { width:100%; height:auto; display:block; border-radius:6%; }
   .shine {
@@ -92,6 +121,22 @@ const avatar = page({
 });
 
 /*
+ * Вариант «игры вообще»: тот же веер, но из-за него выглядывают шашка и
+ * кубик. На 20 пикселях силуэт остаётся веером — то есть узнаётся, — а на
+ * 54 уже видно, что игра тут не одна.
+ */
+const avatarHub = page({
+  w: 512, h: 512, ring: true,
+  cards: [
+    checker({ x: 74, y: 268, d: 104 }),
+    die({ x: 348, y: 280, d: 96, rot: 12 }),
+    put('6H', { x: 176, y: 112, rot: -16, w: 160 }),
+    put('KD', { x: 176, y: 112, rot: 0, w: 160 }),
+    put('AS', { x: 176, y: 112, rot: 16, w: 160 }),
+  ].join(''),
+});
+
+/*
  * Баннер приложения: карты справа, слева спокойное сукно — туда потом можно
  * положить подпись, не наезжая на карты.
  */
@@ -100,6 +145,8 @@ const banner = page({
   // Веер из той же точки, что и на аватарке, только из четырёх карт и мельче:
   // он должен целиком помещаться в кадр, а не упираться в край.
   cards: [
+    checker({ x: 292, y: 232, d: 72 }),
+    die({ x: 516, y: 240, d: 66, rot: 10 }),
     put('6H', { x: 365, y: 103, rot: -27, w: 130 }),
     put('10S', { x: 365, y: 103, rot: -9, w: 130 }),
     put('KD', { x: 365, y: 103, rot: 9, w: 130 }),
@@ -112,18 +159,22 @@ const banner = page({
  * шапке и в профиле. Аватарку судят по маленькому кружку, а не по картинке
  * 512×512 — поэтому она и проверяется маленьким кружком.
  */
-const proof = (dataUrl) => `<!doctype html><meta charset="utf-8">
+const proof = (...urls) => `<!doctype html><meta charset="utf-8">
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { width:520px; height:200px; background:#17212b; display:flex; align-items:center;
-         gap:28px; padding:0 30px; font-family:-apple-system, 'SF Pro Text', Arial, sans-serif; color:#8a9aa8; }
-  .one { display:flex; flex-direction:column; align-items:center; gap:10px; }
+  body { width:520px; height:400px; background:#17212b; padding:26px 30px;
+         font-family:-apple-system, 'SF Pro Text', Arial, sans-serif; color:#8a9aa8; }
+  .row { display:flex; align-items:center; gap:26px; height:170px; }
+  .row + .row { border-top:1px solid rgba(255,255,255,.07); }
+  .title { position:absolute; font-size:12px; font-weight:700; color:#e6ecf1; }
+  .one { display:flex; flex-direction:column; align-items:center; gap:9px; }
   .one img { border-radius:50%; display:block; }
   .one span { font-size:11px; }
 </style>
-${[[108, 'профиль'], [54, 'список чатов'], [34, 'шапка'], [20, 'мелко']]
-    .map(([px, label]) => `<div class="one"><img src="${dataUrl}" width="${px}" height="${px}"><span>${px}px · ${label}</span></div>`)
-    .join('')}
+${urls.map((u, i) => `<div class="row"><div class="title" style="margin-top:-120px">${i ? '2 · карты, шашка и кубик' : '1 · только карты'}</div>
+  ${[[108, 'профиль'], [54, 'список чатов'], [34, 'шапка'], [20, 'мелко']]
+    .map(([px, label]) => `<div class="one"><img src="${u}" width="${px}" height="${px}"><span>${px}px · ${label}</span></div>`)
+    .join('')}</div>`).join('')}
 `;
 
 const require = createRequire(import.meta.url);
@@ -138,6 +189,7 @@ fs.mkdirSync(OUT, { recursive: true });
 const browser = await chromium.launch();
 for (const [name, html, w, h] of [
   ['avatar-512.png', avatar, 512, 512],
+  ['avatar-igry-512.png', avatarHub, 512, 512],
   ['banner-640x360.png', banner, 640, 360],
 ]) {
   const p = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
@@ -148,9 +200,9 @@ for (const [name, html, w, h] of [
   console.log(`· ${name}`);
 }
 // Кружки разного размера — на них и смотрим, прежде чем нести к @BotFather.
-const shot = fs.readFileSync(path.join(OUT, 'avatar-512.png')).toString('base64');
-const pv = await browser.newPage({ viewport: { width: 520, height: 200 }, deviceScaleFactor: 2 });
-await pv.setContent(proof(`data:image/png;base64,${shot}`));
+const url = (f) => `data:image/png;base64,${fs.readFileSync(path.join(OUT, f)).toString('base64')}`;
+const pv = await browser.newPage({ viewport: { width: 520, height: 400 }, deviceScaleFactor: 2 });
+await pv.setContent(proof(url('avatar-512.png'), url('avatar-igry-512.png')));
 await pv.waitForTimeout(120);
 await pv.screenshot({ path: path.join(OUT, 'kak-vyglyadit.png') });
 await pv.close();
