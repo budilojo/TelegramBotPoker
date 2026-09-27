@@ -30,6 +30,20 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq curl ca-certificates gnupg git sqlite3 ufw debian-keyring debian-archive-keyring apt-transport-https
 
+# На сервере с 1 ГБ памяти установка зависимостей и тесты упираются в потолок
+# и падают без объяснений. Двух гигабайт подкачки хватает, чтобы этого не
+# случалось; игре она не нужна — нужна сборке.
+MEM_MB=$(free -m | awk '/^Mem:/{print $2}')
+SWAP_MB=$(free -m | awk '/^Swap:/{print $2}')
+if [ "${MEM_MB:-0}" -lt 1500 ] && [ "${SWAP_MB:-0}" -lt 512 ]; then
+  say "Памяти ${MEM_MB} МБ — добавляю 2 ГБ подкачки"
+  fallocate -l 2G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=2048 status=none
+  chmod 600 /swapfile
+  mkswap /swapfile >/dev/null
+  swapon /swapfile
+  grep -q '^/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+fi
+
 say "Ставлю Node 22 (в нём встроенная SQLite, которой пользуется бот)"
 if ! node -v 2>/dev/null | grep -qE '^v2[2-9]'; then
   curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
