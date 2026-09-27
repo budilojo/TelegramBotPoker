@@ -23,7 +23,8 @@ sudo -u "$USER" git checkout "$BRANCH"
 sudo -u "$USER" git reset --hard "origin/$BRANCH"
 
 echo "· ставлю зависимости"
-sudo -u "$USER" npm ci
+# --omit=dev: на сервере не нужен браузер для e2e и картинок
+sudo -u "$USER" npm ci --omit=dev
 
 echo "· прогоняю тесты"
 sudo -u "$USER" npm test

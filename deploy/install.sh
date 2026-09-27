@@ -106,7 +106,8 @@ else
   sudo -u "$USER" git clone --branch "$BRANCH" "$REPO" "$APP"
 fi
 cd "$APP"
-sudo -u "$USER" npm ci
+# --omit=dev: на сервере не нужен браузер для e2e и картинок
+sudo -u "$USER" npm ci --omit=dev
 sudo -u "$USER" mkdir -p "$APP/data" "$APP/backups"
 
 say "Файл .env"

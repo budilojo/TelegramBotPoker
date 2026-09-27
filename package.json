@@ -23,6 +23,9 @@
   "engines": {
     "node": ">=22.5"
   },
+  "devDependencies": {
+    "playwright": "^1.49.0"
+  },
   "dependencies": {
     "express": "^4.19.2",
     "grammy": "^1.46.0",

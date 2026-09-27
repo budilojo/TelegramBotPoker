@@ -55,6 +55,27 @@ const web = startServer({ hub, port: PORT, root: path.join(ROOT, 'miniapp'), log
 await new Promise((r) => web.server.once('listening', r));
 
 const step = (s) => console.log(`· ${s}`);
+
+/**
+ * Дождаться всплывашки С НУЖНЫМ ТЕКСТОМ.
+ *
+ * Не `waitForSelector('#toast.show')`: всплывашка висит 2,6 секунды, и на
+ * быстрой машине предыдущая ещё на экране — проверка ловит её и радуется
+ * чужому тексту. Ждать надо именно тот текст, которого добиваемся.
+ */
+async function toastSaid(page, re, what) {
+  await page.waitForFunction(
+    (src) => {
+      const el = document.querySelector('#toast');
+      return !!el && el.classList.contains('show') && new RegExp(src).test(el.textContent || '');
+    },
+    re.source,
+    { timeout: 6000 }
+  ).catch(async () => {
+    const seen = await page.locator('#toast').innerText().catch(() => '');
+    throw new Error(`не дождались всплывашки «${what || re}» — на экране «${seen}»`);
+  });
+}
 async function until(cond, what, ms = 5000) {
   const t0 = Date.now();
   while (!cond()) {
@@ -159,8 +180,7 @@ await pa.locator('.inp.area').fill('Лучшее казино для наших 
 await pa.getByRole('button', { name: 'Отправить', exact: true }).click();
 await pa.waitForSelector('.sheet');
 await pa.locator('.sheet').getByRole('button', { name: 'Отправить', exact: true }).click();
-await pa.waitForSelector('#toast.show');
-assert.match(await pa.locator('#toast').innerText(), /казино/);
+await toastSaid(pa, /казино/, 'отказ про казино');
 assert.equal(store.broadcasts(5).length, 0, 'и рассылки не создалось');
 step('казино не уходит: отказ объясняет, какое слово мешает');
 
