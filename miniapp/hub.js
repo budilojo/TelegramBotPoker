@@ -21,27 +21,47 @@ const STATUS = { lobby: 'ждут игроков', playing: 'идёт игра',
 export function render() {
   const s = state;
   if (s.kind === 'home') return renderHome(s);
+  // Сколько столов этой игры уже открыто в группе: «во что играют» полезнее,
+  // чем «сколько игроков влезет» — второе и так написано под названием.
+  const live = (id) => s.lobbies.filter((l) => l.game === id).length;
+
   const box = h('div.lobby.hub',
     s.home ? h('button.back-link', { onclick: () => send({ t: 'home' }, { lock: false }) }, '← Мои группы') : null,
-    h('div',
-      h('h1', '🎮 Во что играем?'),
-      h('div.sub', s.group.title || 'Игры этой группы')),
-    h('div.game-cards', s.games.map((g) => h(`button.game-card.g-${g.id}`, { onclick: () => openCreate(g) },
-      h('div.gc-icon', g.icon),
-      h('div.gc-body',
-        h('div.gc-title', g.title),
-        h('div.gc-blurb', g.blurb),
-        h('div.gc-players', `${g.min}–${g.max} игроков`)),
-      h('div.gc-go', '→')))),
+    h('div.hub-head',
+      h('h1', 'Выберите игру', h('span.hh-2', 'из группы')),
+      h('div.sub', s.group.title ? `Играйте с участниками «${s.group.title}»` : 'Играйте с участниками группы')),
+
+    h('div.game-cards', s.games.map((g) => gameRow(g, live(g.id)))),
+
     h('button.rt-open', { onclick: () => { haptic.tap(); send({ t: 'rating' }, { lock: false }); } },
-      h('span', '🏆 Рейтинг'),
-      h('small', 'кто чего стоит — за месяц и за всё время')),
-    h('div.section-label', 'Открытые игры в группе'),
+      h('div.rt-cup', '🏆'),
+      h('div.rt-open-body',
+        h('div.rt-open-title', 'Рейтинг игроков'),
+        h('div.rt-open-sub', 'Лидеры и своя статистика')),
+      h('div.rt-open-go', '›')),
+
+    h('div.section-label', 'Открытые игры'),
     s.lobbies.length
       ? h('div.lobby-list', s.lobbies.map(lobbyRow))
       : h('div.hint', 'Пока ничего не открыто — выберите игру выше и создайте лобби. Друзья присоединятся по его карточке в группе или отсюда.'),
+    h('div.hub-foot', 'Играть можно только с участниками группы'),
   );
   $app.append(box);
+}
+
+/** Две карты веером — значок игры. Берём из той же колоды, что и за столом. */
+const gameIcon = (id) => h(`div.gc-icon.g-${id}`,
+  ...(id === 'durak' ? ['KH', '9S'] : ['AS', 'KH']).map((c, i) => h(`img.gi-card.c${i}`, { src: `/cards/${c}.svg`, alt: '' })));
+
+function gameRow(g, live) {
+  const on = true; // в списке только то, во что уже можно играть
+  return h(`button.game-card.g-${g.id}`, { onclick: () => openCreate(g) },
+    gameIcon(g.id),
+    h('div.gc-body',
+      h('div.gc-title', g.title),
+      h('div.gc-blurb', g.blurb),
+      h('div.gc-players', live ? `сейчас открыто: ${live}` : `${g.min}–${g.max} игроков`)),
+    h(`span.gc-btn${on ? '.on' : ''}`, 'Играть'));
 }
 
 /** Opened without a group (the bot's profile, a button in private): your groups. */
@@ -64,7 +84,7 @@ function renderHome(s) {
 function lobbyRow(l) {
   const join = l.status === 'lobby' && !l.inside;
   return h(`div.lrow${l.mine ? '.mine' : ''}`,
-    h('div.lr-icon', l.icon),
+    gameIcon(l.game),
     h('div.lr-body',
       h('div.lr-title', l.title, l.host ? h('span.lr-host', ` · ${l.host}`) : null),
       h('div.lr-sub', h('b.num', `${l.seated}/${l.max}`), ` · ${STATUS[l.status] || ''}`, l.detail ? ` · ${l.detail}` : ''),

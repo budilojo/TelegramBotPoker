@@ -10,7 +10,7 @@
  *
  * Ни карт, ни ставок, ни того, с кем играли: только места и очки.
  */
-import { $app, h, fmt, haptic, showSheet, closeSheet } from './ui.js';
+import { $app, h, fmt, haptic, initial, showSheet, closeSheet } from './ui.js';
 import { bus, send } from './net.js';
 
 let state = null;
@@ -22,20 +22,25 @@ export function onState(s) {
 
 const MEDAL = ['🥇', '🥈', '🥉'];
 const plural = (n, one, few, many) => (n % 10 === 1 && n % 100 !== 11 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? few : many);
-const games = (n) => `${fmt(n)} ${plural(n, 'партия', 'партии', 'партий')}`;
 const when = (at) => new Date(at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
 
 export function render() {
   const s = state;
+  const pill = (text, on, onclick) => h(`button.rt-tab${on ? '.on' : ''}`, { onclick }, text);
   const chip = (text, on, onclick) => h(`button.rt-chip${on ? '.on' : ''}`, { onclick }, text);
 
   const box = h('div.lobby.rating',
-    h('button.back-link', { onclick: () => send({ t: 'back' }, { lock: false }) }, '← Назад'),
-    h('div', h('h1', '🏆 Рейтинг'), h('div.sub', 'Партия кончилась — след остался')),
+    h('button.back-link', { onclick: () => send({ t: 'back' }, { lock: false }) }, '←'),
+    h('div.rt-head',
+      h('div.rt-head-cup', '🏆'),
+      h('div',
+        h('h1', 'Рейтинг игроков'),
+        h('div.sub', 'Кто чего стоит — за месяц и за всё время'))),
 
-    h('div.rt-chips', s.games.map((g) => chip(`${g.icon} ${g.title}`, g.id === s.game,
+    h('div.rt-tabs', s.games.map((g) => pill(g.title, g.id === s.game,
       () => { haptic.tap(); send({ t: 'pick', game: g.id }); }))),
-    h('div.rt-chips.small',
+
+    h('div.rt-chips',
       chip('За месяц', s.period === 'month', () => { haptic.tap(); send({ t: 'pick', period: 'month' }); }),
       chip('За всё время', s.period === 'all', () => { haptic.tap(); send({ t: 'pick', period: 'all' }); })),
 
@@ -45,37 +50,42 @@ export function render() {
         ? 'В этом месяце ещё не играли. Первая же доигранная партия попадёт сюда.'
         : 'Здесь пока пусто. Сыграйте партию до конца — и она появится.'),
 
-    h('div.hint.rt-why', `Очки за место: вышел первым +20, вторым +12, третьим +6, остался дураком −10. `
-      + `Ниже нуля не падает. Считаются только доигранные партии, и не больше ${s.perDay} в сутки с одним и тем же составом.`),
+    h('div.hint.rt-why',
+      h('div', 'Очки за место: первым +20, вторым +12, третьим +6, дураком −10. Ниже нуля не падает.'),
+      h('div', `Считаются доигранные партии, не больше ${s.perDay} в сутки с одним и тем же составом.`)),
   );
 
-  // Своя строка — отдельной плашкой снизу, но только если в списке её не
-  // видно: дублировать её на экране незачем, а вот пропасть она не должна.
+  // Своя строка отдельной плашкой снизу — но только если её не видно в
+  // списке: дублировать незачем, а пропасть она не должна.
   const me = s.top.some((r) => r.me) ? null : s.mine;
   const panel = me
-    ? h('div.panel.rt-me',
-      h('button.rt-row.me.wide', { onclick: () => openWho(me.userId) },
-        h('div.rt-place', me.place ? `${me.place}` : '—'),
-        h('div.rt-body',
-          h('div.rt-name', me.name, h('span.rt-you', ' — вы')),
-          h('div.rt-sub', me.place ? `${me.place}-е из ${fmt(me.total)} · ${games(me.played)}` : 'в этом месяце ещё не играли')),
-        h('div.rt-points.num', fmt(me.points))))
-    : s.mine
-      ? null
-      : h('div.panel', h('div.hint', 'Вы ещё не сыграли ни одной партии в этой игре.'));
+    ? h('div.panel.rt-me', row({ ...me, me: true, sticky: true }))
+    : s.mine ? null : h('div.panel', h('div.hint', 'Вы ещё не сыграли ни одной партии в этой игре.'));
 
   $app.append(box, ...(panel ? [panel] : []));
   if (s.who) showWho(s.who);
   else if (!s.who && shown) closeSheet();
 }
 
+/** Доля побед — то, чем игроки меряются на самом деле. */
+const winRate = (r) => (r.played ? `${Math.round((r.wins / r.played) * 100)}%` : '—');
+const games = (n) => `${fmt(n)} ${plural(n, 'партия', 'партии', 'партий')}`;
+/** Цвет кружка — от имени: у одного человека он всегда один и тот же. */
+const hueOf = (s) => [...String(s)].reduce((a, c) => (a * 31 + c.codePointAt(0)) % 360, 7);
+
 function row(r) {
+  const place = r.sticky ? (r.place || '—') : r.place;
   return h(`button.rt-row${r.me ? '.me' : ''}`, { onclick: () => openWho(r.userId) },
-    h('div.rt-place', r.place <= 3 ? MEDAL[r.place - 1] : `${r.place}`),
+    h('div.rt-place', r.place <= 3 && !r.sticky ? MEDAL[r.place - 1] : String(place)),
+    h('div.av.rt-av', { style: { '--h': hueOf(r.name || r.userId) } }, initial(r.name)),
     h('div.rt-body',
       h('div.rt-name', r.name, r.me ? h('span.rt-you', ' — вы') : null),
-      h('div.rt-sub', `${games(r.played)}${r.wins ? ` · побед ${fmt(r.wins)}` : ''}${r.fools ? ` · дурак ${fmt(r.fools)}` : ''}`)),
-    h('div.rt-points.num', fmt(r.points)));
+      h('div.rt-sub', r.sticky && r.total
+        ? `${r.place}-е из ${fmt(r.total)} · ${games(r.played)}`
+        : `${games(r.played)} · побед ${winRate(r)}`)),
+    h('div.rt-points',
+      h('b.num', fmt(r.points)),
+      h('small', 'очков')));
 }
 
 let shown = null;
