@@ -184,12 +184,16 @@ function measureDurak() {
     parts: [...s.querySelectorAll('.av, .info, .plate, .dk-backs img, .dk-count')].map(box)
       .concat([...s.querySelectorAll('.nm')].map(glyphs)),
   }));
-  const center = [...document.querySelectorAll('.dk-deck, .dk-discard, .dk-pair img')].map(box)
+  const center = [...document.querySelectorAll('.dk-pair img')].map(box)
     .concat([...document.querySelectorAll('.dk-line')].filter((e) => e.textContent.trim()).map(glyphs));
+  // Колода и бита живут у краёв и нарочно подрезаны экраном — у них свои
+  // правила (ниже), общее «не выезжать за край» к ним не применяется.
+  const edges = [...document.querySelectorAll('.dk-deck, .dk-discard')].map(box);
   const hand = [...document.querySelectorAll('.dk-card img, .dk-role, .dk-sc')].map(box);
   return {
     seats,
     center,
+    edges,
     hand,
     top: box(document.querySelector('.top')),
     hero: box(document.querySelector('.hero')),
@@ -200,11 +204,26 @@ function measureDurak() {
 }
 
 function problemsDurak(m) {
-  const out = problems(m);
+  // На места игроков не должны налезать ни кон, ни колода с битой.
+  const out = problems({ ...m, center: m.center.concat(m.edges) });
   const EPS = 2;
   for (const c of m.center) {
     if (c.b > m.felt.b + 1 || c.t < m.felt.t - 1) out.push(`${c.what} out of the felt`);
     if (c.l < -1 || c.r > m.vw + 1) out.push(`${c.what} off screen`);
+  }
+  // Колоду и биту край экрана режет НАРОЧНО: смотреть в них не нужно, нужно
+  // знать, что они есть. Но подрезать их можно не как угодно:
+  //   1. видно должно остаться не меньше 45% ширины — иначе это не «край
+  //      колоды», а полоска, которую не опознать;
+  //   2. держаться своей трети экрана — в середине место кона;
+  //   3. не налезать на кон и на строку под ним.
+  for (const e of m.edges) {
+    const shown = Math.min(e.r, m.vw) - Math.max(e.l, 0);
+    const wide = e.r - e.l;
+    if (wide > 0 && shown < wide * 0.45) out.push(`${e.what} почти не видно (${Math.round((shown / wide) * 100)}%)`);
+    if (e.l > m.vw / 3 && e.r < (m.vw * 2) / 3) out.push(`${e.what} влезла в середину стола`);
+    if (e.b > m.felt.b + 1 || e.t < m.felt.t - 1) out.push(`${e.what} out of the felt`);
+    for (const c of m.center) if (area(e, c) > EPS * 40) out.push(`${e.what} × ${c.what}`);
   }
   for (const x of m.hand) if (x.l < -1 || x.r > m.vw + 1) out.push(`hand ${x.what} off screen`);
   if (m.sw > m.vw) out.push(`page wider than the screen (${m.sw} > ${m.vw})`);

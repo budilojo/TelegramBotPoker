@@ -173,7 +173,11 @@ function renderTable() {
   const [st, stCls] = stage(s);
   const top = h('div.top',
     animateOnce(h(`div.stage${stCls ? '.' + stCls : ''}`, st), `dkstage:${d?.no}:${st}`, [{ transform: 'scale(0.55)', opacity: 0, offset: 0 }], { duration: 420 }),
-    h('div.top-meta', s.room.variantName, d ? [' · козырь ', h(`b.suit.s${d.trump}`, SUIT[d.trump])] : null),
+    // Пока колода цела, козырь виден у края стола и в строке хватает масти.
+    // Колода вышла — здесь единственное место, где видно, КАКОЙ это козырь.
+    h('div.top-meta', s.room.variantName, d
+      ? [' · козырь ', h(`b.suit.s${d.trump}`, d.talon === 0 && !d.last ? label(d.trumpCard) : SUIT[d.trump])]
+      : null),
     h('button.icon-btn', { onclick: openMenu, 'aria-label': 'Меню' }, '⋯'),
   );
 
@@ -199,12 +203,22 @@ function middleEl(s) {
   const mid = h('div.dk-mid');
   if (!d) return mid;
 
-  // The pack: its size, and the trump face up under it.
+  // The pack and the discard live at the edges of the table, half cut off by
+  // them: about each you need to know two things — that it is there and how
+  // big it is. The middle belongs to the bout. The trump sticks out of the
+  // pack index-first: the rank decides whether a trump six is worth spending.
   const stock = h('div.dk-stock',
-    h('div.dk-deck', d.talon > 0
-      ? [h('div.dk-trump', cardImg(d.trumpCard)), d.talon > 1 ? backImg('deck') : null, h('span.dk-deck-n.num', String(d.talon))]
-      : h(`div.dk-trump-suit.s${d.trump}`, SUIT[d.trump], h('small', d.trumpHolderSeat >= 0 && d.talon === 0 && !s.deal.last ? `козырь ${label(d.trumpCard)}` : 'козырь'))),
-    h('div.dk-discard', d.discard > 0 ? [backImg('d0'), d.discard > 2 ? backImg('d1') : null, h('span.dk-deck-n.num', `бито ${d.discard}`)] : h('span.dk-empty', 'сброс')),
+    // Колода кончилась — у края больше нечему быть: какой козырь и что он
+    // уже на руках, написано в верхней строке, которая видна всегда.
+    d.talon > 0
+      ? h('div.dk-deck', h('div.dk-fan', h('div.dk-trump', cardImg(d.trumpCard)), d.talon > 1 ? backImg('deck') : null),
+        h('span.dk-deck-n.num', String(d.talon)))
+      : null,
+    // Пустая бита — это просто пустая бита: рисовать её нечем и незачем.
+    d.discard > 0
+      ? h('div.dk-discard', h('div.dk-fan', backImg('d0'), d.discard > 2 ? backImg('d1') : null),
+        h('span.dk-deck-n.num', `бито ${d.discard}`))
+      : null,
   );
 
   const me = s.me;
@@ -569,7 +583,10 @@ function crowded(f) {
   const hit = (a, b, gap) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > -gap && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > -gap;
   const box = (el) => el.getBoundingClientRect();
   const fr = box(f);
-  const middle = [...f.querySelectorAll('.dk-stock > *, .dk-pair, .dk-line')].filter((el) => el.textContent.trim() || el.querySelector('img') || el.classList.contains('dk-pair')).map((el) => {
+  // Колода и бита нарочно уезжают за край стола — их меряем только на то,
+  // не налезли ли на них места игроков, а не на то, влезли ли они в стол.
+  const edges = [...f.querySelectorAll('.dk-deck, .dk-discard')].map(box);
+  const middle = [...f.querySelectorAll('.dk-pair, .dk-line')].filter((el) => el.textContent.trim() || el.querySelector('img') || el.classList.contains('dk-pair')).map((el) => {
     if (!el.classList.contains('dk-line')) return box(el);
     const r = document.createRange();
     r.selectNodeContents(el);
@@ -580,7 +597,7 @@ function crowded(f) {
   for (let i = 0; i < seats.length; i++) {
     for (const p of seats[i]) {
       if (p.left < fr.left + 1 || p.right > fr.right - 1 || p.top < fr.top || p.bottom > fr.bottom) return true;
-      if (middle.some((m) => hit(p, m, 4))) return true;
+      if (middle.some((m) => hit(p, m, 4)) || edges.some((m) => hit(p, m, 2))) return true;
       for (let j = i + 1; j < seats.length; j++) if (seats[j].some((q) => hit(p, q, 2))) return true;
     }
   }

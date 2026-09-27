@@ -26,7 +26,7 @@
 }
 
 .top-meta .suit { font-size: 15px; }
-.suit.sH, .suit.sD, .dk-trump-suit.sH, .dk-trump-suit.sD { color: #ff6b6b; }
+.suit.sH, .suit.sD { color: #ff6b6b; }
 .suit.sS, .suit.sC { color: #f1f6f2; }
 
 /* ---------------------------------------------------------------- seats */
@@ -107,15 +107,22 @@
   pointer-events: none;
 }
 .dk-mid > * { pointer-events: auto; }
-.dk-stock { display: flex; align-items: center; justify-content: center; gap: calc(26px * var(--u, 1)); }
-.dk-deck { position: relative; width: calc(var(--dcw) * 1.75); height: calc(var(--dcw) * 1.4); }
-.dk-trump { position: absolute; left: 0; top: 50%; transform: translateY(-50%); }
-.dk-trump img { width: var(--dcw); rotate: 90deg; translate: calc(var(--dcw) * 0.15) 0; }
-.dk-deck > img.deck { position: absolute; right: 0; top: 0; width: var(--dcw); }
+/* Колода и бита — у краёв стола, обе подрезаны краем экрана. О них нужно
+   знать ровно две вещи: что они есть и сколько в них. Середина остаётся
+   кону — единственному, по чему принимают решение. */
+.dk-stock { display: contents; }
+.dk-deck, .dk-discard { position: absolute; top: 46%; transform: translateY(-50%); z-index: 1; }
+.dk-fan { position: absolute; inset: 0; }
+.dk-deck { left: calc(var(--dcw) * -0.6); width: calc(var(--dcw) * 1.75); height: calc(var(--dcw) * 1.4); }
+/* Козырь торчит из-под колоды тем углом, где напечатан ранг: знать надо не
+   только масть — от ранга зависит, тратить ли на это козырную шестёрку. */
+.dk-trump { position: absolute; left: auto; right: 0; top: 50%; transform: translateY(-50%); }
+.dk-trump img { width: var(--dcw); rotate: 90deg; }
+.dk-deck img.deck { position: absolute; left: 0; top: 0; width: var(--dcw); }
 .dk-deck-n {
   position: absolute;
-  right: calc(var(--dcw) * -0.25);
-  bottom: calc(var(--dcw) * -0.2);
+  right: calc(var(--dcw) * -0.1);
+  bottom: calc(var(--dcw) * -0.24);
   font-size: calc(12px * var(--u, 1));
   font-weight: 900;
   padding: 2px 7px;
@@ -125,24 +132,13 @@
   white-space: nowrap;
   z-index: 2;
 }
-.dk-trump-suit {
-  width: calc(var(--dcw) * 1.4);
-  height: calc(var(--dcw) * 1.4);
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1.5px dashed rgba(255, 255, 255, 0.25);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(26px * var(--u, 1));
-  line-height: 1;
-}
-.dk-trump-suit small { font-size: calc(9px * var(--u, 1)); color: var(--text-2); font-weight: 800; margin-top: 2px; }
-.dk-discard { position: relative; width: calc(var(--dcw) * 1.2); height: calc(var(--dcw) * 1.4); display: grid; place-items: center; }
-.dk-discard img { position: absolute; width: var(--dcw); rotate: 12deg; opacity: 0.85; }
-.dk-discard img.d1 { rotate: -8deg; translate: -3px 2px; }
-.dk-discard .dk-deck-n { right: calc(var(--dcw) * -0.45); }
+.dk-discard { right: 0; width: calc(var(--dcw) * 0.6); height: calc(var(--dcw) * 1.5); }
+/* Веер биты обрезан правым краем: сброс в дураке закрыт, в него не смотрят. */
+.dk-discard .dk-fan { overflow: hidden; }
+.dk-discard img { position: absolute; left: 0; top: 50%; translate: 0 -50%; width: var(--dcw); rotate: 10deg; opacity: 0.85; }
+.dk-discard img.d1 { rotate: -6deg; translate: -4px -50%; }
+/* Подпись растёт влево от края экрана — вправо ей некуда. */
+.dk-discard .dk-deck-n { left: auto; right: 2px; bottom: calc(var(--dcw) * -0.24); }
 .dk-empty {
   font-size: calc(10px * var(--u, 1));
   color: rgba(255, 255, 255, 0.35);
