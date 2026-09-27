@@ -1,199 +1,220 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Стол дурака, 360×740 — размер экрана телефона, в котором живёт игра.
+  Стол дурака, 360×780 — экран телефона, в котором живёт игра.
 
-  Это не обведённая картинка, а собранный макет: каждая группа названа
-  по-русски, цвета взяты из палитры игры (docs/design.md), текст — настоящий
-  текст, а не буквы-картинки. Перетащите файл в Figma — слои откроются
-  такими же, какие здесь: двигайте, красьте, переставляйте.
-
-  Имена групп менять можно; по ним никто не ищет.
+  Собрано генератором tools/make-design.mjs по макету владельца. Группы
+  названы по-русски, текст настоящий, цвета из docs/design.md. Перетащите в
+  Figma — откроется слоями.
 -->
-<svg xmlns="http://www.w3.org/2000/svg" width="360" height="740" viewBox="0 0 360 740" font-family="Inter, -apple-system, 'Segoe UI', Roboto, sans-serif">
-  <defs>
-    <radialGradient id="suknoDurak" cx="50%" cy="38%" r="72%">
-      <stop offset="0%" stop-color="#1E6E7E"/>
-      <stop offset="58%" stop-color="#12495A"/>
-      <stop offset="100%" stop-color="#0A2E39"/>
-    </radialGradient>
-    <linearGradient id="rubashka" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#1B4A63"/>
-      <stop offset="100%" stop-color="#123549"/>
-    </linearGradient>
-    <clipPath id="krayEkrana"><rect x="0" y="0" width="360" height="740"/></clipPath>
-
-    <!-- Карта лицом: индекс в углу, масть крупно. -->
-    <symbol id="karta" viewBox="0 0 60 84">
-      <rect x="0.5" y="0.5" width="59" height="83" rx="9" fill="#F7F4EC" stroke="#000" stroke-opacity="0.25"/>
-    </symbol>
-    <symbol id="rubashkaKarta" viewBox="0 0 60 84">
-      <rect x="0.5" y="0.5" width="59" height="83" rx="9" fill="url(#rubashka)" stroke="#0A2028"/>
-      <rect x="4" y="4" width="52" height="76" rx="6" fill="none" stroke="#7FD8E8" stroke-opacity="0.45"/>
-      <path d="M8 40 L30 12 L52 40 L30 68 Z" fill="none" stroke="#7FD8E8" stroke-opacity="0.3"/>
-      <circle cx="30" cy="40" r="7" fill="none" stroke="#7FD8E8" stroke-opacity="0.35"/>
-    </symbol>
-  </defs>
-
-  <g clip-path="url(#krayEkrana)">
-    <rect width="360" height="740" fill="#0A1216"/>
-
-    <!-- ================================================= верхняя строка -->
-    <g id="Верх">
-      <rect x="12" y="14" width="62" height="30" rx="15" fill="#13212A" stroke="#6E858B" stroke-opacity="0.45"/>
-      <text x="43" y="34" fill="#A9BCC0" font-size="12" font-weight="700" text-anchor="middle">R7QF</text>
-
-      <text x="180" y="34" fill="#A9BCC0" font-size="12" font-weight="600" text-anchor="middle">подкидной · козырь <tspan fill="#D2342B" font-weight="800">9♦</tspan></text>
-
-      <rect x="316" y="14" width="32" height="30" rx="15" fill="#13212A" stroke="#6E858B" stroke-opacity="0.45"/>
-      <text x="332" y="33" fill="#A9BCC0" font-size="14" font-weight="800" text-anchor="middle">⋯</text>
-    </g>
-
-    <!-- ========================================================= сукно -->
-    <g id="Сукно">
-      <path d="M-20 260 A200 196 0 0 1 380 260 L380 412 A40 40 0 0 1 340 452 L20 452 A40 40 0 0 1 -20 412 Z"
-            fill="url(#suknoDurak)" stroke="#07222B" stroke-width="6"/>
-    </g>
-
-    <!-- ===================================================== соперники -->
-    <g id="Соперники">
-      <g id="Место Макс">
-        <circle cx="84" cy="118" r="23" fill="#13212A" stroke="#52B8FF" stroke-width="3"/>
-        <text x="84" y="126" fill="#F2F7F5" font-size="18" font-weight="800" text-anchor="middle">М</text>
-        <rect x="59" y="147" width="50" height="20" rx="10" fill="#000" fill-opacity="0.38"/>
-        <text x="84" y="161" fill="#F2F7F5" font-size="11" font-weight="700" text-anchor="middle">Макс · 6</text>
-        <rect x="46" y="172" width="76" height="20" rx="10" fill="#52B8FF"/>
-        <text x="84" y="186" fill="#03192A" font-size="11" font-weight="800" text-anchor="middle">отбивается</text>
-      </g>
-      <g id="Место Лиза">
-        <circle cx="180" cy="100" r="23" fill="#13212A" stroke="#2EE08C" stroke-width="3"/>
-        <text x="180" y="108" fill="#F2F7F5" font-size="18" font-weight="800" text-anchor="middle">Л</text>
-        <rect x="155" y="129" width="50" height="20" rx="10" fill="#000" fill-opacity="0.38"/>
-        <text x="180" y="143" fill="#F2F7F5" font-size="11" font-weight="700" text-anchor="middle">Лиза · 4</text>
-        <rect x="152" y="154" width="56" height="20" rx="10" fill="#13212A" stroke="#2EE08C" stroke-opacity="0.6"/>
-        <text x="180" y="168" fill="#2EE08C" font-size="11" font-weight="800" text-anchor="middle">думает</text>
-      </g>
-      <g id="Место Дима">
-        <circle cx="276" cy="118" r="23" fill="#13212A" stroke="#6E858B" stroke-width="2"/>
-        <text x="276" y="126" fill="#F2F7F5" font-size="18" font-weight="800" text-anchor="middle">Д</text>
-        <rect x="251" y="147" width="50" height="20" rx="10" fill="#000" fill-opacity="0.38"/>
-        <text x="276" y="161" fill="#F2F7F5" font-size="11" font-weight="700" text-anchor="middle">Дима · 5</text>
-      </g>
-    </g>
-
-    <!-- ============================== колода: у левого края, козырь рангом -->
-    <g id="Колода">
-      <use href="#rubashkaKarta" x="-34" y="292" width="52" height="73"/>
-      <use href="#rubashkaKarta" x="-30" y="288" width="52" height="73"/>
-      <g transform="translate(46 292) rotate(90)">
-        <use href="#karta" width="52" height="73"/>
-        <text x="7" y="19" fill="#D2342B" font-size="17" font-weight="900">9</text>
-        <text x="7" y="34" fill="#D2342B" font-size="14">♦</text>
-        <text x="44" y="64" fill="#D2342B" font-size="30" text-anchor="end">♦</text>
-      </g>
-      <rect x="20" y="352" width="34" height="22" rx="11" fill="#000" fill-opacity="0.7" stroke="#fff" stroke-opacity="0.15"/>
-      <text x="37" y="367" fill="#F2F7F5" font-size="12" font-weight="900" text-anchor="middle">18</text>
-    </g>
-
-    <!-- ========================================== бита: у правого края -->
-    <g id="Бита">
-      <use href="#rubashkaKarta" x="330" y="296" width="50" height="70" transform="rotate(-6 355 331)"/>
-      <use href="#rubashkaKarta" x="336" y="292" width="50" height="70" transform="rotate(4 361 327)"/>
-      <rect x="296" y="368" width="58" height="20" rx="10" fill="#000" fill-opacity="0.7" stroke="#fff" stroke-opacity="0.15"/>
-      <text x="348" y="382" fill="#A9BCC0" font-size="11" font-weight="800" text-anchor="end">бито 12</text>
-    </g>
-
-    <!-- ============================================ кон: только он в центре -->
-    <g id="Кон">
-      <g id="Пара 1" transform="translate(96 232)">
-        <g transform="rotate(-4)">
-          <use href="#karta" width="52" height="73"/>
-          <text x="7" y="19" fill="#16202A" font-size="17" font-weight="900">7</text>
-          <text x="7" y="34" fill="#16202A" font-size="14">♣</text>
-          <text x="44" y="64" fill="#16202A" font-size="30" text-anchor="end">♣</text>
-        </g>
-        <g transform="translate(16 16) rotate(10)">
-          <use href="#karta" width="52" height="73"/>
-          <text x="7" y="19" fill="#16202A" font-size="17" font-weight="900">10</text>
-          <text x="7" y="34" fill="#16202A" font-size="14">♣</text>
-          <text x="44" y="64" fill="#16202A" font-size="30" text-anchor="end">♣</text>
-        </g>
-      </g>
-      <g id="Пара 2" transform="translate(196 232)">
-        <g transform="rotate(-3)">
-          <use href="#karta" width="52" height="73"/>
-          <text x="7" y="19" fill="#D2342B" font-size="17" font-weight="900">7</text>
-          <text x="7" y="34" fill="#D2342B" font-size="14">♥</text>
-          <text x="44" y="64" fill="#D2342B" font-size="30" text-anchor="end">♥</text>
-        </g>
-        <g transform="translate(16 16) rotate(9)">
-          <use href="#karta" width="52" height="73"/>
-          <text x="7" y="19" fill="#16202A" font-size="17" font-weight="900">В</text>
-          <text x="7" y="34" fill="#16202A" font-size="14">♠</text>
-          <text x="44" y="64" fill="#16202A" font-size="30" text-anchor="end">♠</text>
-        </g>
-      </g>
-      <g id="Пара 3 — ждёт ответа" transform="translate(150 316)">
-        <g transform="rotate(-4)">
-          <use href="#karta" width="52" height="73"/>
-          <text x="7" y="19" fill="#D2342B" font-size="17" font-weight="900">9</text>
-          <text x="7" y="34" fill="#D2342B" font-size="14">♦</text>
-          <text x="44" y="64" fill="#D2342B" font-size="30" text-anchor="end">♦</text>
-        </g>
-        <rect x="16" y="16" width="52" height="73" rx="9" fill="none" stroke="#52B8FF" stroke-width="2" stroke-dasharray="5 4"/>
-      </g>
-      <text x="180" y="432" fill="#F2F7F5" font-size="13" font-weight="800" text-anchor="middle">Макс отбивается</text>
-    </g>
-
-    <!-- ======================================================== кнопки -->
-    <g id="Действия">
-      <rect x="12" y="478" width="162" height="48" rx="14" fill="#13212A" stroke="#6E858B" stroke-opacity="0.45"/>
-      <text x="93" y="501" fill="#F2F7F5" font-size="14" font-weight="900" text-anchor="middle">ПАС</text>
-      <text x="93" y="515" fill="#6E858B" font-size="9" font-weight="700" text-anchor="middle">подкидывать нечего</text>
-
-      <rect x="186" y="478" width="162" height="48" rx="14" fill="#2EE08C"/>
-      <text x="267" y="501" fill="#16202A" font-size="14" font-weight="900" text-anchor="middle">БИТО</text>
-      <text x="267" y="515" fill="#16202A" font-size="9" font-weight="700" text-anchor="middle">кон закрыт</text>
-    </g>
-
-    <!-- ===================================================== своя рука -->
-    <g id="Моя рука">
-      <text x="180" y="558" fill="#52B8FF" font-size="11" font-weight="700" text-anchor="middle">ваш ход · бейте 9♦ или заберите</text>
-      <g transform="translate(22 578) rotate(-10 34 48)">
-        <use href="#karta" width="68" height="95"/>
-        <text x="9" y="25" fill="#16202A" font-size="22" font-weight="900">6</text>
-        <text x="9" y="44" fill="#16202A" font-size="18">♠</text>
-        <text x="58" y="84" fill="#16202A" font-size="38" text-anchor="end">♠</text>
-      </g>
-      <g transform="translate(72 574) rotate(-6 34 48)">
-        <use href="#karta" width="68" height="95"/>
-        <text x="9" y="25" fill="#16202A" font-size="22" font-weight="900">9</text>
-        <text x="9" y="44" fill="#16202A" font-size="18">♠</text>
-        <text x="58" y="84" fill="#16202A" font-size="38" text-anchor="end">♠</text>
-      </g>
-      <g transform="translate(122 570) rotate(-2 34 48)">
-        <use href="#karta" width="68" height="95"/>
-        <text x="9" y="25" fill="#D2342B" font-size="22" font-weight="900">10</text>
-        <text x="9" y="44" fill="#D2342B" font-size="18">♥</text>
-        <text x="58" y="84" fill="#D2342B" font-size="38" text-anchor="end">♥</text>
-      </g>
-      <g transform="translate(172 570) rotate(2 34 48)">
-        <use href="#karta" width="68" height="95"/>
-        <text x="9" y="25" fill="#D2342B" font-size="22" font-weight="900">В</text>
-        <text x="9" y="44" fill="#D2342B" font-size="18">♦</text>
-        <text x="58" y="84" fill="#D2342B" font-size="38" text-anchor="end">♦</text>
-      </g>
-      <g transform="translate(222 574) rotate(6 34 48)">
-        <use href="#karta" width="68" height="95"/>
-        <text x="9" y="25" fill="#16202A" font-size="22" font-weight="900">К</text>
-        <text x="9" y="44" fill="#16202A" font-size="18">♣</text>
-        <text x="58" y="84" fill="#16202A" font-size="38" text-anchor="end">♣</text>
-      </g>
-      <g transform="translate(272 578) rotate(10 34 48)">
-        <use href="#karta" width="68" height="95"/>
-        <text x="9" y="25" fill="#16202A" font-size="22" font-weight="900">Т</text>
-        <text x="9" y="44" fill="#16202A" font-size="18">♠</text>
-        <text x="58" y="84" fill="#16202A" font-size="38" text-anchor="end">♠</text>
-      </g>
-    </g>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="780" viewBox="0 0 360 780" font-family="Inter, -apple-system, 'Segoe UI', Roboto, sans-serif">
+<defs>
+  <radialGradient id="suknoDurak" cx="50%" cy="34%" r="76%">
+    <stop offset="0%" stop-color="#1E6E7E"/><stop offset="58%" stop-color="#12495A"/><stop offset="100%" stop-color="#0A2E39"/>
+  </radialGradient>
+  <radialGradient id="suknoPoker" cx="50%" cy="36%" r="74%">
+    <stop offset="0%" stop-color="#2A7B55"/><stop offset="58%" stop-color="#145436"/><stop offset="100%" stop-color="#0A3322"/>
+  </radialGradient>
+  <linearGradient id="zoloto" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#F2C96B" stop-opacity="0.16"/><stop offset="100%" stop-color="#F2C96B" stop-opacity="0.04"/>
+  </linearGradient>
+  <clipPath id="ekran"><rect width="360" height="780"/></clipPath>
+</defs>
+<g clip-path="url(#ekran)">
+<rect x="0" y="0" width="360" height="780" rx="0" fill="#0A1216"/>
+<g id="Верх">
+<rect x="12" y="16" width="96" height="32" rx="16" fill="#13212A" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+<text x="28" y="37" font-size="12" font-weight="700" fill="#A9BCC0" text-anchor="start">Стол 4827</text>
+<text x="176" y="37" font-size="13" font-weight="700" fill="#F2F7F5" text-anchor="end">Козырь:</text>
+<text x="184" y="38" font-size="16" font-weight="800" fill="#2EE08C" text-anchor="start">♣</text>
+<rect x="316" y="16" width="32" height="32" rx="16" fill="#13212A" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+<text x="332" y="36" font-size="15" font-weight="800" fill="#A9BCC0" text-anchor="middle">⋯</text>
+</g>
+<g id="Сукно">
+<path d="M-14 250 A192 174 0 0 1 374 250 L374 486 A34 34 0 0 1 340 520 L20 520 A34 34 0 0 1 -14 486 Z" fill="url(#suknoDurak)"/>
+</g>
+<g id="Соперники">
+<g id="Место Ирина">
+<clipPath id="av58x100"><circle cx="58" cy="100" r="26"/></clipPath>
+<circle cx="58" cy="100" r="26" fill="#25424F"/>
+<g clip-path="url(#av58x100)">
+<circle cx="58" cy="95.32" r="9.36" fill="#8AA6B0"/>
+<ellipse cx="58" cy="121.32" rx="17.16" ry="13.52" fill="#8AA6B0"/>
+</g>
+<circle cx="58" cy="100" r="26" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+<text x="58" y="146" font-size="12.5" font-weight="700" fill="#F2F7F5" text-anchor="middle">Ирина</text>
+<g transform="translate(44 164)"><g transform="translate(0 -9)">
+<rect x="0" y="1" width="7" height="10" rx="1.5" fill="#A9BCC0" opacity="0.55"/>
+<rect x="3" y="0" width="7" height="10" rx="1.5" fill="#A9BCC0"/>
+</g>
+<text x="14" y="0" font-size="11" font-weight="800" fill="#A9BCC0" text-anchor="start">6</text></g>
+</g>
+<g id="Место Алексей">
+<clipPath id="av180x82"><circle cx="180" cy="82" r="26"/></clipPath>
+<circle cx="180" cy="82" r="26" fill="#25424F"/>
+<g clip-path="url(#av180x82)">
+<circle cx="180" cy="77.32" r="9.36" fill="#8AA6B0"/>
+<ellipse cx="180" cy="103.32" rx="17.16" ry="13.52" fill="#8AA6B0"/>
+</g>
+<circle cx="180" cy="82" r="26" fill="none" stroke="#2EE08C" stroke-width="3"/>
+<text x="180" y="128" font-size="12.5" font-weight="700" fill="#F2F7F5" text-anchor="middle">Алексей</text>
+<g transform="translate(166 146)"><g transform="translate(0 -9)">
+<rect x="0" y="1" width="7" height="10" rx="1.5" fill="#A9BCC0" opacity="0.55"/>
+<rect x="3" y="0" width="7" height="10" rx="1.5" fill="#A9BCC0"/>
+</g>
+<text x="14" y="0" font-size="11" font-weight="800" fill="#A9BCC0" text-anchor="start">5</text></g>
+</g>
+<g id="Место Ольга">
+<clipPath id="av302x100"><circle cx="302" cy="100" r="26"/></clipPath>
+<circle cx="302" cy="100" r="26" fill="#25424F"/>
+<g clip-path="url(#av302x100)">
+<circle cx="302" cy="95.32" r="9.36" fill="#8AA6B0"/>
+<ellipse cx="302" cy="121.32" rx="17.16" ry="13.52" fill="#8AA6B0"/>
+</g>
+<circle cx="302" cy="100" r="26" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+<text x="302" y="146" font-size="12.5" font-weight="700" fill="#F2F7F5" text-anchor="middle">Ольга</text>
+<g transform="translate(288 164)"><g transform="translate(0 -9)">
+<rect x="0" y="1" width="7" height="10" rx="1.5" fill="#A9BCC0" opacity="0.55"/>
+<rect x="3" y="0" width="7" height="10" rx="1.5" fill="#A9BCC0"/>
+</g>
+<text x="14" y="0" font-size="11" font-weight="800" fill="#A9BCC0" text-anchor="start">6</text></g>
+</g>
+</g>
+<g id="Колода">
+<g transform="translate(-6 196) rotate(90 25 35)"><g transform="translate(0 0)">
+<rect x="0" y="0" width="50" height="70" rx="8" fill="#F7F4EC" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+<text x="6.5" y="18" font-size="15" font-weight="800" fill="#16202A" text-anchor="start">10</text>
+<text x="6.5" y="31" font-size="12" font-weight="700" fill="#16202A" text-anchor="start">♣</text>
+<text x="38" y="63" font-size="23" font-weight="700" fill="#16202A" text-anchor="middle">♣</text>
+</g></g>
+<g transform="translate(-26 214)">
+<rect x="0" y="0" width="50" height="70" rx="8" fill="#1B4A63" stroke="#0A2028" stroke-width="1"/>
+<rect x="4" y="4" width="42" height="62" rx="4.5" fill="none" stroke="rgba(127,216,232,0.45)" stroke-width="1"/>
+<path d="M10 35 L25 14 L40 35 L25 56 Z" fill="none" stroke="rgba(127,216,232,0.3)"/>
+<circle cx="25" cy="35" r="6.5" fill="none" stroke="rgba(127,216,232,0.35)" stroke-width="1"/>
+</g>
+<g transform="translate(-22 210)">
+<rect x="0" y="0" width="50" height="70" rx="8" fill="#1B4A63" stroke="#0A2028" stroke-width="1"/>
+<rect x="4" y="4" width="42" height="62" rx="4.5" fill="none" stroke="rgba(127,216,232,0.45)" stroke-width="1"/>
+<path d="M10 35 L25 14 L40 35 L25 56 Z" fill="none" stroke="rgba(127,216,232,0.3)"/>
+<circle cx="25" cy="35" r="6.5" fill="none" stroke="rgba(127,216,232,0.35)" stroke-width="1"/>
+</g>
+<g transform="translate(-18 206)">
+<rect x="0" y="0" width="50" height="70" rx="8" fill="#1B4A63" stroke="#0A2028" stroke-width="1"/>
+<rect x="4" y="4" width="42" height="62" rx="4.5" fill="none" stroke="rgba(127,216,232,0.45)" stroke-width="1"/>
+<path d="M10 35 L25 14 L40 35 L25 56 Z" fill="none" stroke="rgba(127,216,232,0.3)"/>
+<circle cx="25" cy="35" r="6.5" fill="none" stroke="rgba(127,216,232,0.35)" stroke-width="1"/>
+</g>
+</g>
+<g id="Бита">
+<g transform="translate(318 210) rotate(-7 25 35)">
+<rect x="0" y="0" width="50" height="70" rx="8" fill="#1B4A63" stroke="#0A2028" stroke-width="1"/>
+<rect x="4" y="4" width="42" height="62" rx="4.5" fill="none" stroke="rgba(127,216,232,0.45)" stroke-width="1"/>
+<path d="M10 35 L25 14 L40 35 L25 56 Z" fill="none" stroke="rgba(127,216,232,0.3)"/>
+<circle cx="25" cy="35" r="6.5" fill="none" stroke="rgba(127,216,232,0.35)" stroke-width="1"/>
+</g>
+<g transform="translate(324 214) rotate(4 25 35)">
+<rect x="0" y="0" width="50" height="70" rx="8" fill="#1B4A63" stroke="#0A2028" stroke-width="1"/>
+<rect x="4" y="4" width="42" height="62" rx="4.5" fill="none" stroke="rgba(127,216,232,0.45)" stroke-width="1"/>
+<path d="M10 35 L25 14 L40 35 L25 56 Z" fill="none" stroke="rgba(127,216,232,0.3)"/>
+<circle cx="25" cy="35" r="6.5" fill="none" stroke="rgba(127,216,232,0.35)" stroke-width="1"/>
+</g>
+<g transform="translate(330 208) rotate(-2 25 35)">
+<rect x="0" y="0" width="50" height="70" rx="8" fill="#1B4A63" stroke="#0A2028" stroke-width="1"/>
+<rect x="4" y="4" width="42" height="62" rx="4.5" fill="none" stroke="rgba(127,216,232,0.45)" stroke-width="1"/>
+<path d="M10 35 L25 14 L40 35 L25 56 Z" fill="none" stroke="rgba(127,216,232,0.3)"/>
+<circle cx="25" cy="35" r="6.5" fill="none" stroke="rgba(127,216,232,0.35)" stroke-width="1"/>
+</g>
+</g>
+<g id="Кон">
+<g transform="translate(78 256) rotate(-6 25 35)">
+<rect x="0" y="0" width="50" height="70" rx="8" fill="#F7F4EC" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+<text x="6.5" y="18" font-size="15" font-weight="800" fill="#16202A" text-anchor="start">9</text>
+<text x="6.5" y="31" font-size="12" font-weight="700" fill="#16202A" text-anchor="start">♠</text>
+<text x="38" y="63" font-size="23" font-weight="700" fill="#16202A" text-anchor="middle">♠</text>
+</g>
+<g transform="translate(100 252) rotate(5 25 35)">
+<rect x="0" y="0" width="50" height="70" rx="8" fill="#F7F4EC" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+<text x="6.5" y="18" font-size="15" font-weight="800" fill="#D2342B" text-anchor="start">К</text>
+<text x="6.5" y="31" font-size="12" font-weight="700" fill="#D2342B" text-anchor="start">♥</text>
+<text x="38" y="63" font-size="23" font-weight="700" fill="#D2342B" text-anchor="middle">♥</text>
+</g>
+<g transform="translate(198 256) rotate(-6 25 35)">
+<rect x="0" y="0" width="50" height="70" rx="8" fill="#F7F4EC" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+<text x="6.5" y="18" font-size="15" font-weight="800" fill="#16202A" text-anchor="start">7</text>
+<text x="6.5" y="31" font-size="12" font-weight="700" fill="#16202A" text-anchor="start">♣</text>
+<text x="38" y="63" font-size="23" font-weight="700" fill="#16202A" text-anchor="middle">♣</text>
+</g>
+<g transform="translate(220 252) rotate(5 25 35)">
+<rect x="0" y="0" width="50" height="70" rx="8" fill="#F7F4EC" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+<text x="6.5" y="18" font-size="15" font-weight="800" fill="#D2342B" text-anchor="start">Д</text>
+<text x="6.5" y="31" font-size="12" font-weight="700" fill="#D2342B" text-anchor="start">♦</text>
+<text x="38" y="63" font-size="23" font-weight="700" fill="#D2342B" text-anchor="middle">♦</text>
+</g>
+<g transform="translate(78 372) rotate(-6 25 35)">
+<rect x="0" y="0" width="50" height="70" rx="8" fill="#F7F4EC" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+<text x="6.5" y="18" font-size="15" font-weight="800" fill="#D2342B" text-anchor="start">8</text>
+<text x="6.5" y="31" font-size="12" font-weight="700" fill="#D2342B" text-anchor="start">♥</text>
+<text x="38" y="63" font-size="23" font-weight="700" fill="#D2342B" text-anchor="middle">♥</text>
+</g>
+<g transform="translate(100 368) rotate(5 25 35)">
+<rect x="0" y="0" width="50" height="70" rx="8" fill="#F7F4EC" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+<text x="6.5" y="18" font-size="15" font-weight="800" fill="#D2342B" text-anchor="start">10</text>
+<text x="6.5" y="31" font-size="12" font-weight="700" fill="#D2342B" text-anchor="start">♥</text>
+<text x="38" y="63" font-size="23" font-weight="700" fill="#D2342B" text-anchor="middle">♥</text>
+</g>
+<g id="Ждёт ответа">
+<g transform="translate(212 372)">
+<rect x="0" y="0" width="50" height="70" rx="8" fill="#F7F4EC" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+<text x="6.5" y="18" font-size="15" font-weight="800" fill="#16202A" text-anchor="start">6</text>
+<text x="6.5" y="31" font-size="12" font-weight="700" fill="#16202A" text-anchor="start">♠</text>
+<text x="38" y="63" font-size="23" font-weight="700" fill="#16202A" text-anchor="middle">♠</text>
+</g>
+<rect x="204" y="364" width="66" height="92.4" rx="10.56" fill="none" stroke="#52B8FF" stroke-width="1" stroke-dasharray="5 4"/>
+</g>
+</g>
+<g id="Действия">
+<rect x="16" y="560" width="156" height="54" rx="16" fill="#13212A" stroke="rgba(255,255,255,0.14)" stroke-width="1.5"/>
+<text x="94" y="592.4" font-size="15" font-weight="800" fill="#A9BCC0" text-anchor="middle">Пас</text>
+<rect x="188" y="560" width="156" height="54" rx="16" fill="#2EE08C"/>
+<text x="266" y="592.4" font-size="15" font-weight="800" fill="#0A2016" text-anchor="middle">Бить</text>
+</g>
+<g id="Моя рука">
+<g transform="translate(6 658.5) rotate(-10 37 51.8)">
+<rect x="0" y="0" width="74" height="103.6" rx="11.84" fill="#F7F4EC" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+<text x="9.62" y="26.64" font-size="22.2" font-weight="800" fill="#D2342B" text-anchor="start">6</text>
+<text x="9.62" y="45.88" font-size="17.759999999999998" font-weight="700" fill="#D2342B" text-anchor="start">♦</text>
+<text x="56.24" y="93.24" font-size="34.04" font-weight="700" fill="#D2342B" text-anchor="middle">♦</text>
+</g>
+<g transform="translate(64 653.5) rotate(-6 37 51.8)">
+<rect x="0" y="0" width="74" height="103.6" rx="11.84" fill="#F7F4EC" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+<text x="9.62" y="26.64" font-size="22.2" font-weight="800" fill="#16202A" text-anchor="start">9</text>
+<text x="9.62" y="45.88" font-size="17.759999999999998" font-weight="700" fill="#16202A" text-anchor="start">♣</text>
+<text x="56.24" y="93.24" font-size="34.04" font-weight="700" fill="#16202A" text-anchor="middle">♣</text>
+</g>
+<g transform="translate(122 648.5) rotate(-2 37 51.8)">
+<rect x="0" y="0" width="74" height="103.6" rx="11.84" fill="#F7F4EC" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+<text x="9.62" y="26.64" font-size="22.2" font-weight="800" fill="#D2342B" text-anchor="start">В</text>
+<text x="9.62" y="45.88" font-size="17.759999999999998" font-weight="700" fill="#D2342B" text-anchor="start">♥</text>
+<text x="56.24" y="93.24" font-size="34.04" font-weight="700" fill="#D2342B" text-anchor="middle">♥</text>
+</g>
+<g transform="translate(180 648.5) rotate(2 37 51.8)">
+<rect x="0" y="0" width="74" height="103.6" rx="11.84" fill="#F7F4EC" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+<text x="9.62" y="26.64" font-size="22.2" font-weight="800" fill="#16202A" text-anchor="start">Д</text>
+<text x="9.62" y="45.88" font-size="17.759999999999998" font-weight="700" fill="#16202A" text-anchor="start">♠</text>
+<text x="56.24" y="93.24" font-size="34.04" font-weight="700" fill="#16202A" text-anchor="middle">♠</text>
+</g>
+<g transform="translate(238 653.5) rotate(6 37 51.8)">
+<rect x="0" y="0" width="74" height="103.6" rx="11.84" fill="#F7F4EC" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+<text x="9.62" y="26.64" font-size="22.2" font-weight="800" fill="#D2342B" text-anchor="start">К</text>
+<text x="9.62" y="45.88" font-size="17.759999999999998" font-weight="700" fill="#D2342B" text-anchor="start">♦</text>
+<text x="56.24" y="93.24" font-size="34.04" font-weight="700" fill="#D2342B" text-anchor="middle">♦</text>
+</g>
+<g transform="translate(296 658.5) rotate(10 37 51.8)">
+<rect x="0" y="0" width="74" height="103.6" rx="11.84" fill="#F7F4EC" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+<text x="9.62" y="26.64" font-size="22.2" font-weight="800" fill="#16202A" text-anchor="start">Т</text>
+<text x="9.62" y="45.88" font-size="17.759999999999998" font-weight="700" fill="#16202A" text-anchor="start">♣</text>
+<text x="56.24" y="93.24" font-size="34.04" font-weight="700" fill="#16202A" text-anchor="middle">♣</text>
+</g>
+</g>
+</g>
 </svg>

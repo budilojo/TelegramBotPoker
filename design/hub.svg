@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Хаб: выбор игры, 360×780 — экран телефона, в котором живёт игра.
+
+  Собрано генератором tools/make-design.mjs по макету владельца. Группы
+  названы по-русски, текст настоящий, цвета из docs/design.md. Перетащите в
+  Figma — откроется слоями.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="780" viewBox="0 0 360 780" font-family="Inter, -apple-system, 'Segoe UI', Roboto, sans-serif">
+<defs>
+  <radialGradient id="suknoDurak" cx="50%" cy="34%" r="76%">
+    <stop offset="0%" stop-color="#1E6E7E"/><stop offset="58%" stop-color="#12495A"/><stop offset="100%" stop-color="#0A2E39"/>
+  </radialGradient>
+  <radialGradient id="suknoPoker" cx="50%" cy="36%" r="74%">
+    <stop offset="0%" stop-color="#2A7B55"/><stop offset="58%" stop-color="#145436"/><stop offset="100%" stop-color="#0A3322"/>
+  </radialGradient>
+  <linearGradient id="zoloto" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#F2C96B" stop-opacity="0.16"/><stop offset="100%" stop-color="#F2C96B" stop-opacity="0.04"/>
+  </linearGradient>
+  <clipPath id="ekran"><rect width="360" height="780"/></clipPath>
+</defs>
+<g clip-path="url(#ekran)">
+<rect x="0" y="0" width="360" height="780" rx="0" fill="#0A1216"/>
+<g id="Заголовок">
+<text x="16" y="46" font-size="27" font-weight="800" fill="#F2F7F5" text-anchor="start">Выберите игру</text>
+<text x="16" y="78" font-size="27" font-weight="800" fill="#2EE08C" text-anchor="start">из группы</text>
+<text x="16" y="102" font-size="13" font-weight="600" fill="#A9BCC0" text-anchor="start">Играйте с участниками группы</text>
+</g>
+<g id="Игра Покер">
+<rect x="12" y="118" width="336" height="90" rx="18" fill="#13212A" stroke="rgba(46,224,140,0.35)" stroke-width="1"/>
+<rect x="26" y="135" width="56" height="56" rx="16" fill="#12503A"/>
+<g transform="translate(34 147) rotate(-10 12 16.8)">
+<rect x="0" y="0" width="24" height="33.6" rx="3.84" fill="#F7F4EC" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+<text x="3.12" y="8.64" font-size="7.199999999999999" font-weight="800" fill="#16202A" text-anchor="start">Т</text>
+<text x="3.12" y="14.88" font-size="5.76" font-weight="700" fill="#16202A" text-anchor="start">♠</text>
+<text x="18.24" y="30.24" font-size="11.040000000000001" font-weight="700" fill="#16202A" text-anchor="middle">♠</text>
+</g>
+<g transform="translate(50 145) rotate(8 12 16.8)">
+<rect x="0" y="0" width="24" height="33.6" rx="3.84" fill="#F7F4EC" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+<text x="3.12" y="8.64" font-size="7.199999999999999" font-weight="800" fill="#D2342B" text-anchor="start">К</text>
+<text x="3.12" y="14.88" font-size="5.76" font-weight="700" fill="#D2342B" text-anchor="start">♥</text>
+<text x="18.24" y="30.24" font-size="11.040000000000001" font-weight="700" fill="#D2342B" text-anchor="middle">♥</text>
+</g>
+<text x="96" y="146" font-size="16" font-weight="800" fill="#F2F7F5" text-anchor="start">Покер</text>
+<text x="96" y="164" font-size="11.5" font-weight="600" fill="#A9BCC0" text-anchor="start">Техасский холдем</text>
+<text x="96" y="180" font-size="11.5" font-weight="600" fill="#A9BCC0" text-anchor="start">на 2–9 игроков</text>
+<text x="96" y="198" font-size="11" font-weight="600" fill="#6E858B" text-anchor="start">12 играют</text>
+<rect x="254" y="145" width="82" height="36" rx="12" fill="#2EE08C"/>
+<text x="295" y="167.68" font-size="13" font-weight="800" fill="#0A2016" text-anchor="middle">Играть</text>
+</g>
+<g id="Игра Дурак">
+<rect x="12" y="216" width="336" height="90" rx="18" fill="#13212A" stroke="rgba(46,224,140,0.35)" stroke-width="1"/>
+<rect x="26" y="233" width="56" height="56" rx="16" fill="#123B4A"/>
+<g transform="translate(34 245) rotate(-10 12 16.8)">
+<rect x="0" y="0" width="24" height="33.6" rx="3.84" fill="#F7F4EC" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+<text x="3.12" y="8.64" font-size="7.199999999999999" font-weight="800" fill="#D2342B" text-anchor="start">К</text>
+<text x="3.12" y="14.88" font-size="5.76" font-weight="700" fill="#D2342B" text-anchor="start">♥</text>
+<text x="18.24" y="30.24" font-size="11.040000000000001" font-weight="700" fill="#D2342B" text-anchor="middle">♥</text>
+</g>
+<g transform="translate(50 243) rotate(8 12 16.8)">
+<rect x="0" y="0" width="24" height="33.6" rx="3.84" fill="#F7F4EC" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+<text x="3.12" y="8.64" font-size="7.199999999999999" font-weight="800" fill="#16202A" text-anchor="start">9</text>
+<text x="3.12" y="14.88" font-size="5.76" font-weight="700" fill="#16202A" text-anchor="start">♠</text>
+<text x="18.24" y="30.24" font-size="11.040000000000001" font-weight="700" fill="#16202A" text-anchor="middle">♠</text>
+</g>
+<text x="96" y="244" font-size="16" font-weight="800" fill="#F2F7F5" text-anchor="start">Дурак</text>
+<text x="96" y="262" font-size="11.5" font-weight="600" fill="#A9BCC0" text-anchor="start">Подкидной и переводной</text>
+<text x="96" y="278" font-size="11.5" font-weight="600" fill="#A9BCC0" text-anchor="start">на 2–6 игроков</text>
+<text x="96" y="296" font-size="11" font-weight="600" fill="#6E858B" text-anchor="start">8 играют</text>
+<rect x="254" y="243" width="82" height="36" rx="12" fill="#2EE08C"/>
+<text x="295" y="265.68" font-size="13" font-weight="800" fill="#0A2016" text-anchor="middle">Играть</text>
+</g>
+<g id="Игра Домино">
+<rect x="12" y="314" width="336" height="90" rx="18" fill="rgba(19,33,42,0.55)" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+<rect x="26" y="331" width="56" height="56" rx="16" fill="#1A222A"/>
+<rect x="36" y="351" width="18" height="26" rx="4" fill="#E4E8E8"/>
+<circle cx="45" cy="358" r="2.5" fill="#16202A"/>
+<circle cx="45" cy="370" r="2.5" fill="#16202A"/>
+<rect x="56" y="347" width="18" height="26" rx="4" fill="#CFD6D6"/>
+<circle cx="65" cy="354" r="2.5" fill="#16202A"/>
+<circle cx="65" cy="366" r="2.5" fill="#16202A"/>
+<text x="96" y="342" font-size="16" font-weight="800" fill="#A9BCC0" text-anchor="start">Домино</text>
+<text x="96" y="360" font-size="11.5" font-weight="600" fill="#6E858B" text-anchor="start">Классическое</text>
+<text x="96" y="376" font-size="11.5" font-weight="600" fill="#6E858B" text-anchor="start">на 2–4 игроков</text>
+<text x="96" y="394" font-size="11" font-weight="600" fill="#6E858B" text-anchor="start">Скоро</text>
+<rect x="254" y="341" width="82" height="36" rx="12" fill="#22303A"/>
+<text x="295" y="363.68" font-size="13" font-weight="800" fill="#6E858B" text-anchor="middle">Скоро</text>
+</g>
+<g id="Игра Шашки">
+<rect x="12" y="412" width="336" height="90" rx="18" fill="rgba(19,33,42,0.55)" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+<rect x="26" y="429" width="56" height="56" rx="16" fill="#1A222A"/>
+<rect x="36" y="439" width="36" height="36" rx="6" fill="#3E2C1E"/>
+<rect x="36" y="439" width="18" height="18" rx="0" fill="#6B4F36"/>
+<rect x="54" y="457" width="18" height="18" rx="0" fill="#6B4F36"/>
+<circle cx="47" cy="465" r="8" fill="#E9E2D2"/>
+<circle cx="63" cy="449" r="8" fill="#1A1A1A"/>
+<text x="96" y="440" font-size="16" font-weight="800" fill="#A9BCC0" text-anchor="start">Шашки</text>
+<text x="96" y="458" font-size="11.5" font-weight="600" fill="#6E858B" text-anchor="start">Русские</text>
+<text x="96" y="474" font-size="11.5" font-weight="600" fill="#6E858B" text-anchor="start">и международные</text>
+<text x="96" y="492" font-size="11" font-weight="600" fill="#6E858B" text-anchor="start">Скоро</text>
+<rect x="254" y="439" width="82" height="36" rx="12" fill="#22303A"/>
+<text x="295" y="461.68" font-size="13" font-weight="800" fill="#6E858B" text-anchor="middle">Скоро</text>
+</g>
+<g id="Рейтинг">
+<rect x="12" y="514" width="336" height="66" rx="18" fill="url(#zoloto)" stroke="rgba(242,201,107,0.55)" stroke-width="1"/>
+<text x="36" y="557" font-size="26" font-weight="700" fill="#F2F7F5" text-anchor="middle">🏆</text>
+<text x="64" y="542" font-size="16" font-weight="800" fill="#F2F7F5" text-anchor="start">Рейтинг группы</text>
+<text x="64" y="561" font-size="11.5" font-weight="600" fill="#A9BCC0" text-anchor="start">Лидеры и своя статистика</text>
+<text x="332" y="555" font-size="20" font-weight="800" fill="#A9BCC0" text-anchor="end">›</text>
+</g>
+<g id="Открытые игры">
+<text x="16" y="610" font-size="16" font-weight="800" fill="#F2F7F5" text-anchor="start">Открытые игры</text>
+<text x="344" y="610" font-size="12" font-weight="700" fill="#A9BCC0" text-anchor="end">Все игры ›</text>
+</g>
+<g id="Открытая игра Холдем, стол 2487">
+<rect x="12" y="624" width="336" height="60" rx="14" fill="#13212A"/>
+<rect x="22" y="626" width="56" height="56" rx="16" fill="#123B4A"/>
+<g transform="translate(30 638) rotate(-10 12 16.8)">
+<rect x="0" y="0" width="24" height="33.6" rx="3.84" fill="#F7F4EC" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+<text x="3.12" y="8.64" font-size="7.199999999999999" font-weight="800" fill="#D2342B" text-anchor="start">К</text>
+<text x="3.12" y="14.88" font-size="5.76" font-weight="700" fill="#D2342B" text-anchor="start">♥</text>
+<text x="18.24" y="30.24" font-size="11.040000000000001" font-weight="700" fill="#D2342B" text-anchor="middle">♥</text>
+</g>
+<g transform="translate(46 636) rotate(8 12 16.8)">
+<rect x="0" y="0" width="24" height="33.6" rx="3.84" fill="#F7F4EC" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+<text x="3.12" y="8.64" font-size="7.199999999999999" font-weight="800" fill="#16202A" text-anchor="start">9</text>
+<text x="3.12" y="14.88" font-size="5.76" font-weight="700" fill="#16202A" text-anchor="start">♠</text>
+<text x="18.24" y="30.24" font-size="11.040000000000001" font-weight="700" fill="#16202A" text-anchor="middle">♠</text>
+</g>
+<text x="92" y="650" font-size="13.5" font-weight="700" fill="#F2F7F5" text-anchor="start">Холдем, стол 2487</text>
+<text x="92" y="668" font-size="11" font-weight="600" fill="#6E858B" text-anchor="start">6 / 9 · блайнды 50 / 100</text>
+<rect x="234" y="638" width="100" height="32" rx="11" fill="#2EE08C"/>
+<text x="284" y="658.5" font-size="12.5" font-weight="800" fill="#0A2016" text-anchor="middle">Войти</text>
+</g>
+<g id="Открытая игра Дурак, стол 3112">
+<rect x="12" y="692" width="336" height="60" rx="14" fill="#13212A"/>
+<rect x="22" y="694" width="56" height="56" rx="16" fill="#123B4A"/>
+<g transform="translate(30 706) rotate(-10 12 16.8)">
+<rect x="0" y="0" width="24" height="33.6" rx="3.84" fill="#F7F4EC" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+<text x="3.12" y="8.64" font-size="7.199999999999999" font-weight="800" fill="#D2342B" text-anchor="start">К</text>
+<text x="3.12" y="14.88" font-size="5.76" font-weight="700" fill="#D2342B" text-anchor="start">♥</text>
+<text x="18.24" y="30.24" font-size="11.040000000000001" font-weight="700" fill="#D2342B" text-anchor="middle">♥</text>
+</g>
+<g transform="translate(46 704) rotate(8 12 16.8)">
+<rect x="0" y="0" width="24" height="33.6" rx="3.84" fill="#F7F4EC" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+<text x="3.12" y="8.64" font-size="7.199999999999999" font-weight="800" fill="#16202A" text-anchor="start">9</text>
+<text x="3.12" y="14.88" font-size="5.76" font-weight="700" fill="#16202A" text-anchor="start">♠</text>
+<text x="18.24" y="30.24" font-size="11.040000000000001" font-weight="700" fill="#16202A" text-anchor="middle">♠</text>
+</g>
+<text x="92" y="718" font-size="13.5" font-weight="700" fill="#F2F7F5" text-anchor="start">Дурак, стол 3112</text>
+<text x="92" y="736" font-size="11" font-weight="600" fill="#6E858B" text-anchor="start">3 / 4 · подкидной</text>
+<rect x="234" y="706" width="100" height="32" rx="11" fill="#2EE08C"/>
+<text x="284" y="726.5" font-size="12.5" font-weight="800" fill="#0A2016" text-anchor="middle">Войти</text>
+</g>
+<text x="180" y="772" font-size="11" font-weight="600" fill="#6E858B" text-anchor="middle">Играть можно только с участниками группы</text>
+</g>
+</svg>

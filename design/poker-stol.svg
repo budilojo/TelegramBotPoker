@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Стол покера, 360×780 — экран телефона, в котором живёт игра.
+
+  Собрано генератором tools/make-design.mjs по макету владельца. Группы
+  названы по-русски, текст настоящий, цвета из docs/design.md. Перетащите в
+  Figma — откроется слоями.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="780" viewBox="0 0 360 780" font-family="Inter, -apple-system, 'Segoe UI', Roboto, sans-serif">
+<defs>
+  <radialGradient id="suknoDurak" cx="50%" cy="34%" r="76%">
+    <stop offset="0%" stop-color="#1E6E7E"/><stop offset="58%" stop-color="#12495A"/><stop offset="100%" stop-color="#0A2E39"/>
+  </radialGradient>
+  <radialGradient id="suknoPoker" cx="50%" cy="36%" r="74%">
+    <stop offset="0%" stop-color="#2A7B55"/><stop offset="58%" stop-color="#145436"/><stop offset="100%" stop-color="#0A3322"/>
+  </radialGradient>
+  <linearGradient id="zoloto" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#F2C96B" stop-opacity="0.16"/><stop offset="100%" stop-color="#F2C96B" stop-opacity="0.04"/>
+  </linearGradient>
+  <clipPath id="ekran"><rect width="360" height="780"/></clipPath>
+</defs>
+<g clip-path="url(#ekran)">
+<rect x="0" y="0" width="360" height="780" rx="0" fill="#0A1216"/>
+<g id="Верх">
+<rect x="12" y="16" width="92" height="32" rx="16" fill="#13212A" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+<text x="30" y="37" font-size="12.5" font-weight="700" fill="#F2F7F5" text-anchor="start">Флоп</text>
+<text x="180" y="37" font-size="12.5" font-weight="700" fill="#A9BCC0" text-anchor="middle">Блайнды 50 / 100</text>
+<rect x="316" y="16" width="32" height="32" rx="16" fill="#13212A" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+<text x="332" y="36" font-size="15" font-weight="800" fill="#A9BCC0" text-anchor="middle">⋯</text>
+</g>
+<g id="Сукно">
+<ellipse cx="180" cy="330" rx="168" ry="268" fill="url(#suknoPoker)"/>
+</g>
+<g id="Соперники">
+<g id="Место Алексей">
+<g transform="translate(160 76) rotate(-8 10 14)">
+<rect x="0" y="0" width="20" height="28" rx="3.2" fill="#1B4A63" stroke="#0A2028" stroke-width="1"/>
+<rect x="1.6" y="1.6" width="16.8" height="24.8" rx="1.7999999999999998" fill="none" stroke="rgba(127,216,232,0.45)" stroke-width="1"/>
+<path d="M4 14 L10 5.6 L16 14 L10 22.4 Z" fill="none" stroke="rgba(127,216,232,0.3)"/>
+<circle cx="10" cy="14" r="2.6" fill="none" stroke="rgba(127,216,232,0.35)" stroke-width="1"/>
+</g>
+<g transform="translate(176 76) rotate(8 10 14)">
+<rect x="0" y="0" width="20" height="28" rx="3.2" fill="#1B4A63" stroke="#0A2028" stroke-width="1"/>
+<rect x="1.6" y="1.6" width="16.8" height="24.8" rx="1.7999999999999998" fill="none" stroke="rgba(127,216,232,0.45)" stroke-width="1"/>
+<path d="M4 14 L10 5.6 L16 14 L10 22.4 Z" fill="none" stroke="rgba(127,216,232,0.3)"/>
+<circle cx="10" cy="14" r="2.6" fill="none" stroke="rgba(127,216,232,0.35)" stroke-width="1"/>
+</g>
+<clipPath id="av180x110"><circle cx="180" cy="110" r="24"/></clipPath>
+<circle cx="180" cy="110" r="24" fill="#25424F"/>
+<g clip-path="url(#av180x110)">
+<circle cx="180" cy="105.68" r="8.64" fill="#8AA6B0"/>
+<ellipse cx="180" cy="129.68" rx="15.84" ry="12.48" fill="#8AA6B0"/>
+</g>
+<circle cx="180" cy="110" r="24" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+<rect x="136" y="138" width="88" height="36" rx="12" fill="#13212A" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+<text x="180" y="153" font-size="11.5" font-weight="700" fill="#A9BCC0" text-anchor="middle">Алексей</text>
+<text x="180" y="168" font-size="13" font-weight="800" fill="#F2F7F5" text-anchor="middle">4 350</text>
+<rect x="146" y="180" width="68" height="22" rx="11" fill="#13212A"/>
+<text x="180" y="194.96" font-size="11" font-weight="700" fill="#A9BCC0" text-anchor="middle">Чек</text>
+</g>
+<g id="Место Ирина">
+<g transform="translate(32 144) rotate(-8 10 14)">
+<rect x="0" y="0" width="20" height="28" rx="3.2" fill="#1B4A63" stroke="#0A2028" stroke-width="1"/>
+<rect x="1.6" y="1.6" width="16.8" height="24.8" rx="1.7999999999999998" fill="none" stroke="rgba(127,216,232,0.45)" stroke-width="1"/>
+<path d="M4 14 L10 5.6 L16 14 L10 22.4 Z" fill="none" stroke="rgba(127,216,232,0.3)"/>
+<circle cx="10" cy="14" r="2.6" fill="none" stroke="rgba(127,216,232,0.35)" stroke-width="1"/>
+</g>
+<g transform="translate(48 144) rotate(8 10 14)">
+<rect x="0" y="0" width="20" height="28" rx="3.2" fill="#1B4A63" stroke="#0A2028" stroke-width="1"/>
+<rect x="1.6" y="1.6" width="16.8" height="24.8" rx="1.7999999999999998" fill="none" stroke="rgba(127,216,232,0.45)" stroke-width="1"/>
+<path d="M4 14 L10 5.6 L16 14 L10 22.4 Z" fill="none" stroke="rgba(127,216,232,0.3)"/>
+<circle cx="10" cy="14" r="2.6" fill="none" stroke="rgba(127,216,232,0.35)" stroke-width="1"/>
+</g>
+<clipPath id="av52x178"><circle cx="52" cy="178" r="24"/></clipPath>
+<circle cx="52" cy="178" r="24" fill="#25424F"/>
+<g clip-path="url(#av52x178)">
+<circle cx="52" cy="173.68" r="8.64" fill="#8AA6B0"/>
+<ellipse cx="52" cy="197.68" rx="15.84" ry="12.48" fill="#8AA6B0"/>
+</g>
+<circle cx="52" cy="178" r="24" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+<rect x="8" y="206" width="88" height="36" rx="12" fill="#13212A" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+<text x="52" y="221" font-size="11.5" font-weight="700" fill="#A9BCC0" text-anchor="middle">Ирина</text>
+<text x="52" y="236" font-size="13" font-weight="800" fill="#F2F7F5" text-anchor="middle">3 200</text>
+<rect x="18" y="248" width="68" height="22" rx="11" fill="#13212A" stroke="#F2C96B" stroke-width="1"/>
+<text x="52" y="262.96" font-size="11" font-weight="700" fill="#F2C96B" text-anchor="middle">Ставка 300</text>
+</g>
+<g id="Место Максим">
+<g transform="translate(288 144) rotate(-8 10 14)">
+<rect x="0" y="0" width="20" height="28" rx="3.2" fill="#1B4A63" stroke="#0A2028" stroke-width="1"/>
+<rect x="1.6" y="1.6" width="16.8" height="24.8" rx="1.7999999999999998" fill="none" stroke="rgba(127,216,232,0.45)" stroke-width="1"/>
+<path d="M4 14 L10 5.6 L16 14 L10 22.4 Z" fill="none" stroke="rgba(127,216,232,0.3)"/>
+<circle cx="10" cy="14" r="2.6" fill="none" stroke="rgba(127,216,232,0.35)" stroke-width="1"/>
+</g>
+<g transform="translate(304 144) rotate(8 10 14)">
+<rect x="0" y="0" width="20" height="28" rx="3.2" fill="#1B4A63" stroke="#0A2028" stroke-width="1"/>
+<rect x="1.6" y="1.6" width="16.8" height="24.8" rx="1.7999999999999998" fill="none" stroke="rgba(127,216,232,0.45)" stroke-width="1"/>
+<path d="M4 14 L10 5.6 L16 14 L10 22.4 Z" fill="none" stroke="rgba(127,216,232,0.3)"/>
+<circle cx="10" cy="14" r="2.6" fill="none" stroke="rgba(127,216,232,0.35)" stroke-width="1"/>
+</g>
+<clipPath id="av308x178"><circle cx="308" cy="178" r="24"/></clipPath>
+<circle cx="308" cy="178" r="24" fill="#25424F"/>
+<g clip-path="url(#av308x178)">
+<circle cx="308" cy="173.68" r="8.64" fill="#8AA6B0"/>
+<ellipse cx="308" cy="197.68" rx="15.84" ry="12.48" fill="#8AA6B0"/>
+</g>
+<circle cx="308" cy="178" r="24" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+<rect x="264" y="206" width="88" height="36" rx="12" fill="#13212A" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+<text x="308" y="221" font-size="11.5" font-weight="700" fill="#A9BCC0" text-anchor="middle">Максим</text>
+<text x="308" y="236" font-size="13" font-weight="800" fill="#F2F7F5" text-anchor="middle">6 780</text>
+<rect x="274" y="248" width="68" height="22" rx="11" fill="#13212A"/>
+<text x="308" y="262.96" font-size="11" font-weight="700" fill="#A9BCC0" text-anchor="middle">Колл 300</text>
+</g>
+<g id="Место Сергей">
+<g transform="translate(32 384) rotate(-8 10 14)">
+<rect x="0" y="0" width="20" height="28" rx="3.2" fill="#1B4A63" stroke="#0A2028" stroke-width="1"/>
+<rect x="1.6" y="1.6" width="16.8" height="24.8" rx="1.7999999999999998" fill="none" stroke="rgba(127,216,232,0.45)" stroke-width="1"/>
+<path d="M4 14 L10 5.6 L16 14 L10 22.4 Z" fill="none" stroke="rgba(127,216,232,0.3)"/>
+<circle cx="10" cy="14" r="2.6" fill="none" stroke="rgba(127,216,232,0.35)" stroke-width="1"/>
+</g>
+<g transform="translate(48 384) rotate(8 10 14)">
+<rect x="0" y="0" width="20" height="28" rx="3.2" fill="#1B4A63" stroke="#0A2028" stroke-width="1"/>
+<rect x="1.6" y="1.6" width="16.8" height="24.8" rx="1.7999999999999998" fill="none" stroke="rgba(127,216,232,0.45)" stroke-width="1"/>
+<path d="M4 14 L10 5.6 L16 14 L10 22.4 Z" fill="none" stroke="rgba(127,216,232,0.3)"/>
+<circle cx="10" cy="14" r="2.6" fill="none" stroke="rgba(127,216,232,0.35)" stroke-width="1"/>
+</g>
+<clipPath id="av52x418"><circle cx="52" cy="418" r="24"/></clipPath>
+<circle cx="52" cy="418" r="24" fill="#25424F"/>
+<g clip-path="url(#av52x418)">
+<circle cx="52" cy="413.68" r="8.64" fill="#8AA6B0"/>
+<ellipse cx="52" cy="437.68" rx="15.84" ry="12.48" fill="#8AA6B0"/>
+</g>
+<circle cx="52" cy="418" r="24" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+<rect x="8" y="446" width="88" height="36" rx="12" fill="#13212A" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+<text x="52" y="461" font-size="11.5" font-weight="700" fill="#A9BCC0" text-anchor="middle">Сергей</text>
+<text x="52" y="476" font-size="13" font-weight="800" fill="#F2F7F5" text-anchor="middle">2 150</text>
+<rect x="18" y="488" width="68" height="22" rx="11" fill="#13212A"/>
+<text x="52" y="502.96" font-size="11" font-weight="700" fill="#A9BCC0" text-anchor="middle">Фолд</text>
+</g>
+<g id="Место Ольга">
+<g transform="translate(288 384) rotate(-8 10 14)">
+<rect x="0" y="0" width="20" height="28" rx="3.2" fill="#1B4A63" stroke="#0A2028" stroke-width="1"/>
+<rect x="1.6" y="1.6" width="16.8" height="24.8" rx="1.7999999999999998" fill="none" stroke="rgba(127,216,232,0.45)" stroke-width="1"/>
+<path d="M4 14 L10 5.6 L16 14 L10 22.4 Z" fill="none" stroke="rgba(127,216,232,0.3)"/>
+<circle cx="10" cy="14" r="2.6" fill="none" stroke="rgba(127,216,232,0.35)" stroke-width="1"/>
+</g>
+<g transform="translate(304 384) rotate(8 10 14)">
+<rect x="0" y="0" width="20" height="28" rx="3.2" fill="#1B4A63" stroke="#0A2028" stroke-width="1"/>
+<rect x="1.6" y="1.6" width="16.8" height="24.8" rx="1.7999999999999998" fill="none" stroke="rgba(127,216,232,0.45)" stroke-width="1"/>
+<path d="M4 14 L10 5.6 L16 14 L10 22.4 Z" fill="none" stroke="rgba(127,216,232,0.3)"/>
+<circle cx="10" cy="14" r="2.6" fill="none" stroke="rgba(127,216,232,0.35)" stroke-width="1"/>
+</g>
+<clipPath id="av308x418"><circle cx="308" cy="418" r="24"/></clipPath>
+<circle cx="308" cy="418" r="24" fill="#25424F"/>
+<g clip-path="url(#av308x418)">
+<circle cx="308" cy="413.68" r="8.64" fill="#8AA6B0"/>
+<ellipse cx="308" cy="437.68" rx="15.84" ry="12.48" fill="#8AA6B0"/>
+</g>
+<circle cx="308" cy="418" r="24" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+<rect x="264" y="446" width="88" height="36" rx="12" fill="#13212A" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+<text x="308" y="461" font-size="11.5" font-weight="700" fill="#A9BCC0" text-anchor="middle">Ольга</text>
+<text x="308" y="476" font-size="13" font-weight="800" fill="#F2F7F5" text-anchor="middle">5 600</text>
+<rect x="274" y="488" width="68" height="22" rx="11" fill="#13212A"/>
+<text x="308" y="502.96" font-size="11" font-weight="700" fill="#A9BCC0" text-anchor="middle">Чек</text>
+</g>
+</g>
+<g id="Банк">
+<rect x="114" y="248" width="132" height="44" rx="14" fill="rgba(3,32,20,0.55)" stroke="rgba(255,255,255,0.14)" stroke-width="1"/>
+<text x="180" y="265" font-size="10.5" font-weight="700" fill="#A9BCC0" text-anchor="middle">Банк</text>
+<circle cx="136" cy="279" r="7" fill="#E8574C"/>
+<circle cx="146" cy="279" r="7" fill="#F7F4EC"/>
+<text x="196" y="286" font-size="18" font-weight="800" fill="#F2F7F5" text-anchor="middle">1 350</text>
+</g>
+<g id="Борд">
+<g transform="translate(60 308)">
+<rect x="0" y="0" width="48" height="67.2" rx="7.68" fill="#F7F4EC" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+<text x="6.24" y="17.28" font-size="14.399999999999999" font-weight="800" fill="#16202A" text-anchor="start">Т</text>
+<text x="6.24" y="29.76" font-size="11.52" font-weight="700" fill="#16202A" text-anchor="start">♠</text>
+<text x="36.48" y="60.48" font-size="22.080000000000002" font-weight="700" fill="#16202A" text-anchor="middle">♠</text>
+</g>
+<g transform="translate(116 308)">
+<rect x="0" y="0" width="48" height="67.2" rx="7.68" fill="#F7F4EC" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+<text x="6.24" y="17.28" font-size="14.399999999999999" font-weight="800" fill="#D2342B" text-anchor="start">К</text>
+<text x="6.24" y="29.76" font-size="11.52" font-weight="700" fill="#D2342B" text-anchor="start">♥</text>
+<text x="36.48" y="60.48" font-size="22.080000000000002" font-weight="700" fill="#D2342B" text-anchor="middle">♥</text>
+</g>
+<g transform="translate(172 308)">
+<rect x="0" y="0" width="48" height="67.2" rx="7.68" fill="#F7F4EC" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+<text x="6.24" y="17.28" font-size="14.399999999999999" font-weight="800" fill="#16202A" text-anchor="start">7</text>
+<text x="6.24" y="29.76" font-size="11.52" font-weight="700" fill="#16202A" text-anchor="start">♣</text>
+<text x="36.48" y="60.48" font-size="22.080000000000002" font-weight="700" fill="#16202A" text-anchor="middle">♣</text>
+</g>
+<rect x="228" y="308" width="48" height="67.2" rx="7.68" fill="rgba(3,40,26,0.5)" stroke="rgba(255,255,255,0.35)" stroke-width="1" stroke-dasharray="5 4"/>
+<rect x="284" y="308" width="48" height="67.2" rx="7.68" fill="rgba(3,40,26,0.5)" stroke="rgba(255,255,255,0.35)" stroke-width="1" stroke-dasharray="5 4"/>
+<rect x="132" y="384" width="96" height="22" rx="11" fill="rgba(0,0,0,0.35)"/>
+<text x="180" y="398.96" font-size="11" font-weight="700" fill="#A9BCC0" text-anchor="middle">Ставка: 300</text>
+</g>
+<g id="Мои карты">
+<g transform="translate(94 472) rotate(-7 41 57.4)">
+<rect x="0" y="0" width="82" height="114.8" rx="13.120000000000001" fill="#F7F4EC" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+<text x="10.66" y="29.52" font-size="24.599999999999998" font-weight="800" fill="#D2342B" text-anchor="start">Д</text>
+<text x="10.66" y="50.84" font-size="19.68" font-weight="700" fill="#D2342B" text-anchor="start">♥</text>
+<text x="62.32" y="103.32" font-size="37.72" font-weight="700" fill="#D2342B" text-anchor="middle">♥</text>
+</g>
+<g transform="translate(184 466) rotate(6 41 57.4)">
+<rect x="0" y="0" width="82" height="114.8" rx="13.120000000000001" fill="#F7F4EC" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+<text x="10.66" y="29.52" font-size="24.599999999999998" font-weight="800" fill="#D2342B" text-anchor="start">10</text>
+<text x="10.66" y="50.84" font-size="19.68" font-weight="700" fill="#D2342B" text-anchor="start">♥</text>
+<text x="62.32" y="103.32" font-size="37.72" font-weight="700" fill="#D2342B" text-anchor="middle">♥</text>
+</g>
+<rect x="126" y="592" width="108" height="26" rx="13" fill="#13212A" stroke="rgba(46,224,140,0.5)" stroke-width="1"/>
+<text x="180" y="609.32" font-size="12" font-weight="700" fill="#2EE08C" text-anchor="middle">Пара дам</text>
+</g>
+<g id="Я">
+<rect x="12" y="630" width="336" height="62" rx="16" fill="#13212A" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+<text x="28" y="653" font-size="16" font-weight="800" fill="#F2F7F5" text-anchor="start">Вы</text>
+<circle cx="66" cy="648" r="5" fill="#2EE08C"/>
+<text x="332" y="653" font-size="16" font-weight="800" fill="#F2F7F5" text-anchor="end">4 720</text>
+<text x="28" y="671" font-size="12" font-weight="700" fill="#A9BCC0" text-anchor="start">Ваш ход</text>
+<rect x="28" y="678" width="268" height="6" rx="3" fill="rgba(255,255,255,0.12)"/>
+<rect x="28" y="678" width="176" height="6" rx="3" fill="#2EE08C"/>
+<text x="332" y="683" font-size="11" font-weight="700" fill="#A9BCC0" text-anchor="end">20 с</text>
+</g>
+<g id="Действия">
+<rect x="12" y="704" width="104" height="60" rx="14" fill="rgba(232,87,76,0.12)" stroke="#E8574C" stroke-width="1.5"/>
+<text x="64" y="735.04" font-size="14" font-weight="800" fill="#E8574C" text-anchor="middle">Сбросить</text>
+<text x="64" y="750" font-size="11" font-weight="700" fill="#E8574C" text-anchor="middle">300</text>
+<rect x="128" y="704" width="104" height="60" rx="14" fill="#2EE08C"/>
+<text x="180" y="735.04" font-size="14" font-weight="800" fill="#0A2016" text-anchor="middle">Колл</text>
+<text x="180" y="750" font-size="11" font-weight="700" fill="#0A2016" text-anchor="middle">300</text>
+<rect x="244" y="704" width="104" height="60" rx="14" fill="#F2C96B"/>
+<text x="296" y="735.04" font-size="14" font-weight="800" fill="#2A1F06" text-anchor="middle">Рейз</text>
+<text x="296" y="750" font-size="11" font-weight="700" fill="#2A1F06" text-anchor="middle">900</text>
+</g>
+</g>
+</svg>

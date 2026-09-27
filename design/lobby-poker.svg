@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Лобби: стол собирается, 360×780 — экран телефона, в котором живёт игра.
+
+  Собрано генератором tools/make-design.mjs по макету владельца. Группы
+  названы по-русски, текст настоящий, цвета из docs/design.md. Перетащите в
+  Figma — откроется слоями.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="780" viewBox="0 0 360 780" font-family="Inter, -apple-system, 'Segoe UI', Roboto, sans-serif">
+<defs>
+  <radialGradient id="suknoDurak" cx="50%" cy="34%" r="76%">
+    <stop offset="0%" stop-color="#1E6E7E"/><stop offset="58%" stop-color="#12495A"/><stop offset="100%" stop-color="#0A2E39"/>
+  </radialGradient>
+  <radialGradient id="suknoPoker" cx="50%" cy="36%" r="74%">
+    <stop offset="0%" stop-color="#2A7B55"/><stop offset="58%" stop-color="#145436"/><stop offset="100%" stop-color="#0A3322"/>
+  </radialGradient>
+  <linearGradient id="zoloto" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#F2C96B" stop-opacity="0.16"/><stop offset="100%" stop-color="#F2C96B" stop-opacity="0.04"/>
+  </linearGradient>
+  <clipPath id="ekran"><rect width="360" height="780"/></clipPath>
+</defs>
+<g clip-path="url(#ekran)">
+<rect x="0" y="0" width="360" height="780" rx="0" fill="#0A1216"/>
+<g id="Заголовок">
+<text x="16" y="52" font-size="30" font-weight="800" fill="#F2F7F5" text-anchor="start">Покер</text>
+<text x="16" y="78" font-size="13" font-weight="600" fill="#A9BCC0" text-anchor="start">Ждём игроков, чтобы начать</text>
+</g>
+<g id="Места">
+<rect x="12" y="100" width="336" height="252" rx="20" fill="#13212A"/>
+<g id="Место Алексей">
+<rect x="24" y="114" width="96" height="108" rx="16" fill="#17252E" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+<clipPath id="av72x158"><circle cx="72" cy="158" r="28"/></clipPath>
+<circle cx="72" cy="158" r="28" fill="#25424F"/>
+<g clip-path="url(#av72x158)">
+<circle cx="72" cy="152.96" r="10.08" fill="#8AA6B0"/>
+<ellipse cx="72" cy="180.96" rx="18.48" ry="14.56" fill="#8AA6B0"/>
+</g>
+<circle cx="72" cy="158" r="28" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+<text x="72" y="206" font-size="12.5" font-weight="700" fill="#F2F7F5" text-anchor="middle">Алексей</text>
+</g>
+<g id="Место Ирина">
+<rect x="132" y="114" width="96" height="108" rx="16" fill="#17252E" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+<clipPath id="av180x158"><circle cx="180" cy="158" r="28"/></clipPath>
+<circle cx="180" cy="158" r="28" fill="#25424F"/>
+<g clip-path="url(#av180x158)">
+<circle cx="180" cy="152.96" r="10.08" fill="#8AA6B0"/>
+<ellipse cx="180" cy="180.96" rx="18.48" ry="14.56" fill="#8AA6B0"/>
+</g>
+<circle cx="180" cy="158" r="28" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+<text x="180" y="206" font-size="12.5" font-weight="700" fill="#F2F7F5" text-anchor="middle">Ирина</text>
+</g>
+<g id="Место Максим">
+<rect x="240" y="114" width="96" height="108" rx="16" fill="#17252E" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+<clipPath id="av288x158"><circle cx="288" cy="158" r="28"/></clipPath>
+<circle cx="288" cy="158" r="28" fill="#25424F"/>
+<g clip-path="url(#av288x158)">
+<circle cx="288" cy="152.96" r="10.08" fill="#8AA6B0"/>
+<ellipse cx="288" cy="180.96" rx="18.48" ry="14.56" fill="#8AA6B0"/>
+</g>
+<circle cx="288" cy="158" r="28" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+<text x="288" y="206" font-size="12.5" font-weight="700" fill="#F2F7F5" text-anchor="middle">Максим</text>
+</g>
+<g id="Свободно">
+<rect x="24" y="230" width="96" height="108" rx="16" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.22)" stroke-width="1" stroke-dasharray="6 5"/>
+<circle cx="72" cy="274" r="22" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+<text x="72" y="281" font-size="22" font-weight="700" fill="#A9BCC0" text-anchor="middle">+</text>
+<text x="72" y="322" font-size="11.5" font-weight="600" fill="#6E858B" text-anchor="middle">Свободно</text>
+</g>
+<g id="Свободно">
+<rect x="132" y="230" width="96" height="108" rx="16" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.22)" stroke-width="1" stroke-dasharray="6 5"/>
+<circle cx="180" cy="274" r="22" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+<text x="180" y="281" font-size="22" font-weight="700" fill="#A9BCC0" text-anchor="middle">+</text>
+<text x="180" y="322" font-size="11.5" font-weight="600" fill="#6E858B" text-anchor="middle">Свободно</text>
+</g>
+<g id="Свободно">
+<rect x="240" y="230" width="96" height="108" rx="16" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.22)" stroke-width="1" stroke-dasharray="6 5"/>
+<circle cx="288" cy="274" r="22" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+<text x="288" y="281" font-size="22" font-weight="700" fill="#A9BCC0" text-anchor="middle">+</text>
+<text x="288" y="322" font-size="11.5" font-weight="600" fill="#6E858B" text-anchor="middle">Свободно</text>
+</g>
+</g>
+<g id="Правила стола">
+<rect x="12" y="366" width="140" height="34" rx="17" fill="rgba(46,224,140,0.10)" stroke="rgba(46,224,140,0.6)" stroke-width="1"/>
+<text x="82" y="387.32" font-size="12" font-weight="700" fill="#2EE08C" text-anchor="middle">Блайнды 50 / 100</text>
+<rect x="158" y="366" width="86" height="34" rx="17" fill="#13212A" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+<text x="201" y="387.32" font-size="12" font-weight="700" fill="#A9BCC0" text-anchor="middle">6 игроков</text>
+<rect x="250" y="366" width="98" height="34" rx="17" fill="#13212A" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+<text x="299" y="387.32" font-size="12" font-weight="700" fill="#A9BCC0" text-anchor="middle">Без лимита</text>
+<rect x="12" y="408" width="96" height="34" rx="17" fill="#13212A" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+<text x="60" y="429.32" font-size="12" font-weight="700" fill="#A9BCC0" text-anchor="middle">Анте: нет</text>
+<rect x="114" y="408" width="128" height="34" rx="17" fill="#13212A" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+<text x="178" y="429.32" font-size="12" font-weight="700" fill="#A9BCC0" text-anchor="middle">Таймбанк 30 с</text>
+<rect x="248" y="408" width="100" height="34" rx="17" fill="#13212A" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+<text x="298" y="429.32" font-size="12" font-weight="700" fill="#A9BCC0" text-anchor="middle">Ребай: да</text>
+</g>
+<g id="Хозяину стола">
+<rect x="12" y="462" width="336" height="130" rx="20" fill="#13212A"/>
+<g id="Пункт Настройки стола">
+<rect x="28" y="482" width="34" height="34" rx="11" fill="#1B2A33"/>
+<text x="45" y="505" font-size="15" font-weight="700" fill="#F2F7F5" text-anchor="middle">⚙</text>
+<text x="74" y="500" font-size="14.5" font-weight="800" fill="#F2F7F5" text-anchor="start">Настройки стола</text>
+<text x="74" y="518" font-size="11" font-weight="600" fill="#6E858B" text-anchor="start">Правила, таймер, ребаи</text>
+<text x="330" y="506" font-size="18" font-weight="800" fill="#A9BCC0" text-anchor="end">›</text>
+<line x1="28" y1="528" x2="332" y2="528" stroke="rgba(255,255,255,0.07)"/>
+</g>
+<g id="Пункт Пригласить игроков">
+<rect x="28" y="547" width="34" height="34" rx="11" fill="#1B2A33"/>
+<text x="45" y="570" font-size="15" font-weight="700" fill="#F2F7F5" text-anchor="middle">👥</text>
+<text x="74" y="565" font-size="14.5" font-weight="800" fill="#F2F7F5" text-anchor="start">Пригласить игроков</text>
+<text x="74" y="583" font-size="11" font-weight="600" fill="#6E858B" text-anchor="start">Ссылка в чат группы</text>
+<text x="330" y="571" font-size="18" font-weight="800" fill="#A9BCC0" text-anchor="end">›</text>
+</g>
+</g>
+<g id="Кнопки">
+<rect x="12" y="648" width="336" height="60" rx="18" fill="#2EE08C"/>
+<text x="180" y="684.12" font-size="17" font-weight="800" fill="#0A2016" text-anchor="middle">Начать игру</text>
+<rect x="12" y="720" width="336" height="54" rx="16" fill="transparent" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+<text x="180" y="752.4" font-size="15" font-weight="800" fill="#A9BCC0" text-anchor="middle">Покинуть стол</text>
+</g>
+</g>
+</svg>

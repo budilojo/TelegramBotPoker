@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Рейтинг, 360×780 — экран телефона, в котором живёт игра.
+
+  Собрано генератором tools/make-design.mjs по макету владельца. Группы
+  названы по-русски, текст настоящий, цвета из docs/design.md. Перетащите в
+  Figma — откроется слоями.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="780" viewBox="0 0 360 780" font-family="Inter, -apple-system, 'Segoe UI', Roboto, sans-serif">
+<defs>
+  <radialGradient id="suknoDurak" cx="50%" cy="34%" r="76%">
+    <stop offset="0%" stop-color="#1E6E7E"/><stop offset="58%" stop-color="#12495A"/><stop offset="100%" stop-color="#0A2E39"/>
+  </radialGradient>
+  <radialGradient id="suknoPoker" cx="50%" cy="36%" r="74%">
+    <stop offset="0%" stop-color="#2A7B55"/><stop offset="58%" stop-color="#145436"/><stop offset="100%" stop-color="#0A3322"/>
+  </radialGradient>
+  <linearGradient id="zoloto" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#F2C96B" stop-opacity="0.16"/><stop offset="100%" stop-color="#F2C96B" stop-opacity="0.04"/>
+  </linearGradient>
+  <clipPath id="ekran"><rect width="360" height="780"/></clipPath>
+</defs>
+<g clip-path="url(#ekran)">
+<rect x="0" y="0" width="360" height="780" rx="0" fill="#0A1216"/>
+<g id="Верх">
+<rect x="12" y="16" width="40" height="36" rx="12" fill="#13212A" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+<text x="32" y="40" font-size="20" font-weight="800" fill="#F2F7F5" text-anchor="middle">‹</text>
+<text x="30" y="100" font-size="30" font-weight="700" fill="#F2F7F5" text-anchor="middle">🏆</text>
+<text x="56" y="100" font-size="24" font-weight="800" fill="#F2F7F5" text-anchor="start">Рейтинг игроков</text>
+<text x="56" y="122" font-size="12" font-weight="600" fill="#A9BCC0" text-anchor="start">Кто чего стоит — за месяц и за всё время</text>
+</g>
+<g id="Переключатель игры">
+<rect x="12" y="142" width="164" height="44" rx="22" fill="#2EE08C"/>
+<text x="94" y="169.04" font-size="14" font-weight="800" fill="#0A2016" text-anchor="middle">Дурак</text>
+<rect x="184" y="142" width="164" height="44" rx="22" fill="#13212A" stroke="rgba(255,255,255,0.10)" stroke-width="1.5"/>
+<text x="266" y="169.04" font-size="14" font-weight="800" fill="#A9BCC0" text-anchor="middle">Покер</text>
+</g>
+<g id="Переключатель срока">
+<rect x="12" y="196" width="120" height="34" rx="17" fill="#2EE08C"/>
+<text x="72" y="217.5" font-size="12.5" font-weight="800" fill="#0A2016" text-anchor="middle">За месяц</text>
+<rect x="140" y="196" width="130" height="34" rx="17" fill="#13212A" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+<text x="205" y="217.5" font-size="12.5" font-weight="700" fill="#A9BCC0" text-anchor="middle">За всё время</text>
+</g>
+<g id="Строка Алексей">
+<rect x="12" y="244" width="336" height="66" rx="16" fill="#13212A" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+<text x="38" y="284" font-size="22" font-weight="700" fill="#F2F7F5" text-anchor="middle">🥇</text>
+<clipPath id="av78x277"><circle cx="78" cy="277" r="20"/></clipPath>
+<circle cx="78" cy="277" r="20" fill="#25424F"/>
+<g clip-path="url(#av78x277)">
+<circle cx="78" cy="273.4" r="7.2" fill="#8AA6B0"/>
+<ellipse cx="78" cy="293.4" rx="13.2" ry="10.4" fill="#8AA6B0"/>
+</g>
+<circle cx="78" cy="277" r="20" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+<text x="108" y="273" font-size="15" font-weight="800" fill="#F2F7F5" text-anchor="start">Алексей</text>
+<text x="108" y="292" font-size="11" font-weight="600" fill="#6E858B" text-anchor="start">312 партий · побед 68%</text>
+<text x="336" y="275" font-size="17" font-weight="800" fill="#F2C96B" text-anchor="end">12 450</text>
+<text x="336" y="292" font-size="10.5" font-weight="600" fill="#6E858B" text-anchor="end">очков</text>
+</g>
+<g id="Строка Ирина">
+<rect x="12" y="318" width="336" height="66" rx="16" fill="#13212A" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+<text x="38" y="358" font-size="22" font-weight="700" fill="#F2F7F5" text-anchor="middle">🥈</text>
+<clipPath id="av78x351"><circle cx="78" cy="351" r="20"/></clipPath>
+<circle cx="78" cy="351" r="20" fill="#25424F"/>
+<g clip-path="url(#av78x351)">
+<circle cx="78" cy="347.4" r="7.2" fill="#8AA6B0"/>
+<ellipse cx="78" cy="367.4" rx="13.2" ry="10.4" fill="#8AA6B0"/>
+</g>
+<circle cx="78" cy="351" r="20" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+<text x="108" y="347" font-size="15" font-weight="800" fill="#F2F7F5" text-anchor="start">Ирина</text>
+<text x="108" y="366" font-size="11" font-weight="600" fill="#6E858B" text-anchor="start">284 партии · побед 62%</text>
+<text x="336" y="349" font-size="17" font-weight="800" fill="#F2C96B" text-anchor="end">11 980</text>
+<text x="336" y="366" font-size="10.5" font-weight="600" fill="#6E858B" text-anchor="end">очков</text>
+</g>
+<g id="Строка Максим">
+<rect x="12" y="392" width="336" height="66" rx="16" fill="#13212A" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+<text x="38" y="432" font-size="22" font-weight="700" fill="#F2F7F5" text-anchor="middle">🥉</text>
+<clipPath id="av78x425"><circle cx="78" cy="425" r="20"/></clipPath>
+<circle cx="78" cy="425" r="20" fill="#25424F"/>
+<g clip-path="url(#av78x425)">
+<circle cx="78" cy="421.4" r="7.2" fill="#8AA6B0"/>
+<ellipse cx="78" cy="441.4" rx="13.2" ry="10.4" fill="#8AA6B0"/>
+</g>
+<circle cx="78" cy="425" r="20" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+<text x="108" y="421" font-size="15" font-weight="800" fill="#F2F7F5" text-anchor="start">Максим</text>
+<text x="108" y="440" font-size="11" font-weight="600" fill="#6E858B" text-anchor="start">275 партий · побед 59%</text>
+<text x="336" y="423" font-size="17" font-weight="800" fill="#F2C96B" text-anchor="end">10 320</text>
+<text x="336" y="440" font-size="10.5" font-weight="600" fill="#6E858B" text-anchor="end">очков</text>
+</g>
+<g id="Строка Ольга">
+<rect x="12" y="466" width="336" height="66" rx="16" fill="#13212A" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+<text x="38" y="506" font-size="16" font-weight="800" fill="#6E858B" text-anchor="middle">4</text>
+<clipPath id="av78x499"><circle cx="78" cy="499" r="20"/></clipPath>
+<circle cx="78" cy="499" r="20" fill="#25424F"/>
+<g clip-path="url(#av78x499)">
+<circle cx="78" cy="495.4" r="7.2" fill="#8AA6B0"/>
+<ellipse cx="78" cy="515.4" rx="13.2" ry="10.4" fill="#8AA6B0"/>
+</g>
+<circle cx="78" cy="499" r="20" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+<text x="108" y="495" font-size="15" font-weight="800" fill="#F2F7F5" text-anchor="start">Ольга</text>
+<text x="108" y="514" font-size="11" font-weight="600" fill="#6E858B" text-anchor="start">230 партий · побед 58%</text>
+<text x="336" y="497" font-size="17" font-weight="800" fill="#F2C96B" text-anchor="end">9 760</text>
+<text x="336" y="514" font-size="10.5" font-weight="600" fill="#6E858B" text-anchor="end">очков</text>
+</g>
+<g id="Строка Вы">
+<rect x="12" y="540" width="336" height="66" rx="16" fill="#17252E" stroke="#2EE08C" stroke-width="2"/>
+<text x="38" y="580" font-size="16" font-weight="800" fill="#2EE08C" text-anchor="middle">5</text>
+<clipPath id="av78x573"><circle cx="78" cy="573" r="20"/></clipPath>
+<circle cx="78" cy="573" r="20" fill="#25424F"/>
+<g clip-path="url(#av78x573)">
+<circle cx="78" cy="569.4" r="7.2" fill="#8AA6B0"/>
+<ellipse cx="78" cy="589.4" rx="13.2" ry="10.4" fill="#8AA6B0"/>
+</g>
+<circle cx="78" cy="573" r="20" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+<text x="108" y="569" font-size="15" font-weight="800" fill="#F2F7F5" text-anchor="start">Вы</text>
+<text x="108" y="588" font-size="11" font-weight="600" fill="#6E858B" text-anchor="start">198 партий · побед 55%</text>
+<text x="336" y="571" font-size="17" font-weight="800" fill="#F2C96B" text-anchor="end">8 420</text>
+<text x="336" y="588" font-size="10.5" font-weight="600" fill="#6E858B" text-anchor="end">очков</text>
+</g>
+<g id="Строка Сергей">
+<rect x="12" y="614" width="336" height="66" rx="16" fill="#13212A" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+<text x="38" y="654" font-size="16" font-weight="800" fill="#6E858B" text-anchor="middle">6</text>
+<clipPath id="av78x647"><circle cx="78" cy="647" r="20"/></clipPath>
+<circle cx="78" cy="647" r="20" fill="#25424F"/>
+<g clip-path="url(#av78x647)">
+<circle cx="78" cy="643.4" r="7.2" fill="#8AA6B0"/>
+<ellipse cx="78" cy="663.4" rx="13.2" ry="10.4" fill="#8AA6B0"/>
+</g>
+<circle cx="78" cy="647" r="20" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+<text x="108" y="643" font-size="15" font-weight="800" fill="#F2F7F5" text-anchor="start">Сергей</text>
+<text x="108" y="662" font-size="11" font-weight="600" fill="#6E858B" text-anchor="start">185 партий · побед 53%</text>
+<text x="336" y="645" font-size="17" font-weight="800" fill="#F2C96B" text-anchor="end">7 910</text>
+<text x="336" y="662" font-size="10.5" font-weight="600" fill="#6E858B" text-anchor="end">очков</text>
+</g>
+<g id="Как считается">
+<text x="16" y="706" font-size="11" font-weight="600" fill="#6E858B" text-anchor="start">Очки за место: первым +20, вторым +12, третьим +6,</text>
+<text x="16" y="723" font-size="11" font-weight="600" fill="#6E858B" text-anchor="start">дураком −10. Ниже нуля не падает.</text>
+<text x="16" y="740" font-size="11" font-weight="600" fill="#6E858B" text-anchor="start">Считаются доигранные партии, не больше 10 в сутки</text>
+<text x="16" y="757" font-size="11" font-weight="600" fill="#6E858B" text-anchor="start">с одним и тем же составом.</text>
+</g>
+</g>
+</svg>
