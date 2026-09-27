@@ -27,7 +27,13 @@ BRANCH="${1:-claude/bold-carson-kjswyx}"
 [ "$(id -u)" -eq 0 ] || { echo "запускать через sudo: sudo $0"; exit 1; }
 cd "$APP"
 
-sudo -u "$USER" ./deploy/backup.sh || true
+# Бэкап обязателен: обновление может менять схему базы, и откатываться
+# без копии некуда. Своего «базы ещё нет» скрипт бэкапа не считает ошибкой,
+# так что падение здесь — это настоящее падение, и дальше идти нельзя.
+if ! sudo -u "$USER" ./deploy/backup.sh; then
+  echo "бэкап не снялся — обновление отменено. Разберитесь и запустите снова."
+  exit 1
+fi
 
 echo "· забираю ветку $BRANCH"
 sudo -u "$USER" git fetch origin "$BRANCH"

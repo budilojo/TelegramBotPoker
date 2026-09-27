@@ -250,6 +250,23 @@ sudo -u worldcard /opt/worldcard/deploy/backup.sh # бэкап прямо сей
 | Бот молчит в Telegram | `journalctl -u worldcard -n 50`. `401` — не тот токен. Таймауты к api.telegram.org — площадка в России, см. пункт 0 |
 | `active (running)`, но игра не идёт | проверьте `WEBAPP_URL` в `.env` и адрес у @BotFather — они должны совпадать |
 | Кончилось место | `df -h`, потом `du -sh /opt/worldcard/*` — чаще всего это старые бэкапы или логи |
+| Папка `backups` пуста, хотя крон стоит | ночной бэкап писал лог в `/var/log/`, куда пользователю `worldcard` нельзя. Оболочка не открывает лог — и задание не начинается вовсе. Лечится так: `sudo sed -i 's#/var/log/worldcard-backup.log#/opt/worldcard/backups/backup.log#' /etc/cron.d/worldcard-backup`. Проверить, что бэкап вообще снимается: `sudo -u worldcard /opt/worldcard/deploy/backup.sh` |
+
+### Откат на вчерашнюю базу
+
+Бэкапы сжаты, а база живёт в режиме WAL, поэтому просто скопировать файл
+нельзя: при старте SQLite накатит на неё свежий журнал, и база испортится.
+Порядок такой и только такой:
+
+```bash
+sudo systemctl stop worldcard
+sudo -u worldcard rm -f /opt/worldcard/data/bot.db-wal /opt/worldcard/data/bot.db-shm
+sudo -u worldcard sh -c 'gunzip -c /opt/worldcard/backups/bot-ГГГГ-ММ-ДД-ЧЧММ.db.gz > /opt/worldcard/data/bot.db'
+sudo systemctl start worldcard
+```
+
+Если откатывается и код, то `git reset --hard <коммит>` и `npm ci --omit=dev`
+делаются, пока бот остановлен, — до запуска.
 
 ---
 

@@ -217,7 +217,7 @@ systemctl restart systemd-journald
 say "Бэкап базы раз в сутки, в 4 утра"
 cat > /etc/cron.d/worldcard-backup <<CRON
 # Бэкап базы бота. Хранится две недели, дальше удаляется само.
-0 4 * * * $USER $APP/deploy/backup.sh >> /var/log/worldcard-backup.log 2>&1
+0 4 * * * $USER $APP/deploy/backup.sh >> $APP/backups/backup.log 2>&1
 CRON
 chmod 644 /etc/cron.d/worldcard-backup
 
