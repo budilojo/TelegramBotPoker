@@ -35,10 +35,21 @@ export function render() {
       h('div.rt-head-cup', '🏆'),
       h('div',
         h('h1', 'Рейтинг игроков'),
-        h('div.sub', 'Кто чего стоит — за месяц и за всё время'))),
+        h('div.sub', s.scope === 'group'
+          ? `Только те, кто играл в${s.groupTitle ? ` «${s.groupTitle}»` : ' этой группе'}`
+          : 'Кто чего стоит — во всех группах сразу'))),
 
-    h('div.rt-tabs', s.games.map((g) => pill(g.title, g.id === s.game,
-      () => { haptic.tap(); send({ t: 'pick', game: g.id }); }))),
+    // Где считаем: во всех группах сразу или только в этой. Вкладка «эта
+    // группа» есть только у страницы, открытой из группы.
+    s.canGroup
+      ? h('div.rt-tabs',
+        pill('Общий рейтинг', s.scope === 'all', () => { haptic.tap(); send({ t: 'pick', scope: 'all' }); }),
+        pill('Эта группа', s.scope === 'group',
+          () => { haptic.tap(); send({ t: 'pick', scope: 'group' }); }))
+      : null,
+
+    h('div.rt-chips',
+      ...s.games.map((g) => chip(g.title, g.id === s.game, () => { haptic.tap(); send({ t: 'pick', game: g.id }); }))),
 
     h('div.rt-chips',
       chip('За месяц', s.period === 'month', () => { haptic.tap(); send({ t: 'pick', period: 'month' }); }),
@@ -46,9 +57,11 @@ export function render() {
 
     s.top.length
       ? h('div.rt-list', s.top.map(row))
-      : h('div.hint', s.period === 'month'
-        ? 'В этом месяце ещё не играли. Первая же доигранная партия попадёт сюда.'
-        : 'Здесь пока пусто. Сыграйте партию до конца — и она появится.'),
+      : h('div.hint', s.scope === 'group'
+        ? 'В этой группе ещё не доигрывали партий. Сыграйте — и список появится.'
+        : s.period === 'month'
+          ? 'В этом месяце ещё не играли. Первая же доигранная партия попадёт сюда.'
+          : 'Здесь пока пусто. Сыграйте партию до конца — и она появится.'),
 
     h('div.hint.rt-why',
       h('div', 'Очки за место: первым +20, вторым +12, третьим +6, дураком −10. Ниже нуля не падает.'),

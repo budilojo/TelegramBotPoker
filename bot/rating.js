@@ -77,7 +77,7 @@ export function split(places, loserId = null) {
  * `{ skipped, why }` — почему партия не в счёт. Отказ всегда объясним словами:
  * человек должен понимать, почему за эту партию ничего не дали.
  */
-export function apply(store, { game, round, places, loserId = null, aborted = false, at = Date.now() }) {
+export function apply(store, { game, round, places, loserId = null, aborted = false, chatId = null, at = Date.now() }) {
   if (aborted) return { skipped: 'ABORTED', why: WHY.ABORTED };
   const people = places.filter((p) => p && p.id != null);
   if (people.length < 2) return { skipped: 'TOO_FEW', why: WHY.TOO_FEW };
@@ -92,7 +92,7 @@ export function apply(store, { game, round, places, loserId = null, aborted = fa
   for (const r of rows) {
     // Повтор той же партии (перезапуск, второй вызов) не удвоит очки: за это
     // отвечает база — строка журнала уникальна по человеку, игре и партии.
-    if (store.rate({ ...r, game, round: String(round), at })) written.push(r);
+    if (store.rate({ ...r, game, round: String(round), chatId, at })) written.push(r);
   }
   if (!written.length) return { skipped: 'ALREADY', why: 'эта партия уже засчитана' };
   store.countParty(print, at);

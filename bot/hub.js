@@ -491,14 +491,28 @@ export class Hub {
     this.detach(session);
     session.kind = 'rating';
     session.code = null;
-    session.rating = { game: GAMES[game] ? game : 'durak', period: period === 'all' ? 'all' : 'month', who: null };
+    session.rating = {
+      game: GAMES[game] ? game : 'durak',
+      period: period === 'all' ? 'all' : 'month',
+      // По умолчанию общий: у новой группы свой рейтинг пуст, и открывать
+      // экран на пустом списке — плохо. «Эту группу» включают вкладкой, и
+      // она есть только у страницы, открытой из группы.
+      scope: 'all',
+      who: null,
+    };
     this.pushRating(session);
   }
 
   pushRating(session) {
     if (this.app.down) return void session.send({ t: 'state', state: this.downState() });
     try {
-      session.send({ t: 'state', state: ratingView(this.app, session.user, { ...session.rating, back: session.group ? 'hub' : 'home' }) });
+      const group = session.group ? this.app.groupByCode(session.group) : null;
+      session.send({ t: 'state', state: ratingView(this.app, session.user, {
+        ...session.rating,
+        chatId: session.rating.scope === 'group' ? group?.chatId ?? null : null,
+        groupTitle: group?.title || '',
+        back: session.group ? 'hub' : 'home',
+      }) });
     } catch (err) {
       this.app.log(err);
       this.refuse(session, 'NO_RATING', 'Рейтинг сейчас не отдаётся — попробуйте позже.');
@@ -515,6 +529,9 @@ export class Hub {
         // Игра и срок — единственное, что страница здесь решает.
         if (msg.game != null) session.rating.game = GAMES[String(msg.game)] ? String(msg.game) : session.rating.game;
         if (msg.period != null) session.rating.period = msg.period === 'all' ? 'all' : 'month';
+        // Группу подставляет сервер из сессии: страница не может попросить
+        // рейтинг чужой группы, назвав её код.
+        if (msg.scope != null) session.rating.scope = msg.scope === 'group' && session.group ? 'group' : 'all';
         session.rating.who = null;
         return this.pushRating(session);
       case 'who':
@@ -633,12 +650,14 @@ export function hubView(app, group, user, { home = false } = {}) {
  * без неё список — чужая доска почёта, а не твой рейтинг. Ни карт, ни ставок,
  * ни того, с кем именно играли, здесь нет: только места и очки.
  */
-export function ratingView(app, user, { game = 'durak', period = 'month', who = null, back = 'hub' } = {}) {
+export function ratingView(app, user, {
+  game = 'durak', period = 'month', scope = 'all', chatId = null, groupTitle = '', who = null, back = 'hub',
+} = {}) {
   const now = app.clock.now();
   const month = period === 'month' ? ym(now) : null;
   const store = app.store;
   const uid = String(user.id);
-  const top = store.ratingTop(game, { month, limit: 50 }).map((r, i) => ({
+  const top = store.ratingTop(game, { month, limit: 50, chatId }).map((r, i) => ({
     place: i + 1,
     userId: String(r.userId),
     name: r.name || 'Игрок',
@@ -649,7 +668,7 @@ export function ratingView(app, user, { game = 'durak', period = 'month', who = 
     me: String(r.userId) === uid,
   }));
   const card = (id) => {
-    const r = store.ratingOf(id, game, { month });
+    const r = store.ratingOf(id, game, { month, chatId });
     if (!r) return null;
     return {
       userId: String(id),
@@ -661,7 +680,7 @@ export function ratingView(app, user, { game = 'durak', period = 'month', who = 
       wins: r.wins,
       fools: r.fools,
       // Последние партии — откуда взялись очки. Без этого число не объяснить.
-      last: store.ratingLog(id, game, 5).map((x) => ({ place: x.place, of: x.of, delta: x.delta, sign: sign(x.delta), at: x.at })),
+      last: store.ratingLog(id, game, 5, { chatId }).map((x) => ({ place: x.place, of: x.of, delta: x.delta, sign: sign(x.delta), at: x.at })),
     };
   };
   return {
@@ -672,6 +691,10 @@ export function ratingView(app, user, { game = 'durak', period = 'month', who = 
     back,
     game,
     period,
+    // scope: 'all' — все группы вместе, 'group' — только эта.
+    scope: chatId == null ? 'all' : 'group',
+    canGroup: back === 'hub',
+    groupTitle,
     month,
     perDay: PER_DAY,
     games: GAME_LIST.map((g) => ({ id: g.id, title: GAME_RU[g.id] || g.title, icon: g.icon })),

@@ -309,3 +309,79 @@ test('страница не может попросить у рейтинга н
   t.app.stop();
   store.close();
 });
+
+/* ------------------------------------------------------- рейтинг группы */
+
+test('рейтинг группы считается отдельно от общего', () => {
+  const store = new Store(':memory:');
+  const nash = { game: 'durak', places: people(1, 2), loserId: 2, chatId: '-100', at: DAY };
+  const chuzhoy = { game: 'durak', places: people(1, 3), loserId: 3, chatId: '-200', at: DAY };
+  apply(store, { ...nash, round: 'a' });
+  apply(store, { ...chuzhoy, round: 'b' });
+
+  assert.equal(store.ratingOf(1, 'durak').points, 40, 'общий — обе партии');
+  assert.equal(store.ratingOf(1, 'durak', { chatId: '-100' }).points, 20, 'в первой группе — одна');
+  assert.equal(store.ratingOf(1, 'durak', { chatId: '-200' }).points, 20, 'во второй — другая');
+  assert.equal(store.ratingTop('durak', { chatId: '-100' }).length, 2, 'в первой группе двое');
+  assert.equal(store.ratingTop('durak').length, 3, 'а всего трое');
+  assert.equal(store.ratingOf(3, 'durak', { chatId: '-100' }), null, 'кто там не играл — того и нет');
+  store.close();
+});
+
+test('в группе «ниже нуля не падает» работает так же, как в общем', () => {
+  const store = new Store(':memory:');
+  for (let i = 0; i < 3; i++) {
+    apply(store, { game: 'durak', round: `r${i}`, places: people(2, 1), loserId: 1, chatId: '-100', at: DAY });
+  }
+  assert.equal(store.ratingOf(1, 'durak', { chatId: '-100' }).points, 0);
+  assert.equal(store.ratingOf(1, 'durak', { chatId: '-100' }).fools, 3);
+  store.close();
+});
+
+test('экран: вкладка «эта группа» показывает только своих', async () => {
+  const store = new Store(':memory:');
+  const t = new Table({ store });
+  const ivan = user(101, 'Иван');
+  await t.start(ivan);
+  await t.cmd(ivan, '/play');
+  const chatId = String(t.chatId);
+
+  apply(store, { game: 'durak', round: 'svoi', places: [{ id: 101, name: 'Иван' }, { id: 202, name: 'Макс' }], loserId: 202, chatId, at: t.clock.now() });
+  apply(store, { game: 'durak', round: 'chuzhie', places: people(777, 888), loserId: 888, chatId: '-999', at: t.clock.now() });
+
+  t.openHub(ivan);
+  await t.send(ivan, { t: 'rating' });
+  assert.equal(t.state(ivan).scope, 'all', 'открывается на общем: у новой группы свой список пуст');
+  assert.equal(t.state(ivan).top.length, 4, 'в общем — все четверо');
+  assert.equal(t.state(ivan).canGroup, true, 'из группы вкладка «эта группа» доступна');
+
+  await t.send(ivan, { t: 'pick', scope: 'group' });
+  const s = t.state(ivan);
+  assert.equal(s.scope, 'group');
+  assert.deepEqual(s.top.map((r) => r.name), ['Иван', 'Макс'], 'в группе только те, кто в ней играл');
+  assert.equal(s.mine.total, 2, 'и своё место считается среди них');
+
+  await t.send(ivan, { t: 'pick', scope: 'all' });
+  assert.equal(t.state(ivan).top.length, 4, 'обратно в общий');
+  t.app.stop();
+  store.close();
+});
+
+test('страница не может попросить рейтинг чужой группы', async () => {
+  const store = new Store(':memory:');
+  const t = new Table({ store });
+  const ivan = user(101, 'Иван');
+  await t.start(ivan);
+  await t.cmd(ivan, '/play');
+  apply(store, { game: 'durak', round: 'chuzhie', places: people(777, 888), loserId: 888, chatId: '-999', at: t.clock.now() });
+  t.openHub(ivan);
+  await t.send(ivan, { t: 'rating' });
+
+  // Группу берут из сессии, а не из сообщения: код чужой группы ничего не даст.
+  await t.send(ivan, { t: 'pick', scope: 'group', chatId: '-999', code: '-999' });
+  const s = t.state(ivan);
+  assert.equal(s.scope, 'group');
+  assert.equal(s.top.length, 0, 'своя группа пуста — чужую подсунуть не вышло');
+  t.app.stop();
+  store.close();
+});

@@ -557,7 +557,7 @@ export class App {
       if (seen[r.id]) continue;
       let out;
       try {
-        out = rateRound(this.store, { ...r, game: room.game, round: r.id, at: this.clock.now() });
+        out = rateRound(this.store, { ...r, game: room.game, round: r.id, chatId: room.chatId, at: this.clock.now() });
       } catch (err) {
         this.log(err);
         continue; // рейтинг не должен ронять игру: сыграли — и ладно

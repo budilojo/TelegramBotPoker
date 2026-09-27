@@ -96,7 +96,11 @@
 .rt-tabs { display: flex; gap: 10px; }
 .rt-tab {
   flex: 1;
+  min-width: 0;
   padding: 13px 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   border-radius: 22px;
   background: var(--panel);
   border: 1px solid var(--line);
@@ -107,6 +111,7 @@
 .rt-tab.on { background: var(--accent); border-color: transparent; color: var(--accent-ink); }
 
 .rt-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.rt-chips + .rt-chips { margin-top: -4px; }
 .rt-chip {
   padding: 9px 16px;
   border-radius: 999px;

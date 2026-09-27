@@ -125,11 +125,32 @@ CREATE TABLE IF NOT EXISTS ratings (
 );
 CREATE INDEX IF NOT EXISTS ratings_by_points ON ratings (game, points DESC);
 
+-- То же самое, но внутри одной группы. Отдельной таблицей, а не суммой по
+-- журналу: правило «ниже нуля не падает» применяется к бегущему счёту, и
+-- сумма за всё время дала бы другое число, чем то, что человек видел после
+-- каждой партии.
+CREATE TABLE IF NOT EXISTS ratings_group (
+  chat_id      TEXT NOT NULL,
+  user_id      TEXT NOT NULL,
+  game         TEXT NOT NULL,
+  name         TEXT,
+  points       INTEGER NOT NULL DEFAULT 0,
+  month        TEXT,
+  month_points INTEGER NOT NULL DEFAULT 0,
+  played       INTEGER NOT NULL DEFAULT 0,
+  wins         INTEGER NOT NULL DEFAULT 0,
+  fools        INTEGER NOT NULL DEFAULT 0,
+  updated_at   INTEGER NOT NULL,
+  PRIMARY KEY (chat_id, user_id, game)
+);
+CREATE INDEX IF NOT EXISTS ratings_group_by_points ON ratings_group (chat_id, game, points DESC);
+
 -- Откуда у человека очки. Без этого нельзя ни показать «последние партии»,
 -- ни ответить, если он спросит, за что ему столько.
 CREATE TABLE IF NOT EXISTS rating_log (
   id      INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id TEXT NOT NULL,
+  chat_id TEXT,
   game    TEXT NOT NULL,
   round   TEXT NOT NULL,
   place   INTEGER NOT NULL,
@@ -150,7 +171,7 @@ CREATE TABLE IF NOT EXISTS party_day (
 );
 `;
 
-export const SCHEMA_VERSION = '4';
+export const SCHEMA_VERSION = '5';
 
 export class Store {
   /** @param file path, or ':memory:' for tests */
@@ -217,6 +238,12 @@ export class Store {
     // обновлении не должно потеряться.
     const userCols = this.db.prepare("SELECT name FROM pragma_table_info('users')").all().map((c) => c.name);
     if (userCols.length && !userCols.includes('ads')) this.db.exec('ALTER TABLE users ADD COLUMN ads TEXT');
+
+    // v4 → v5: рейтинг в разрезе группы. Таблицу создаёт схема; журналу
+    // нужен столбец. Уже начисленные очки в группы не раскидываются — было
+    // бы враньём: до этой версии бот не знал, в какой группе шла партия.
+    const logCols = this.db.prepare("SELECT name FROM pragma_table_info('rating_log')").all().map((c) => c.name);
+    if (logCols.length && !logCols.includes('chat_id')) this.db.exec('ALTER TABLE rating_log ADD COLUMN chat_id TEXT');
 
     const cols = this.db.prepare("SELECT name FROM pragma_table_info('rooms')").all().map((c) => c.name);
     if (!cols.length || cols.includes('code')) return;
@@ -486,28 +513,42 @@ export class Store {
    *
    * Ниже нуля рейтинг не опускается: упереться в дно и бросить не за что.
    */
-  rate({ userId, game, round, place, of, delta, name = null, win = false, fool = false, at = Date.now() }) {
+  rate({ userId, game, round, place, of, delta, name = null, win = false, fool = false, chatId = null, at = Date.now() }) {
     const id = String(userId);
-    const month = ym(at);
+    const g = String(game);
+    const chat = chatId == null ? null : String(chatId);
     const log = this.db
-      .prepare('INSERT OR IGNORE INTO rating_log (user_id, game, round, place, of, delta, at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-      .run(id, String(game), String(round), Math.round(place), Math.round(of), Math.round(delta), at);
+      .prepare('INSERT OR IGNORE INTO rating_log (user_id, chat_id, game, round, place, of, delta, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(id, chat, g, String(round), Math.round(place), Math.round(of), Math.round(delta), at);
     if (!log.changes) return false;
-    const row = this.db.prepare('SELECT name, points, month, month_points FROM ratings WHERE user_id = ? AND game = ?').get(id, String(game));
+    this.#bump('ratings', null, { id, game: g, name, delta, win, fool, at });
+    // Тот же счёт внутри группы — по тем же правилам, включая «не ниже нуля».
+    if (chat) this.#bump('ratings_group', chat, { id, game: g, name, delta, win, fool, at });
+    return true;
+  }
+
+  /** Прибавить очки в одну из двух таблиц рейтинга: общую или групповую. */
+  #bump(table, chat, { id, game, name, delta, win, fool, at }) {
+    const month = ym(at);
+    const where = chat ? 'chat_id = ? AND user_id = ? AND game = ?' : 'user_id = ? AND game = ?';
+    const key = chat ? [chat, id, game] : [id, game];
+    const row = this.db.prepare(`SELECT name, points, month, month_points FROM ${table} WHERE ${where}`).get(...key);
     // Сменился месяц — счёт месяца начинается с нуля сам, без ночной задачи.
     const wasMonth = row?.month === month ? row.month_points : 0;
     const points = Math.max(0, (row?.points ?? 0) + delta);
     const monthPoints = Math.max(0, wasMonth + delta);
+    const cols = chat ? '(chat_id, user_id, game, ' : '(user_id, game, ';
+    const marks = chat ? '(?, ?, ?, ' : '(?, ?, ';
+    const conflict = chat ? '(chat_id, user_id, game)' : '(user_id, game)';
     this.db
       .prepare(
-        'INSERT INTO ratings (user_id, game, name, points, month, month_points, played, wins, fools, updated_at) ' +
-          'VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?) ' +
-          'ON CONFLICT(user_id, game) DO UPDATE SET name = excluded.name, points = ?, month = ?, month_points = ?, ' +
+        `INSERT INTO ${table} ${cols}name, points, month, month_points, played, wins, fools, updated_at) ` +
+          `VALUES ${marks}?, ?, ?, ?, 1, ?, ?, ?) ` +
+          `ON CONFLICT${conflict} DO UPDATE SET name = excluded.name, points = ?, month = ?, month_points = ?, ` +
           'played = played + 1, wins = wins + ?, fools = fools + ?, updated_at = excluded.updated_at'
       )
-      .run(id, String(game), name ?? row?.name ?? null, points, month, monthPoints, win ? 1 : 0, fool ? 1 : 0, at,
+      .run(...key, name ?? row?.name ?? null, points, month, monthPoints, win ? 1 : 0, fool ? 1 : 0, at,
         points, month, monthPoints, win ? 1 : 0, fool ? 1 : 0);
-    return true;
   }
 
   /** Сколько зачётных партий у этого состава за день. */
@@ -528,36 +569,44 @@ export class Store {
    * время. При равенстве очков выше тот, кто сыграл меньше партий: одинаковый
    * счёт за меньшее число вечеров — лучше.
    */
-  ratingTop(game, { month = null, limit = 50, offset = 0 } = {}) {
+  ratingTop(game, { month = null, limit = 50, offset = 0, chatId = null } = {}) {
+    const t = chatId == null ? 'ratings' : 'ratings_group';
+    const scope = chatId == null ? [] : [String(chatId)];
+    const only = chatId == null ? '' : 'chat_id = ? AND ';
     const sql = month
-      ? 'SELECT user_id, name, month_points AS points, played, wins, fools FROM ratings ' +
-        'WHERE game = ? AND month = ? AND month_points > 0 ORDER BY month_points DESC, played ASC, user_id LIMIT ? OFFSET ?'
-      : 'SELECT user_id, name, points, played, wins, fools FROM ratings ' +
-        'WHERE game = ? AND played > 0 ORDER BY points DESC, played ASC, user_id LIMIT ? OFFSET ?';
-    const args = month ? [String(game), month, limit, offset] : [String(game), limit, offset];
+      // В месячном списке — все, кто в этом месяце играл, даже если очков
+      // ноль: иначе человек сыграл пять партий и не видит себя.
+      ? `SELECT user_id, name, month_points AS points, played, wins, fools FROM ${t} ` +
+        `WHERE ${only}game = ? AND month = ? ORDER BY month_points DESC, played ASC, user_id LIMIT ? OFFSET ?`
+      : `SELECT user_id, name, points, played, wins, fools FROM ${t} ` +
+        `WHERE ${only}game = ? AND played > 0 ORDER BY points DESC, played ASC, user_id LIMIT ? OFFSET ?`;
+    const args = month ? [...scope, String(game), month, limit, offset] : [...scope, String(game), limit, offset];
     return this.db.prepare(sql).all(...args).map((r) => ({ ...r, userId: String(r.user_id) }));
   }
 
   /** Строка одного человека: его очки, место и сколько всего в списке. */
-  ratingOf(userId, game, { month = null } = {}) {
+  ratingOf(userId, game, { month = null, chatId = null } = {}) {
     const id = String(userId);
-    const row = this.db.prepare('SELECT * FROM ratings WHERE user_id = ? AND game = ?').get(id, String(game));
+    const t = chatId == null ? 'ratings' : 'ratings_group';
+    const scope = chatId == null ? [] : [String(chatId)];
+    const only = chatId == null ? '' : 'chat_id = ? AND ';
+    const row = this.db.prepare(`SELECT * FROM ${t} WHERE ${only}user_id = ? AND game = ?`).get(...scope, id, String(game));
     if (!row) return null;
     const points = month ? (row.month === month ? row.month_points : 0) : row.points;
     const col = month ? 'month_points' : 'points';
-    const where = month ? 'game = ? AND month = ? AND month_points > 0' : 'game = ? AND played > 0';
-    const args = month ? [String(game), month] : [String(game)];
+    const where = month ? `${only}game = ? AND month = ?` : `${only}game = ? AND played > 0`;
+    const args = month ? [...scope, String(game), month] : [...scope, String(game)];
     // Место считается ровно тем же порядком, что и список: очки, потом
     // меньше сыгранных партий. Иначе при равных очках человек видит «2-е
     // место», а в списке стоит третьим — и правильно не верит ни тому, ни
     // другому.
     const above = this.db
       .prepare(
-        `SELECT COUNT(*) AS n FROM ratings WHERE ${where} AND ` +
+        `SELECT COUNT(*) AS n FROM ${t} WHERE ${where} AND ` +
           `(${col} > ? OR (${col} = ? AND (played < ? OR (played = ? AND user_id < ?))))`
       )
       .get(...args, points, points, row.played, row.played, id)?.n ?? 0;
-    const total = this.db.prepare(`SELECT COUNT(*) AS n FROM ratings WHERE ${where}`).get(...args)?.n ?? 0;
+    const total = this.db.prepare(`SELECT COUNT(*) AS n FROM ${t} WHERE ${where}`).get(...args)?.n ?? 0;
     return {
       userId: id,
       name: row.name,
@@ -565,16 +614,18 @@ export class Store {
       played: row.played,
       wins: row.wins,
       fools: row.fools,
-      place: points > 0 || !month ? above + 1 : 0,
+      place: above + 1,
       total,
     };
   }
 
   /** Последние партии человека — откуда взялись очки. */
-  ratingLog(userId, game, limit = 5) {
+  ratingLog(userId, game, limit = 5, { chatId = null } = {}) {
+    const only = chatId == null ? '' : 'chat_id = ? AND ';
+    const scope = chatId == null ? [] : [String(chatId)];
     return this.db
-      .prepare('SELECT round, place, of, delta, at FROM rating_log WHERE user_id = ? AND game = ? ORDER BY at DESC, id DESC LIMIT ?')
-      .all(String(userId), String(game), limit);
+      .prepare(`SELECT round, place, of, delta, at FROM rating_log WHERE ${only}user_id = ? AND game = ? ORDER BY at DESC, id DESC LIMIT ?`)
+      .all(...scope, String(userId), String(game), limit);
   }
 
   close() {
@@ -650,24 +701,29 @@ export class NullStore {
     Object.assign(cur, patch);
     return cur;
   }
-  rate({ userId, game, round, place, of, delta, name = null, win = false, fool = false, at = Date.now() }) {
-    const key = `${userId}:${game}`;
-    if (this.rated.has(`${key}:${round}`)) return false;
-    this.rated.add(`${key}:${round}`);
-    const month = ym(at);
-    const r = this.rating.get(key) || { userId: String(userId), game, name, points: 0, month, monthPoints: 0, played: 0, wins: 0, fools: 0, log: [] };
-    if (r.month !== month) {
-      r.month = month;
-      r.monthPoints = 0;
-    }
-    r.name = name ?? r.name;
-    r.points = Math.max(0, r.points + delta);
-    r.monthPoints = Math.max(0, r.monthPoints + delta);
-    r.played += 1;
-    if (win) r.wins += 1;
-    if (fool) r.fools += 1;
-    r.log.unshift({ round: String(round), place, of, delta, at });
-    this.rating.set(key, r);
+  rate({ userId, game, round, place, of, delta, name = null, win = false, fool = false, chatId = null, at = Date.now() }) {
+    if (this.rated.has(`${userId}:${game}:${round}`)) return false;
+    this.rated.add(`${userId}:${game}:${round}`);
+    const bump = (chat) => {
+      const key = `${chat ?? ''}:${userId}:${game}`;
+      const month = ym(at);
+      const r = this.rating.get(key)
+        || { userId: String(userId), chat, game, name, points: 0, month, monthPoints: 0, played: 0, wins: 0, fools: 0, log: [] };
+      if (r.month !== month) {
+        r.month = month;
+        r.monthPoints = 0;
+      }
+      r.name = name ?? r.name;
+      r.points = Math.max(0, r.points + delta);
+      r.monthPoints = Math.max(0, r.monthPoints + delta);
+      r.played += 1;
+      if (win) r.wins += 1;
+      if (fool) r.fools += 1;
+      r.log.unshift({ round: String(round), place, of, delta, at });
+      this.rating.set(key, r);
+    };
+    bump(null);
+    if (chatId != null) bump(String(chatId));
     return true;
   }
   partyCount(fingerprint, at = Date.now()) {
@@ -679,17 +735,18 @@ export class NullStore {
     this.parties.set(key, n);
     return n;
   }
-  ratingTop(game, { month = null, limit = 50, offset = 0 } = {}) {
+  ratingTop(game, { month = null, limit = 50, offset = 0, chatId = null } = {}) {
+    const chat = chatId == null ? null : String(chatId);
     return [...this.rating.values()]
-      .filter((r) => r.game === game && (month ? r.month === month && r.monthPoints > 0 : r.played > 0))
+      .filter((r) => r.game === game && (r.chat ?? null) === chat && (month ? r.month === month : r.played > 0))
       .map((r) => ({ userId: r.userId, name: r.name, points: month ? r.monthPoints : r.points, played: r.played, wins: r.wins, fools: r.fools }))
       .sort((a, b) => b.points - a.points || a.played - b.played || a.userId.localeCompare(b.userId))
       .slice(offset, offset + limit);
   }
-  ratingOf(userId, game, { month = null } = {}) {
-    const r = this.rating.get(`${userId}:${game}`);
+  ratingOf(userId, game, { month = null, chatId = null } = {}) {
+    const r = this.rating.get(`${chatId == null ? '' : String(chatId)}:${userId}:${game}`);
     if (!r) return null;
-    const list = this.ratingTop(game, { month, limit: 1e6 });
+    const list = this.ratingTop(game, { month, limit: 1e6, chatId });
     const points = month ? (r.month === month ? r.monthPoints : 0) : r.points;
     const at = list.findIndex((x) => x.userId === String(userId));
     return {
@@ -698,8 +755,8 @@ export class NullStore {
       total: list.length,
     };
   }
-  ratingLog(userId, game, limit = 5) {
-    return (this.rating.get(`${userId}:${game}`)?.log ?? []).slice(0, limit);
+  ratingLog(userId, game, limit = 5, { chatId = null } = {}) {
+    return (this.rating.get(`${chatId == null ? '' : String(chatId)}:${userId}:${game}`)?.log ?? []).slice(0, limit);
   }
   save() {}
   loadAll() {
