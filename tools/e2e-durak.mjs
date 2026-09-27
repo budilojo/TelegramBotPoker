@@ -218,7 +218,9 @@ for (let guard = 0; room().deal.phase === 'play' && guard < 800; guard++) {
       await until(moved, `${u.first_name} подкидывает`);
       throwsIn++;
     } else {
-      await page.locator('.panel button', { hasText: /^(ПАС|БИТО)$/ }).click();
+      // Под словом на кнопке теперь есть пояснение, поэтому «начинается с»,
+      // а не «равно»: ВЗЯТЬ и ПЕРЕВЕСТИ под это всё равно не подходят.
+      await page.locator('.panel button', { hasText: /^(ПАС|БИТО)/ }).click();
       await until(moved, `${u.first_name}: пас`);
     }
   }

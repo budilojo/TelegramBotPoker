@@ -428,7 +428,7 @@ function panelEl(s) {
     return note(lineText(s));
   }
   if (L) {
-    if (L.take) panel.append(h('button.btn.danger', { onclick: () => play({ t: 'take' }) }, 'ВЗЯТЬ'));
+    if (L.take) panel.append(h('button.btn.danger', { onclick: () => play({ t: 'take' }) }, 'ВЗЯТЬ', h('small', 'карты со стола — себе')));
     if (L.transfer?.length) {
       panel.append(h('button.btn.gold', { onclick: () => {
         const card = L.transfer.includes(picked) ? picked : L.transfer.length === 1 ? L.transfer[0] : null;
@@ -436,9 +436,24 @@ function panelEl(s) {
         play({ t: 'transfer', card });
       } }, 'ПЕРЕВЕСТИ', h('small', L.transfer.length === 1 ? label(L.transfer[0]) : 'картой того же достоинства')));
     }
-    if (L.pass) panel.append(h(`button.btn.${L.passLabel === 'Бито' ? 'primary' : ''}`, { onclick: () => play({ t: 'pass' }) }, L.passLabel.toUpperCase()));
+    // «Бито» и «Пас» — одна и та же кнопка: «я больше ничего не добавляю».
+    // Разные слова потому, что для ходившего это «бито», а для
+    // подкидывающего — «пас». Подпись говорит, что будет дальше: без неё
+    // человек жмёт, не понимая, за что платит этим тапом.
+    if (L.pass) {
+      const bito = L.passLabel === 'Бито';
+      const more = !!L.attack?.length;
+      panel.append(h(`button.btn${bito ? '.primary' : ''}`, { onclick: () => play({ t: 'pass' }) },
+        L.passLabel.toUpperCase(),
+        h('small', bito
+          ? (more ? 'закрыть кон — или подкиньте ещё' : 'закрыть кон, карты в биту')
+          : (more ? 'ничего не добавляю — или подкиньте' : 'подкидывать нечем'))));
+    }
   }
   if (panel.children.length) {
+    // Одна кнопка — во всю ширину: по ней проще попасть пальцем, а других
+    // действий в этот момент и нет.
+    if (panel.children.length === 1) panel.firstElementChild.classList.add('wide');
     [...panel.children].forEach((b, i) => animateOnce(b, `dkbtn:${d.no}:${d.bout}:${d.table.length}:${d.taking}:${i}:${b.textContent}`,
       [{ transform: 'translateY(18px) scale(0.92)', opacity: 0, offset: 0 }], { duration: 340, delay: 40 + i * 50 }));
     if (net.busy) panel.classList.add('busy');
@@ -446,6 +461,12 @@ function panelEl(s) {
   }
   if (L?.lead) return note(picked ? 'Ещё тап по карте — сходить ею' : 'Ваш ход: тап по карте — выбрать, второй — сходить');
   if (me.role === 'out') return note('Вы вышли из партии — ждём остальных');
+  // Своё сказали — видно, за кем очередь. Кто ещё не сказал «пас», и так
+  // отмечен у себя на месте: это не новость про чужие карты, а очередь.
+  const waitingOn = s.players.filter((p) => p.waiting && !p.isMe).map((p) => p.name);
+  if (waitingOn.length) {
+    return note('Ждём: ', h('b', waitingOn.join(', ')), L?.attack?.length ? ' · можно ещё подкинуть' : '');
+  }
   if (me.seat === d.defenderSeat && !d.taking && !d.covered) return note('Выберите карту и тапните по карте на столе, которую кроете');
   if (L?.attack?.length) return note(picked ? 'Ещё тап по карте — подкинуть' : 'Подкинуть — два тапа по карте');
   if (!d.table.length) return note('Ждём первый ход…');
