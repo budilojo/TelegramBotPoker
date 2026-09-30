@@ -176,6 +176,8 @@ export class Hub {
 
   enterRoom(session, room) {
     this.detach(session);
+    // Стол открыли — он живой, отсчёт «за столом никого» начинается заново.
+    this.app.noteLive(room);
     session.kind = 'room';
     session.code = room.code;
     if (!this.byRoom.has(room.code)) this.byRoom.set(room.code, new Set());
@@ -408,6 +410,8 @@ export class Hub {
       return this.enterHub(session);
     }
 
+    // Что бы страница ни просила у стола — за ним кто-то есть.
+    this.app.noteLive(room);
     const game = gameOf(room);
     return game.handle({
       app,

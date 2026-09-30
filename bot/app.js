@@ -65,6 +65,32 @@ export const FINISHED_KEEP_MS = 30 * 60_000;
 /** …and is dropped at start-up after this long, new game or not. */
 export const FINISHED_MAX_MS = 24 * 60 * 60_000;
 
+/**
+ * Заброшенный стол: создали и не пришли.
+ *
+ * Стол в лобби живёт столько без единого признака жизни — и закрывается сам.
+ * Признак жизни самый широкий: кто-то открыл стол в приложении, сел, встал,
+ * поменял настройки. Одного открытия хватает: значит, за столом кто-то есть.
+ *
+ * Начатую игру это не трогает вообще. Там своё время на ход, свои правила, и
+ * закрывать игру, в которой люди думают над картами, нельзя.
+ */
+export const IDLE_CLOSE_MS = 20 * 60_000;
+/** За минуту до закрытия бот предупреждает в группе — вдруг кто-то рядом. */
+export const IDLE_WARN_MS = 60_000;
+/**
+ * После перезапуска бота у стола есть столько, чтобы подать признаки жизни.
+ * Открытые приложения переподключаются сами за секунды — живой стол успевает;
+ * заброшенный закрывается вскоре после старта, а не через полные двадцать
+ * минут и не мгновенно.
+ */
+export const IDLE_GRACE_MS = 2 * 60_000;
+
+export const IDLE_WARN_TEXT =
+  '⏳ За этим столом давно тихо. Если никто не вернётся, через минуту он закроется.';
+export const IDLE_CLOSED_TEXT =
+  '😔 Похоже, за этим столом так никто и не собрался. Стол закрыт — создавайте новый, когда соберётесь.';
+
 /** The real clock. Tests pass a fake one and move time by hand. */
 const REAL_CLOCK = {
   now: () => Date.now(),
@@ -213,6 +239,15 @@ export class App {
     } catch (err) {
       this.log(err);
     }
+    // Снимаем обслуживание — заброшенным столам отсчёт с нуля. Иначе стол,
+    // простоявший всё обслуживание, закрылся бы в первую же секунду после
+    // него: не потому что заброшен, а потому что бота не было.
+    if (!on) for (const room of this.rooms.values()) {
+      if (room.status === 'lobby') {
+        room.idleAt = this.clock.now();
+        room.idleWarned = false;
+      }
+    }
     this.syncClocks();
     this.hub?.broadcastAll();
     return this.maintenance;
@@ -301,6 +336,13 @@ export class App {
         if (room.status === 'finished' && now - (room.finishedAt || 0) > FINISHED_MAX_MS) {
           this.store.remove(room.code);
           continue;
+        }
+        // Сколько стол простоял до перезапуска, никто не знает: это нигде не
+        // записано. Даём всем лобби одинаковый короткий срок — открытые
+        // приложения переподключатся и продлят его сами.
+        if (room.status === 'lobby') {
+          room.idleAt = now - IDLE_CLOSE_MS + IDLE_GRACE_MS;
+          room.idleWarned = false;
         }
         this.rooms.set(room.code, room);
       } catch (err) {
@@ -508,6 +550,7 @@ export class App {
     room.createdAt = Math.max(room.createdAt || 0, ...this.roomsOf(chatId).map((r) => (r.createdAt || 0) + 1));
     this.rooms.set(room.code, room);
     this.note('created', room);
+    this.noteLive(room); // с этой секунды идёт отсчёт «за столом никого»
     return room;
   }
 
@@ -626,7 +669,7 @@ export class App {
     const now = this.clock.now();
     const live = new Set();
     for (const room of this.rooms.values()) {
-      for (const c of gameOf(room).clocks?.(this, room, now) || []) {
+      for (const c of [...this.coreClocks(room, now), ...(gameOf(room).clocks?.(this, room, now) || [])]) {
         const id = `${c.id}:${room.code}`;
         live.add(id);
         if (!c.keep) this.arm(id, c.timer, c.fire);
@@ -657,6 +700,58 @@ export class App {
     }
     for (const cur of this.handles.values()) this.clock.clearTimeout(cur.h);
     this.handles.clear();
+  }
+
+  /**
+   * Часы самого ядра — одинаковые для всех игр. Пока они одни: на стол,
+   * который создали и забыли.
+   *
+   * Шага два: сперва предупреждение в группу, через минуту — закрытие. Оба
+   * идут через один и тот же таймер, потому что `arm` перевзводит его только
+   * когда меняется ключ или срок, — а значит, лишний `syncClocks` ничего не
+   * сбивает и ничего не дублирует.
+   */
+  coreClocks(room, now) {
+    if (room.status !== 'lobby') return [];
+    const since = room.idleAt ?? room.createdAt ?? now;
+    const deadline = since + (room.idleWarned ? IDLE_CLOSE_MS : IDLE_CLOSE_MS - IDLE_WARN_MS);
+    return [{
+      id: 'idle',
+      timer: { key: `${room.idleWarned ? 'close' : 'warn'}:${since}`, deadline },
+      fire: () => this.idleStep(room),
+    }];
+  }
+
+  /**
+   * Признак жизни за столом: часы отсчитывают заново.
+   *
+   * Зовётся отовсюду, где человек что-то сделал со столом, — в том числе
+   * когда просто открыл его в приложении. Открыл, посмотрел и закрыл — стол
+   * всё равно живой: кто-то же его открывал.
+   */
+  noteLive(room) {
+    if (!room || room.status !== 'lobby' || !this.rooms.has(room.code)) return;
+    room.idleAt = this.clock.now();
+    room.idleWarned = false;
+    this.syncClocks();
+  }
+
+  /** Сначала предупреждение, через минуту — закрытие. */
+  async idleStep(room) {
+    if (!this.rooms.has(room.code) || room.status !== 'lobby') return;
+    const to = { message_id: room.ui?.tableMessageId };
+    if (!room.idleWarned) {
+      room.idleWarned = true;
+      this.syncClocks(); // теперь таймер ведёт к закрытию, а не к предупреждению
+      await this.reply(room.chatId, IDLE_WARN_TEXT, to);
+      return;
+    }
+    // Порядок важен: сперва убрать стол (карточка теряет кнопку, открытые
+    // приложения возвращаются в хаб), и только потом объяснить словами.
+    const chatId = room.chatId;
+    this.note('idle', room);
+    await this.dropGame(room);
+    await this.reply(chatId, IDLE_CLOSED_TEXT, to);
   }
 
   arm(id, timer, fire) {
