@@ -76,6 +76,12 @@ export const FINISHED_MAX_MS = 24 * 60 * 60_000;
  * закрывать игру, в которой люди думают над картами, нельзя.
  */
 export const IDLE_CLOSE_MS = 20 * 60_000;
+/**
+ * …а когда за столом уже двое, ждём втрое дольше. Двое — это не «создал и
+ * забыл», это «ждём третьего»: такой стол закрывать через двадцать минут
+ * обидно и неправильно.
+ */
+export const IDLE_READY_MS = 60 * 60_000;
 /** За минуту до закрытия бот предупреждает в группе — вдруг кто-то рядом. */
 export const IDLE_WARN_MS = 60_000;
 /**
@@ -85,6 +91,8 @@ export const IDLE_WARN_MS = 60_000;
  * минут и не мгновенно.
  */
 export const IDLE_GRACE_MS = 2 * 60_000;
+/** На столько сдвигается каждый следующий брошенный стол после перезапуска. */
+export const IDLE_SPREAD_MS = 3_000;
 
 export const IDLE_WARN_TEXT =
   '⏳ За этим столом давно тихо. Если никто не вернётся, через минуту он закроется.';
@@ -317,6 +325,7 @@ export class App {
 
   load() {
     const now = this.clock.now();
+    let lobbies = 0; // чтобы развести брошенные столы по времени, а не закрывать залпом
     for (const g of this.store.loadGroups()) {
       this.groups.set(String(g.chatId), { ...g, ui: g.ui || { hubMessageId: null } });
     }
@@ -337,11 +346,17 @@ export class App {
           this.store.remove(room.code);
           continue;
         }
-        // Сколько стол простоял до перезапуска, никто не знает: это нигде не
-        // записано. Даём всем лобби одинаковый короткий срок — открытые
-        // приложения переподключатся и продлят его сами.
         if (room.status === 'lobby') {
-          room.idleAt = now - IDLE_CLOSE_MS + IDLE_GRACE_MS;
+          // Деплой не должен укорачивать жизнь стола: сколько он простоял,
+          // видно по createdAt — он в базе есть. Стол, созданный за минуту
+          // до перезапуска, получает свои оставшиеся девятнадцать, а не две.
+          //
+          // А по-настоящему старым лобби даётся короткий срок — и РАЗНЫЙ:
+          // иначе первое, что делает бот после каждого деплоя, — пишет во
+          // все группы разом и упирается в лимит Telegram, тормозя заодно
+          // сообщения живых игр.
+          const floor = now - IDLE_CLOSE_MS + IDLE_GRACE_MS + IDLE_SPREAD_MS * lobbies++;
+          room.idleAt = Math.max(room.createdAt || 0, floor);
           room.idleWarned = false;
         }
         this.rooms.set(room.code, room);
@@ -547,7 +562,10 @@ export class App {
     const room = g.create({ chatId: String(chatId), title, host: this.person(host), settings });
     if (room.error) return room;
     room.game = g.id;
-    room.createdAt = Math.max(room.createdAt || 0, ...this.roomsOf(chatId).map((r) => (r.createdAt || 0) + 1));
+    // От часов приложения, а не от Date.now() в правилах игры: по этому
+    // времени считается возраст стола, и под поддельными часами в тестах
+    // оно должно быть поддельным тоже.
+    room.createdAt = Math.max(this.clock.now(), ...this.roomsOf(chatId).map((r) => (r.createdAt || 0) + 1));
     this.rooms.set(room.code, room);
     this.note('created', room);
     this.noteLive(room); // с этой секунды идёт отсчёт «за столом никого»
@@ -714,7 +732,9 @@ export class App {
   coreClocks(room, now) {
     if (room.status !== 'lobby') return [];
     const since = room.idleAt ?? room.createdAt ?? now;
-    const deadline = since + (room.idleWarned ? IDLE_CLOSE_MS : IDLE_CLOSE_MS - IDLE_WARN_MS);
+    const seated = room.players.filter((p) => !p.left && !p.kicked).length;
+    const span = seated >= 2 ? IDLE_READY_MS : IDLE_CLOSE_MS;
+    const deadline = since + (room.idleWarned ? span : span - IDLE_WARN_MS);
     return [{
       id: 'idle',
       timer: { key: `${room.idleWarned ? 'close' : 'warn'}:${since}`, deadline },
@@ -731,9 +751,12 @@ export class App {
    */
   noteLive(room) {
     if (!room || room.status !== 'lobby' || !this.rooms.has(room.code)) return;
-    room.idleAt = this.clock.now();
+    const now = this.clock.now();
+    room.idleAt = now;
     room.idleWarned = false;
-    this.syncClocks();
+    // Взводим часы этого стола, а не всех сразу: noteLive зовётся на каждое
+    // сообщение страницы, а syncClocks обходит все столы бота.
+    for (const c of this.coreClocks(room, now)) this.arm(`${c.id}:${room.code}`, c.timer, c.fire);
   }
 
   /** Сначала предупреждение, через минуту — закрытие. */
@@ -743,7 +766,14 @@ export class App {
     if (!room.idleWarned) {
       room.idleWarned = true;
       this.syncClocks(); // теперь таймер ведёт к закрытию, а не к предупреждению
-      await this.reply(room.chatId, IDLE_WARN_TEXT, to);
+      // С кнопкой, а не голым текстом: до стола минута, и листать чат вверх
+      // за карточкой — это ровно то время, которого нет.
+      try {
+        await this.outbox.post(room.chatId, IDLE_WARN_TEXT, [[{ text: '🙋 Я тут, играем', url: this.tableLink(room) }]],
+          to.message_id ? { reply_parameters: { message_id: to.message_id, allow_sending_without_reply: true } } : {});
+      } catch (err) {
+        this.log(err);
+      }
       return;
     }
     if (!this.claimIdle(room)) return;
@@ -836,6 +866,15 @@ export class App {
     if (typeof msg.text !== 'string') return;
 
     this.seenInChat(chatId, msg.message_id);
+    // «Ща доиграю и сяду» в чате — это тоже «мы тут». Стол держит только
+    // тот, кто за ним сидит, и только свой: чужая болтовня в группе ничьих
+    // столов не продлевает.
+    const who = String(msg.from?.id || '');
+    for (const room of this.roomsOf(chatId)) {
+      if (room.status === 'lobby' && room.players.some((p) => String(p.id) === who && !p.left && !p.kicked)) {
+        this.noteLive(room);
+      }
+    }
     const cmd = parseCommand(msg.text, this.botUsername);
     if (!cmd) return;
     return this.onCommand(cmd, msg);

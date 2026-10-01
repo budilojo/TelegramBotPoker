@@ -17,9 +17,10 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Table, user, durakDecks } from './harness.js';
+import { Table, user, durakDecks, FakeClock } from './harness.js';
+import { TelegramStub } from './tg-stub.js';
 import { Store } from './store.js';
-import { IDLE_CLOSE_MS, IDLE_WARN_MS, IDLE_GRACE_MS } from './app.js';
+import { IDLE_CLOSE_MS, IDLE_WARN_MS, IDLE_GRACE_MS, IDLE_SPREAD_MS, IDLE_READY_MS } from './app.js';
 
 const IVAN = user(101, 'Иван');
 const MAX = user(202, 'Макс');
@@ -145,7 +146,7 @@ test('начатую игру таймер не закрывает никогд�
 
 /* ------------------------------------------- перезапуск и обслуживание */
 
-test('после перезапуска бота у стола есть время подать признаки жизни', async () => {
+test('перезапуск не укорачивает жизнь свежему столу', async () => {
   // С настоящей базой: в NullStore столу негде пережить перезапуск.
   const store = new Store(':memory:');
   const t = new Table({ store });
@@ -154,17 +155,70 @@ test('после перезапуска бота у стола есть врем
   const code = room.code;
   t.app.stop();
 
-  // Бот поднялся заново с той же базой.
+  // Хост создал стол минуту назад и зовёт друзей в чате — и тут деплой.
+  await t.clock.advance(60_000);
   const again = new Table({ store, clock: t.clock, chatId: t.chatId, tg: t.tg });
   again.app.load();
-  await again.app.resume(); // так поднимается настоящий бот: сперва загрузка, потом часы
-  assert.ok(again.app.roomByCode(code), 'стол восстановился');
+  await again.app.resume(); // так поднимается настоящий бот
+
+  await again.clock.advance(IDLE_GRACE_MS + 5000);
+  assert.ok(again.app.roomByCode(code), 'столу осталось его время, а не две минуты');
+
+  // И закроется он тогда, когда закрылся бы без перезапуска.
+  await again.clock.advance(IDLE_CLOSE_MS);
+  assert.equal(again.app.roomByCode(code), null, 'в свой срок — закрылся');
+  again.app.stop();
+  store.close();
+});
+
+test('давно брошенный стол после перезапуска закрывается вскоре, но не мгновенно', async () => {
+  const store = new Store(':memory:');
+  const t = new Table({ store });
+  const room = await lobby(t);
+  // Бот лежал полдня: стол этот всё время никому не был нужен.
+  room.createdAt = t.clock.now() - 12 * 60 * 60_000;
+  t.app.save(room);
+  const code = room.code;
+  t.app.stop();
+
+  const again = new Table({ store, clock: t.clock, chatId: t.chatId, tg: t.tg });
+  again.app.load();
+  await again.app.resume();
 
   await again.clock.advance(IDLE_GRACE_MS - IDLE_WARN_MS - 1000);
   assert.ok(again.app.roomByCode(code), 'сразу после старта не закрываем');
 
   await again.clock.advance(IDLE_WARN_MS + 2000);
   assert.equal(again.app.roomByCode(code), null, 'а вскоре — закрываем: к нему так и не пришли');
+  again.app.stop();
+  store.close();
+});
+
+test('после перезапуска брошенные столы закрываются по очереди, а не залпом', async () => {
+  const store = new Store(':memory:');
+  const clock = new FakeClock();
+  const tg = new TelegramStub();
+  for (let i = 0; i < 12; i++) {
+    const t = new Table({ store, clock, tg, chatId: -100000 - i });
+    const room = await lobby(t, user(500 + i, `Хост${i}`));
+    room.createdAt = clock.now() - 12 * 60 * 60_000; // все давно брошены
+    t.app.save(room);
+    t.app.stop();
+  }
+
+  const again = new Table({ store, clock, tg, chatId: -100000 });
+  assert.equal(again.app.load(), 12, 'все лобби вернулись');
+  const before = tg.calls.length;
+  again.app.syncClocks();
+
+  // Столько, сколько нужно самому первому из них.
+  await again.clock.advance(IDLE_GRACE_MS - IDLE_WARN_MS + 1000);
+  const burst = tg.calls.slice(before).filter((c) => c.method === 'sendMessage').length;
+  assert.ok(burst <= 2, `в одну секунду ушло ${burst} сообщений — это залп по всем группам`);
+
+  // Но и не теряются: за свою очередь каждый получает своё.
+  await again.clock.advance(IDLE_SPREAD_MS * 12 + IDLE_WARN_MS + 5000);
+  assert.equal(again.app.rooms.size, 0, 'все двенадцать закрылись');
   again.app.stop();
   store.close();
 });
@@ -249,5 +303,54 @@ test('признак жизни за секунду до срабатывани�
   t.openRoom(MAX, room); // успел
   await t.clock.advance(IDLE_WARN_MS * 2);
   assert.ok(t.app.roomByCode(room.code), 'стол жив: успели до решения');
+  t.app.stop();
+});
+
+/* ------------------------------------------- что ещё считается жизнью */
+
+test('написал в группе, где сидишь за столом, — стол живой', async () => {
+  const t = new Table();
+  const room = await lobby(t);
+  await t.clock.advance(IDLE_CLOSE_MS - IDLE_WARN_MS - 2000);
+  await t.cmd(IVAN, 'ща доиграю и сяду');
+  await t.clock.advance(IDLE_CLOSE_MS - IDLE_WARN_MS - 2000);
+  assert.ok(t.app.roomByCode(room.code), '«мы тут» в чате — тоже признак жизни');
+  t.app.stop();
+});
+
+test('чужая болтовня в группе чужих столов не держит', async () => {
+  const t = new Table();
+  const room = await lobby(t);
+  await t.clock.advance(IDLE_CLOSE_MS - IDLE_WARN_MS - 2000);
+  await t.cmd(MAX, 'привет всем'); // Макс за этим столом не сидит
+  await t.clock.advance(IDLE_WARN_MS * 3);
+  assert.equal(t.app.roomByCode(room.code), null, 'стол закрылся по сроку');
+  t.app.stop();
+});
+
+test('двоих за столом ждут дольше, чем одного', async () => {
+  const t = new Table();
+  const room = await lobby(t);
+  t.openRoom(MAX, room);
+  await t.send(MAX, { t: 'sit' });
+  assert.equal(room.players.length, 2);
+
+  await t.clock.advance(IDLE_CLOSE_MS + IDLE_WARN_MS + 5000);
+  assert.ok(t.app.roomByCode(room.code), 'двое ждут третьего — это не брошенный стол');
+
+  await t.clock.advance(IDLE_READY_MS);
+  assert.equal(t.app.roomByCode(room.code), null, 'но и не навсегда');
+  t.app.stop();
+});
+
+test('в предупреждении есть кнопка, по которой сразу попадают за стол', async () => {
+  const t = new Table();
+  await lobby(t);
+  await t.clock.advance(IDLE_CLOSE_MS - IDLE_WARN_MS + 1000);
+  // Кнопки видно в самом сообщении, а не в журнале вызовов.
+  const warn = [...t.tg.messages.values()].filter((m) => /через минуту он закроется/.test(m.text || '')).at(-1);
+  assert.ok(warn, 'предупреждение ушло');
+  const btn = warn.markup?.inline_keyboard?.flat?.() ?? [];
+  assert.ok(btn.some((b) => b.url), 'и в нём кнопка со ссылкой на стол');
   t.app.stop();
 });

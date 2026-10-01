@@ -341,7 +341,11 @@ export class Hub {
       } catch {
         /* closed already */
       }
+      // Стол открывали кнопкой с карточки — тогда группы у сессии нет, и
+      // раньше человек оставался на «Игру удалили» без выхода. Ведём его к
+      // своим группам: оттуда он дойдёт куда хотел.
       if (s.group && this.app.groupByCode(s.group)) this.enterHub(s);
+      else this.pushHome(s);
     }
     this.byRoom.delete(code);
   }
