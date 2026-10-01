@@ -186,3 +186,68 @@ test('обслуживание простоем игроков не считае
   assert.equal(t.app.roomByCode(room.code), null, 'дальше — как обычно');
   t.app.stop();
 });
+
+/* ------------------------------------------------- гонки на закрытии */
+
+/**
+ * Пока idleStep ждёт Telegram, в бот успевает прийти что угодно: второй
+ * таймер, признак жизни, старт игры. В тестах заглушка отвечает мгновенно,
+ * поэтому окно подделано честно: хук делает то, что в живом боте сделал бы
+ * событийный цикл, пока висит сетевой вызов.
+ */
+function duringTelegram(t, method, what) {
+  const orig = t.tg[method].bind(t.tg);
+  let once = false;
+  t.tg[method] = async (...args) => {
+    if (!once) {
+      once = true;
+      await what();
+    }
+    return orig(...args);
+  };
+}
+
+test('пока идёт закрытие, стол не закрывается во второй раз', async () => {
+  const t = new Table();
+  const room = await lobby(t);
+  // Второй стол в той же группе: любое действие с ним дёргает syncClocks,
+  // а значит может перевзвести таймер первого — прямо посреди его закрытия.
+  duringTelegram(t, 'editMessageReplyMarkup', async () => {
+    t.app.syncClocks();
+    await t.clock.advance(0); // событийный цикл успел прокрутить готовый таймер
+  });
+
+  await t.clock.advance(IDLE_CLOSE_MS + IDLE_WARN_MS + 2000);
+  assert.equal(t.app.roomByCode(room.code), null, 'стол закрыт');
+  assert.equal(said(t).filter((x) => /так никто и не собрался/.test(x)).length, 1, 'ровно одно сообщение о закрытии');
+  t.app.stop();
+});
+
+test('решение о закрытии принимается до первого обращения к сети', async () => {
+  const t = new Table();
+  const room = await lobby(t);
+  let stillListed = 'не проверено';
+  duringTelegram(t, 'editMessageReplyMarkup', () => {
+    // Мы внутри сетевой части закрытия. Стола в списке быть уже не должно:
+    // иначе сюда успеет и второй таймер, и человек, которому отдадут
+    // наполовину закрытый стол.
+    stillListed = t.app.roomByCode(room.code);
+    t.app.noteLive(room); // признак жизни на снесённый стол ничего не воскрешает
+  });
+
+  await t.clock.advance(IDLE_CLOSE_MS + IDLE_WARN_MS + 2000);
+  assert.equal(stillListed, null, 'к началу сетевой части стола уже нет в списке');
+  assert.equal(t.app.roomByCode(room.code), null, 'и после неё нет');
+  assert.equal(said(t).filter((x) => /так никто и не собрался/.test(x)).length, 1, 'одно сообщение');
+  t.app.stop();
+});
+
+test('признак жизни за секунду до срабатывания стол спасает', async () => {
+  const t = new Table();
+  const room = await lobby(t);
+  await t.clock.advance(IDLE_CLOSE_MS - 1000); // предупреждение уже было
+  t.openRoom(MAX, room); // успел
+  await t.clock.advance(IDLE_WARN_MS * 2);
+  assert.ok(t.app.roomByCode(room.code), 'стол жив: успели до решения');
+  t.app.stop();
+});
