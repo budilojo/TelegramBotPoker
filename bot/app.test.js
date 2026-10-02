@@ -10,6 +10,7 @@ import { Table, user, stack, TEST_TOKEN, initDataFor, FakeClock } from './harnes
 import { App, parseCommand } from './app.js';
 import { Hub } from './hub.js';
 import { Store } from './store.js';
+import { GAME_LIST } from './games/index.js';
 import { totalPot } from '../server/game.js';
 
 const CAST = () => ({ ivan: user(101, 'Иван'), max: user(202, 'Макс'), dima: user(303, 'Дима'), sasha: user(404, 'Саша') });
@@ -640,4 +641,19 @@ test('a group promoted to a supergroup keeps its table — and open tables keep 
   await t.act(actor, 'call');
   assert.notEqual(moved.hand.actorId, String(actor.id), 'a page opened before the migration still plays');
   store.close();
+});
+
+test('справка называет все игры из реестра: новая игра не забывается в текстах', async () => {
+  const t = new Table();
+  await t.cmd(user(101, 'Иван'), '/help');
+  const said = [...t.tg.messages.values()].filter((m) => m.chatId === String(t.chatId)).at(-1).text;
+  for (const g of GAME_LIST) {
+    assert.ok(said.includes(g.title), `в справке нет игры «${g.title}» — её забыли вписать`);
+  }
+  // Личка — отдельный текст, и в нём то же самое.
+  await t.start(user(101, 'Иван'));
+  await t.dm(user(101, 'Иван'), '/help');
+  for (const g of GAME_LIST) {
+    assert.ok(t.lastDm(user(101, 'Иван')).includes(g.title), `в личной справке нет «${g.title}»`);
+  }
 });

@@ -54,7 +54,7 @@ test('/admin в личке шлёт кнопку админу и обычную 
 
   await t.start(max);
   await t.dm(max, '/admin');
-  assert.match(t.lastDm(max), /Покер и дурак/, 'чужому — та же справка, что на любое сообщение');
+  assert.match(t.lastDm(max), /Игры в Telegram/, 'чужому — та же справка, что на любое сообщение');
   assert.ok(!t.lastDm(max).includes('Цифры'));
 });
 

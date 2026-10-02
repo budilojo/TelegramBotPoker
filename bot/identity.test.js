@@ -98,7 +98,7 @@ test('opened without a room (from @BotFather or the bot profile), the app says w
   await t.seat({ ivan: user(101, 'Иван') });
   const r = t.open(user(202, 'Макс'), { initData: initDataFor(user(202, 'Макс'), { startParam: '' }) });
   assert.equal(r.error, 'NO_ROOM');
-  assert.match(r.text, /из группы.*\/newgame/, 'not "the game was deleted" — there never was one');
+  assert.match(r.text, /из группы.*\/game/, 'not "the game was deleted" — there never was one');
   assert.equal(t.room.players.length, 1);
 });
 

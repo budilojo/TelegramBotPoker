@@ -120,7 +120,7 @@ export class Hub {
     if (!code) {
       const mine = this.app.groupsOf(auth.user.id);
       if (!mine.length) {
-        return { error: 'NO_ROOM', text: 'Игры открываются из группы: напишите там /game (или /newgame для покера) и нажмите кнопку.' };
+        return { error: 'NO_ROOM', text: 'Игры открываются из группы: добавьте меня в группу, напишите там /game и нажмите кнопку.' };
       }
       const session = { id: this.nextId++, user: auth.user, kind: 'home', group: null, code: null, send, visible: true, home: true };
       if (mine.length === 1) {
