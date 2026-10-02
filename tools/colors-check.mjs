@@ -208,6 +208,18 @@ function probe() {
     brokenImgs: imgs.filter((im) => im.complete && im.naturalWidth === 0).length,
     loadedImgs: imgs.filter((im) => im.naturalWidth > 0).length,
     seq: document.body.dataset.seq,
+    // Тост прибит к верху общими стилями, а здесь наверху сидят соперники:
+    // он не имеет права накрыть ни одного из них.
+    toastOnSeats: (() => {
+      const t = document.querySelector('#toast');
+      if (!t) return 0;
+      const b = t.getBoundingClientRect();
+      if (!b.height) return 0;
+      return [...document.querySelectorAll('.cl-seat')].filter((el) => {
+        const r = el.getBoundingClientRect();
+        return b.left < r.right && r.left < b.right && b.top < r.bottom && r.top < b.bottom;
+      }).length;
+    })(),
   };
 }
 
@@ -250,6 +262,7 @@ for (const scene of scenes) {
     need(!errors.length, `${tag}: ошибки в консоли — ${errors.slice(0, 2).join(' | ')}`);
     need(!p.brokenImgs, `${tag}: ${p.brokenImgs} картинок карт не загрузилось`);
     need(p.pageOverflow === 0, `${tag}: страница шире экрана на ${p.pageOverflow}px`);
+    need(p.toastOnSeats === 0, `${tag}: подсказка накрыла соперников (${p.toastOnSeats})`);
 
     if (scene.lobby || scene.room.status === 'finished') {
       need(p.lobby > 0, `${tag}: экран не собрался`);

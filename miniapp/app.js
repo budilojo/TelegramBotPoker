@@ -58,8 +58,11 @@ function render() {
     $app.append(h('div.boot', h('div.boot-logo', '♠'), h('div', 'Подключаемся…')));
     return;
   }
-  SCREENS[screenOf(net.state)].render();
-  // Which state is on screen — for the browser checks (tools/e2e*.mjs).
+  const screen = screenOf(net.state);
+  SCREENS[screen].render();
+  // Which state is on screen — for the browser checks (tools/e2e*.mjs) and for
+  // the few common things a screen needs to move out of its own way.
+  document.body.dataset.screen = screen;
   document.body.dataset.seq = net.state.seq ?? '';
   if (!net.connected) $app.append(h('div.conn', 'Нет связи — переподключаемся…'));
   tickClocks(serverNow());

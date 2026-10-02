@@ -169,6 +169,7 @@ function renderLobby() {
   }
   if (net.busy) actions.classList.add('busy');
   $app.append(lobby, actions);
+  toastBelow(null); // в лобби соперников наверху нет — тосту можно как всем
 }
 
 /* ------------------------------------------------------------------ table */
@@ -194,7 +195,18 @@ function renderTable() {
     eventsEl(s),
   );
   $app.append(top, felt, heroEl(s), panelEl(s));
+  // Общий тост прибит к верху экрана — а наверху здесь сидят соперники.
+  // Опускаем его под их ряд, каким бы тот ни был: вшестером и восьмером он
+  // переносится на две строки, и постоянным числом тут не обойтись.
+  toastBelow(felt.querySelector('.cl-seats'));
   restoreHandScroll();
+}
+
+/** Куда опустить общий тост, чтобы он не накрыл ряд соперников. */
+function toastBelow(seats) {
+  const px = seats ? Math.round(seats.getBoundingClientRect().bottom) + 10 : 0;
+  if (px > 0) document.body.style.setProperty('--cl-toast-top', `${px}px`);
+  else document.body.style.removeProperty('--cl-toast-top');
 }
 
 const nameAt = (s, seat) => s.players.find((p) => p.seat === seat)?.name ?? '—';
@@ -573,9 +585,10 @@ function panelEl(s) {
       d.pending ? `Взять ${d.pending}` : 'Взять карту'));
   }
   if (L?.pass) p.append(h('button.btn', { onclick: () => { haptic.tap(); send({ t: 'pass', seq: s.seq }); } }, 'Передать ход'));
-  if (!p.childElementCount) {
-    p.append(h('div.cl-wait', L?.myTurn ? 'Нажмите карту в руке' : `Ходит ${nameAt(s, d?.turnSeat ?? -1)}`));
-  }
+  // Чей ход — уже сказано заголовком панели. Повторять это второй строкой
+  // незачем: на чужом ходу панель просто схлопывается, и руке достаётся
+  // больше места.
+  if (!p.childElementCount && L?.myTurn) p.append(h('div.cl-wait', 'Нажмите карту в руке'));
   return p;
 }
 
