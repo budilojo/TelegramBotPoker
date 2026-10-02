@@ -1,6 +1,6 @@
 'use strict';
 /**
- * Что бот пишет в Telegram про «Радугу» — чистые функции, как покерные и
+ * Что бот пишет в Telegram про «UNOQ» — чистые функции, как покерные и
  * дурацкие, чтобы их можно было прибить тестами.
  *
  * - КАРТОЧКА в группе: одна на игру, правится на месте. Кто играет, что
@@ -22,7 +22,7 @@ const colorWords = (c) => (c ? `${COLOR_RU[c]} (${SHAPE_RU[COLOR_SHAPE[c]]})` : 
 export function renderCard(room, { link = null } = {}) {
   const s = room.settings;
   const seated = seatedPlayers(room);
-  const lines = [`🌈 <b>Радуга</b> · цветные карты`];
+  const lines = [`🎨 <b>UNOQ</b> · цветные карты`];
   lines.push(
     `Игроков: <b>${seated.length}/${MAX_SEATS}</b>` +
       (room.status !== 'finished' && seated.length && (room.status === 'lobby' || room.deal?.phase !== 'play')
@@ -33,7 +33,7 @@ export function renderCard(room, { link = null } = {}) {
   lines.push('');
   lines.push(...statusLines(room));
 
-  const text = room.status === 'lobby' ? '🌈 Присоединиться' : '🌈 Открыть стол';
+  const text = room.status === 'lobby' ? '🎨 Присоединиться' : '🎨 Открыть стол';
   return { text: lines.join('\n'), keyboard: link ? [[{ text, url: link }]] : [] };
 }
 
@@ -54,7 +54,7 @@ function statusLines(room) {
     const pend = d.pending ? ` · на столе +${d.pending}` : '';
     out.push(turn + pend);
     const one = alive(d).filter((id) => d.hands[id].length === 1).map((id) => nameOf(room, id));
-    if (one.length) out.push(`🌈 Одна карта: ${one.join(', ')}`);
+    if (one.length) out.push(`✋ Одна карта: ${one.join(', ')}`);
   } else if (d) {
     if (d.aborted) out.push(`Партия #${d.no} прервана${d.abortedWhy ? ` — ${esc(d.abortedWhy)}` : ''}. Не засчитывается.`);
     else if (d.loser) out.push(`🏁 Партия #${d.no}: последний — <b>${nameOf(room, d.loser)}</b>`);
@@ -74,12 +74,12 @@ export function renderTurnPing(room, p, wait) {
   const lines = [];
   if (wait?.kind === 'pending') {
     lines.push(
-      `➕ <b>На вас +${d.pending}</b> · Радуга${title}`,
+      `➕ <b>На вас +${d.pending}</b> · UNOQ${title}`,
       `Кройте или берите ${d.pending} · цвет ${colorWords(d.color)}`
     );
   } else {
     lines.push(
-      `🌈 <b>Ваш ход</b> · Радуга${title}`,
+      `🎨 <b>Ваш ход</b> · UNOQ${title}`,
       `Цвет ${colorWords(d.color)} · в колоде ${d.deck.length}`
     );
   }

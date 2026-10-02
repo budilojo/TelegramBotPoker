@@ -1,5 +1,5 @@
 /**
- * Стол «Радуги» в настоящем браузере: живой ли экран.
+ * Стол «UNOQ» в настоящем браузере: живой ли экран.
  *
  *   node tools/colors-check.mjs            → отчёт; выход 1 при любой ошибке
  *   node tools/colors-check.mjs --shots    → ещё и снимки в preview/colors/
@@ -127,13 +127,13 @@ for (const n of [2, 3, 5, 8]) {
   });
 }
 
-// Своя одна карта: кнопка «Радуга!».
+// Своя одна карта: кнопка «Последняя!».
 {
   const room = tableOf(3, 66);
   room.deal.turn = '102';
   room.deal.hands['101'] = ['G1'];
   scenes.push({
-    name: 'rainbow', room, hero: '101', expect: { rainbowBtn: true },
+    name: 'shout', room, hero: '101', expect: { shoutBtn: true },
     before: () => { room.deal.call = { id: '101', at: app.clock.now(), called: false }; },
   });
 }
@@ -182,7 +182,7 @@ const sdk = (initData, code) => `
 const initDataFor = (id, name, code) =>
   signInitData({ auth_date: Math.floor(Date.now() / 1000), user: { id: Number(id), first_name: name, is_bot: false }, start_param: code }, TOKEN);
 
-/** Всё, что меряется на экране «Радуги». */
+/** Всё, что меряется на экране «UNOQ». */
 function probe() {
   const n = (sel) => document.querySelectorAll(sel).length;
   const hand = document.querySelector('.cl-hand');
@@ -197,7 +197,7 @@ function probe() {
     counter: document.querySelector('.cl-fits')?.textContent || '',
     pending: document.querySelector('.cl-pending')?.textContent || '',
     catchBtn: n('.cl-catch'),
-    rainbowBtn: n('.btn.rainbow'),
+    shoutBtn: n('.btn.shout'),
     seats: n('.cl-seat'),
     events: n('.cl-ev'),
     shapes: n('.cl-shape'),
@@ -284,7 +284,7 @@ for (const scene of scenes) {
       if (scene.expect?.counter) need(/подход/.test(p.counter), `${tag}: нет счётчика «N подходят» (${p.counter})`);
       if (scene.expect?.pending) need(p.pending === scene.expect.pending, `${tag}: на куче «${p.pending}», а ждали «${scene.expect.pending}»`);
       if (scene.expect?.catchBtn) need(p.catchBtn === 1, `${tag}: нет кнопки «Поймал!»`);
-      if (scene.expect?.rainbowBtn) need(p.rainbowBtn === 1, `${tag}: нет кнопки «Радуга!»`);
+      if (scene.expect?.shoutBtn) need(p.shoutBtn === 1, `${tag}: нет кнопки «Последняя!»`);
       need(p.shapes > 0, `${tag}: фигур цвета на экране нет`);
 
       // Шторка цвета — только там, где есть что ею класть.
@@ -322,4 +322,4 @@ if (problems.length) {
   for (const p of problems.slice(0, 40)) console.log('  ✗ ' + p);
   process.exit(1);
 }
-console.log('\nэкран «Радуги» живой');
+console.log('\nэкран «UNOQ» живой');

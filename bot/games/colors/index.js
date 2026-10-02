@@ -1,6 +1,6 @@
 'use strict';
 /**
- * «Радуга» как одна игра хаба: ходы, которые может прислать приложение,
+ * «UNOQ» как одна игра хаба: ходы, которые может прислать приложение,
  * таймер хода и крючки, которые зовёт ядро, — та же форма, что у games/durak
  * и games/poker. Ядро про эту игру не знает ничего, кроме строки в реестре.
  */
@@ -12,12 +12,12 @@ import { isCard, COLORS, COLOR_RU } from './cards.js';
 
 /** Название показываемое. Вынесено сюда: его могут поменять. */
 export const TITLE = C.TITLE;
-export const ICON = '🌈';
+export const ICON = '🎨';
 export const BLURB = 'Цветные карты: кто первым сбросит все';
 
-/** Что страница может попросить у стола «Радуги», и ничего больше. */
+/** Что страница может попросить у стола «UNOQ», и ничего больше. */
 const ACTIONS = new Set([
-  'sit', 'leave', 'start', 'next', 'play', 'draw', 'pass', 'rainbow', 'catch',
+  'sit', 'leave', 'start', 'next', 'play', 'draw', 'pass', 'shout', 'catch',
   'settings', 'kick', 'host', 'abort', 'finish',
 ]);
 
@@ -25,7 +25,7 @@ const ACTIONS = new Set([
  * Слова на каждый отказ. Трёх кодов здесь нет нарочно — `NOT_YOUR_TURN`,
  * `NOT_ENOUGH_PLAYERS` и `TABLE_FULL`: словарь ошибок один на все игры, а у
  * покера и дурака они написаны по-своему и про своё («играют до шести»).
- * «Радуга» присылает на них свои слова прямо из правил, рядом с кодом.
+ * «UNOQ» присылает на них свои слова прямо из правил, рядом с кодом.
  */
 export const ERRORS = {
   NOT_IN_DEAL: 'Вы не играете в этой партии — сядьте, и вас сдадут со следующей.',
@@ -40,9 +40,9 @@ export const ERRORS = {
   CAN_PLAY: 'У вас есть чем ходить — брать не нужно.',
   ALREADY_DREW: 'Карта уже взята: сыграйте её или передайте ход.',
   NOTHING_TO_PASS: 'Передать ход можно только после того, как взяли карту.',
-  NOT_ONE_CARD: '«Радуга!» — когда у вас осталась ровно одна карта.',
-  NOTHING_TO_CATCH: 'Ловить некого: все назвали «Радугу!» вовремя.',
-  CATCH_SELF: 'Себя поймать нельзя — «Радугу!» за себя нажимают сами.',
+  NOT_ONE_CARD: '«Последняя!» — когда у вас осталась ровно одна карта.',
+  NOTHING_TO_CATCH: 'Ловить некого: все назвали «Последнюю!» вовремя.',
+  CATCH_SELF: 'Себя поймать нельзя — «Последнюю!» за себя нажимают сами.',
   TOO_LATE: 'Поздно: пять секунд прошли, он ушёл чисто.',
   DEAL_IN_PROGRESS: 'Партия ещё идёт.',
   DEAL_OVER: 'Партия уже кончилась.',
@@ -106,7 +106,7 @@ export default {
   results: (room) => renderResults(room),
 
   /**
-   * Партии, которые рейтингу есть смысл считать. В «Радуге» партия — это одна
+   * Партии, которые рейтингу есть смысл считать. В «UNOQ» партия — это одна
    * сдача: у неё есть порядок выхода и есть последний. Прерванная сюда тоже
    * попадает — и получает отказ с объяснением, а не тихо пропадает.
    *
@@ -210,12 +210,12 @@ export default {
         if (fail(C.pass(room, uid, { seq, now, randInt }), { resync: true })) return;
         return app.afterAction(room);
 
-      case 'rainbow':
-        if (fail(C.rainbow(room, uid, { now }), { resync: true })) return;
+      case 'shout':
+        if (fail(C.shout(room, uid, { now }), { resync: true })) return;
         return app.afterAction(room);
 
       case 'catch':
-        if (fail(C.catchRainbow(room, uid, { now, randInt }), { resync: true })) return;
+        if (fail(C.catchShout(room, uid, { now, randInt }), { resync: true })) return;
         return app.afterAction(room);
 
       case 'settings': {

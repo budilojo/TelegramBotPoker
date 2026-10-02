@@ -1,11 +1,11 @@
 'use strict';
 /**
- * «Радуга» — правила как чистые функции над комнатой. Ни Telegram, ни
+ * «UNOQ» — правила как чистые функции над комнатой. Ни Telegram, ни
  * сокетов, ни таймеров: каждая функция берёт комнату и id того, кто ходит
  * (всегда из проверенной подписи, никогда из тела сообщения), проверяет ход,
  * применяет его или отказывает кодом.
  *
- * Правила целиком — в docs/game-hub.md, раздел «Правила Радуги»; на каждое
+ * Правила целиком — в docs/game-hub.md, раздел «Правила UNOQ»; на каждое
  * есть по тесту в colors.rules.test.js.
  *
  * Места идут в том порядке, в каком садились; «следующий» — соседнее место в
@@ -35,11 +35,11 @@ const topWord = (d) =>
       : `любой «${SIGN_RU[signOf(d.top)]}»`;
 
 /** Показываемое название. Одной константой: его могут поменять. */
-export const TITLE = 'Радуга';
+export const TITLE = 'UNOQ';
 
 export const MAX_SEATS = 8;
 export const MIN_PLAYERS = 2;
-/** Сколько у человека есть, чтобы нажать «Радуга!», пока его не поймали. */
+/** Сколько у человека есть, чтобы нажать «Последняя!», пока его не поймали. */
 export const CALL_MS = 5_000;
 /** Столько кругов подряд бот ходит за всех — и партия останавливается. */
 export const IDLE_ROUNDS = 2;
@@ -267,7 +267,7 @@ function dealGame(room, { deck = defaultDeck, randInt = (n) => crypto.randomInt(
     drawn: null, // карта, только что взятая ходящим: её можно сыграть сразу
     out: [], // порядок выхода — он же порядок мест
     quit: [], // ушли из чата посреди партии
-    call: null, // { id, at, called } — окно «Радуга!»
+    call: null, // { id, at, called } — окно «Последняя!»
     phase: 'play',
     loser: null,
     aborted: false,
@@ -437,10 +437,10 @@ export function pass(room, userId, { seq, now = Date.now(), randInt = (n) => cry
 }
 
 /**
- * «Радуга!» — своя и только своя. Нажать за другого нельзя: вся эта кнопка
+ * «Последняя!» — своя и только своя. Нажать за другого нельзя: вся эта кнопка
  * про то, успел ли человек сам.
  */
-export function rainbow(room, userId, { now = Date.now() } = {}) {
+export function shout(room, userId, { now = Date.now() } = {}) {
   const d = live(room);
   if (!d) return { error: room.status === 'lobby' ? 'NOT_PLAYING' : 'DEAL_OVER' };
   const id = String(userId);
@@ -449,8 +449,8 @@ export function rainbow(room, userId, { now = Date.now() } = {}) {
   if (!d.call || d.call.id !== id) return { error: 'NOT_ONE_CARD' };
   if (d.call.called) return { ok: true, noop: true };
   d.call.called = true;
-  note(d, { kind: 'rainbow', by: id });
-  room.notice = `🌈 ${nameOf(room, id)}: Радуга! Осталась одна карта.`;
+  note(d, { kind: 'shout', by: id });
+  room.notice = `✋ ${nameOf(room, id)}: Последняя! Осталась одна карта.`;
   touch(room);
   return { ok: true };
 }
@@ -459,7 +459,7 @@ export function rainbow(room, userId, { now = Date.now() } = {}) {
  * «Поймал!» — за того, кто с одной картой промолчал. Своё молчание поймать
  * нельзя, и после пяти секунд ловить уже поздно: промолчал и ушёл чисто.
  */
-export function catchRainbow(room, userId, { now = Date.now(), randInt = (n) => crypto.randomInt(n) } = {}) {
+export function catchShout(room, userId, { now = Date.now(), randInt = (n) => crypto.randomInt(n) } = {}) {
   const d = live(room);
   if (!d) return { error: room.status === 'lobby' ? 'NOT_PLAYING' : 'DEAL_OVER' };
   const id = String(userId);
@@ -715,7 +715,7 @@ function playableFor(d, id, settings) {
 export function legalFor(room, userId, { now = Date.now() } = {}) {
   const d = live(room);
   const id = String(userId);
-  const none = { play: [], draw: false, drawCount: 0, pass: false, rainbow: false, catch: null, myTurn: false, needColor: false };
+  const none = { play: [], draw: false, drawCount: 0, pass: false, shout: false, catch: null, myTurn: false, needColor: false };
   if (!d || !d.order.includes(id) || d.out.includes(id) || d.quit.includes(id)) {
     return { ...none, catch: catchableFor(d, id, now) };
   }
@@ -728,7 +728,7 @@ export function legalFor(room, userId, { now = Date.now() } = {}) {
     draw: myTurn && (d.pending > 0 || (!d.drawn && playable.length === 0)),
     drawCount: myTurn && d.pending ? d.pending : 1,
     pass: myTurn && !!d.drawn,
-    rainbow: !!d.call && d.call.id === id && !d.call.called && d.hands[id].length === 1,
+    shout: !!d.call && d.call.id === id && !d.call.called && d.hands[id].length === 1,
     catch: catchableFor(d, id, now),
     myTurn,
     needColor: playable.some(isWild),
@@ -945,7 +945,7 @@ export function deserialize(data) {
   room.ui.lastMsgId = room.ui.lastMsgId || 0;
   room.ui.pings = room.ui.pings || {};
   room.code = room.code || newRoomCode();
-  // Окно «Радуга!» живёт пять секунд: пережить перезапуск оно не может и не
+  // Окно «Последняя!» живёт пять секунд: пережить перезапуск оно не может и не
   // должно — ловить человека за молчание, которого никто не видел, нечестно.
   if (room.deal) room.deal.call = null;
   return room;

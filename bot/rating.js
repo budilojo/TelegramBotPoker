@@ -26,7 +26,7 @@ export const LAST = -10;
 /** Больше десяти зачётных партий в сутки один и тот же состав не наиграет. */
 export const PER_DAY = 10;
 
-export const GAME_RU = { durak: 'Дурак', poker: 'Покер', colors: 'Радуга' };
+export const GAME_RU = { durak: 'Дурак', poker: 'Покер', colors: 'UNOQ' };
 
 export const WHY = {
   ABORTED: 'партия не доиграна — она не засчитывается',

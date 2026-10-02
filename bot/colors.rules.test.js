@@ -1,11 +1,11 @@
 'use strict';
 /**
- * Правила «Радуги» — по одному тесту на правило, как в дураке.
+ * Правила «UNOQ» — по одному тесту на правило, как в дураке.
  *
  * Здесь нет ни Telegram, ни сокетов: только комната и чистые функции над
  * ней. Что видно людям и кто кем может ходить — в colors.test.js.
  *
- * Колода подтасована всюду, где важно, ЧТО именно лежит: партия в «Радуге»
+ * Колода подтасована всюду, где важно, ЧТО именно лежит: партия в «UNOQ»
  * целиком про то, какая карта у кого, и случайная пачка проверяет удачу, а
  * не правила.
  */
@@ -271,23 +271,23 @@ test('11а. вдвоём: вышел последней «+2» — второй 
   assert.equal(d.loser, '1');
 });
 
-/* --------------------------------------------------------------- 12. Радуга */
+/* --------------------------------------------------------------- 12. UNOQ */
 
-test('12. «Радуга!»: нажал сам — чисто; поймали за три секунды — взял две; через шесть — поздно', () => {
+test('12. «Последняя!»: нажал сам — чисто; поймали за три секунды — взял две; через шесть — поздно', () => {
   // Нажал сам.
   let room = table({ 1: 'R1 R2 R3 R4 R5 R6 R7', 2: 'G1 G2 G3 G4 G5 G6 G7', 3: 'B1 B2 B3 B4 B5 B6 B7' }, { top: 'G0' });
   room.deal.hands['2'] = ['G1', 'G2'];
   assert.ok(play(room, 2, 'G1', { now: 1000 }).ok);
   assert.deepEqual({ id: room.deal.call.id, called: room.deal.call.called }, { id: '2', called: false });
-  assert.ok(C.rainbow(room, 2, { now: 1500 }).ok);
+  assert.ok(C.shout(room, 2, { now: 1500 }).ok);
   assert.equal(room.deal.call.called, true);
-  assert.equal(C.catchRainbow(room, 3, { now: 2000 }).error, 'NOTHING_TO_CATCH', 'назвал вовремя — ловить нечего');
+  assert.equal(C.catchShout(room, 3, { now: 2000 }).error, 'NOTHING_TO_CATCH', 'назвал вовремя — ловить нечего');
 
   // Промолчал, поймали на третьей секунде.
   room = table({ 1: 'R1 R2 R3 R4 R5 R6 R7', 2: 'G1 G2 G3 G4 G5 G6 G7', 3: 'B1 B2 B3 B4 B5 B6 B7' }, { top: 'G0' });
   room.deal.hands['2'] = ['G1', 'G2'];
   assert.ok(play(room, 2, 'G1', { now: 1000 }).ok);
-  const r = C.catchRainbow(room, 3, { now: 4000, randInt: colorsRandom(2) });
+  const r = C.catchShout(room, 3, { now: 4000, randInt: colorsRandom(2) });
   assert.ok(r.ok);
   assert.equal(hand(room, 2).length, 3, 'взял две');
   assert.equal(room.deal.call, null, 'окно закрылось');
@@ -296,18 +296,18 @@ test('12. «Радуга!»: нажал сам — чисто; поймали з
   room = table({ 1: 'R1 R2 R3 R4 R5 R6 R7', 2: 'G1 G2 G3 G4 G5 G6 G7', 3: 'B1 B2 B3 B4 B5 B6 B7' }, { top: 'G0' });
   room.deal.hands['2'] = ['G1', 'G2'];
   assert.ok(play(room, 2, 'G1', { now: 1000 }).ok);
-  assert.equal(C.catchRainbow(room, 3, { now: 7000 }).error, 'TOO_LATE');
+  assert.equal(C.catchShout(room, 3, { now: 7000 }).error, 'TOO_LATE');
   assert.equal(hand(room, 2).length, 1, 'карт не прибавилось');
 });
 
-test('12а. «Радуга!» за другого нельзя, и «Поймал!» за себя — тоже', () => {
+test('12а. «Последняя!» за другого нельзя, и «Поймал!» за себя — тоже', () => {
   const room = table({ 1: 'R1 R2 R3 R4 R5 R6 R7', 2: 'G1 G2 G3 G4 G5 G6 G7', 3: 'B1 B2 B3 B4 B5 B6 B7' }, { top: 'G0' });
   room.deal.hands['2'] = ['G1', 'G2'];
   assert.ok(play(room, 2, 'G1', { now: 1000 }).ok);
-  assert.equal(C.rainbow(room, 3, { now: 1500 }).error, 'NOT_ONE_CARD', 'нажать за другого нельзя');
+  assert.equal(C.shout(room, 3, { now: 1500 }).error, 'NOT_ONE_CARD', 'нажать за другого нельзя');
   assert.equal(room.deal.call.called, false, 'и чужое молчание так не снимается');
-  assert.equal(C.catchRainbow(room, 2, { now: 1500 }).error, 'CATCH_SELF', 'сам себя не ловит');
-  assert.equal(C.rainbow(room, 1, { now: 1500 }).error, 'NOT_ONE_CARD', 'у первого семь карт');
+  assert.equal(C.catchShout(room, 2, { now: 1500 }).error, 'CATCH_SELF', 'сам себя не ловит');
+  assert.equal(C.shout(room, 1, { now: 1500 }).error, 'NOT_ONE_CARD', 'у первого семь карт');
 });
 
 test('12б. набрал карт — ловить уже нечего: окно закрывается само', () => {
@@ -320,7 +320,7 @@ test('12б. набрал карт — ловить уже нечего: окно
   assert.ok(play(room, 1, 'GP', { now: 1100 }).ok); // «+2» прилетело молчуну
   assert.equal(hand(room, 2).length, 3, 'он взял две');
   assert.equal(room.deal.call, null, 'карт у него больше одной — ловить нечего');
-  assert.equal(C.catchRainbow(room, 1, { now: 1200 }).error, 'NOTHING_TO_CATCH');
+  assert.equal(C.catchShout(room, 1, { now: 1200 }).error, 'NOTHING_TO_CATCH');
 });
 
 /* ------------------------------------------------------------- 13–14. места */
@@ -545,7 +545,7 @@ test('настройки: накопление и таймер — только 
   assert.equal(room.settings.turnSeconds, 15, 'меньше пятнадцати секунд не бывает');
 });
 
-test('сохранение и чтение: партия переживает перезапуск, окно «Радуги» — нет', () => {
+test('сохранение и чтение: партия переживает перезапуск, окно «UNOQ» — нет', () => {
   const room = table({ 1: 'R1 R2 R3 R4 R5 R6 R7', 2: 'G1 G2 G3 G4 G5 G6 G7', 3: 'B1 B2 B3 B4 B5 B6 B7' }, { top: 'G0' });
   room.deal.hands['2'] = ['G1', 'G2'];
   assert.ok(play(room, 2, 'G1', { now: 1000 }).ok);

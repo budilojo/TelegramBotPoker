@@ -1,6 +1,6 @@
 'use strict';
 /**
- * «Радуга» через мини-приложение: те же два железных правила, что у покера и
+ * «UNOQ» через мини-приложение: те же два железных правила, что у покера и
  * дурака.
  *
  *   НИКТО НЕ ВИДИТ ЧУЖИХ КАРТ — проверяется на ВСЁМ, что каждый телефон
@@ -25,7 +25,7 @@ const THREE = () => ({ ivan: user(101, 'Иван'), max: user(202, 'Макс'), 
 const groupPosts = (t) => t.tg.calls.filter((c) => c.method === 'sendMessage' && c.chatId === String(t.chatId));
 const everyText = (t) => t.tg.calls.filter((c) => c.method === 'sendMessage' || c.method === 'editMessageText').map((c) => c.text);
 
-/** Код карты «Радуги» в JSON — ровно в кавычках, чтобы не ловить обрывки слов. */
+/** Код карты «UNOQ» в JSON — ровно в кавычках, чтобы не ловить обрывки слов. */
 const CARD_CODE = /"(?:[RYGB](?:[0-9]|S|V|P)|WC|WF)"/g;
 /** Карта, названная словами в Telegram: «красная 5», «синий «стоп»». */
 const CARD_WORD = /(красн|жёлт|зелён|син)(ая|ый|ую|ого)\s+(\d|«)/i;
@@ -62,7 +62,7 @@ async function playOut(t, cast, limit = 2000) {
     if (!u) break;
     const s = t.state(u);
     const L = s.legal;
-    if (L.rainbow) await t.send(u, { t: 'rainbow' });
+    if (L.shout) await t.send(u, { t: 'shout' });
     if (L.play.length) {
       const card = L.play[0];
       const wild = card === 'WC' || card === 'WF';
@@ -200,11 +200,11 @@ test('17. подмена: сообщение с чужим id играет от 
   assert.equal(t.lastError(cast.ivan).code, 'NOT_YOUR_TURN');
   assert.equal(room.deal.hands['202'].length, 7, 'Макс не взял карту, потому что кто-то так сказал');
 
-  // «Радуга!» и «Поймал!» — тоже только за себя.
+  // «Последняя!» и «Поймал!» — тоже только за себя.
   room.deal.hands['202'] = ['G1', 'G2'];
   await t.send(cast.max, { t: 'play', card: 'G1' });
-  await t.send(cast.ivan, { t: 'rainbow', seat: 1 });
-  assert.equal(t.lastError(cast.ivan).code, 'NOT_ONE_CARD', 'за Макса «Радугу» не нажать');
+  await t.send(cast.ivan, { t: 'shout', seat: 1 });
+  assert.equal(t.lastError(cast.ivan).code, 'NOT_ONE_CARD', 'за Макса «UNOQ» не нажать');
   assert.equal(room.deal.call.called, false);
   await t.send(cast.max, { t: 'catch' });
   assert.equal(t.lastError(cast.max).code, 'CATCH_SELF', 'и сам себя он не поймает');
@@ -228,7 +228,7 @@ test('17а. всякий отказ сказан словами, и страни
   await t.send(cast.max, { t: 'play', card: 'ерунда' });
   assert.equal(t.lastError(cast.max).code, 'NOT_YOUR_CARD');
   await t.send(cast.max, { t: 'attack', card: 'G1' });
-  assert.equal(t.lastError(cast.max).code, 'BAD_REQUEST', 'дурацкий ход за столом «Радуги»');
+  assert.equal(t.lastError(cast.max).code, 'BAD_REQUEST', 'дурацкий ход за столом «UNOQ»');
   await t.send(cast.max, { t: 'draw' });
   assert.equal(t.lastError(cast.max).code, 'CAN_PLAY', 'есть чем ходить — брать не дают');
 });
@@ -294,7 +294,7 @@ test('18а. карточка идёт за игрой правкой: чей х�
   assert.ok(!/[RYGB][0-9]/.test(text()), 'карты с кучи в группе нет');
 });
 
-test('18б. «Радуга!» и «Поймал!» видно всем за столом, а в группе — только что одна карта', async () => {
+test('18б. «Последняя!» и «Поймал!» видно всем за столом, а в группе — только что одна карта', async () => {
   const cast = THREE();
   const t = new Table();
   t.useColorsDeck(colorsStack(
@@ -310,7 +310,7 @@ test('18б. «Радуга!» и «Поймал!» видно всем за ст
   assert.equal(macs.alone, true, 'у Макса одна карта — это видно всем');
   assert.equal(macs.called, false, 'и что он ещё молчит — тоже');
   assert.equal(seen.legal.catch.seat, macs.seat, 'Диме предложено поймать');
-  assert.equal(t.state(cast.max).legal.rainbow, true, 'а Максу — назваться');
+  assert.equal(t.state(cast.max).legal.shout, true, 'а Максу — назваться');
   assert.equal(t.state(cast.max).legal.catch, null, 'себя он поймать не может');
   assert.match(t.tg.message(room.ui.tableMessageId).text, /Одна карта: Макс/);
 
@@ -429,7 +429,7 @@ test('22. рейтинг: доигранная партия даёт очки п
 
 /* ------------------------------------------------- заброшенный стол */
 
-test('23. заброшенный стол «Радуги» закрывается сам — как у остальных игр', async () => {
+test('23. заброшенный стол «UNOQ» закрывается сам — как у остальных игр', async () => {
   const t = new Table();
   const ivan = user(101, 'Иван');
   await t.start(ivan);
@@ -446,7 +446,7 @@ test('23. заброшенный стол «Радуги» закрываетс�
   t.app.stop();
 });
 
-test('23а. начатую «Радугу» таймер заброшенного стола не трогает', async () => {
+test('23а. начатую «UNOQ» таймер заброшенного стола не трогает', async () => {
   const cast = THREE();
   const t = new Table({ colorsDeck: colorsDecks(13) });
   const room = await begin(t, cast);
@@ -491,13 +491,13 @@ test('24. перезапуск посреди партии: руки, колод
 
 /* ------------------------------------------------------------------ хаб */
 
-test('25. «Радуга» есть в хабе, лобби создаётся, и в группе появляется своя карточка', async () => {
+test('25. «UNOQ» есть в хабе, лобби создаётся, и в группе появляется своя карточка', async () => {
   const t = new Table();
   const ivan = user(101, 'Иван');
   await t.cmd(ivan, '/play');
   t.openHub(ivan);
   const games = t.state(ivan).games;
-  assert.ok(games.some((g) => g.id === 'colors' && g.title === 'Радуга' && g.min === 2 && g.max === 8), 'игра на витрине');
+  assert.ok(games.some((g) => g.id === 'colors' && g.title === 'UNOQ' && g.min === 2 && g.max === 8), 'игра на витрине');
 
   const before = groupPosts(t).length;
   await t.send(ivan, { t: 'create', game: 'colors', settings: { stacking: false, turnSeconds: 60 } });
@@ -506,6 +506,6 @@ test('25. «Радуга» есть в хабе, лобби создаётся, 
   assert.equal(room.hostId, '101');
   assert.deepEqual(room.settings, { stacking: false, turnSeconds: 60 });
   assert.equal(groupPosts(t).length, before + 1, 'в группе ровно одна новая карточка');
-  assert.match(groupPosts(t).at(-1).text, /🌈 <b>Радуга<\/b>/);
+  assert.match(groupPosts(t).at(-1).text, /🎨 <b>UNOQ<\/b>/);
   assert.equal(t.state(ivan).game, 'colors', 'и страница шагнула внутрь');
 });

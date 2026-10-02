@@ -1,5 +1,5 @@
 /**
- * Собирает 54 лица «Радуги» и рубашку для мини-приложения:
+ * Собирает 54 лица «UNOQ» и рубашку для мини-приложения:
  *   miniapp/colors/R0.svg, R7.svg, GS.svg, BV.svg, YP.svg, WC.svg, WF.svg, back.svg
  *
  *   node tools/make-colors-cards.mjs

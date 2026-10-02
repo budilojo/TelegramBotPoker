@@ -1,5 +1,5 @@
 /**
- * Стол «Радуги» внутри Telegram — одна игра хаба.
+ * Стол «UNOQ» внутри Telegram — одна игра хаба.
  *
  * Как и покерный, и дурацкий, страница — зрение, а не судья: сервер
  * присылает карты ЭТОГО игрока и ходы, законные для него прямо сейчас, и
@@ -145,7 +145,7 @@ function renderLobby() {
   const st = s.room.settings;
   const lobby = h('div.lobby',
     backToHub(s),
-    h('div', h('h1', '🌈 Радуга'), h('div.sub', `Цветные карты · Игроков ${seated.length}/${s.room.maxSeats}`)),
+    h('div', h('h1', '🎨 UNOQ'), h('div.sub', `Цветные карты · Игроков ${seated.length}/${s.room.maxSeats}`)),
     h('div.box', h('div.seats-grid.eight', slots)),
     h('div.tags',
       h('span.tag', st.stacking ? '➕ С накоплением' : '➕ Без накопления'),
@@ -154,7 +154,7 @@ function renderLobby() {
     h('div.cl-swatches', ['R', 'Y', 'G', 'B'].map((c) =>
       h(`span.cl-swatch.c${c}`, shapeIcon(c), COLOR_RU[c]))),
     h('div.hint', 'Кладите карту того же цвета, того же числа или того же знака. Сбросил все — вышел; '
-      + 'кто остался с картами последним — последний. Осталась одна карта — жмите «Радуга!», иначе поймают.'),
+      + 'кто остался с картами последним — последний. Осталась одна карта — жмите «Последняя!», иначе поймают.'),
     notifyHint(),
     me.isHost ? h('button.menu-item', { onclick: openSettings }, 'Настройки', h('small', 'накопление, таймер хода')) : null,
     me.isHost ? h('button.menu-item', { onclick: openMenu }, 'Хост', h('small', 'удалить, передать')) : null,
@@ -232,7 +232,7 @@ function seatEl(p, s) {
   return h(`div.${cls}`, { 'data-seat': p.seat },
     h('div.pod', av, p.inDeal ? h('span.cl-count.num', String(p.count)) : null),
     h('div.cl-plate', h('div.nm', p.name), sub ? h('div.sub2', sub) : null),
-    p.alone ? h(`div.cl-one${p.called ? '.ok' : ''}`, p.called ? '🌈' : '1') : null,
+    p.alone ? h(`div.cl-one${p.called ? '.ok' : ''}`, p.called ? '✋' : '1') : null,
   );
 }
 
@@ -318,7 +318,7 @@ function eventText(e, s) {
     case 'take': return `${who} берёт ${e.count}`;
     case 'forced': return `${who} берёт ${e.count} и пропускает`;
     case 'skip': return `${who} пропускает ход`;
-    case 'rainbow': return `🌈 ${who}: Радуга!`;
+    case 'shout': return `✋ ${who}: Последняя!`;
     case 'caught': return `🫵 ${who} поймал ${nameAt(s, e.targetSeat)} — две карты`;
     case 'quit': return `${who} вышел из партии`;
     default: return '';
@@ -559,7 +559,7 @@ function panelEl(s) {
   if (net.busy) p.classList.add('busy');
 
   if (d?.phase === 'over') {
-    if (s.canNext) p.append(h('button.btn.primary.lg', { onclick: () => { haptic.tap(); send({ t: 'next' }); } }, '🌈 Ещё партию'));
+    if (s.canNext) p.append(h('button.btn.primary.lg', { onclick: () => { haptic.tap(); send({ t: 'next' }); } }, '🎨 Ещё партию'));
     if (s.me.isHost) p.append(h('button.btn', { onclick: confirmFinish }, 'Завершить игру'));
     if (!s.canNext && !s.me.isHost) p.append(h('div.hint', 'Ждём, пока сдадут следующую.'));
     return p;
@@ -573,11 +573,11 @@ function panelEl(s) {
     }, `🫵 Поймал! ${nameAt(s, L.catch.seat)} молчит`), `clcatch:${L.catch.until}`,
     [{ transform: 'scale(0.6)', opacity: 0, offset: 0 }], { duration: 260 }));
   }
-  // «Радуга!» — там же, где палец только что нажимал карту, а не в центре экрана.
-  if (L?.rainbow) {
-    p.append(animateOnce(h('button.btn.rainbow.lg', {
-      onclick: () => { haptic.tap(); send({ t: 'rainbow', seq: s.seq }); },
-    }, '🌈 Радуга!'), `clrainbow:${d.no}:${s.me.seat}`,
+  // «Последняя!» — там же, где палец только что нажимал карту, а не в центре экрана.
+  if (L?.shout) {
+    p.append(animateOnce(h('button.btn.shout.lg', {
+      onclick: () => { haptic.tap(); send({ t: 'shout', seq: s.seq }); },
+    }, '✋ Последняя!'), `clshout:${d.no}:${s.me.seat}`,
     [{ transform: 'scale(0.6)', opacity: 0, offset: 0 }], { duration: 260 }));
   }
   if (L?.myTurn && L?.draw) {
@@ -601,7 +601,7 @@ function renderResults() {
   $app.append(
     h('div.lobby',
       backToHub(s),
-      h('div', h('h1', '🏁 Итоги · Радуга'), h('div.sub', `Партий сыграно: ${s.history}`)),
+      h('div', h('h1', '🏁 Итоги · UNOQ'), h('div.sub', `Партий сыграно: ${s.history}`)),
       h('div.box', rows.length
         ? rows.map((r, i) => h(`div.cl-res${r.name === s.me.name ? '.me' : ''}`,
           h('span.pl.num', String(i + 1)),
@@ -628,7 +628,7 @@ function openMenu() {
     const s = state;
     const me = s.me;
     return h('div.sheet-body',
-      h('h3', '🌈 Радуга'),
+      h('h3', '🎨 UNOQ'),
       h('button.menu-item', { onclick: openRules }, 'Правила', h('small', 'коротко, по делу')),
       h('button.menu-item', { onclick: openOrder }, 'Порядок карт в руке',
         h('small', handOrder() === 'dealt' ? 'как пришли' : 'по цвету')),
@@ -665,7 +665,7 @@ function openRules() {
       h('li', 'Кладите карту того же цвета, того же числа или того же знака. «Смена цвета» ложится всегда.'),
       h('li', '«+2» — следующий берёт две и пропускает. «Стоп» — пропускает. «Разворот» — ход идёт в обратную сторону (вдвоём это «стоп»).'),
       h('li', 'Нечего положить — возьмите одну из колоды. Подошла — можно сыграть сразу.'),
-      h('li', 'Осталась одна карта — жмите «Радуга!». Промолчали пять секунд — любой может поймать, и вы возьмёте две.'),
+      h('li', 'Осталась одна карта — жмите «Последняя!». Промолчали пять секунд — любой может поймать, и вы возьмёте две.'),
       h('li', 'Сбросил все — вышел. Кто остался с картами последним, тот и последний.')),
     h('button.btn', { onclick: () => closeSheet(true) }, 'Понятно')));
 }

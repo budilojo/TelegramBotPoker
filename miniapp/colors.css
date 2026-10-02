@@ -374,7 +374,7 @@
 /* --------------------------------------------------------------- панель */
 
 .cl-panel { flex-wrap: wrap; }
-.btn.rainbow {
+.btn.shout {
   background: linear-gradient(90deg, var(--cl-R), var(--cl-Y) 33%, var(--cl-G) 66%, var(--cl-B));
   color: #fff;
   border: 0;

@@ -1,5 +1,5 @@
 /**
- * Знаки особых карт «Радуги» и рубашка — кодом, а не генератором.
+ * Знаки особых карт «UNOQ» и рубашка — кодом, а не генератором.
  *
  *   node tools/make-colors-art.mjs   → design/colors/*.svg + design/colors.png
  *

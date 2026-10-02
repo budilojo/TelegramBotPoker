@@ -107,7 +107,7 @@ export function durakStack(hands = {}, { trump = null, talon = '' } = {}) {
 }
 
 /**
- * Подтасованная колода «Радуги»: кому что сдать, что открыть в сброс и что
+ * Подтасованная колода «UNOQ»: кому что сдать, что открыть в сброс и что
  * лежит сверху колоды.
  *
  * `hands` — по id игрока, строкой: 'R1 R5 WC'. Карты раздаются по одной с
@@ -116,12 +116,12 @@ export function durakStack(hands = {}, { trump = null, talon = '' } = {}) {
  * пачку заново и подтасовка пропадёт. `deck` — что лежит сверху колоды,
  * первым берётся первое. Всё неназванное добирается в неизменном порядке.
  *
- * Карта в «Радуге» встречается дважды, поэтому считаются экземпляры: две
+ * Карта в «UNOQ» встречается дважды, поэтому считаются экземпляры: две
  * 'R5' в подтасовке — это две разные карты, а третья — уже ошибка.
  */
 export function colorsStack(hands = {}, { top = 'R0', deck = '' } = {}) {
   const parse = (s) => String(s || '').trim().split(/\s+/).filter(Boolean).map((c) => {
-    if (!isColorsCard(c)) throw new Error(`не карта «Радуги»: ${c}`);
+    if (!isColorsCard(c)) throw new Error(`не карта «UNOQ»: ${c}`);
     return c;
   });
   if (!isColorsNumber(top)) throw new Error(`верхней картой открывается только цифра, а не ${top}`);
@@ -150,7 +150,7 @@ export function colorsStack(hands = {}, { top = 'R0', deck = '' } = {}) {
   };
 }
 
-/** Своя честная пачка «Радуги» на каждую партию, повторимая из семени. */
+/** Своя честная пачка «UNOQ» на каждую партию, повторимая из семени. */
 export function colorsDecks(seed = 1) {
   const rnd = seededRng(seed);
   return () => colorsShuffled(rnd);
@@ -243,7 +243,7 @@ export class Table {
       api: this.tg, store, minIntervalMs, botUsername, deck, durakDeck, clock, runoutStepMs, miniAppName, webappUrl, admins,
       onError: (e) => this.errors.push(e),
     });
-    // Колода «Радуги» и её случайность — сиденья модуля игры, а не ядра:
+    // Колода «UNOQ» и её случайность — сиденья модуля игры, а не ядра:
     // ради новой игры в bot/app.js не меняется ни строки.
     if (colorsDeck) this.app.colorsDeck = colorsDeck;
     if (colorsRand) this.app.colorsRand = colorsRand;
@@ -283,12 +283,12 @@ export class Table {
     return this;
   }
 
-  /** Самая новая «Радуга» этой группы. */
+  /** Самая новая «UNOQ» этой группы. */
   get colors() {
     return this.app.roomsOf(this.chatId).filter((r) => r.game === 'colors').at(-1) || null;
   }
 
-  /** Подменить пачку, из которой сдаются СЛЕДУЮЩИЕ партии «Радуги». */
+  /** Подменить пачку, из которой сдаются СЛЕДУЮЩИЕ партии «UNOQ». */
   useColorsDeck(fn) {
     this.app.colorsDeck = fn;
     return this;
