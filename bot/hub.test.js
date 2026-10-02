@@ -74,7 +74,7 @@ test('/play in the private chat creates nothing', async () => {
 
 /* ------------------------------------------------------------ the hub */
 
-test('the hub shows the games — poker and durak, with how many can play — and what is open in the group', async () => {
+test('the hub shows the games, with how many can play — and what is open in the group', async () => {
   const t = new Table();
   await t.cmd(user(101, 'Иван'), '/play');
   const ivan = user(101, 'Иван');
@@ -82,7 +82,11 @@ test('the hub shows the games — poker and durak, with how many can play — an
   assert.ok(r.session);
   const s = t.state(ivan);
   assert.equal(s.kind, 'hub');
-  assert.deepEqual(s.games.map((g) => [g.id, g.title, g.min, g.max]), [['poker', 'Покер', 2, 8], ['durak', 'Дурак', 2, 6]]);
+  // По витрине, а не по её длине: новая игра в хабе не должна ронять этот
+  // тест, но пропажа покера или смена числа мест — должна.
+  for (const [id, title, min, max] of [['poker', 'Покер', 2, 8], ['durak', 'Дурак', 2, 6]]) {
+    assert.ok(s.games.some((g) => g.id === id && g.title === title && g.min === min && g.max === max), `${title} на витрине`);
+  }
   assert.equal(s.group.title, 'Покер по пятницам');
   assert.deepEqual(s.lobbies, []);
 });

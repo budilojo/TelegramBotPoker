@@ -18,7 +18,9 @@
     "e2e": "node --disable-warning=ExperimentalWarning tools/e2e.mjs && node --disable-warning=ExperimentalWarning tools/e2e-durak.mjs && node --disable-warning=ExperimentalWarning tools/e2e-admin.mjs",
     "cards": "node tools/make-cards.mjs",
     "brand": "node --disable-warning=ExperimentalWarning tools/make-avatar.mjs",
-    "layout": "node --disable-warning=ExperimentalWarning tools/layout-check.mjs"
+    "layout": "node --disable-warning=ExperimentalWarning tools/layout-check.mjs",
+    "cards:colors": "node tools/make-colors-cards.mjs",
+    "colors": "node --disable-warning=ExperimentalWarning tools/colors-check.mjs"
   },
   "engines": {
     "node": ">=22.5"

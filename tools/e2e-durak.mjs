@@ -102,7 +102,7 @@ const pageOf = (u) => pages.get(String(u.id));
 
 const pi = await openPage(ivan, `g_${group.code}`);
 await pi.waitForSelector('.game-card');
-assert.equal(await pi.locator('.game-card').count(), 2, 'две игры на выбор');
+await pi.waitForSelector('.game-card:has-text("Дурак")'); // игр в хабе может стать больше — важно, что дурак на месте
 await pi.locator('.game-card', { hasText: 'Дурак' }).click();
 await pi.waitForSelector('.sheet');
 await pi.getByRole('button', { name: 'Создать лобби' }).click();

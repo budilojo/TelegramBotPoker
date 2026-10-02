@@ -20,6 +20,11 @@ import { parseCard, freshDeck, shuffled, seededRng } from './deck.js';
 import { signInitData } from './webapp-auth.js';
 import { nextDealOrder } from './games/durak/rules.js';
 import { freshDeck36, isCard, shuffled36 } from './games/durak/cards.js';
+import { nextDealOrder as colorsDealOrder } from './games/colors/rules.js';
+import {
+  freshDeck as colorsFresh, isCard as isColorsCard, isNumber as isColorsNumber,
+  shuffled as colorsShuffled, HAND as COLORS_HAND,
+} from './games/colors/cards.js';
 
 export { user };
 
@@ -101,6 +106,61 @@ export function durakStack(hands = {}, { trump = null, talon = '' } = {}) {
   };
 }
 
+/**
+ * Подтасованная колода «Радуги»: кому что сдать, что открыть в сброс и что
+ * лежит сверху колоды.
+ *
+ * `hands` — по id игрока, строкой: 'R1 R5 WC'. Карты раздаются по одной с
+ * левой руки сдающего, как в настоящей сдаче. `top` — карта, которая
+ * открывается в сброс; она ОБЯЗАНА быть цифрой, иначе правила перетасуют
+ * пачку заново и подтасовка пропадёт. `deck` — что лежит сверху колоды,
+ * первым берётся первое. Всё неназванное добирается в неизменном порядке.
+ *
+ * Карта в «Радуге» встречается дважды, поэтому считаются экземпляры: две
+ * 'R5' в подтасовке — это две разные карты, а третья — уже ошибка.
+ */
+export function colorsStack(hands = {}, { top = 'R0', deck = '' } = {}) {
+  const parse = (s) => String(s || '').trim().split(/\s+/).filter(Boolean).map((c) => {
+    if (!isColorsCard(c)) throw new Error(`не карта «Радуги»: ${c}`);
+    return c;
+  });
+  if (!isColorsNumber(top)) throw new Error(`верхней картой открывается только цифра, а не ${top}`);
+  return (room) => {
+    const { dealOrder: order } = colorsDealOrder(room);
+    const n = order.length;
+    const size = colorsFresh().length;
+    const out = new Array(size).fill(null);
+    // Сколько каждой карты ещё осталось в пачке — по ним и проверяем состав.
+    const left = new Map();
+    for (const c of colorsFresh()) left.set(c, (left.get(c) || 0) + 1);
+    const put = (i, c) => {
+      const have = left.get(c) || 0;
+      if (!have) throw new Error(`в колоде нет больше карт ${c}`);
+      left.set(c, have - 1);
+      if (out[i] != null) throw new Error(`место ${i} занято дважды`);
+      out[i] = c;
+    };
+    order.forEach((id, i) => parse(hands[id]).forEach((c, k) => put(k * n + i, c)));
+    put(COLORS_HAND * n, top);
+    parse(deck).forEach((c, k) => put(COLORS_HAND * n + 1 + k, c));
+    const rest = [];
+    for (const [c, k] of left) for (let i = 0; i < k; i++) rest.push(c);
+    for (let i = 0; i < size; i++) if (out[i] == null) out[i] = rest.shift();
+    return out;
+  };
+}
+
+/** Своя честная пачка «Радуги» на каждую партию, повторимая из семени. */
+export function colorsDecks(seed = 1) {
+  const rnd = seededRng(seed);
+  return () => colorsShuffled(rnd);
+}
+
+/** Повторимая случайность для перетасовки сброса — её же берут правила. */
+export function colorsRandom(seed = 1) {
+  return seededRng(seed);
+}
+
 /** A different honest-looking durak pack every game, reproducible from the seed. */
 export function durakDecks(seed = 1) {
   const rnd = seededRng(seed);
@@ -173,7 +233,7 @@ export class Table {
   constructor({
     chatId = -1001234, minIntervalMs = 0, store = new NullStore(), botUsername = 'ChipTableBot', deck = seededDecks(1),
     clock = new FakeClock(), runoutStepMs = 0, miniAppName = 'table', webappUrl = 'https://poker.example',
-    durakDeck = durakDecks(1), tg = null, admins = [],
+    durakDeck = durakDecks(1), colorsDeck = null, colorsRand = null, tg = null, admins = [],
   } = {}) {
     this.chatId = chatId;
     this.tg = tg || new TelegramStub();
@@ -183,6 +243,10 @@ export class Table {
       api: this.tg, store, minIntervalMs, botUsername, deck, durakDeck, clock, runoutStepMs, miniAppName, webappUrl, admins,
       onError: (e) => this.errors.push(e),
     });
+    // Колода «Радуги» и её случайность — сиденья модуля игры, а не ядра:
+    // ради новой игры в bot/app.js не меняется ни строки.
+    if (colorsDeck) this.app.colorsDeck = colorsDeck;
+    if (colorsRand) this.app.colorsRand = colorsRand;
     this.hub = new Hub(this.app, { botToken: TEST_TOKEN, adminToken: ADMIN_TEST_TOKEN });
     this.app.attachHub(this.hub);
     /** Рассылки — как в проде: через игрового бота. */
@@ -216,6 +280,17 @@ export class Table {
   /** Swap the pack the NEXT durak games are dealt from. */
   useDurakDeck(fn) {
     this.app.durakDeck = fn;
+    return this;
+  }
+
+  /** Самая новая «Радуга» этой группы. */
+  get colors() {
+    return this.app.roomsOf(this.chatId).filter((r) => r.game === 'colors').at(-1) || null;
+  }
+
+  /** Подменить пачку, из которой сдаются СЛЕДУЮЩИЕ партии «Радуги». */
+  useColorsDeck(fn) {
+    this.app.colorsDeck = fn;
     return this;
   }
 
