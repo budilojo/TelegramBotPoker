@@ -643,17 +643,18 @@ test('a group promoted to a supergroup keeps its table — and open tables keep 
   store.close();
 });
 
-test('справка называет все игры из реестра: новая игра не забывается в текстах', async () => {
+test('справка не называет ни одной игры: тексты переживают любую смену списка', async () => {
   const t = new Table();
   await t.cmd(user(101, 'Иван'), '/help');
   const said = [...t.tg.messages.values()].filter((m) => m.chatId === String(t.chatId)).at(-1).text;
-  for (const g of GAME_LIST) {
-    assert.ok(said.includes(g.title), `в справке нет игры «${g.title}» — её забыли вписать`);
-  }
-  // Личка — отдельный текст, и в нём то же самое.
   await t.start(user(101, 'Иван'));
   await t.dm(user(101, 'Иван'), '/help');
+  const dm = t.lastDm(user(101, 'Иван'));
+  // Игру выбирают на экране, где она и живёт. Вписать её имя в справку — значит
+  // соврать в тот день, когда список игр изменится.
   for (const g of GAME_LIST) {
-    assert.ok(t.lastDm(user(101, 'Иван')).includes(g.title), `в личной справке нет «${g.title}»`);
+    assert.ok(!said.includes(g.title), `справка в группе называет «${g.title}» — она должна быть без имён игр`);
+    assert.ok(!dm.includes(g.title), `справка в личке называет «${g.title}» — она должна быть без имён игр`);
   }
+  assert.match(said, /выберите игру/, 'но сказать, что игру выбирают в приложении, она обязана');
 });

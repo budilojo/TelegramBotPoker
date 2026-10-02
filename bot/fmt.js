@@ -23,17 +23,6 @@ export function signed(n) {
   return (v > 0 ? '+' : '') + num(v);
 }
 
-/**
- * Перечисление по-русски: «Покер», «Покер и Дурак», «Покер, Дурак и Радуга».
- * Нужно там, где текст называет все игры сразу: игр становится больше, а
- * фразы должны оставаться живыми, а не «покер / дурак / радуга».
- */
-export function listRu(items) {
-  const xs = items.filter(Boolean);
-  if (xs.length < 2) return xs[0] || '';
-  return `${xs.slice(0, -1).join(', ')} и ${xs.at(-1)}`;
-}
-
 export function esc(s) {
   return String(s ?? '')
     .replace(/&/g, '&amp;')

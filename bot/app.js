@@ -25,18 +25,20 @@ import crypto from 'node:crypto';
 import { identify } from './identity.js';
 import { Outbox } from './outbox.js';
 import { NullStore } from './store.js';
-import { esc, listRu } from './fmt.js';
+import { esc } from './fmt.js';
 import { GAMES, GAME_LIST, gameOf } from './games/index.js';
 import { apply as rateRound } from './rating.js';
 
 /**
- * Справка не перечисляет игры руками: имена берутся из реестра `GAME_LIST`.
- * Четвёртая игра появится в текстах сама, и никто не забудет её вписать.
+ * Справка НЕ НАЗЫВАЕТ ИГР. Ни одной — ни списком, ни примером.
+ *
+ * Игры появляются и уходят, а текст остаётся; стоит вписать сюда названия, и
+ * через месяц бот врёт. Всё, что человеку нужно знать здесь, — что игру
+ * выбирают в приложении. Какие там игры, он увидит на экране, где они и
+ * живут.
  */
-const GAMES_RU = () => listRu(GAME_LIST.map((g) => g.title));
-
-const HELP = () => [
-  `🎮 <b>Игры в Telegram</b> — ${GAMES_RU()} в мини-приложении.`,
+const HELP = [
+  '🎮 <b>Игры в Telegram</b> — играем прямо в чате, в мини-приложении.',
   '',
   '<b>/game</b> — во что играем. Бот пришлёт карточку с кнопкой: выберите игру',
   'в приложении и создайте лобби; друзья присоединятся по его карточке.',
@@ -48,8 +50,8 @@ const HELP = () => [
   'Чтобы бот мог напомнить, что ваш ход, — один раз нажмите Start у него в личке.',
 ].join('\n');
 
-const HELP_DM = () => [
-  `🎮 <b>Игры в Telegram</b> — ${GAMES_RU()}`,
+const HELP_DM = [
+  '🎮 <b>Игры в Telegram</b>',
   '',
   'Сюда приходят напоминания «ваш ход» — только когда приложение у вас закрыто.',
   'Сама игра — в группе: напишите там /game и выберите игру.',
@@ -912,7 +914,7 @@ export class App {
           : 'Стол есть, но адрес мини-приложения не настроен (WEBAPP_URL). Скажите тому, кто запускает бота.';
         return void (await this.outbox.post(user.tgId, text, btn ? [[btn]] : null));
       }
-      if (!cmd.rest) return this.sendMyGames(user, `${WELCOME_DM}\n\n${HELP_DM()}`);
+      if (!cmd.rest) return this.sendMyGames(user, `${WELCOME_DM}\n\n${HELP_DM}`);
       const gm = /^g_([a-z0-9]{4,32})$/.exec(cmd.rest);
       const group = gm ? this.groupByCode(gm[1]) : null;
       if (group) {
@@ -930,7 +932,7 @@ export class App {
       return void (await this.outbox.post(user.tgId, `⏸ <b>Идёт обслуживание</b>\n${esc(this.downText)}`));
     }
     if (['game', 'play', 'games', 'newgame'].includes(cmd?.cmd)) return this.sendMyGames(user);
-    return void (await this.outbox.post(user.tgId, HELP_DM()));
+    return void (await this.outbox.post(user.tgId, HELP_DM));
   }
 
   /**
@@ -997,7 +999,7 @@ export class App {
         return void (await this.reply(chatId, `⏸ <b>Идёт обслуживание</b>\n${esc(this.downText)}`, msg));
       }
     }
-    if (cmd.cmd === 'start' || cmd.cmd === 'help') return void (await this.reply(chatId, HELP()));
+    if (cmd.cmd === 'start' || cmd.cmd === 'help') return void (await this.reply(chatId, HELP));
     if (!who.ok) return void (await this.reply(chatId, who.text, msg));
 
     const user = who.user;
@@ -1134,7 +1136,7 @@ export class App {
 
   async onJoined(chatId, members) {
     const me = members.find((m) => m.is_bot && this.botUsername && m.username === this.botUsername);
-    if (me) await this.reply(chatId, HELP());
+    if (me) await this.reply(chatId, HELP);
   }
 
   async onMyChatMember(u) {

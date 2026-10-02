@@ -24,7 +24,6 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Bot } from 'grammy';
 import { App } from './app.js';
-import { GAME_LIST } from './games/index.js';
 import { Store } from './store.js';
 import { Hub } from './hub.js';
 import { AdminBot } from './admin-bot.js';
@@ -192,8 +191,7 @@ web.server.on('error', (err) => {
 
 /** The "/" menu: the games are played in the Mini App, the chat only needs these. */
 const GROUP_COMMANDS = [
-  // Список игр берётся из реестра: новая игра появится в меню сама.
-  ['game', `во что играем: ${GAME_LIST.map((g) => g.title.toLowerCase()).join(', ')}`],
+  ['game', 'во что играем — выбрать игру и создать стол'],
   ['table', 'показать игры внизу чата'],
   ['finish', 'завершить свою игру (хост)'],
   ['help', 'как играть'],
