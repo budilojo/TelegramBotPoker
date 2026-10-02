@@ -209,3 +209,19 @@
 .rt-open-title { font-size: 16px; font-weight: 900; }
 .rt-open-sub { font-size: 11.5px; color: var(--text-2); font-weight: 600; margin-top: 2px; }
 .rt-open-go { flex: none; font-size: 22px; font-weight: 800; color: var(--muted); }
+
+/* Рейтинг ещё не открыт: кнопка на месте, но спокойная, а не зовущая. */
+.rt-open.soon { opacity: 0.72; }
+.rt-soon-tag {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(242, 201, 107, 0.16);
+  color: var(--gold);
+  white-space: nowrap;
+}
+.soon-list { margin: 10px 0 0; padding-left: 18px; color: var(--text-2); font-size: 14px; line-height: 1.5; }
+.soon-list li { margin-bottom: 6px; }

@@ -22,7 +22,7 @@
  */
 import { checkInitData } from './webapp-auth.js';
 import { GAMES, GAME_LIST, gameOf } from './games/index.js';
-import { HUB_PREFIX, MAX_LIVE_PER_GROUP } from './app.js';
+import { HUB_PREFIX, MAX_LIVE_PER_GROUP, RATING_SOON_TEXT } from './app.js';
 import { AUDIENCES, ERRORS as CAST_ERRORS } from './broadcast.js';
 import { GAME_RU, PER_DAY, sign } from './rating.js';
 import { ym } from './fmt.js';
@@ -36,6 +36,7 @@ const CORE_ERRORS = {
   NOT_FROM_HUB: 'Список игр группы открывается кнопкой «Выбрать игру» из /game.',
   NOT_YOUR_GROUP: 'Этой группы нет среди ваших — напишите в ней /game.',
   DOWN: 'Идёт обслуживание — игра пока стоит.',
+  RATING_SOON: RATING_SOON_TEXT,
 };
 
 /** Error codes in words a person can act on — the core's and every game's. */
@@ -496,6 +497,9 @@ export class Hub {
    * он не меняется сам по себе, его собирают по запросу.
    */
   enterRating(session, { game = 'durak', period = 'month' } = {}) {
+    // Решает сервер, а не кнопка на странице: старая вкладка не должна
+    // открывать то, что ещё закрыто.
+    if (this.app.ratingSoon) return this.refuse(session, 'RATING_SOON');
     this.detach(session);
     session.kind = 'rating';
     session.code = null;
@@ -645,6 +649,7 @@ export function hubView(app, group, user, { home = false } = {}) {
     group: { title: group.title || '', code: group.code },
     home, // opened without a group: «← Мои группы»
     me: { name: user.name },
+    ratingSoon: app.ratingSoon ? RATING_SOON_TEXT : null,
     games: GAME_LIST.map((g) => ({ id: g.id, title: g.title, icon: g.icon, blurb: g.blurb, min: g.minPlayers, max: g.maxPlayers })),
     lobbies,
   };

@@ -17,7 +17,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { Store } from './store.js';
 import { apply, fingerprint, points, split, PER_DAY, LAST } from './rating.js';
-import { Table, user, durakDecks } from './harness.js';
+import { Table, user, durakDecks, initDataFor } from './harness.js';
 import { allCovered, waitingThrowers } from './games/durak/rules.js';
 import { RANKS } from './games/durak/cards.js';
 
@@ -243,7 +243,7 @@ test('журнал помнит, откуда очки', () => {
 
 test('экран рейтинга: список, своя строка, переключатели и карточка игрока', async () => {
   const store = new Store(':memory:');
-  const t = new Table({ store });
+  const t = new Table({ store, ratingSoon: false });
   const ivan = user(101, 'Иван');
   await t.start(ivan);
   await t.cmd(ivan, '/play');
@@ -292,7 +292,7 @@ test('экран рейтинга: список, своя строка, пере
 
 test('страница не может попросить у рейтинга ничего лишнего', async () => {
   const store = new Store(':memory:');
-  const t = new Table({ store });
+  const t = new Table({ store, ratingSoon: false });
   const ivan = user(101, 'Иван');
   await t.start(ivan);
   await t.cmd(ivan, '/play');
@@ -340,7 +340,7 @@ test('в группе «ниже нуля не падает» работает �
 
 test('экран: вкладка «эта группа» показывает только своих', async () => {
   const store = new Store(':memory:');
-  const t = new Table({ store });
+  const t = new Table({ store, ratingSoon: false });
   const ivan = user(101, 'Иван');
   await t.start(ivan);
   await t.cmd(ivan, '/play');
@@ -369,7 +369,7 @@ test('экран: вкладка «эта группа» показывает т
 
 test('страница не может попросить рейтинг чужой группы', async () => {
   const store = new Store(':memory:');
-  const t = new Table({ store });
+  const t = new Table({ store, ratingSoon: false });
   const ivan = user(101, 'Иван');
   await t.start(ivan);
   await t.cmd(ivan, '/play');
@@ -384,4 +384,19 @@ test('страница не может попросить рейтинг чуж�
   assert.equal(s.top.length, 0, 'своя группа пуста — чужую подсунуть не вышло');
   t.app.stop();
   store.close();
+});
+
+test('пока рейтинг не открыт: кнопка есть, экран закрыт, отказ объяснён словами', async () => {
+  const t = new Table({ store: new Store(':memory:') });
+  const ivan = user(101, 'Иван');
+  await t.cmd(ivan, '/play');
+  t.open(ivan, { initData: initDataFor(ivan, { startParam: `g_${t.group.code}`, clock: t.clock }) });
+  const hub = t.state(ivan);
+  assert.ok(hub.ratingSoon, 'хаб честно говорит, что рейтинг пока не открыт');
+
+  // Открыть его нельзя даже со старой вкладки: решает сервер, а не кнопка.
+  await t.send(ivan, { t: 'rating' });
+  assert.equal(t.state(ivan).kind, 'hub', 'экран рейтинга не открылся');
+  const said = t.page(ivan).inbox.map((m) => m.text || '').join(' ');
+  assert.match(said, /рейтинговыми группами/, 'и человеку сказано, чего ждать');
 });

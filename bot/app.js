@@ -68,6 +68,18 @@ const WELCOME_DM = '✅ Готово: если приложение будет �
 
 /** Games a group may have going at once. Past this the hub asks to finish one. */
 export const MAX_LIVE_PER_GROUP = 10;
+
+/**
+ * Рейтинг ещё не открыт людям.
+ *
+ * Экран готов и очки считаются, но показывать таблицу рано: в неё должны идти
+ * партии из рейтинговых групп, а их ещё не завели (docs/ranked.md). Пустить
+ * людей сейчас — значит показать им доску, собранную из домашних партий, и
+ * потом её отнять. Открыть обратно — снять этот флаг, больше ничего.
+ */
+export const RATING_SOON = true;
+export const RATING_SOON_TEXT = 'Рейтинг почти готов. Он откроется вместе с рейтинговыми группами: '
+  + 'очки будут идти за партии в них, а не за домашние.';
 /** A finished game stays (its results on open phones) this long after it ended. */
 export const FINISHED_KEEP_MS = 30 * 60_000;
 /** …and is dropped at start-up after this long, new game or not. */
@@ -131,10 +143,11 @@ export class App {
    * @param webappUrl      public HTTPS address of the Mini App
    * @param miniAppName    the short name registered with @BotFather (/newapp):
    *                       then the group button opens the app directly
+   * @param ratingSoon     рейтинг ещё не открыт людям: кнопка есть, экран нет
    */
   constructor({
     api, store = new NullStore(), minIntervalMs = 1000, botUsername = '', onError = null, deck = null, durakDeck = null,
-    clock = REAL_CLOCK, runoutStepMs = 1500, webappUrl = '', miniAppName = '', admins = [],
+    clock = REAL_CLOCK, runoutStepMs = 1500, webappUrl = '', miniAppName = '', admins = [], ratingSoon = RATING_SOON,
   } = {}) {
     this.api = api;
     this.store = store;
@@ -145,6 +158,8 @@ export class App {
     this.runoutStepMs = runoutStepMs;
     this.webappUrl = String(webappUrl || '').replace(/\/+$/, '');
     this.miniAppName = miniAppName;
+    /** Рейтинг ещё не открыт людям — см. RATING_SOON. Снимается одним значением. */
+    this.ratingSoon = !!ratingSoon;
     /**
      * Кто видит админку. Список приходит из `.env`, а не из чата: файл правит
      * тот, кто запускает бота, и подделать это сообщением нельзя.

@@ -40,12 +40,16 @@ export function render() {
 
     h('div.game-cards', s.games.map((g) => gameRow(g, live(g.id)))),
 
-    h('button.rt-open', { onclick: () => { haptic.tap(); send({ t: 'rating' }, { lock: false }); } },
+    // Пока рейтинг не открыт, кнопка остаётся на месте и честно говорит, чего
+    // ждать: убрать её совсем — значит сделать вид, что рейтинга не будет.
+    h(`button.rt-open${s.ratingSoon ? '.soon' : ''}`, {
+      onclick: () => { haptic.tap(); if (s.ratingSoon) soonSheet(s.ratingSoon); else send({ t: 'rating' }, { lock: false }); },
+    },
       h('div.rt-cup', '🏆'),
       h('div.rt-open-body',
         h('div.rt-open-title', 'Рейтинг игроков'),
-        h('div.rt-open-sub', 'Лидеры и своя статистика')),
-      h('div.rt-open-go', '›')),
+        h('div.rt-open-sub', s.ratingSoon ? 'Совсем скоро' : 'Лидеры и своя статистика')),
+      h('div.rt-open-go', s.ratingSoon ? h('span.rt-soon-tag', 'скоро') : '›')),
 
     h('div.section-label', 'Открытые игры'),
     s.lobbies.length
@@ -99,6 +103,18 @@ function lobbyRow(l) {
       l.names.length ? h('div.lr-names', l.names.join(', ')) : null),
     h(`button.btn.sm${join ? '.primary' : ''}`, { onclick: () => { haptic.tap(); send({ t: 'join', code: l.code }); } },
       join ? 'Присоединиться' : 'Открыть'));
+}
+
+/** «Совсем скоро» — что это значит и чего ждать. */
+function soonSheet(text) {
+  showSheet('soon', () => h('div.sheet-body',
+    h('h3', '🏆 Рейтинг — совсем скоро'),
+    h('div.sub', text),
+    h('ul.soon-list',
+      h('li', 'Очки уже считаются — за доигранные партии, по местам.'),
+      h('li', 'Таблица откроется вместе с рейтинговыми группами: отдельная группа на игру, там и будут рейтинговые столы.'),
+      h('li', 'Рейтинг у каждой игры свой: покер не влияет на дурака.')),
+    h('button.btn.wide', { onclick: () => closeSheet(true) }, 'Понятно')));
 }
 
 /* ---------------------------------------------------- «Новое лобби» */
