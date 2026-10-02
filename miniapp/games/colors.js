@@ -154,7 +154,7 @@ function renderLobby() {
     h('div.cl-swatches', ['R', 'Y', 'G', 'B'].map((c) =>
       h(`span.cl-swatch.c${c}`, shapeIcon(c), COLOR_RU[c]))),
     h('div.hint', 'Кладите карту того же цвета, того же числа или того же знака. Сбросил все — вышел; '
-      + 'кто остался с картами последним — последний. Осталась одна карта — жмите «Последняя!», иначе поймают.'),
+      + `кто остался с картами последним — последний. Осталась одна карта — жмите «${s.room.shout}», иначе поймают.`),
     notifyHint(),
     me.isHost ? h('button.menu-item', { onclick: openSettings }, 'Настройки', h('small', 'накопление, таймер хода')) : null,
     me.isHost ? h('button.menu-item', { onclick: openMenu }, 'Хост', h('small', 'удалить, передать')) : null,
@@ -318,7 +318,7 @@ function eventText(e, s) {
     case 'take': return `${who} берёт ${e.count}`;
     case 'forced': return `${who} берёт ${e.count} и пропускает`;
     case 'skip': return `${who} пропускает ход`;
-    case 'shout': return `✋ ${who}: Последняя!`;
+    case 'shout': return `✋ ${who}: ${s.room.shout}`;
     case 'caught': return `🫵 ${who} поймал ${nameAt(s, e.targetSeat)} — две карты`;
     case 'quit': return `${who} вышел из партии`;
     default: return '';
@@ -573,11 +573,11 @@ function panelEl(s) {
     }, `🫵 Поймал! ${nameAt(s, L.catch.seat)} молчит`), `clcatch:${L.catch.until}`,
     [{ transform: 'scale(0.6)', opacity: 0, offset: 0 }], { duration: 260 }));
   }
-  // «Последняя!» — там же, где палец только что нажимал карту, а не в центре экрана.
+  // Выкрик — там же, где палец только что нажимал карту, а не в центре экрана.
   if (L?.shout) {
     p.append(animateOnce(h('button.btn.shout.lg', {
       onclick: () => { haptic.tap(); send({ t: 'shout', seq: s.seq }); },
-    }, '✋ Последняя!'), `clshout:${d.no}:${s.me.seat}`,
+    }, `✋ ${s.room.shout}`), `clshout:${d.no}:${s.me.seat}`,
     [{ transform: 'scale(0.6)', opacity: 0, offset: 0 }], { duration: 260 }));
   }
   if (L?.myTurn && L?.draw) {
@@ -665,7 +665,7 @@ function openRules() {
       h('li', 'Кладите карту того же цвета, того же числа или того же знака. «Смена цвета» ложится всегда.'),
       h('li', '«+2» — следующий берёт две и пропускает. «Стоп» — пропускает. «Разворот» — ход идёт в обратную сторону (вдвоём это «стоп»).'),
       h('li', 'Нечего положить — возьмите одну из колоды. Подошла — можно сыграть сразу.'),
-      h('li', 'Осталась одна карта — жмите «Последняя!». Промолчали пять секунд — любой может поймать, и вы возьмёте две.'),
+      h('li', `Осталась одна карта — жмите «${s.room.shout}». Промолчали пять секунд — любой может поймать, и вы возьмёте две.`),
       h('li', 'Сбросил все — вышел. Кто остался с картами последним, тот и последний.')),
     h('button.btn', { onclick: () => closeSheet(true) }, 'Понятно')));
 }

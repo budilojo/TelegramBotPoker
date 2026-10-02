@@ -20,7 +20,7 @@
  */
 import {
   isHost, findPlayer, isSeated, seatedPlayers, startBlocker, legalFor, alive, score, highlights,
-  MAX_SEATS, MIN_PLAYERS, CALL_MS,
+  MAX_SEATS, MIN_PLAYERS, CALL_MS, SHOUT,
 } from './rules.js';
 import { sortHand, COLOR_SHAPE, COLORS } from './cards.js';
 
@@ -106,6 +106,7 @@ export function colorsView(room, viewerId, { now = Date.now(), botUsername = '' 
       hostName: findPlayer(room, room.hostId)?.name ?? null,
       startBlocker: room.status !== 'finished' ? startBlocker(room) : null,
       callMs: CALL_MS,
+      shout: SHOUT, // что кричат на последней карте — словами сервера
       shapes: COLOR_SHAPE, // фигура цвета — часть карты, не настройка
       colors: COLORS,
     },

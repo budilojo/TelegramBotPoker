@@ -36,10 +36,16 @@ const topWord = (d) =>
 
 /** Показываемое название. Одной константой: его могут поменять. */
 export const TITLE = 'UNOQ';
+/**
+ * Что кричат на последней карте. Отдельной константой, и клиент берёт её из
+ * состояния: имя игры может смениться, а искать его по экранам и текстам
+ * ошибок потом никто не будет.
+ */
+export const SHOUT = 'UNOQ!';
 
 export const MAX_SEATS = 8;
 export const MIN_PLAYERS = 2;
-/** Сколько у человека есть, чтобы нажать «Последняя!», пока его не поймали. */
+/** Сколько у человека есть, чтобы нажать «UNOQ!», пока его не поймали. */
 export const CALL_MS = 5_000;
 /** Столько кругов подряд бот ходит за всех — и партия останавливается. */
 export const IDLE_ROUNDS = 2;
@@ -267,7 +273,7 @@ function dealGame(room, { deck = defaultDeck, randInt = (n) => crypto.randomInt(
     drawn: null, // карта, только что взятая ходящим: её можно сыграть сразу
     out: [], // порядок выхода — он же порядок мест
     quit: [], // ушли из чата посреди партии
-    call: null, // { id, at, called } — окно «Последняя!»
+    call: null, // { id, at, called } — окно «UNOQ!»
     phase: 'play',
     loser: null,
     aborted: false,
@@ -437,7 +443,7 @@ export function pass(room, userId, { seq, now = Date.now(), randInt = (n) => cry
 }
 
 /**
- * «Последняя!» — своя и только своя. Нажать за другого нельзя: вся эта кнопка
+ * «UNOQ!» — своя и только своя. Нажать за другого нельзя: вся эта кнопка
  * про то, успел ли человек сам.
  */
 export function shout(room, userId, { now = Date.now() } = {}) {
@@ -450,7 +456,7 @@ export function shout(room, userId, { now = Date.now() } = {}) {
   if (d.call.called) return { ok: true, noop: true };
   d.call.called = true;
   note(d, { kind: 'shout', by: id });
-  room.notice = `✋ ${nameOf(room, id)}: Последняя! Осталась одна карта.`;
+  room.notice = `✋ ${nameOf(room, id)}: ${SHOUT} Осталась одна карта.`;
   touch(room);
   return { ok: true };
 }
@@ -945,7 +951,7 @@ export function deserialize(data) {
   room.ui.lastMsgId = room.ui.lastMsgId || 0;
   room.ui.pings = room.ui.pings || {};
   room.code = room.code || newRoomCode();
-  // Окно «Последняя!» живёт пять секунд: пережить перезапуск оно не может и не
+  // Окно «UNOQ!» живёт пять секунд: пережить перезапуск оно не может и не
   // должно — ловить человека за молчание, которого никто не видел, нечестно.
   if (room.deal) room.deal.call = null;
   return room;
