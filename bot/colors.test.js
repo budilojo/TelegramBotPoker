@@ -19,6 +19,7 @@ import { Hub } from './hub.js';
 import { Store } from './store.js';
 import { IDLE_CLOSE_MS, IDLE_WARN_MS } from './app.js';
 import { PLACE, LAST } from './rating.js';
+import { TITLE } from './games/colors/rules.js';
 
 const THREE = () => ({ ivan: user(101, 'Иван'), max: user(202, 'Макс'), dima: user(303, 'Дима') });
 
@@ -269,7 +270,7 @@ test('18. целая серия кладёт в группу ровно два �
   const all = groupPosts(t);
   assert.equal(all.length, posts + 1);
   const results = all.at(-1).text;
-  assert.match(results, /ИТОГИ · РАДУГА/);
+  assert.match(results, new RegExp(`ИТОГИ · ${TITLE.toUpperCase()}`), 'итоги подписаны именем игры, а не словом из прошлого');
   assert.match(results, /Партий сыграно: 2/);
   assert.match(t.tg.message(t.colors.ui.tableMessageId).text, /Игра завершена/);
   assert.equal(t.state(cast.dima).room.status, 'finished', 'телефоны тоже видят конец');

@@ -164,6 +164,9 @@ const deal3 = { 102: '6D 7S 8C 10S KH JS', 103: '7H 9S 10C JH QH 8D', 101: '7C 9
   app.addRoom(p);
   scene('11-hub', open, 101, { start: `g_${g.code}` });
   scene('12-hub-new-durak', open, 101, { start: `g_${g.code}`, click: 'Дурак' });
+  // Шторка каждой игры — своя: однажды UNOQ спросил у людей «подкидной или
+  // переводной», потому что форму рисовал хаб, а не игра.
+  scene('12б-hub-new-colors', open, 101, { start: `g_${g.code}`, click: 'UNOQ' });
 }
 // 12. A durak lobby, the host's view.
 {

@@ -748,3 +748,20 @@ function openPlayers(kind) {
   });
 }
 
+/** Что спрашивают при создании стола дурака. Рисует это хаб, решает — игра. */
+export const lobby = {
+  defaults: { variant: 'podkidnoy', turnSeconds: 0 },
+  fields: (st, { seg, TIMERS, h: hh }) => [
+    hh('div.section-label', 'Вариант'),
+    seg([['podkidnoy', 'Подкидной'], ['perevodnoy', 'Переводной']], 'variant'),
+    hh('div.hint', { style: { marginTop: '6px' } }, st.variant === 'perevodnoy'
+      ? 'Пока ни одна карта не побита, отбивающийся может перевести атаку картой того же достоинства на следующего.'
+      : 'Подкидывают все, кроме отбивающегося, — карты тех достоинств, что уже на столе.'),
+    hh('div.section-label', 'Таймер хода'),
+    seg(TIMERS, 'turnSeconds'),
+    hh('div.hint', { style: { marginTop: '6px' } }, 'Не успел: отбивающийся берёт, подкидывающие пасуют.'),
+  ],
+};
+
+/** Чем игра подписана в хабе: шестёрка и туз — колода на 36 карт. */
+export const iconCards = ['/cards/6D.svg', '/cards/AS.svg'];

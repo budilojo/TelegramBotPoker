@@ -43,6 +43,7 @@
 }
 .gc-icon.g-poker { background: radial-gradient(120% 140% at 20% 0%, #17694a, #0b3d28); }
 .gc-icon.g-durak { background: radial-gradient(120% 140% at 20% 0%, #1a6274, #0c3440); }
+.gc-icon.g-colors { background: radial-gradient(120% 140% at 20% 0%, #2b3c66, #141d33); }
 .gi-card { position: absolute; width: 26px; border-radius: 3px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5); }
 .gi-card.c0 { left: 7px; top: 13px; rotate: -10deg; }
 .gi-card.c1 { left: 22px; top: 11px; rotate: 9deg; }

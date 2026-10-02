@@ -714,3 +714,21 @@ function confirmFinish() {
 }
 
 export { openSettings, openMenu };
+
+/** Что спрашивают при создании стола UNOQ. Рисует это хаб, решает — игра. */
+export const lobby = {
+  defaults: { stacking: true, turnSeconds: 0 },
+  fields: (st, { seg, TIMERS, h: hh }) => [
+    hh('div.section-label', 'Накопление «+2»'),
+    seg([[true, 'Вкл'], [false, 'Выкл']], 'stacking'),
+    hh('div.hint', { style: { marginTop: '6px' } }, st.stacking
+      ? 'На «+2» можно положить «+2» или «+4» — и берёт следующий сумму.'
+      : 'Прилетело «+2» — берёте, крыть нечем. Партии короче и спокойнее.'),
+    hh('div.section-label', 'Таймер хода'),
+    seg(TIMERS, 'turnSeconds'),
+    hh('div.hint', { style: { marginTop: '6px' } }, 'Не успел — бот берёт за вас одну карту и передаёт ход.'),
+  ],
+};
+
+/** Чем игра подписана в хабе: две цветные карты, видно издалека. */
+export const iconCards = ['/colors/R5.svg', '/colors/B3.svg'];

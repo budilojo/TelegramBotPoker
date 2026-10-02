@@ -12,7 +12,7 @@
  * можно — он лежит на столе в открытую, — а больше ничего.
  */
 import { esc, padEnd } from '../../fmt.js';
-import { MAX_SEATS, findPlayer, seatedPlayers, startBlocker, score, highlights, alive } from './rules.js';
+import { MAX_SEATS, TITLE, findPlayer, seatedPlayers, startBlocker, score, highlights, alive } from './rules.js';
 import { COLOR_RU, COLOR_SHAPE, SHAPE_RU } from './cards.js';
 
 const nameOf = (room, id) => esc(findPlayer(room, id)?.name ?? '—');
@@ -95,7 +95,7 @@ export function renderResults(room) {
   const rows = score(room).filter((r) => r.games > 0);
   const played = room.history.filter((h) => !h.aborted);
   if (!rows.length) {
-    return ['🏁 <b>ИТОГИ · РАДУГА</b>', '', '<i>Ни одной партии не сыграно.</i>'].join('\n');
+    return [`🏁 <b>ИТОГИ · ${TITLE.toUpperCase()}</b>`, '', '<i>Ни одной партии не сыграно.</i>'].join('\n');
   }
   const body = rows.map((r) => `${padEnd(r.name, 14)}выиграл ${r.wins} · последний ${r.last}`).join('\n');
   const lines = highlights(room);
@@ -108,7 +108,7 @@ export function renderResults(room) {
     .map((r) => `${esc(r.name)} — ${[r.isHost && 'хост', r.kicked ? 'удалён' : r.left && 'вышел'].filter(Boolean).join(', ')}`);
   const best = rows.filter((r) => r.wins === rows[0].wins).map((r) => esc(r.name));
   return [
-    '🏁 <b>ИТОГИ · РАДУГА</b>',
+    `🏁 <b>ИТОГИ · ${TITLE.toUpperCase()}</b>`,
     '',
     `<pre>${esc(body)}</pre>`,
     ...(live.length ? ['', live.join('\n')] : []),

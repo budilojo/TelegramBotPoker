@@ -1009,3 +1009,23 @@ function openSettings() {
     );
   });
 }
+
+/**
+ * Что спрашивают при создании покерного стола. Хаб эти поля только рисует —
+ * сам он про покер ничего не знает, как и про любую другую игру.
+ */
+export const lobby = {
+  defaults: { startingStack: 10000, smallBlind: 25, bigBlind: 50, turnSeconds: 0, cards: 'virtual' },
+  fields: (st, { seg, numField, TIMERS, h: hh }) => [
+    numField('Стартовый стек', 'startingStack'),
+    numField('Малый блайнд', 'smallBlind'),
+    numField('Большой блайнд', 'bigBlind'),
+    hh('div.section-label', 'Таймер хода'),
+    seg([...TIMERS, [120, '2 мин']], 'turnSeconds'),
+    hh('div.section-label', 'Карты'),
+    seg([['virtual', '🤖 Раздаёт бот'], ['live', '🃏 Настоящие']], 'cards'),
+  ],
+};
+
+/** Чем игра подписана в хабе: два туза читаются даже размером с ноготь. */
+export const iconCards = ['/cards/AS.svg', '/cards/AH.svg'];

@@ -7,6 +7,13 @@
  */
 import { $app, h, haptic, showSheet, closeSheet, refreshSheet } from './ui.js';
 import { bus, send } from './net.js';
+import { lobby as pokerLobby, iconCards as pokerIcon } from './games/poker.js';
+import { lobby as durakLobby, iconCards as durakIcon } from './games/durak.js';
+import { lobby as colorsLobby, iconCards as colorsIcon } from './games/colors.js';
+
+/** Форма «новое лобби» у каждой игры своя — хаб берёт её у игры. */
+const LOBBY = { poker: pokerLobby, durak: durakLobby, colors: colorsLobby };
+const ICON = { poker: pokerIcon, durak: durakIcon, colors: colorsIcon };
 
 let state = null;
 
@@ -50,8 +57,9 @@ export function render() {
 }
 
 /** Две карты веером — значок игры. Берём из той же колоды, что и за столом. */
+/** Какими картами подписана игра, говорит сама игра. */
 const gameIcon = (id) => h(`div.gc-icon.g-${id}`,
-  ...(id === 'durak' ? ['KH', '9S'] : ['AS', 'KH']).map((c, i) => h(`img.gi-card.c${i}`, { src: `/cards/${c}.svg`, alt: '' })));
+  ...(ICON[id] || ICON.poker).map((src, i) => h(`img.gi-card.c${i}`, { src, alt: '' })));
 
 function gameRow(g, live) {
   const on = true; // в списке только то, во что уже можно играть
@@ -99,9 +107,11 @@ const TIMERS = [[0, 'Выкл'], [30, '30 с'], [60, '60 с'], [90, '90 с']];
 
 function openCreate(g) {
   haptic.soft();
-  const st = g.id === 'poker'
-    ? { startingStack: 10000, smallBlind: 25, bigBlind: 50, turnSeconds: 0, cards: 'virtual' }
-    : { variant: 'podkidnoy', turnSeconds: 0 };
+  // Какие настройки у стола, знает сама игра: хаб их только рисует. Иначе
+  // каждая новая игра получала бы чужую форму — так UNOQ однажды и спросил
+  // у людей «подкидной или переводной».
+  const form = LOBBY[g.id];
+  const st = { ...(form?.defaults || { turnSeconds: 0 }) };
 
   showSheet('create', () => {
     const seg = (options, key) => h('div.seg', options.map(([v, label]) => h(`button${st[key] === v ? '.on' : ''}`, {
@@ -110,26 +120,7 @@ function openCreate(g) {
     const numField = (label, key) => h('div.field', h('label', label),
       h('input.num', { type: 'number', inputmode: 'numeric', value: st[key], oninput: (e) => (st[key] = Number(e.target.value)) }));
 
-    const fields = g.id === 'poker'
-      ? [
-          numField('Стартовый стек', 'startingStack'),
-          numField('Малый блайнд', 'smallBlind'),
-          numField('Большой блайнд', 'bigBlind'),
-          h('div.section-label', 'Таймер хода'),
-          seg([...TIMERS, [120, '2 мин']], 'turnSeconds'),
-          h('div.section-label', 'Карты'),
-          seg([['virtual', '🤖 Раздаёт бот'], ['live', '🃏 Настоящие']], 'cards'),
-        ]
-      : [
-          h('div.section-label', 'Вариант'),
-          seg([['podkidnoy', 'Подкидной'], ['perevodnoy', 'Переводной']], 'variant'),
-          h('div.hint', { style: { marginTop: '6px' } }, st.variant === 'perevodnoy'
-            ? 'Пока ни одна карта не побита, отбивающийся может перевести атаку картой того же достоинства на следующего.'
-            : 'Подкидывают все, кроме отбивающегося, — карты тех достоинств, что уже на столе.'),
-          h('div.section-label', 'Таймер хода'),
-          seg(TIMERS, 'turnSeconds'),
-          h('div.hint', { style: { marginTop: '6px' } }, 'Не успел: отбивающийся берёт, подкидывающие пасуют.'),
-        ];
+    const fields = form ? form.fields(st, { seg, numField, TIMERS, h }) : [];
 
     return h('div',
       h('h3', `${g.icon} ${g.title} — новое лобби`),
@@ -143,3 +134,4 @@ function openCreate(g) {
     );
   });
 }
+
