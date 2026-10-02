@@ -1,0 +1,100 @@
+<!doctype html><meta charset="utf-8"><style>
+  body{margin:0;background:#0F1A14;font:14px -apple-system,system-ui,sans-serif;color:#cfe3d6;padding:28px}
+  h2{font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;opacity:.6;margin:26px 0 12px}
+  .row{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap}
+  .card{width:var(--w);aspect-ratio:2/3;border-radius:calc(var(--w)/9);background:#fff;position:relative;
+        box-shadow:0 6px 18px rgba(0,0,0,.45);overflow:hidden}
+  .card.red{background:#E04A3F}.card.yellow{background:#F2B22E}
+  .card.green{background:#2FA355}.card.blue{background:#2D6FD8}
+  .card::after{content:"";position:absolute;inset:6%;border-radius:calc(var(--w)/12);background:#fff}
+  .mid{position:absolute;inset:0;display:grid;place-items:center;z-index:2}
+  .mid img{width:56%}
+  .corner{position:absolute;top:5%;left:6%;width:20%;z-index:3}
+  .corner img{width:100%}
+  .plain{display:flex;gap:18px;background:#fff;padding:18px;border-radius:14px}
+  .plain img{width:96px}
+</style>
+<h2>Знаки сами по себе</h2>
+<div class="plain">
+  <img src="plus2.svg"><img src="stop.svg"><img src="reverse.svg"><img src="wild.svg">
+</div>
+<h2>На карте: 170, 110, 74 и 40 пикселей — как в игре</h2>
+<div class="row">
+  
+  <div class="card red" style="--w:170px">
+    <div class="corner"><img src="plus2.svg"></div>
+    <div class="mid"><img src="plus2.svg"></div>
+  </div>
+  <div class="card red" style="--w:110px">
+    <div class="corner"><img src="plus2.svg"></div>
+    <div class="mid"><img src="plus2.svg"></div>
+  </div>
+  <div class="card red" style="--w:74px">
+    <div class="corner"><img src="plus2.svg"></div>
+    <div class="mid"><img src="plus2.svg"></div>
+  </div>
+  <div class="card red" style="--w:40px">
+    <div class="corner"><img src="plus2.svg"></div>
+    <div class="mid"><img src="plus2.svg"></div>
+  </div>
+  
+  <div class="card blue" style="--w:170px">
+    <div class="corner"><img src="stop.svg"></div>
+    <div class="mid"><img src="stop.svg"></div>
+  </div>
+  <div class="card blue" style="--w:110px">
+    <div class="corner"><img src="stop.svg"></div>
+    <div class="mid"><img src="stop.svg"></div>
+  </div>
+  <div class="card blue" style="--w:74px">
+    <div class="corner"><img src="stop.svg"></div>
+    <div class="mid"><img src="stop.svg"></div>
+  </div>
+  <div class="card blue" style="--w:40px">
+    <div class="corner"><img src="stop.svg"></div>
+    <div class="mid"><img src="stop.svg"></div>
+  </div>
+</div>
+<div class="row" style="margin-top:14px">
+  
+  <div class="card green" style="--w:170px">
+    <div class="corner"><img src="reverse.svg"></div>
+    <div class="mid"><img src="reverse.svg"></div>
+  </div>
+  <div class="card green" style="--w:110px">
+    <div class="corner"><img src="reverse.svg"></div>
+    <div class="mid"><img src="reverse.svg"></div>
+  </div>
+  <div class="card green" style="--w:74px">
+    <div class="corner"><img src="reverse.svg"></div>
+    <div class="mid"><img src="reverse.svg"></div>
+  </div>
+  <div class="card green" style="--w:40px">
+    <div class="corner"><img src="reverse.svg"></div>
+    <div class="mid"><img src="reverse.svg"></div>
+  </div>
+  
+  <div class="card yellow" style="--w:170px">
+    <div class="corner"><img src="wild.svg"></div>
+    <div class="mid"><img src="wild.svg"></div>
+  </div>
+  <div class="card yellow" style="--w:110px">
+    <div class="corner"><img src="wild.svg"></div>
+    <div class="mid"><img src="wild.svg"></div>
+  </div>
+  <div class="card yellow" style="--w:74px">
+    <div class="corner"><img src="wild.svg"></div>
+    <div class="mid"><img src="wild.svg"></div>
+  </div>
+  <div class="card yellow" style="--w:40px">
+    <div class="corner"><img src="wild.svg"></div>
+    <div class="mid"><img src="wild.svg"></div>
+  </div>
+</div>
+<h2>Рубашка</h2>
+<div class="row">
+  <img src="back.svg" style="width:170px;border-radius:14px">
+  <img src="back.svg" style="width:110px;border-radius:10px">
+  <img src="back.svg" style="width:74px;border-radius:7px">
+  <img src="back.svg" style="width:40px;border-radius:4px">
+</div>
