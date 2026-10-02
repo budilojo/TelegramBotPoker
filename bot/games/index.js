@@ -9,11 +9,12 @@
  */
 import poker from './poker/index.js';
 import durak from './durak/index.js';
+import colors from './colors/index.js';
 
-export const GAMES = { poker, durak };
+export const GAMES = { poker, durak, colors };
 
 /** The order of the big cards on the hub's first screen. */
-export const GAME_LIST = [poker, durak];
+export const GAME_LIST = [poker, durak, colors];
 
 /** Rooms saved before the hub existed have no `game`: they are poker tables. */
 export const gameOf = (room) => GAMES[room?.game] || poker;
