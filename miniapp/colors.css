@@ -1,0 +1,482 @@
+/* ==========================================================================
+   СТОЛ «РАДУГИ» — соперники по верху, колода и куча в середине, веер своих
+   карт внизу. Своё сукно (тёмно-зелёное, как на макете), чтобы его никогда
+   не спутали с покерным; всё остальное — та же комната.
+
+   Главное в этом файле — две вещи, которые видны боковым зрением:
+   поднятые карты (их можно положить) и приглушённая ровная рука (сейчас не
+   ваш ход). Цвет нигде не остаётся единственным признаком: у каждого цвета
+   есть своя фигура, и она стоит рядом везде, где назван цвет.
+   ========================================================================== */
+
+:root {
+  --cl-1: #1F6B45;
+  --cl-2: #14512F;
+  --cl-3: #0B3320;
+  --cl-R: #E04A3F;
+  --cl-Y: #F2B22E;
+  --cl-G: #2FA355;
+  --cl-B: #2D6FD8;
+  /* Ширина карты в руке. Под неё считается и перекрытие веера. */
+  --cw: clamp(54px, 17vw, 74px);
+}
+
+.cl-felt {
+  position: relative;
+  flex: 1;
+  min-height: 250px;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(120% 80% at 50% 38%, var(--cl-1) 0%, var(--cl-2) 58%, var(--cl-3) 100%);
+  border-radius: 0 0 26px 26px;
+  box-shadow: inset 0 10px 40px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+}
+
+/* ---------------------------------------------------------------- места */
+
+.cl-seats {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 10px 8px 0;
+  flex-wrap: wrap;
+  z-index: 3;
+}
+
+.cl-seat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  flex: 0 1 76px;
+  transition: opacity 0.25s;
+}
+.cl-seat.away { opacity: 0.4; }
+
+.cl-seat .pod { position: relative; }
+.cl-seat .av {
+  width: 48px;
+  height: 48px;
+  font-size: 19px;
+  transition: box-shadow 0.25s, transform 0.25s var(--ease);
+}
+/* Чей ход — кольцо вокруг аватара. Таймер идёт тем же кольцом, тоньше. */
+.cl-seat.turn .av {
+  box-shadow: 0 0 0 3px var(--gold), 0 0 18px rgba(242, 201, 107, 0.65);
+  transform: scale(1.06);
+}
+/* Осталась одна карта — красная рамка. Промолчал — рамка мигает: вот окно. */
+.cl-seat.alone .av { box-shadow: 0 0 0 3px var(--cl-R), 0 0 16px rgba(224, 74, 63, 0.6); }
+.cl-seat.alone.turn .av { box-shadow: 0 0 0 3px var(--cl-R), 0 0 0 6px rgba(242, 201, 107, 0.75); }
+.cl-seat.quiet .av { animation: cl-blink 0.7s steps(1, end) infinite; }
+@keyframes cl-blink {
+  50% { box-shadow: 0 0 0 4px #fff, 0 0 22px rgba(224, 74, 63, 0.9); }
+}
+.cl-seat.last .av { filter: saturate(0.5); }
+
+.cl-count {
+  position: absolute;
+  right: -4px;
+  bottom: -3px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  border-radius: 10px;
+  background: #0d1a12;
+  border: 1.5px solid var(--line-hi);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+}
+
+.cl-plate {
+  max-width: 76px;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  padding: 2px 6px;
+}
+.cl-plate .nm {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cl-plate .sub2 { font-size: 10px; color: var(--muted); }
+
+.cl-one {
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--cl-R);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+.cl-one.ok { background: transparent; box-shadow: none; font-size: 15px; }
+
+/* ------------------------------------------------------------- середина */
+
+.cl-mid {
+  position: relative;
+  flex: 1;
+  display: grid;
+  place-items: center;
+  min-height: 150px;
+}
+
+/* Круг направления. «Разворот» коротко прокручивает его в обратную сторону. */
+.cl-dir {
+  position: absolute;
+  width: min(74vw, 260px);
+  aspect-ratio: 1;
+  pointer-events: none;
+  opacity: 0.4;
+}
+.cl-dir svg { width: 100%; height: 100%; fill: none; stroke: #bfe6cd; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+.cl-dir[data-dir='ccw'] svg { transform: scaleX(-1); }
+
+.cl-center {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  z-index: 2;
+}
+
+.cl-deck, .cl-pile { position: relative; width: calc(var(--cw) * 1.22); aspect-ratio: 5 / 7; }
+.cl-deck { cursor: pointer; }
+.cl-stack { position: absolute; inset: 0; }
+.cl-stack img { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 9px; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5); }
+.cl-stack img.b1 { transform: translate(-2px, -2px); }
+.cl-stack img.b2 { transform: translate(-4px, -4px); }
+
+/* Нечего положить — колода пульсирует: бей по ней. Ноль раздумий. */
+.cl-deck.pulse { animation: cl-pulse 1.1s var(--ease) infinite; }
+@keyframes cl-pulse {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(242, 201, 107, 0)); }
+  50% { transform: scale(1.07); filter: drop-shadow(0 0 14px rgba(242, 201, 107, 0.8)); }
+}
+.cl-deck.empty .cl-deck-empty {
+  position: absolute;
+  inset: 0;
+  border: 2px dashed var(--line-hi);
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  color: var(--muted);
+}
+.cl-deck-n, .cl-discard-n {
+  position: absolute;
+  left: 50%;
+  bottom: -18px;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.cl-pile img.cl-top { width: 100%; height: 100%; border-radius: 9px; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.55); }
+/* Названный цвет виден на самой куче: после «смены цвета» верхняя карта
+   про цвет уже ничего не говорит. */
+.cl-chosen {
+  position: absolute;
+  right: -8px;
+  top: -8px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 2px solid #fff;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+}
+.cl-chosen.cR { background: var(--cl-R); }
+.cl-chosen.cY { background: var(--cl-Y); }
+.cl-chosen.cG { background: var(--cl-G); }
+.cl-chosen.cB { background: var(--cl-B); }
+
+/* Накопление видно на куче: сколько прилетит следующему. */
+.cl-pending {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: calc(var(--cw) * 0.62);
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.9), 0 3px 0 rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.32);
+  border-radius: 9px;
+}
+
+/* Лента: три последних события, затухают. Без неё быстрый ход соперника
+   остаётся незамеченным. */
+.cl-events {
+  position: relative;
+  z-index: 3;
+  padding: 2px 12px 8px;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 1px;
+  min-height: 34px;
+}
+.cl-ev {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.cl-ev.a0 { opacity: 1; color: var(--text); }
+.cl-ev.a1 { opacity: 0.5; font-size: 11px; }
+.cl-ev.a2 { opacity: 0.25; font-size: 10.5px; }
+
+/* ------------------------------------------------------------------ рука */
+
+.hero.cl-hero {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 6px 0 8px;
+  min-height: 0;
+  position: relative;
+}
+.cl-role-row { display: flex; align-items: center; gap: 8px; padding: 0 12px; }
+.cl-role {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cl-role.go { color: var(--gold); }
+.cl-role.last { color: var(--cl-R); }
+.cl-role.won { color: #2ee08c; }
+.cl-role.watch { color: var(--muted); }
+
+.cl-fits {
+  flex: none;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 13px;
+  border: 1px solid var(--line-hi);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--gold);
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+/* Одна строка с горизонтальной прокруткой. Две строки не делаем: веер
+   превращается в кашу. */
+.cl-hand {
+  overflow-x: auto;
+  overflow-y: visible;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding: 24px 12px 2px;
+  margin-top: -6px;
+}
+.cl-hand::-webkit-scrollbar { display: none; }
+.cl-hand.none {
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 18px 12px;
+}
+
+.cl-fan {
+  display: flex;
+  justify-content: center;
+  min-width: min-content;
+  margin: 0 auto;
+  padding-right: calc(var(--cw) * 0.1);
+}
+/* Перекрытие: до десяти карт веер влезает целиком, дальше сжимается — но не
+   теснее трети карты, иначе по ней не попасть пальцем. */
+.cl-card + .cl-card { margin-left: calc(var(--cw) * -0.42); }
+.cl-hand[data-n='11'] .cl-card + .cl-card,
+.cl-hand[data-n='12'] .cl-card + .cl-card { margin-left: calc(var(--cw) * -0.55); }
+.cl-fan .cl-card:nth-child(n + 13) { margin-left: calc(var(--cw) * -0.67); }
+
+.cl-card {
+  flex: none;
+  width: var(--cw);
+  padding: 0;
+  border: 0;
+  background: none;
+  position: relative;
+  transition: transform 0.18s var(--ease), filter 0.18s;
+  transform-origin: 50% 100%;
+}
+.cl-card img {
+  width: 100%;
+  display: block;
+  border-radius: 9px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+/* Подходящие подняты и полностью яркие; остальные опущены и приглушены —
+   БЕЗ серого фильтра: цвет должен остаться читаемым. */
+.cl-card.up { transform: translateY(-18px); z-index: 2; }
+.cl-card.up img { box-shadow: 0 0 0 2px rgba(46, 224, 140, 0.85), 0 8px 18px rgba(0, 0, 0, 0.55); }
+.cl-card img.no { opacity: 0.55; }
+/* Не ваш ход — не поднята ни одна, и вся рука чуть приглушена. Это главный
+   признак «сейчас не ты». */
+.cl-hero:not(.turn) .cl-fan { opacity: 0.78; }
+
+/* Палец закрывает карту целиком: держишь — она над пальцем и крупнее. */
+.cl-card.held { transform: translateY(-74px) scale(1.5); z-index: 9; }
+.cl-card.held img { box-shadow: 0 0 0 3px var(--gold), 0 18px 34px rgba(0, 0, 0, 0.7); }
+
+/* Правило объясняется действием, а не экраном справки. */
+.cl-hint {
+  position: absolute;
+  left: 50%;
+  top: -26px;
+  transform: translateX(-50%);
+  background: var(--gold);
+  color: var(--gold-ink);
+  font-size: 12.5px;
+  font-weight: 800;
+  padding: 5px 12px;
+  border-radius: 12px;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------- панель */
+
+.cl-panel { flex-wrap: wrap; }
+.btn.rainbow {
+  background: linear-gradient(90deg, var(--cl-R), var(--cl-Y) 33%, var(--cl-G) 66%, var(--cl-B));
+  color: #fff;
+  border: 0;
+  font-weight: 900;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+.cl-catch { animation: cl-urgent 0.9s ease-in-out infinite; }
+@keyframes cl-urgent {
+  50% { transform: scale(1.03); }
+}
+.cl-wait { flex: 1; text-align: center; color: var(--muted); font-size: 13px; font-weight: 600; }
+
+/* ------------------------------------------------------------- шторка цвета */
+
+.cl-pick {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 4px 0 12px;
+}
+.cl-pick-btn {
+  height: 84px;
+  border: 0;
+  border-radius: 16px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+.cl-pick-btn:active { transform: scale(0.96); }
+.cl-pick-btn.cR { background: var(--cl-R); }
+.cl-pick-btn.cY { background: var(--cl-Y); }
+.cl-pick-btn.cG { background: var(--cl-G); }
+.cl-pick-btn.cB { background: var(--cl-B); }
+
+/* Фигура цвета — на кнопках шторки те же, что на картах. */
+.cl-shape { display: inline-grid; place-items: center; width: 14px; height: 14px; vertical-align: -2px; }
+.cl-shape svg { width: 100%; height: 100%; fill: currentColor; }
+.cl-shape.big { width: 30px; height: 30px; }
+
+.cl-colorword { display: inline-flex; align-items: center; gap: 4px; }
+.cl-colorword.cR { color: var(--cl-R); }
+.cl-colorword.cY { color: var(--cl-Y); }
+.cl-colorword.cG { color: var(--cl-G); }
+.cl-colorword.cB { color: var(--cl-B); }
+
+.cl-swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.cl-swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+}
+.cl-swatch.cR { color: var(--cl-R); }
+.cl-swatch.cY { color: var(--cl-Y); }
+.cl-swatch.cG { color: var(--cl-G); }
+.cl-swatch.cB { color: var(--cl-B); }
+
+/* ------------------------------------------------------------------ итоги */
+
+.seats-grid.eight { grid-template-columns: repeat(4, 1fr); }
+
+.cl-score { display: flex; flex-direction: column; gap: 2px; padding: 0 12px; }
+.cl-sc { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-2); }
+.cl-sc.me { color: var(--gold); font-weight: 700; }
+.cl-sc-cap { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+.cl-res {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--line);
+}
+.cl-res:last-child { border-bottom: 0; }
+.cl-res.me { color: var(--gold); }
+.cl-res .pl {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.07);
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 800;
+  flex: none;
+}
+.cl-res .who { flex: 1; min-width: 0; }
+.cl-res .nm { max-width: none; font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cl-res .sub2 { font-size: 11.5px; color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .cl-deck.pulse, .cl-seat.quiet .av, .cl-catch { animation: none; }
+}
