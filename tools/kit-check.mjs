@@ -89,13 +89,24 @@ function probe(scales) {
     seenFont: [...seen.font].sort((a, b) => a - b),
     seenRadius: [...seen.radius].sort((a, b) => a - b),
     pageOverflow: Math.max(0, document.documentElement.scrollWidth - innerWidth),
-    // Кто именно вылезает за край — иначе ищется руками полчаса.
+    /*
+     * Кто именно вылезает за край. Смотреть надо В ДВА ГЛАЗА: коробка может
+     * остаться в пределах экрана, а содержимое — вылезти наружу. Так и было
+     * с кнопкой: рамка упиралась в край, а неразрывная подпись внутри
+     * растягивала страницу, и поиск «широкого элемента» ничего не находил.
+     */
     widest: [...document.querySelectorAll('body *')]
-      .map((el) => ({ el: where(el), right: Math.round(el.getBoundingClientRect().right) }))
-      .filter((x) => x.right > innerWidth + 1)
-      .sort((a, b) => b.right - a.right)
+      .map((el) => {
+        const r = el.getBoundingClientRect();
+        const spill = Math.round(el.scrollWidth - el.clientWidth);
+        return { el: where(el), right: Math.round(r.right), spill };
+      })
+      .filter((x) => x.right > innerWidth + 1 || x.spill > 1)
+      .sort((a, b) => (b.right - a.right) || (b.spill - a.spill))
       .slice(0, 3)
-      .map((x) => `${x.el} до ${x.right}px`),
+      .map((x) => (x.right > innerWidth + 1
+        ? `${x.el} до ${x.right}px`
+        : `${x.el}: содержимое шире рамки на ${x.spill}px`)),
     parts: {
       btnPrimary: count('.k-btn--primary'),
       btnSecondary: count('.k-btn--secondary'),
