@@ -21,7 +21,8 @@
     "layout": "node --disable-warning=ExperimentalWarning tools/layout-check.mjs",
     "cards:colors": "node tools/make-colors-cards.mjs",
     "colors": "node --disable-warning=ExperimentalWarning tools/colors-check.mjs",
-    "fuzz": "node tools/fuzz-rules.mjs"
+    "fuzz": "node tools/fuzz-rules.mjs",
+    "load": "node --expose-gc tools/load-check.mjs"
   },
   "engines": {
     "node": ">=22.5"
