@@ -8,6 +8,11 @@
   <title>Покер, дурак и радуга</title>
   <!-- The Telegram Mini App SDK: identity (initData), haptics, full-screen. -->
   <script src="https://telegram.org/js/telegram-web-app.js?59"></script>
+  <!-- Кит идёт ПЕРВЫМ: при случайном совпадении правил выигрывают
+       существующие стили, а не новые. Пока его никто не использует —
+       экраны переезжают на него фазами. -->
+  <link rel="stylesheet" href="/tokens.css">
+  <link rel="stylesheet" href="/kit.css">
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/hub.css">
   <link rel="stylesheet" href="/durak.css">
