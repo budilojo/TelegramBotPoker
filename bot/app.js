@@ -1179,15 +1179,21 @@ export class App {
     }
     if (status === 'left' || status === 'kicked') {
       const chatId = String(u.chat.id);
-      for (const room of this.roomsOf(chatId)) {
-        this.hub?.forget(room.code);
-        this.rooms.delete(room.code);
-      }
+      // СНАЧАЛА УБРАТЬ, ПОТОМ РАССКАЗАТЬ.
+      //
+      // Тем, кому мы расскажем, страница тут же задаёт следующий вопрос —
+      // «а что у меня осталось?» — и ответ она должна получить про уже
+      // убранное. Пока разборка шла вперемешку с рассказом, человека уводили
+      // к своим группам и показывали в списке ту самую группу, из которой
+      // его только что выгнали: нажми — и получишь отказ.
+      const codes = this.roomsOf(chatId).map((r) => r.code);
+      for (const code of codes) this.rooms.delete(code);
       const group = this.groups.get(chatId);
-      if (group) this.hub?.forgetGroup(group.code);
       this.groups.delete(chatId);
       this.store.removeChat(chatId);
       this.syncClocks();
+      for (const code of codes) this.hub?.forget(code);
+      if (group) this.hub?.forgetGroup(group.code);
     }
   }
 

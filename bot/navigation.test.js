@@ -123,19 +123,35 @@ async function twoGroups(t) {
 test('бота выгнали из группы — человека уводят к своим группам, а не бросают', async () => {
   const t = new Table({ chatId: -4001 });
   const ivan = await twoGroups(t);
+  // Со столом: его тоже должно снести, и в памяти, и в базе.
+  await t.send(ivan, { t: 'create', game: 'durak' });
+  assert.equal(t.app.roomsOf(t.chatId).length, 1);
 
+  // Настоящий путь: Telegram говорит, что бота выгнали.
   await t.raw({
     my_chat_member: {
-      chat: { id: t.chatId, type: 'supergroup' }, from: { id: 101 },
-      new_chat_member: { status: 'left', user: { id: 1, is_bot: true, username: 'ChipTableBot' } },
+      chat: { id: t.chatId, type: 'supergroup' }, from: { id: 999 }, date: t.date,
+      old_chat_member: { status: 'member', user: { id: 1, is_bot: true, username: 'ChipTableBot' } },
+      new_chat_member: { status: 'kicked', user: { id: 1, is_bot: true, username: 'ChipTableBot' } },
     },
   });
 
-  // Главное: экран сменился сам, без единого нажатия. Группы больше нет, и
-  // смотреть на её хаб не на что — а вторая группа у человека осталась.
+  assert.equal(t.app.roomsOf(t.chatId).length, 0, 'столы группы снесены');
+  assert.equal(t.app.groups.get(String(t.chatId)), undefined, 'и сама группа');
+
+  // Экран сменился сам, без единого нажатия: смотреть на хаб мёртвой группы
+  // не на что, а вторая группа у человека осталась.
   const s = t.state(ivan);
   assert.equal(s.kind, 'home', 'страницу увели на «Мои группы»');
   assert.ok(s.groups.some((g) => g.title === 'Вторая'), 'и вторая группа в списке — человеку есть куда идти');
+
+  // Главное. Список, который УВИДЕЛА страница, не должен содержать группу, из
+  // которой человека только что выгнали: нажми на неё — и получишь отказ.
+  // Снимок берётся во время разборки, и легко взять его на шаг раньше, чем
+  // разборка кончилась.
+  assert.equal(s.groups.some((g) => g.title === 'Покер по пятницам'), false,
+    'мёртвой группы в списке нет');
+  assert.deepEqual(t.app.groupsOf(101).map((g) => g.title), ['Вторая'], 'и сервер того же мнения');
 });
 
 test('на хабе мёртвой группы ни одна кнопка не остаётся без ответа', async () => {
