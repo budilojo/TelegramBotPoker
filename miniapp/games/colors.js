@@ -229,10 +229,15 @@ function seatEl(p, s) {
   const sub = p.role === 'quit' ? 'вышел'
     : p.place ? `${p.place}-е место`
       : p.inDeal ? '' : 'со след. партии';
+  // Метка «осталась одна карта» живёт НА аватаре, внутри .pod: это он здесь
+  // единственный позиционированный предок. Снаружи она уезжала в угол сукна
+  // и там обрезалась — а это ровно тот знак, по которому решают, ловить или
+  // нет, и решают за пять секунд.
   return h(`div.${cls}`, { 'data-seat': p.seat },
-    h('div.pod', av, p.inDeal ? h('span.cl-count.num', String(p.count)) : null),
+    h('div.pod', av,
+      p.inDeal ? h('span.cl-count.num', String(p.count)) : null,
+      p.alone ? h(`div.cl-one${p.called ? '.ok' : ''}`, p.called ? '✋' : '1') : null),
     h('div.cl-plate', h('div.nm', p.name), sub ? h('div.sub2', sub) : null),
-    p.alone ? h(`div.cl-one${p.called ? '.ok' : ''}`, p.called ? '✋' : '1') : null,
   );
 }
 
@@ -567,10 +572,14 @@ function panelEl(s) {
 
   // «Поймал!» — первым: окно пять секунд, и оно важнее всего остального.
   if (L?.catch) {
+    // Отсчёт — отдельной строкой внутри кнопки, а не на самой кнопке:
+    // tickClocks переписывает textContent всему, у чего есть data-count, и
+    // надпись с кнопки пропадала целиком. Пять секунд на решение, и за них
+    // человек видел только часы, без единого слова, что это за кнопка.
     p.append(animateOnce(h('button.btn.danger.lg.cl-catch', {
-      'data-count': L.catch.until,
       onclick: () => { haptic.tap(); send({ t: 'catch', seq: s.seq }); },
-    }, `🫵 Поймал! ${nameAt(s, L.catch.seat)} молчит`), `clcatch:${L.catch.until}`,
+    }, `🫵 Поймал! ${nameAt(s, L.catch.seat)} молчит`,
+    h('small.num', { 'data-count': L.catch.until })), `clcatch:${L.catch.until}`,
     [{ transform: 'scale(0.6)', opacity: 0, offset: 0 }], { duration: 260 }));
   }
   // Выкрик — там же, где палец только что нажимал карту, а не в центре экрана.

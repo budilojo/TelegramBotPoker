@@ -197,6 +197,15 @@ function probe() {
     counter: document.querySelector('.cl-fits')?.textContent || '',
     pending: document.querySelector('.cl-pending')?.textContent || '',
     catchBtn: n('.cl-catch'),
+    catchText: document.querySelector('.cl-catch')?.textContent || '',
+    // Метки «одна карта» обязаны лежать на своих местах, а не улетать в угол.
+    strayMarks: [...document.querySelectorAll('.cl-one')].filter((m) => {
+      const seat = m.closest('.cl-seat');
+      if (!seat) return true;
+      const a = m.getBoundingClientRect();
+      const b = seat.getBoundingClientRect();
+      return a.right < b.left - 12 || a.left > b.right + 12 || a.bottom < b.top - 12 || a.top > b.bottom + 12;
+    }).length,
     shoutBtn: n('.btn.shout'),
     seats: n('.cl-seat'),
     events: n('.cl-ev'),
@@ -283,9 +292,15 @@ for (const scene of scenes) {
       if (scene.expect?.pulse) need(p.pulse === 1, `${tag}: колода не пульсирует, хотя класть нечего`);
       if (scene.expect?.counter) need(/подход/.test(p.counter), `${tag}: нет счётчика «N подходят» (${p.counter})`);
       if (scene.expect?.pending) need(p.pending === scene.expect.pending, `${tag}: на куче «${p.pending}», а ждали «${scene.expect.pending}»`);
-      if (scene.expect?.catchBtn) need(p.catchBtn === 1, `${tag}: нет кнопки «Поймал!»`);
+      if (scene.expect?.catchBtn) {
+        need(p.catchBtn === 1, `${tag}: нет кнопки «Поймал!»`);
+        // Кнопка обязана говорить словами, а не одними часами: на решение
+        // пять секунд, и гадать, что это за кнопка, в них не входит.
+        need(/Поймал/.test(p.catchText), `${tag}: на кнопке «Поймал!» нет слов, только «${p.catchText}»`);
+      }
       if (scene.expect?.shoutBtn) need(p.shoutBtn === 1, `${tag}: нет кнопки «Последняя!»`);
       need(p.shapes > 0, `${tag}: фигур цвета на экране нет`);
+      need(p.strayMarks === 0, `${tag}: метка «одна карта» оторвалась от своего места`);
 
       // Шторка цвета — только там, где есть что ею класть.
       if (legal.play.some((c) => c === 'WC' || c === 'WF')) {
