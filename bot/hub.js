@@ -275,7 +275,10 @@ export class Hub {
       return void session.send({ t: 'state', state: this.downState() });
     }
     const group = this.app.groupByCode(session.group);
-    if (!group) return;
+    // Группы больше нет. Молчать нельзя: страница ждёт ответа и без него
+    // выглядит зависшей. Ведём к своим группам — это настоящий экран с
+    // настоящим выходом.
+    if (!group) return this.pushHome(session);
     try {
       const view = hubView(this.app, group, session.user, { home: !!session.home && this.app.groupsOf(session.user.id).length > 1 });
       const json = JSON.stringify(view);
@@ -299,7 +302,12 @@ export class Hub {
       title: g.title || 'Группа',
       live: this.app.liveRooms(g.chatId).length,
     }));
-    session.send({ t: 'state', state: { kind: 'home', now: this.app.clock.now(), bot: this.app.botUsername, me: { name: session.user.name }, groups } });
+    session.send({ t: 'state', state: {
+      kind: 'home', now: this.app.clock.now(), bot: this.app.botUsername, me: { name: session.user.name }, groups,
+      // Тот же текст, что на хабе группы: один закрытый рейтинг — одно
+      // объяснение, а не отказ на одном экране и спокойная шторка на другом.
+      ratingSoon: this.app.ratingSoon ? RATING_SOON_TEXT : null,
+    } });
   }
 
   /** Всё, что видит владелец: цифры, живые сессии, обслуживание, рассылки. */
@@ -368,12 +376,18 @@ export class Hub {
 
   /** The bot left the group: its hub is gone too. */
   forgetGroup(groupCode) {
-    for (const s of this.byGroup.get(groupCode) || []) {
+    // Копия: pushHome отцепляет сессию и правит то самое множество, по
+    // которому мы идём.
+    for (const s of [...(this.byGroup.get(groupCode) || [])]) {
       try {
         s.send({ t: 'gone', text: 'Бота удалили из группы.' });
       } catch {
         /* closed already */
       }
+      // Как и при удалении стола: сказать и увести. Группы больше нет, и
+      // оставлять человека смотреть на её хаб не на что — у него могут быть
+      // другие группы, а на «Моих группах» есть и они, и объяснение.
+      this.pushHome(s);
     }
     this.byGroup.delete(groupCode);
   }
@@ -582,6 +596,10 @@ export class Hub {
       return;
     }
     if (msg.t === 'rating') return this.enterRating(session, msg);
+    // «Мои группы», когда мы уже на них: страница могла нажать кнопку до
+    // того, как пришло новое состояние. Это не ошибка — просто покажем
+    // экран ещё раз.
+    if (msg.t === 'home' || msg.t === 'refresh') return this.pushHome(session);
     if (msg.t !== 'group') return this.refuse(session, 'BAD_REQUEST');
     const group = this.app.groupsOf(session.user.id).find((g) => g.code === String(msg.code || ''));
     if (!group) return this.refuse(session, 'NOT_YOUR_GROUP');
@@ -593,7 +611,10 @@ export class Hub {
   async handleHub(session, msg) {
     const app = this.app;
     const group = app.groupByCode(session.group);
-    if (!group) return session.send({ t: 'gone', text: 'Бота удалили из группы.' });
+    if (!group) {
+      session.send({ t: 'gone', text: 'Бота удалили из группы.' });
+      return this.pushHome(session);
+    }
     if (COMMON.has(msg.t)) {
       session.visible = !!msg.visible;
       return;

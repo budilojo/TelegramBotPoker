@@ -86,9 +86,13 @@ function renderHome(s) {
         h('div.lr-title', g.title),
         h('div.lr-sub', g.live ? `открыто игр: ${g.live}` : 'сейчас ничего не открыто')),
       h('button.btn.sm.primary', { onclick: () => { haptic.tap(); send({ t: 'group', code: g.code }); } }, 'Открыть')))),
-    h('button.rt-open', { onclick: () => { haptic.tap(); send({ t: 'rating' }, { lock: false }); } },
+    // Как на хабе группы: пока рейтинг закрыт, кнопка остаётся и честно
+    // говорит, чего ждать. Отказ вместо объяснения получал только этот экран.
+    h(`button.rt-open${s.ratingSoon ? '.soon' : ''}`, {
+      onclick: () => { haptic.tap(); if (s.ratingSoon) soonSheet(s.ratingSoon); else send({ t: 'rating' }, { lock: false }); },
+    },
       h('span', '🏆 Рейтинг'),
-      h('small', 'кто чего стоит — за месяц и за всё время')),
+      h('small', s.ratingSoon ? 'Совсем скоро' : 'кто чего стоит — за месяц и за всё время')),
     h('div.hint', 'Здесь группы, где вы писали боту или играли. Новая группа — добавьте бота и напишите там /game.'),
   ));
 }
