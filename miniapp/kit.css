@@ -1,0 +1,323 @@
+/* ==========================================================================
+   ПРИМИТИВЫ КИТА — design/mockups/00-ui-kit-final.png
+
+   Кнопка, поле, степпер, сегменты, тумблер, ползунок, разделитель,
+   иконочная кнопка, шторка. Всё — на токенах из tokens.css: ни одного числа
+   руками, кроме толщины линии и того, что из токенов считается.
+
+   Классы с префиксом `.k-`. Существующие классы не переименовываются и не
+   трогаются: экраны переедут сюда фазами, по одному.
+
+   Из принципов кита (раздел 22), которые видно прямо здесь: ни градиентов,
+   ни свечения, ни стекла, ни золота, ни «таблеток» в полэкрана. Зелёный
+   появляется там, где есть действие или состояние, и больше нигде.
+   ========================================================================== */
+
+/*
+ * Кит стоит сам. `box-sizing` живёт в style.css, и если экран загрузит
+ * только кит, поля с внутренним отступом вылезут за край: `width: 100%`
+ * плюс поля плюс рамка — это больше ста процентов. Глобального `*` здесь
+ * нарочно нет: кит — это добавка к существующим стилям, и трогать всё
+ * подряд он не вправе.
+ */
+.k-btn, .k-icon-btn, .k-input, .k-field, .k-stepper, .k-seg, .k-segmented,
+.k-slider, .k-sheet, .k-actions, .k-toggle { box-sizing: border-box; }
+
+/* -------------------------------------------------------------- типографика */
+
+.k-title     { font: var(--k-w-semibold) var(--k-fs-title)/var(--k-lh-title) var(--k-font); color: var(--k-text); }
+.k-section   { font: var(--k-w-semibold) var(--k-fs-section)/var(--k-lh-section) var(--k-font); color: var(--k-text); }
+.k-component { font: var(--k-w-semibold) var(--k-fs-component)/var(--k-lh-component) var(--k-font); color: var(--k-text); }
+.k-body      { font: var(--k-w-regular) var(--k-fs-body)/var(--k-lh-body) var(--k-font); color: var(--k-text); }
+.k-secondary { font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font); color: var(--k-text-2); }
+.k-caption   { font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font); color: var(--k-text-2); }
+/* Крупное число: цифры не пляшут по ширине, иначе счёт дёргается при росте. */
+.k-num       { font: var(--k-w-semibold) var(--k-fs-num)/var(--k-lh-num) var(--k-font); color: var(--k-text); font-variant-numeric: tabular-nums; }
+/* Игровое число — то же начертание, что заголовок раздела; роль другая. */
+.k-num-game  { font: var(--k-w-semibold) var(--k-fs-section)/var(--k-lh-section) var(--k-font); color: var(--k-text); font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------------------------------ кнопки */
+
+.k-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--k-s8);
+  min-height: var(--k-control-h);
+  padding: 0 var(--k-pad-x);
+  border: 1px solid transparent;
+  border-radius: var(--k-r-md);
+  font: var(--k-w-semibold) var(--k-fs-component)/var(--k-lh-component) var(--k-font);
+  text-align: center;
+  /* Ярлык кнопки не переносится: «½ бан-\nка» — это не кнопка. Не влезает
+     ряд — переносится ряд, а не слово. */
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--k-fast) var(--k-ease), border-color var(--k-fast) var(--k-ease);
+  -webkit-tap-highlight-color: transparent;
+}
+.k-btn:focus-visible { outline: 2px solid var(--k-green); outline-offset: 2px; }
+/* Во всю ширину — в липкой зоне действий и в шторке. */
+.k-btn--block { display: flex; width: 100%; }
+/*
+ * Компактная — ряд быстрого выбора: доли банка в шторке рейза (кит, 17).
+ * Меньше поля и мельче текст, высота та же: палец всё равно должен попадать.
+ */
+.k-btn--compact { padding: 0 var(--k-s12); font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); }
+
+.k-btn--primary { background: var(--k-green); color: var(--k-on-green); }
+.k-btn--primary:active:not(:disabled) { background: var(--k-green-pressed); }
+
+.k-btn--secondary { background: var(--k-elevated); color: var(--k-text); border-color: var(--k-divider); }
+.k-btn--secondary:active:not(:disabled) { background: var(--k-surface); }
+
+.k-btn--ghost { background: transparent; color: var(--k-text); border-color: var(--k-divider); }
+.k-btn--ghost:active:not(:disabled) { background: var(--k-press); }
+
+/*
+ * Выключенная кнопка не прячется и не бледнеет до невидимости: человек
+ * должен видеть, что действие есть, и прочесть рядом, чего не хватает
+ * («Нужно минимум 2 игрока» в ките).
+ */
+.k-btn:disabled {
+  background: var(--k-elevated);
+  color: var(--k-disabled);
+  border-color: transparent;
+  cursor: default;
+}
+
+/* Иконочная кнопка: иконка 24, поля по 12 — ровно 48 на палец. */
+.k-icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: var(--k-control-h);
+  height: var(--k-control-h);
+  padding: 0;
+  border: 0;
+  border-radius: var(--k-r-md);
+  background: transparent;
+  color: var(--k-text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.k-icon-btn:active:not(:disabled) { background: var(--k-press); }
+.k-icon-btn:disabled { color: var(--k-disabled); cursor: default; }
+.k-icon-btn:focus-visible { outline: 2px solid var(--k-green); outline-offset: -2px; }
+.k-icon-btn svg { width: var(--k-icon); height: var(--k-icon); display: block; }
+
+/* ------------------------------------------------------------------- поля */
+
+.k-field { display: flex; flex-direction: column; gap: var(--k-s8); }
+.k-label { font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font); color: var(--k-text-2); }
+
+.k-input {
+  width: 100%;
+  min-height: var(--k-control-h);
+  padding: 0 var(--k-pad-x);
+  background: var(--k-elevated);
+  color: var(--k-text);
+  border: 1px solid var(--k-divider);
+  border-radius: var(--k-r-md);
+  font: var(--k-w-regular) var(--k-fs-body)/var(--k-lh-body) var(--k-font);
+}
+.k-input::placeholder { color: var(--k-text-2); }
+.k-input:focus { outline: none; border-color: var(--k-green); }
+.k-input:disabled { color: var(--k-disabled); background: var(--k-surface); }
+/* Красный — только ошибка (docs/redesign.md §2). */
+.k-input[aria-invalid='true'] { border-color: var(--k-suit-red); }
+.k-error { font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font); color: var(--k-suit-red); }
+
+/* Числовое поле со степпером: − значение + */
+.k-stepper {
+  display: grid;
+  grid-template-columns: var(--k-control-h) 1fr var(--k-control-h);
+  align-items: center;
+  min-height: var(--k-control-h);
+  background: var(--k-elevated);
+  border: 1px solid var(--k-divider);
+  border-radius: var(--k-r-md);
+  overflow: hidden;
+}
+.k-stepper > .k-icon-btn { border-radius: 0; }
+.k-stepper-value {
+  text-align: center;
+  font: var(--k-w-semibold) var(--k-fs-num)/var(--k-lh-num) var(--k-font);
+  color: var(--k-text);
+  font-variant-numeric: tabular-nums;
+}
+.k-stepper[data-disabled] .k-stepper-value { color: var(--k-disabled); }
+
+/* --------------------------------------------------------- сегменты */
+
+.k-segmented {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: var(--k-s4);
+  background: var(--k-surface);
+  border-radius: var(--k-r-md);
+  overflow: hidden;
+}
+.k-seg {
+  /* Сегмент — такой же орган управления, как кнопка: в него должен попадать
+     палец, поэтому высота общая, а не «как в макете поменьше». */
+  min-height: var(--k-control-h);
+  padding: 0 var(--k-s12);
+  border: 0;
+  border-radius: var(--k-r-sm);
+  background: transparent;
+  color: var(--k-text-2);
+  font: var(--k-w-semibold) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Выбранное верное — зелёным, это состояние, а не украшение. */
+.k-seg[aria-selected='true'] { background: var(--k-green); color: var(--k-on-green); border-radius: var(--k-r-sm); }
+.k-seg:disabled { color: var(--k-disabled); cursor: default; }
+.k-seg:focus-visible { outline: 2px solid var(--k-green); outline-offset: -2px; }
+
+/* ---------------------------------------------------------- тумблер */
+
+.k-toggle {
+  position: relative;
+  display: inline-block;
+  width: var(--k-s48);
+  height: var(--k-s32);
+  flex: none;
+}
+.k-toggle input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+}
+.k-toggle-track {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--k-r-pill);
+  background: var(--k-disabled);
+  transition: background-color var(--k-fast) var(--k-ease);
+  pointer-events: none;
+}
+.k-toggle-knob {
+  position: absolute;
+  top: var(--k-s4);
+  left: var(--k-s4);
+  width: var(--k-s24);
+  height: var(--k-s24);
+  border-radius: 50%;
+  background: var(--k-text);
+  transition: transform var(--k-fast) var(--k-ease);
+  pointer-events: none;
+}
+.k-toggle input:checked ~ .k-toggle-track { background: var(--k-green); }
+.k-toggle input:checked ~ .k-toggle-knob { transform: translateX(var(--k-s16)); }
+.k-toggle input:disabled ~ .k-toggle-track { background: var(--k-surface); }
+.k-toggle input:disabled ~ .k-toggle-knob { background: var(--k-disabled); }
+.k-toggle input:focus-visible ~ .k-toggle-track { outline: 2px solid var(--k-green); outline-offset: 2px; }
+
+/* --------------------------------------------------------- ползунок */
+
+.k-slider { display: flex; flex-direction: column; gap: var(--k-s8); }
+.k-slider input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: var(--k-s24);
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.k-slider input[type='range']::-webkit-slider-runnable-track {
+  height: var(--k-s4);
+  border-radius: var(--k-s4);
+  /* Заполнено до бегунка — зелёным: это выбранное значение, то есть состояние. */
+  background: linear-gradient(to right,
+    var(--k-green) 0 var(--k-fill, 50%), var(--k-divider) var(--k-fill, 50%) 100%);
+}
+.k-slider input[type='range']::-moz-range-track {
+  height: var(--k-s4);
+  border-radius: var(--k-s4);
+  background: linear-gradient(to right,
+    var(--k-green) 0 var(--k-fill, 50%), var(--k-divider) var(--k-fill, 50%) 100%);
+}
+.k-slider input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: var(--k-s24);
+  height: var(--k-s24);
+  margin-top: calc((var(--k-s4) - var(--k-s24)) / 2);
+  border: 0;
+  border-radius: 50%;
+  background: var(--k-text);
+}
+.k-slider input[type='range']::-moz-range-thumb {
+  width: var(--k-s24);
+  height: var(--k-s24);
+  border: 0;
+  border-radius: 50%;
+  background: var(--k-text);
+}
+.k-slider input[type='range']:focus-visible { outline: 2px solid var(--k-green); outline-offset: 2px; }
+.k-slider-ends {
+  display: flex;
+  justify-content: space-between;
+  font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font);
+  color: var(--k-text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------- разделитель */
+
+.k-divider { height: 1px; border: 0; margin: 0; background: var(--k-divider); }
+
+/* ------------------------------------------------------------ шторка */
+
+.k-sheet-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); }
+.k-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Скругление только сверху — кит, раздел 4. */
+  border-radius: var(--k-r-sheet) var(--k-r-sheet) 0 0;
+  background: var(--k-surface);
+  box-shadow: var(--k-shadow-sheet);
+  padding: var(--k-s12) var(--k-screen-x) var(--k-sticky-bottom);
+  display: flex;
+  flex-direction: column;
+  gap: var(--k-s16);
+}
+/* Ручка: за неё тянут, и она же говорит, что шторку можно смахнуть. */
+.k-sheet-grab {
+  width: var(--k-s32);
+  height: var(--k-s4);
+  margin: 0 auto;
+  border-radius: var(--k-r-pill);
+  background: var(--k-divider);
+}
+.k-sheet-head { display: flex; flex-direction: column; gap: var(--k-s4); text-align: center; }
+
+/* Липкая зона действий — кит, раздел 14. */
+.k-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--k-s8);
+  padding: var(--k-sticky-top) var(--k-screen-x) var(--k-sticky-bottom);
+  background: var(--k-bg);
+  border-top: 1px solid var(--k-divider);
+}
+.k-actions--row { flex-direction: row; }
+.k-actions--row > .k-btn { flex: 1; }
+
+/* ------------------------------------------------------------- витрина */
+
+/* Полоса состояния — кит, раздел 8. Цвет здесь и есть смысл. */
+.k-dot { width: var(--k-s12); height: var(--k-s12); border-radius: 50%; display: inline-block; }
+.k-dot--neutral { background: var(--k-text-2); }
+.k-dot--active, .k-dot--success { background: var(--k-green); }
+.k-dot--disabled { background: var(--k-disabled); }
+
+@media (prefers-reduced-motion: reduce) {
+  .k-btn, .k-toggle-track, .k-toggle-knob { transition: none; }
+}
