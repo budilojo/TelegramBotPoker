@@ -69,11 +69,15 @@ journalctl -u worldcard -n 50 --no-pager
 curl -s -o /dev/null -w '%{http_code}\n' https://<домен>/health
 curl -s https://<домен>/health
 curl -s -o /dev/null -w '%{http_code}\n' https://<домен>/colors/R5.svg
-sudo -u worldcard sqlite3 /opt/worldcard/bot.db 'PRAGMA user_version;'
+sudo -u worldcard sqlite3 /opt/worldcard/bot.db "SELECT value FROM meta WHERE key='schema';"
 ```
 
 Жду: сервис active, в логах нет ошибок, `/health` отдаёт 200, картинка карты
-UNOQ отдаётся 200, `user_version` равен 5 — он не должен меняться.
+UNOQ отдаётся 200, версия схемы равна **5** — она не должна меняться.
+
+Версию схемы хранит строка `schema` в таблице `meta` (`bot/store.js:186`), а не
+`PRAGMA user_version` — тот у нас всегда 0, и четыре выкатки подряд сбивал с
+толку именно он.
 
 **4. Доложи и остановись.**
 
