@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Кит — токены и примитивы</title>
+<!--
+  Витрина кита: все примитивы во всех состояниях на одной странице.
+
+  Нужна не для красоты, а чтобы кит было ВИДНО. Правило «ни одного размера
+  сверх шкалы» проверяется здесь же машиной (tools/kit-check.mjs), а
+  «выглядит ли это как кит» — глазами, по снимкам.
+
+  Экранов приложения страница не касается: только tokens.css и kit.css.
+-->
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="kit.css">
+<style>
+  /* Разметка самой витрины — она не часть кита, но живёт на его же токенах. */
+  html, body { margin: 0; background: var(--k-bg); }
+  body { font-family: var(--k-font); padding: var(--k-s24) var(--k-screen-x) var(--k-s48); }
+  h1 { margin: 0 0 var(--k-s24); }
+  section { margin-bottom: var(--k-section-gap); }
+  h2 {
+    font: var(--k-w-semibold) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font);
+    color: var(--k-text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0 0 var(--k-s12);
+  }
+  .row { display: flex; flex-wrap: wrap; gap: var(--k-s8); align-items: center; }
+  .stack { display: flex; flex-direction: column; gap: var(--k-s12); }
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: var(--k-s8); }
+  .sw { border-radius: var(--k-r-md); overflow: hidden; background: var(--k-surface); }
+  .sw i { display: block; height: var(--k-s48); }
+  .sw span {
+    display: block;
+    padding: var(--k-s8);
+    font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font);
+    color: var(--k-text-2);
+  }
+  .card { background: var(--k-surface); border-radius: var(--k-r-lg); padding: var(--k-pad-y) var(--k-pad-x); }
+  .sheet-demo { position: static; box-shadow: none; }
+</style>
+</head>
+<body>
+
+<h1 class="k-title">Кит</h1>
+
+<section id="colors">
+  <h2>1 · Цвета</h2>
+  <div class="swatches">
+    <div class="sw"><i style="background:var(--k-bg)"></i><span>Фон<br>#0A1216</span></div>
+    <div class="sw"><i style="background:var(--k-surface)"></i><span>Поверхность<br>#13212A</span></div>
+    <div class="sw"><i style="background:var(--k-elevated)"></i><span>Приподнятая<br>#1D2D35</span></div>
+    <div class="sw"><i style="background:var(--k-text)"></i><span>Текст<br>#F2F7F5</span></div>
+    <div class="sw"><i style="background:var(--k-text-2)"></i><span>Вторичный<br>#A9BCC0</span></div>
+    <div class="sw"><i style="background:var(--k-divider)"></i><span>Разделитель<br>#23343B</span></div>
+    <div class="sw"><i style="background:var(--k-green)"></i><span>Зелёный<br>#2EE08C</span></div>
+    <div class="sw"><i style="background:var(--k-felt-poker)"></i><span>Сукно<br>#103D32</span></div>
+    <div class="sw"><i style="background:var(--k-card-face)"></i><span>Лицо карты<br>#F7F5EF</span></div>
+    <div class="sw"><i style="background:var(--k-suit-red)"></i><span>Красная масть<br>#C93632</span></div>
+    <div class="sw"><i style="background:var(--k-suit-black)"></i><span>Чёрная масть<br>#171B1C</span></div>
+    <div class="sw"><i style="background:var(--k-disabled)"></i><span>Выключено<br>#41545C</span></div>
+  </div>
+</section>
+
+<section id="type">
+  <h2>2 · Типографика — семь начертаний</h2>
+  <div class="stack">
+    <div class="k-title">Партия окончена</div>
+    <div class="k-num">1 240</div>
+    <div class="k-section">Игры</div>
+    <div class="k-component">Создать стол</div>
+    <div class="k-body">Количество игроков</div>
+    <div class="k-secondary">Покер · Техасский холдем</div>
+    <div class="k-caption">Войти смогут только по коду</div>
+    <div class="k-num-game">240 <span class="k-caption">— игровое число: то же начертание, что заголовок раздела</span></div>
+  </div>
+</section>
+
+<section id="buttons">
+  <h2>6 · Кнопки</h2>
+  <div class="stack">
+    <div class="row">
+      <button class="k-btn k-btn--primary">Создать стол</button>
+      <button class="k-btn k-btn--secondary">Выйти в игры</button>
+      <button class="k-btn k-btn--ghost">Дополнительные настройки →</button>
+      <button class="k-btn k-btn--secondary k-btn--compact">Компактная</button>
+    </div>
+    <div class="row">
+      <button class="k-btn k-btn--primary" disabled>Нужно минимум 2 игрока</button>
+      <button class="k-btn k-btn--secondary" disabled>Выключена</button>
+    </div>
+    <button class="k-btn k-btn--primary k-btn--block">Во всю ширину</button>
+  </div>
+</section>
+
+<section id="icon-buttons">
+  <h2>7 · Иконочные кнопки</h2>
+  <div class="row">
+    <button class="k-icon-btn" aria-label="Назад"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+    <button class="k-icon-btn" aria-label="Ещё"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+    <button class="k-icon-btn" aria-label="Копировать"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+    <button class="k-icon-btn" aria-label="Поделиться"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></button>
+    <button class="k-icon-btn" aria-label="Больше"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button class="k-icon-btn" aria-label="Меньше"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
+    <button class="k-icon-btn" aria-label="Дальше"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+    <button class="k-icon-btn" aria-label="Выключена" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+  </div>
+</section>
+
+<section id="status">
+  <h2>8 · Состояние</h2>
+  <div class="row">
+    <span class="k-dot k-dot--neutral"></span><span class="k-caption">Нейтрально</span>
+    <span class="k-dot k-dot--active"></span><span class="k-caption">Активно</span>
+    <span class="k-dot k-dot--success"></span><span class="k-caption">Успех</span>
+    <span class="k-dot k-dot--disabled"></span><span class="k-caption">Выключено</span>
+  </div>
+</section>
+
+<section id="fields">
+  <h2>9 · Поля и органы управления</h2>
+  <div class="stack">
+    <div class="k-field">
+      <label class="k-label" for="f1">Название стола</label>
+      <input class="k-input" id="f1" placeholder="Например, «Пятничный»">
+    </div>
+    <div class="k-field">
+      <label class="k-label" for="f2">С ошибкой</label>
+      <input class="k-input" id="f2" aria-invalid="true" value="12">
+      <div class="k-error">Минимум 80</div>
+    </div>
+    <div class="k-field">
+      <label class="k-label" for="f3">Выключено</label>
+      <input class="k-input" id="f3" value="Нельзя менять" disabled>
+    </div>
+
+    <div class="k-field">
+      <span class="k-label">Сегменты — количество игроков</span>
+      <div class="k-segmented" role="tablist">
+        <button class="k-seg" role="tab" aria-selected="false">2</button>
+        <button class="k-seg" role="tab" aria-selected="false">3</button>
+        <button class="k-seg" role="tab" aria-selected="false">4</button>
+        <button class="k-seg" role="tab" aria-selected="false">5</button>
+        <button class="k-seg" role="tab" aria-selected="true">6</button>
+      </div>
+    </div>
+
+    <div class="k-field">
+      <span class="k-label">Степпер</span>
+      <div class="k-stepper">
+        <button class="k-icon-btn" aria-label="Меньше"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
+        <div class="k-stepper-value">1 000</div>
+        <button class="k-icon-btn" aria-label="Больше"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      </div>
+    </div>
+
+    <div class="row" style="justify-content:space-between">
+      <span class="k-body">Тумблер</span>
+      <span class="row">
+        <label class="k-toggle"><input type="checkbox"><span class="k-toggle-track"></span><span class="k-toggle-knob"></span></label>
+        <label class="k-toggle"><input type="checkbox" checked><span class="k-toggle-track"></span><span class="k-toggle-knob"></span></label>
+        <label class="k-toggle"><input type="checkbox" disabled><span class="k-toggle-track"></span><span class="k-toggle-knob"></span></label>
+      </span>
+    </div>
+
+    <div class="k-field">
+      <span class="k-label">Ползунок — размер рейза</span>
+      <div class="k-slider" style="--k-fill:40%">
+        <input type="range" min="80" max="960" value="432" aria-label="Размер рейза">
+        <div class="k-slider-ends"><span>80</span><span>960</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="divider">
+  <h2>21 · Разделитель</h2>
+  <div class="card">
+    <div class="k-body">Строка сверху</div>
+    <hr class="k-divider" style="margin:var(--k-s12) 0">
+    <div class="k-body">Строка снизу</div>
+  </div>
+</section>
+
+<section id="actions">
+  <h2>14 · Липкая зона действий</h2>
+  <div class="k-actions" style="position:static">
+    <button class="k-btn k-btn--primary k-btn--block">Создать стол</button>
+    <button class="k-btn k-btn--secondary k-btn--block">Выйти в игры</button>
+  </div>
+</section>
+
+<section id="sheet">
+  <h2>17 · Шторка снизу</h2>
+  <div class="k-sheet sheet-demo">
+    <div class="k-sheet-grab"></div>
+    <div class="k-sheet-head">
+      <div class="k-component">Размер рейза</div>
+      <div class="k-caption">Минимум 80</div>
+    </div>
+    <div class="k-stepper">
+      <button class="k-icon-btn" aria-label="Меньше"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
+      <div class="k-stepper-value">120</div>
+      <button class="k-icon-btn" aria-label="Больше"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+    </div>
+    <div class="k-slider" style="--k-fill:5%">
+      <input type="range" min="80" max="960" value="120" aria-label="Размер рейза">
+      <div class="k-slider-ends"><span>80</span><span>960</span></div>
+    </div>
+    <div class="k-actions--row row">
+      <button class="k-btn k-btn--secondary k-btn--compact">½ банка</button>
+      <button class="k-btn k-btn--secondary k-btn--compact">¾ банка</button>
+      <button class="k-btn k-btn--secondary k-btn--compact">Банк</button>
+      <button class="k-btn k-btn--secondary k-btn--compact">Всё</button>
+    </div>
+    <button class="k-btn k-btn--primary k-btn--block">Повысить до 120</button>
+  </div>
+</section>
+
+</body>
+</html>
