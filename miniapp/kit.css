@@ -191,13 +191,21 @@
 
 /* ---------------------------------------------------------- тумблер */
 
+/*
+ * Тумблер выглядит по киту — 48 на 32, — но НАЖИМАЕТСЯ на 44 в высоту:
+ * палец не попадает в 32, а уменьшать его ради попадания значит рисовать не
+ * то, что нарисовано. Поэтому зона нажатия больше рисунка, а дорожка стоит
+ * ровно посередине неё.
+ */
 .k-toggle {
   position: relative;
   display: inline-block;
   width: var(--k-s48);
-  height: var(--k-s32);
+  height: var(--k-tap);
   flex: none;
 }
+/* Отступ сверху и снизу, чтобы дорожка 32 встала по центру зоны 44. */
+.k-toggle { --k-toggle-inset: calc((var(--k-tap) - var(--k-s32)) / 2); }
 .k-toggle input {
   position: absolute;
   inset: 0;
@@ -207,7 +215,7 @@
 }
 .k-toggle-track {
   position: absolute;
-  inset: 0;
+  inset: var(--k-toggle-inset) 0;
   border-radius: var(--k-r-pill);
   background: var(--k-disabled);
   transition: background-color var(--k-fast) var(--k-ease);
@@ -215,7 +223,7 @@
 }
 .k-toggle-knob {
   position: absolute;
-  top: var(--k-s4);
+  top: calc(var(--k-toggle-inset) + var(--k-s4));
   left: var(--k-s4);
   width: var(--k-s24);
   height: var(--k-s24);
@@ -237,7 +245,9 @@
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: var(--k-s24);
+  /* Дорожка тонкая, а браться за неё нужно пальцем: высота по порогу
+     нажатия, сама дорожка рисуется по центру. */
+  height: var(--k-tap);
   margin: 0;
   background: transparent;
   cursor: pointer;
@@ -334,3 +344,331 @@
 @media (prefers-reduced-motion: reduce) {
   .k-btn, .k-toggle-track, .k-toggle-knob { transition: none; }
 }
+
+/* ==========================================================================
+   ОБЩИЕ КОМПОНЕНТЫ — кит, разделы 5, 8, 10–16, 19
+
+   Те, что живут во всех трёх играх и на всех экранах. Собраны из примитивов
+   выше и тех же токенов: ни одного нового цвета, отступа или скругления.
+
+   Каждый — ОДИН компонент с состояниями. Место за столом не шесть
+   компонентов, а один с шестью состояниями: иначе «обычное» и «сбросил»
+   разъедутся при первой же правке.
+   ========================================================================== */
+
+/* ------------------------------------------------------- шапка (кит, 5) */
+
+/*
+ * Шапка экрана и шапка игры — одна вещь в двух видах, а не две вещи.
+ * Отличается только тем, что под заголовком: подзаголовок экрана или
+ * строка партии.
+ */
+.k-header {
+  display: grid;
+  grid-template-columns: var(--k-control-h) 1fr var(--k-control-h);
+  align-items: center;
+  gap: var(--k-s8);
+  padding: var(--k-s8) var(--k-screen-x);
+  border-bottom: 1px solid var(--k-divider);
+}
+.k-header-mid { min-width: 0; text-align: center; }
+.k-header-title {
+  display: block;
+  font: var(--k-w-semibold) var(--k-fs-section)/var(--k-lh-section) var(--k-font);
+  color: var(--k-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.k-header-sub {
+  display: block;
+  font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font);
+  color: var(--k-text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Шапка игры — та же, но компактнее: над ней стол, и место дорого. */
+.k-header--game { padding-top: var(--k-s4); padding-bottom: var(--k-s4); }
+
+/* ----------------------------------------------------- аватар (кит, 10) */
+
+/*
+ * Кружок у всех одинаковый — тот же размер, та же обводка, то же место.
+ * Отличается только содержимое: своё фото настоящее (его отдаёт initData),
+ * у остальных буква с цветом от имени. Чужих фото Telegram не отдаёт, и
+ * подставлять вместо них что-то выдуманное хуже, чем честная буква.
+ */
+.k-av {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--k-av-lg);
+  height: var(--k-av-lg);
+  border-radius: var(--k-r-pill);
+  background: hsl(var(--k-hue, 160) 32% 42%);
+  color: var(--k-text);
+  font: var(--k-w-semibold) var(--k-fs-component)/1 var(--k-font);
+  overflow: hidden;
+  user-select: none;
+}
+.k-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.k-av--md { width: var(--k-av-md); height: var(--k-av-md); font-size: var(--k-fs-secondary); }
+.k-av--sm { width: var(--k-av-sm); height: var(--k-av-sm); font-size: var(--k-fs-caption); }
+.k-av--xs { width: var(--k-av-xs); height: var(--k-av-xs); font-size: var(--k-fs-caption); }
+/* Пустое место: приподнятая поверхность и вторичный значок — своего цвета у него нет. */
+.k-av--empty { background: var(--k-elevated); color: var(--k-text-2); }
+.k-av--empty svg { width: 60%; height: 60%; }
+
+/* Группа: аватары внахлёст и «+N» последним кружком. */
+.k-avs { display: inline-flex; align-items: center; }
+.k-avs > * + * { margin-left: calc(var(--k-s8) * -1); }
+.k-avs .k-av { box-shadow: 0 0 0 2px var(--k-bg); }
+.k-av--more { background: var(--k-elevated); color: var(--k-text-2); }
+
+/* ------------------------------------------------ строка игрока (кит, 11) */
+
+.k-player {
+  display: flex;
+  align-items: center;
+  gap: var(--k-s12);
+  min-height: var(--k-tap);
+  padding: var(--k-s8) 0;
+}
+.k-player-body { min-width: 0; flex: 1; }
+.k-player-name {
+  display: block;
+  font: var(--k-w-semibold) var(--k-fs-component)/var(--k-lh-component) var(--k-font);
+  color: var(--k-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.k-player-marks {
+  display: flex;
+  align-items: center;
+  gap: var(--k-s4);
+  font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font);
+  color: var(--k-text-2);
+}
+.k-player--empty .k-player-name { color: var(--k-text-2); font-weight: var(--k-w-regular); }
+
+/* --------------------------------------------- строка рейтинга (кит, 12) */
+
+.k-rank {
+  display: flex;
+  align-items: center;
+  gap: var(--k-s12);
+  min-height: var(--k-tap);
+  padding: var(--k-s8) 0;
+}
+.k-rank-place {
+  width: var(--k-s24);
+  text-align: center;
+  font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font);
+  color: var(--k-text-2);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+.k-rank-name {
+  flex: 1;
+  min-width: 0;
+  display: block;
+  font: var(--k-w-regular) var(--k-fs-body)/var(--k-lh-body) var(--k-font);
+  color: var(--k-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/*
+ * Плюс зелёный, минус красный — и больше ничего красным. Проигравший не
+ * ошибка (docs/redesign.md §2), поэтому красный тут только у знака числа.
+ */
+.k-rank-points {
+  font: var(--k-w-semibold) var(--k-fs-component)/var(--k-lh-component) var(--k-font);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+.k-rank-points--up { color: var(--k-green); }
+.k-rank-points--down { color: var(--k-suit-red); }
+.k-rank-points--zero { color: var(--k-text-2); }
+
+/* ----------------------------------------------- строка стола (кит, 13) */
+
+.k-table-row {
+  display: flex;
+  align-items: center;
+  gap: var(--k-s12);
+  width: 100%;
+  min-height: var(--k-tap);
+  padding: var(--k-s12) 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.k-table-row:focus-visible { outline: 2px solid var(--k-green); outline-offset: -2px; }
+.k-table-body { flex: 1; min-width: 0; }
+.k-table-title {
+  display: block;
+  font: var(--k-w-semibold) var(--k-fs-component)/var(--k-lh-component) var(--k-font);
+  color: var(--k-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.k-table-sub {
+  display: block;
+  font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font);
+  color: var(--k-text-2);
+  /* Одна строка. Строка стола — это ряд в списке: разъехавшись на три,
+     список перестаёт читаться как список. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.k-table-state {
+  flex: none;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: var(--k-s8);
+  font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font);
+  color: var(--k-text-2);
+  flex: none;
+  white-space: nowrap;
+}
+.k-table-chevron { color: var(--k-text-2); flex: none; display: grid; place-items: center; }
+
+/*
+ * На самых узких телефонах в строку не помещается всё сразу, и чем-то надо
+ * поступиться. Поступаемся ПОДПИСЬЮ состояния, а не названием стола: за
+ * названием человек и пришёл, а состояние несёт точка — цвет здесь и есть
+ * смысл. Подпись остаётся в разметке для тех, кто читает экран голосом.
+ */
+/*
+ * Порог — 420, а не «на глаз». Макет строки нарисован под ~426 логических
+ * пикселей, и там подпись помещается честно. Ниже этого в ряд не влезают
+ * разом аватары, название, подпись состояния и шеврон — и жертвовать
+ * названием нельзя: за ним человек и пришёл.
+ */
+@media (max-width: 420px) {
+  .k-table-state-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+.k-table-chevron svg { width: var(--k-icon); height: var(--k-icon); }
+/* Недоступный стол: войти нельзя, но видно, что он есть и что там идёт игра. */
+.k-table-row--off { cursor: default; }
+.k-table-row--off .k-table-title, .k-table-row--off .k-table-sub { color: var(--k-disabled); }
+.k-table-row--off .k-av { opacity: 0.5; }
+
+/* ------------------------------------------- место за столом (кит, 19) */
+
+/*
+ * ОДИН компонент с состояниями: обычное, со ставкой, сбросил, его ход,
+ * победитель. Разводить их по разным компонентам нельзя — разъедутся.
+ */
+/* Зазор 8, а не 4: под аватаром висит значок D/SB/BB или часы, и имя не
+   должно к ним прижиматься. */
+.k-seat { display: inline-flex; flex-direction: column; align-items: center; gap: var(--k-s8); }
+.k-seat-pod { position: relative; }
+.k-seat-name {
+  max-width: calc(var(--k-av-lg) * 2);
+  font: var(--k-w-semibold) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font);
+  color: var(--k-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+.k-seat-stack {
+  font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font);
+  color: var(--k-text-2);
+  font-variant-numeric: tabular-nums;
+}
+/* Ставка — рядом с местом, числом: это деньги, а не подпись. */
+.k-seat-bet {
+  font: var(--k-w-semibold) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font);
+  color: var(--k-text);
+  font-variant-numeric: tabular-nums;
+}
+/* Значок D / SB / BB — на кружке, снизу справа. */
+.k-seat-badge {
+  position: absolute;
+  right: calc(var(--k-s8) * -1);
+  bottom: 0;
+  min-width: var(--k-av-xs);
+  height: var(--k-av-xs);
+  padding: 0 var(--k-s4);
+  border-radius: var(--k-r-pill);
+  background: var(--k-elevated);
+  color: var(--k-text);
+  font: var(--k-w-semibold) var(--k-fs-caption)/var(--k-av-xs) var(--k-font);
+  text-align: center;
+}
+/* Чей ход — зелёное кольцо и число секунд. Цвет здесь и есть смысл. */
+.k-seat--turn .k-av { box-shadow: 0 0 0 2px var(--k-green); }
+.k-seat--turn .k-seat-name { color: var(--k-text); }
+.k-seat-clock {
+  position: absolute;
+  right: calc(var(--k-s8) * -1);
+  bottom: 0;
+  min-width: var(--k-av-xs);
+  height: var(--k-av-xs);
+  padding: 0 var(--k-s4);
+  border-radius: var(--k-r-pill);
+  background: var(--k-bg);
+  color: var(--k-text);
+  font: var(--k-w-semibold) var(--k-fs-caption)/var(--k-av-xs) var(--k-font);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+/* Сбросил — выбыл из раздачи, но со стола не исчез. */
+.k-seat--folded { opacity: 0.45; }
+/* Победитель — зелёная подпись, без золота и без свечения (кит, 22). */
+.k-seat-win {
+  font: var(--k-w-semibold) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font);
+  color: var(--k-green);
+}
+
+/* ------------------------------------------- статус-бар игры (кит, 15) */
+
+/* Полоса, которую не нажимают: она только говорит, чего ждут. */
+.k-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--k-s4);
+  padding: var(--k-s12) var(--k-screen-x);
+  text-align: center;
+}
+.k-status-main {
+  font: var(--k-w-semibold) var(--k-fs-component)/var(--k-lh-component) var(--k-font);
+  color: var(--k-text);
+}
+.k-status-sub {
+  font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font);
+  color: var(--k-text-2);
+}
+
+/* --------------------------------------- зона действий игры (кит, 16) */
+
+/* Три в ряд, главное посередине — под большим пальцем. */
+.k-game-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 1fr;
+  gap: var(--k-s8);
+  padding: var(--k-sticky-top) var(--k-screen-x) var(--k-sticky-bottom);
+}
+.k-game-actions > .k-btn { width: 100%; }
+
+/* Липкая зона действий прижата к низу и знает про безопасную зону. */
+.k-actions--sticky { position: sticky; bottom: 0; z-index: 2; }
