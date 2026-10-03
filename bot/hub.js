@@ -150,7 +150,22 @@ export class Hub {
 
     const room = this.app.roomByCode(code);
     if (!room) return { error: 'NO_ROOM', text: 'Стол не найден — возможно, игру уже удалили.' };
-    const session = { id: this.nextId++, user: auth.user, kind: 'room', group: null, code: null, send, visible: true };
+    // Путь назад — для страницы, которая ПЕРЕПОДКЛЮЧАЕТСЯ, а не открывается
+    // заново. Такую видно по тому, что кода комнаты в подписанной ссылке нет:
+    // он пришёл из памяти самой страницы (`room`), то есть она уже была за
+    // этим столом. Без этого человек, открывший приложение из лички и
+    // зашедший за стол, после первого же обрыва связи терял «← Все игры
+    // группы» и системную «Назад» — и оставался заперт за столом, пока не
+    // закроет приложение целиком.
+    //
+    // Прав это не прибавляет: группа подставляется только своя — та, в
+    // которой человек и так состоит, — а каждое действие в хабе проверяется
+    // заново. Открытому по ссылке столу группа по-прежнему не достаётся.
+    const reconnect = !auth.startParam && asked === code;
+    const mine = reconnect ? this.app.groupsOf(auth.user.id).find((g) => g.chatId === room.chatId) : null;
+    const session = {
+      id: this.nextId++, user: auth.user, kind: 'room', group: mine ? mine.code : null, code: null, send, visible: true,
+    };
     this.enterRoom(session, room);
     return { session };
   }
