@@ -1,0 +1,199 @@
+/* ==========================================================================
+   СТОЛ ПОКЕРА НА КИТЕ — фаза 4 редизайна.
+
+   Правила живут здесь, а не в style.css: там общая основа, на которой стоят
+   ещё дурак и UNOQ, и переписывать её ради одной игры нельзя. Всё ниже
+   ограничено `body[data-screen='poker']` — у экранов нет общего корня, и
+   признак на body единственный способ отличить правило для покера от
+   правила для всех.
+
+   Что меняется по киту (раздел 22): нет золота, нет свечения, нет
+   градиентов. Красный — только ошибка, поэтому FOLD перестал быть красным:
+   сбросить карты не ошибка. Зелёный — только смысл, поэтому он остался за
+   одним действием: тем, которое продолжает раздачу (CHECK или CALL).
+   ========================================================================== */
+
+body[data-screen='poker'] {
+  --felt-1: var(--k-felt-poker);
+  --felt-2: var(--k-felt-poker);
+  --felt-3: var(--k-felt-poker);
+  --rim: var(--k-divider);
+  --panel: var(--k-surface);
+  --panel-hi: var(--k-elevated);
+  --bg: var(--k-bg);
+  --bg-2: var(--k-bg);
+  --text: var(--k-text);
+  --text-2: var(--k-text-2);
+  --muted: var(--k-text-2);
+  --faint: var(--k-disabled);
+  --line: var(--k-divider);
+  --line-hi: var(--k-divider);
+  --accent: var(--k-green);
+  --accent-ink: var(--k-on-green);
+  /* Золота нет. Там, где оно было ролью «важное, но не главное», теперь
+     обычная вторичная поверхность. */
+  --gold: var(--k-text);
+  --gold-ink: var(--k-on-green);
+  background: var(--k-bg);
+}
+
+/* Сукно плоское: ни градиента, ни свечения по ободу. */
+body[data-screen='poker'] .cloth {
+  background: var(--k-felt-poker);
+  box-shadow: 0 0 0 1px var(--k-divider);
+}
+
+/* ------------------------------------------------------------ шапка */
+
+body[data-screen='poker'] .stage { color: var(--k-text-2); background: var(--k-surface); border-color: var(--k-divider); }
+body[data-screen='poker'] .top-meta { color: var(--k-text-2); }
+
+/* ------------------------------------------------------------ места */
+
+body[data-screen='poker'] .plate {
+  background: var(--k-elevated);
+  color: var(--k-text);
+  border-color: var(--k-divider);
+}
+/* Ставка, блайнды, «олл-ин» — это состояния, а не праздник: одна
+   поверхность, разный текст. Пульсации у олл-ина больше нет. */
+body[data-screen='poker'] .plate.bet,
+body[data-screen='poker'] .plate.raise,
+body[data-screen='poker'] .plate.call,
+body[data-screen='poker'] .plate.sb,
+body[data-screen='poker'] .plate.bb,
+body[data-screen='poker'] .plate.hand {
+  background: var(--k-elevated);
+  color: var(--k-text);
+  border-color: var(--k-divider);
+}
+body[data-screen='poker'] .plate.allin {
+  background: var(--k-elevated);
+  color: var(--k-text);
+  animation: none;
+}
+/* Чей ход — зелёным: это и есть состояние, ради которого зелёный существует. */
+body[data-screen='poker'] .plate.turn { background: var(--k-green); color: var(--k-on-green); }
+body[data-screen='poker'] .plate.win { background: var(--k-green); color: var(--k-on-green); box-shadow: none; }
+
+/* ------------------------------------------------------------ центр */
+
+body[data-screen='poker'] .pot { background: var(--k-surface); box-shadow: none; }
+body[data-screen='poker'] .pot small { color: var(--k-text-2); }
+body[data-screen='poker'] .result-line { color: var(--k-text); }
+
+/* ------------------------------------------------------------ рука */
+
+body[data-screen='poker'] .hero { background: var(--k-surface); }
+body[data-screen='poker'] .hero.turn { box-shadow: 0 0 0 1px var(--k-green); }
+body[data-screen='poker'] .your-turn { background: var(--k-green); color: var(--k-on-green); }
+body[data-screen='poker'] .hero-stack { font-variant-numeric: tabular-nums; }
+body[data-screen='poker'] .hero-stack.up { color: var(--k-green); text-shadow: none; }
+
+/* -------------------------------------------------------- зона действий */
+
+/*
+ * ГЕОМЕТРИЯ ЭТОГО ЭКРАНА НЕ ТРОГАЕТСЯ. Высота зоны действий вычитается из
+ * сукна, сукно сжимается, и плашки мест доезжают до банка: npm run layout
+ * поймал это на 23 раскладках. Отсюда правило — здесь только цвет и форма,
+ * а отступы и высоты остаются теми, под которые стол уже выверен.
+ */
+body[data-screen='poker'] .panel {
+  background: var(--k-bg);
+  border-top: 1px solid var(--k-divider);
+}
+body[data-screen='poker'] .panel .btn {
+  border-radius: var(--k-r-md);
+  letter-spacing: normal;
+}
+/* Вторичные: сбросить и повысить. Красный тут был неправдой — сбросить
+   карты не ошибка, а обычный ход. */
+body[data-screen='poker'] .panel .btn.danger,
+body[data-screen='poker'] .panel .btn.gold {
+  background: var(--k-elevated);
+  color: var(--k-text);
+  border: 1px solid var(--k-divider);
+  box-shadow: none;
+}
+/* Зелёная одна — та, что продолжает раздачу. */
+body[data-screen='poker'] .panel .btn.primary {
+  background: var(--k-green);
+  color: var(--k-on-green);
+  border: 0;
+  box-shadow: none;
+}
+body[data-screen='poker'] .panel.note { color: var(--k-text-2); }
+body[data-screen='poker'] .panel.note b { color: var(--k-text); }
+
+/* ------------------------------------------------------- шторка рейза */
+
+/* Ряд «− сумма +» — степпер кита: ползунком в ровное число попадаешь через
+   раз, а 240 набирается руками за секунду. */
+body[data-screen='poker'] .amount-row {
+  display: grid;
+  grid-template-columns: var(--k-control-h) 1fr var(--k-control-h);
+  align-items: center;
+  gap: var(--k-s8);
+  margin-top: var(--k-s12);
+}
+body[data-screen='poker'] .amount-step {
+  border: 1px solid var(--k-divider);
+  border-radius: var(--k-r-md);
+  background: var(--k-elevated);
+  color: var(--k-text);
+}
+body[data-screen='poker'] .amount-input {
+  width: 100%;
+  min-height: var(--k-control-h);
+  padding: 0 var(--k-s12);
+  text-align: center;
+  background: var(--k-elevated);
+  color: var(--k-text);
+  border: 1px solid var(--k-divider);
+  border-radius: var(--k-r-md);
+  font: var(--k-w-semibold) var(--k-fs-num)/var(--k-lh-num) var(--k-font);
+  font-variant-numeric: tabular-nums;
+}
+body[data-screen='poker'] .amount-input:focus { outline: none; border-color: var(--k-green); }
+/* Красный — только ошибка. Здесь как раз она. */
+body[data-screen='poker'] .amount-row.bad .amount-input { border-color: var(--k-suit-red); }
+body[data-screen='poker'] .amount-err {
+  min-height: var(--k-lh-caption);
+  margin-top: var(--k-s4);
+  text-align: center;
+  font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font);
+  color: var(--k-suit-red);
+}
+body[data-screen='poker'] .amount { display: none; }
+body[data-screen='poker'] .amount-sub {
+  text-align: center;
+  font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font);
+  color: var(--k-text-2);
+}
+body[data-screen='poker'] .size-btn {
+  min-height: var(--k-control-h);
+  border-radius: var(--k-r-md);
+  background: var(--k-elevated);
+  color: var(--k-text);
+  border: 1px solid var(--k-divider);
+  font: var(--k-w-semibold) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font);
+  box-shadow: none;
+}
+body[data-screen='poker'] .size-btn.gold { background: var(--k-elevated); color: var(--k-text); }
+/* «Точно весь стек?» — единственное место, где красный уместен: это
+   предупреждение о необратимом. */
+body[data-screen='poker'] .size-btn.danger { background: var(--k-suit-red); color: var(--k-text); border-color: transparent; }
+/* Выключённое подтверждение видно, но не нажимается: экран не превращается
+   в ошибку, поправить можно одним движением. */
+body[data-screen='poker'] .sheet .btn:disabled {
+  background: var(--k-elevated);
+  color: var(--k-disabled);
+  box-shadow: none;
+}
+/* Клавиатура закрывает низ: шторка прокручивается, и подтверждение можно
+   довести до видимой части. */
+body[data-screen='poker'] .sheet { max-height: 92vh; overflow-y: auto; }
+
+/* Цвет аватара — та же спокойная полоса, что в ките: на зелёном сукне
+   полный круг оттенков рябит. */
+body[data-screen='poker'] .av { background: hsl(calc(195 + var(--h, 0) * 0.36) 30% 42%); }
