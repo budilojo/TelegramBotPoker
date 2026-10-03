@@ -69,15 +69,21 @@ journalctl -u worldcard -n 50 --no-pager
 curl -s -o /dev/null -w '%{http_code}\n' https://<домен>/health
 curl -s https://<домен>/health
 curl -s -o /dev/null -w '%{http_code}\n' https://<домен>/colors/R5.svg
-sudo -u worldcard sqlite3 /opt/worldcard/bot.db "SELECT value FROM meta WHERE key='schema';"
+sudo -u worldcard sqlite3 -readonly /opt/worldcard/data/bot.db "SELECT value FROM meta WHERE key='schema';"
 ```
 
 Жду: сервис active, в логах нет ошибок, `/health` отдаёт 200, картинка карты
 UNOQ отдаётся 200, версия схемы равна **5** — она не должна меняться.
 
-Версию схемы хранит строка `schema` в таблице `meta` (`bot/store.js:186`), а не
-`PRAGMA user_version` — тот у нас всегда 0, и четыре выкатки подряд сбивал с
-толку именно он.
+Две тонкости в этой команде, обе стоили нам по нескольку выкаток:
+
+- **версию схемы хранит строка `schema` в таблице `meta`** (`bot/store.js:186`),
+  а не `PRAGMA user_version` — тот у нас всегда 0;
+- **база лежит в `data/bot.db`**, а не в корне приложения (`deploy/install.sh`,
+  `DB_PATH`). На несуществующем пути `sqlite3` молча создаёт пустую базу, и
+  `SELECT` из неё вернёт пустую строку — выглядит ровно так, будто миграция не
+  прошла. `-readonly` это предотвращает и заодно ручается, что проверка живой
+  базы ничего в неё не запишет.
 
 **4. Доложи и остановись.**
 
