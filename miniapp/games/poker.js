@@ -818,23 +818,76 @@ function openRaise() {
       return h('button.btn.size-btn', { onclick: () => act(verb, p.total) }, p.label, h('b.num', fmt(p.total)));
     }));
 
-    const amountEl = h(`div.amount.num${value >= L.maxTotal ? '.max' : ''}`, fmt(value));
+    /*
+     * Сумму можно не только тянуть ползунком, но и набрать руками, и
+     * подвинуть на шаг кнопками. Ползунок хорош, чтобы прикинуть, и плох,
+     * чтобы попасть в ровное число: 240 он даёт через раз.
+     */
+    const step = Math.max(1, Math.round(state.room.settings.bigBlind / 2));
+    const input = h('input.amount-input.num', {
+      type: 'text', inputmode: 'numeric', autocomplete: 'off', value: fmt(value), 'aria-label': 'Сумма',
+    });
+    const err = h('div.amount-err');
+    const amountEl = h(`div.amount.num${value >= L.maxTotal ? '.max' : ''}`);
+    const bump = (d) => {
+      value = clamp(value + d * step, L.minTotal, L.maxTotal);
+      typed = null;
+      input.value = fmt(value);
+      sync();
+    };
+    const row = h('div.amount-row',
+      h('button.icon-btn.amount-step', {
+        'aria-label': 'Меньше',
+        onclick: () => bump(-1),
+        html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg>',
+      }),
+      input,
+      h('button.icon-btn.amount-step', {
+        'aria-label': 'Больше',
+        onclick: () => bump(1),
+        html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+      }));
+    /** Что набрано руками и ещё не легло в допустимые границы. */
+    let typed = null;
+    input.oninput = () => {
+      const digits = input.value.replace(/[^0-9]/g, '');
+      typed = digits === '' ? NaN : Number(digits);
+      if (Number.isFinite(typed) && typed >= L.minTotal && typed <= L.maxTotal) {
+        value = typed;
+        typed = null;
+      }
+      sync();
+    };
+    // Клавиатура закрывает низ экрана — а подтверждение внизу. Подвинем его
+    // в видимую часть: это единственное место в игре, где клавиатура вообще
+    // появляется.
+    input.onfocus = () => setTimeout(() => confirm.scrollIntoView({ block: 'end', behavior: 'smooth' }), 300);
     const sub = h('div.amount-sub');
     const confirm = h('button.btn.primary.wide.lg');
     const sync = () => {
-      amountEl.textContent = fmt(value);
+      const bad = typed !== null;
+      err.textContent = !bad ? ''
+        : !Number.isFinite(typed) ? 'Введите сумму'
+          : typed < L.minTotal ? `Минимум ${fmt(L.minTotal)}`
+            : `Максимум ${fmt(L.maxTotal)}`;
+      row.classList.toggle('bad', bad);
+      // При ошибке выключена кнопка, а не испорчен экран: стол на месте,
+      // ползунок на месте, поправить можно одним движением.
+      confirm.disabled = bad;
+      amountEl.textContent = '';
       amountEl.classList.toggle('max', value >= L.maxTotal);
       slider.style.setProperty('--pct', `${L.maxTotal === L.minTotal ? 100 : ((value - L.minTotal) / (L.maxTotal - L.minTotal)) * 100}%`);
       sub.textContent = value >= L.maxTotal ? 'Весь стек' : `Добавите ${fmt(value - L.myBet)} · останется ${fmt(L.stack - (value - L.myBet))}`;
       confirm.textContent = value >= L.maxTotal ? `ALL-IN ${fmt(value)}` : `${word} ДО ${fmt(value)}`;
     };
-    const step = Math.max(1, Math.round(state.room.settings.bigBlind / 2));
     const slider = h('input.slider', {
       type: 'range', min: L.minTotal, max: L.maxTotal, step: 1, value,
       oninput: (e) => {
         const v = Number(e.target.value);
         value = v >= L.maxTotal - step / 2 ? L.maxTotal : v <= L.minTotal ? L.minTotal : Math.round(v / step) * step;
         value = clamp(value, L.minTotal, L.maxTotal);
+        typed = null;
+        input.value = fmt(value);
         sync();
       },
     });
@@ -854,8 +907,7 @@ function openRaise() {
     return h('div',
       h('h3', L.canBet ? 'Ставка' : 'Рейз'),
       h('div.sub', `от ${fmt(L.minTotal)} до ${fmt(L.maxTotal)} · сумма — сколько всего будет перед вами`),
-      sizes,
-      amountEl, sub, slider, confirm,
+      row, err, slider, sizes, sub, confirm,
     );
   });
 }
