@@ -1,0 +1,43 @@
+# Автозапуск бота: systemd поднимает его при старте сервера и после падения.
+#
+# Ставится в /etc/systemd/system/worldcard.service (это делает install.sh).
+# Проверить:   systemctl status worldcard
+# Логи:        journalctl -u worldcard -f
+# Перезапуск:  systemctl restart worldcard
+
+[Unit]
+Description=WorldCard — Telegram-бот с играми
+Documentation=https://github.com/budilojo/TelegramBotPoker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=worldcard
+WorkingDirectory=/opt/worldcard
+EnvironmentFile=/opt/worldcard/.env
+ExecStart=/usr/bin/node bot/index.js
+
+# Падать бот не должен, но если упал — подняться через 5 секунд и не сдаваться.
+Restart=always
+RestartSec=5
+# Пять падений за минуту — значит дело не в случайности; systemd перестаёт
+# долбить и оставляет сервис лежать, чтобы это было видно в status.
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+# Логи — в системный журнал, с понятной меткой.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=worldcard
+
+# Процессу нужен только свой каталог: остальная файловая система для него
+# доступна только на чтение, /tmp — свой. Токен утечь через бота некуда.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/worldcard/data
+
+[Install]
+WantedBy=multi-user.target

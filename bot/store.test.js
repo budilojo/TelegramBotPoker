@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { Store } from './store.js';
-import { createRoom, addPlayer, startGame, serialize, deserialize } from './room.js';
+import { createRoom, addPlayer, startGame, act, serialize, deserialize } from './room.js';
 
 function sample() {
   const room = createRoom({ chatId: -1001, host: { id: 1, name: 'Иван' } });
@@ -109,5 +109,102 @@ test('it creates its own directory on first run', () => {
   const again = new Store(file);
   assert.equal(again.loadAll().length, 1, 'and the data is really on disk');
   again.close();
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('who has pressed Start survives a restart — cards must not start bouncing', () => {
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'bot-dm-')), 'bot.db');
+  const a = new Store(file);
+  assert.equal(a.getDm('202'), null, 'unknown until they press Start or a delivery bounces');
+  a.setDm('202', 'ok');
+  a.setDm('303', 'fail');
+  a.setDm('202', 'ok'); // idempotent
+  a.close();
+
+  const b = new Store(file);
+  assert.equal(b.getDm('202'), 'ok');
+  assert.equal(b.getDm('303'), 'fail');
+  b.close();
+});
+
+test('the deck of a hand in progress is saved, and dropped once the hand is over', () => {
+  const room = sample();
+  const back = deserialize(serialize(room));
+  assert.deepEqual(back.hand.deck, room.hand.deck, 'a restart continues the same deck');
+  assert.deepEqual(back.hand.holes, room.hand.holes);
+  assert.equal(back.hand.deck.length, 52);
+
+  let guard = 0;
+  while (room.hand.phase === 'betting' && guard++ < 10) act(room, room.hand.actorId, 'fold');
+  assert.equal(room.hand.phase, 'complete');
+  const done = deserialize(serialize(room));
+  assert.equal(done.hand.deck, null, '"what would have come next" is not kept anywhere');
+  assert.ok(done.hand.holes, 'the dealt cards themselves are the record of the hand');
+});
+
+/* --------------------------------------------- схема 3: отписка и рассылки */
+
+test('база версии 2 поднимается до 3, никого не потеряв', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'store-v2-'));
+  const file = path.join(dir, 'bot.db');
+  // Версия 2: users без столбца отписки, рассылок нет вовсе.
+  const old = new Store(file);
+  old.db.exec('DROP TABLE broadcasts');
+  old.db.exec('DROP TABLE users');
+  old.db.exec('CREATE TABLE users (user_id TEXT PRIMARY KEY, dm TEXT NOT NULL, updated_at INTEGER NOT NULL)');
+  old.db.prepare('INSERT INTO users (user_id, dm, updated_at) VALUES (?, ?, ?)').run('202', 'ok', 1);
+  old.db.close();
+
+  const now = new Store(file);
+  assert.equal(now.getDm('202'), 'ok', '«нажал Start» не потерялось при обновлении');
+  assert.equal(now.adsAllowed('202'), true, 'и он по-прежнему согласен получать рассылки');
+  now.setAds('202', 'off');
+  assert.equal(now.adsAllowed('202'), false);
+  assert.deepEqual(now.audience('all'), [], 'отписавшийся выпал из аудитории');
+  now.close();
+
+  const again = new Store(file);
+  assert.equal(again.adsAllowed('202'), false, 'отписка живёт и после перезапуска');
+  again.close();
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('аудитория — только те, кому бот может написать', () => {
+  const db = new Store(':memory:');
+  db.setDm('1', 'ok');
+  db.setDm('2', 'fail'); // заблокировал бота
+  db.setDm('3', 'ok');
+  db.setAds('3', 'off'); // отписался
+  assert.deepEqual(db.audience('all'), ['1']);
+  db.close();
+});
+
+test('рассылка помнит, до кого дошла', () => {
+  const db = new Store(':memory:');
+  const row = db.addBroadcast({ at: 1000, text: 'привет', audience: 'all', total: 3 });
+  assert.equal(row.status, 'scheduled');
+  db.patchBroadcast(row.id, { status: 'sending', sent: 2, cursor: '202' });
+  const mid = db.broadcast(row.id);
+  assert.equal(mid.sent, 2);
+  assert.equal(mid.cursor, '202', 'по курсору отправка продолжится после перезапуска');
+  assert.equal(db.pendingBroadcasts().length, 1);
+  db.patchBroadcast(row.id, { status: 'done' });
+  assert.equal(db.pendingBroadcasts().length, 0);
+  db.close();
+});
+
+test('настройка переживает перезапуск, а сломанная не роняет бота', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'store-set-'));
+  const file = path.join(dir, 'bot.db');
+  const a = new Store(file);
+  a.setSetting('maintenance', { on: true, text: 'Обновляемся' });
+  a.db.prepare('INSERT INTO meta (key, value) VALUES (?, ?)').run('s:broken', '{не json');
+  a.close();
+
+  const b = new Store(file);
+  assert.deepEqual(b.getSetting('maintenance'), { on: true, text: 'Обновляемся' });
+  assert.equal(b.getSetting('broken', 'по умолчанию'), 'по умолчанию');
+  assert.equal(b.getSetting('нет такой', null), null);
+  b.close();
   fs.rmSync(dir, { recursive: true, force: true });
 });

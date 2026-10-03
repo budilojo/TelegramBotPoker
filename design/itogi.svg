@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Итоги партии, 360×780 — экран телефона, в котором живёт игра.
+
+  Собрано генератором tools/make-design.mjs по макету владельца. Группы
+  названы по-русски, текст настоящий, цвета из docs/design.md. Перетащите в
+  Figma — откроется слоями.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="780" viewBox="0 0 360 780" font-family="Inter, -apple-system, 'Segoe UI', Roboto, sans-serif">
+<defs>
+  <radialGradient id="suknoDurak" cx="50%" cy="34%" r="76%">
+    <stop offset="0%" stop-color="#1E6E7E"/><stop offset="58%" stop-color="#12495A"/><stop offset="100%" stop-color="#0A2E39"/>
+  </radialGradient>
+  <radialGradient id="suknoPoker" cx="50%" cy="36%" r="74%">
+    <stop offset="0%" stop-color="#2A7B55"/><stop offset="58%" stop-color="#145436"/><stop offset="100%" stop-color="#0A3322"/>
+  </radialGradient>
+  <linearGradient id="zoloto" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#F2C96B" stop-opacity="0.16"/><stop offset="100%" stop-color="#F2C96B" stop-opacity="0.04"/>
+  </linearGradient>
+  <filter id="razmytie" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="7"/></filter>
+  <linearGradient id="zolotoFon" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#F2C96B" stop-opacity="0.14"/><stop offset="100%" stop-color="#F2C96B" stop-opacity="0.05"/>
+  </linearGradient>
+  <clipPath id="ekran"><rect width="360" height="780"/></clipPath>
+</defs>
+<g clip-path="url(#ekran)">
+<rect x="0" y="0" width="360" height="780" rx="0" fill="#0A1216"/>
+<g id="Заголовок">
+<text x="180" y="52" font-size="11" font-weight="800" fill="#F2C96B" text-anchor="middle" letter-spacing="3">ИГРА ЗАВЕРШЕНА</text>
+<text x="180" y="104" font-size="34" font-weight="800" fill="#F2F7F5" text-anchor="middle">Вы победили!</text>
+<text x="180" y="132" font-size="13.5" font-weight="600" fill="#A9BCC0" text-anchor="middle">Спасибо за игру. Отличная партия!</text>
+</g>
+<g id="Строка Алексей">
+<rect x="12" y="164" width="336" height="88" rx="18" fill="rgba(46,224,140,0.07)" stroke="#2EE08C" stroke-width="2"/>
+<circle cx="46" cy="208" r="19" fill="#2EE08C"/>
+<text x="46" y="214" font-size="16" font-weight="800" fill="#0D1A12" text-anchor="middle">1</text>
+<clipPath id="av100x208"><circle cx="100" cy="208" r="25"/></clipPath>
+<circle cx="100" cy="208" r="25" fill="#25424F"/>
+<g clip-path="url(#av100x208)">
+<circle cx="100" cy="203.5" r="9" fill="#8AA6B0"/>
+<ellipse cx="100" cy="228.5" rx="16.5" ry="13" fill="#8AA6B0"/>
+</g>
+<circle cx="100" cy="208" r="25" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+<text x="136" y="198" font-size="16" font-weight="800" fill="#F2F7F5" text-anchor="start">Алексей</text>
+<text x="136" y="217" font-size="11.5" font-weight="600" fill="#A9BCC0" text-anchor="start">Собрал стрит</text>
+<text x="136" y="234" font-size="11" font-weight="700" fill="#2EE08C" text-anchor="start">+20 очков · 3-е место в рейтинге</text>
+<text x="338" y="214" font-size="19" font-weight="800" fill="#2EE08C" text-anchor="end">+3 450</text>
+</g>
+<g id="Строка Ирина">
+<rect x="12" y="264" width="336" height="88" rx="18" fill="#13212A" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+<circle cx="46" cy="308" r="19" fill="#2A3B45"/>
+<text x="46" y="314" font-size="16" font-weight="800" fill="#A9BCC0" text-anchor="middle">2</text>
+<clipPath id="av100x308"><circle cx="100" cy="308" r="25"/></clipPath>
+<circle cx="100" cy="308" r="25" fill="#25424F"/>
+<g clip-path="url(#av100x308)">
+<circle cx="100" cy="303.5" r="9" fill="#8AA6B0"/>
+<ellipse cx="100" cy="328.5" rx="16.5" ry="13" fill="#8AA6B0"/>
+</g>
+<circle cx="100" cy="308" r="25" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+<text x="136" y="298" font-size="16" font-weight="800" fill="#F2F7F5" text-anchor="start">Ирина</text>
+<text x="136" y="317" font-size="11.5" font-weight="600" fill="#A9BCC0" text-anchor="start">Собрала две пары</text>
+<text x="136" y="334" font-size="11" font-weight="700" fill="#2EE08C" text-anchor="start">+12 очков · 5-е место</text>
+<text x="338" y="314" font-size="19" font-weight="800" fill="#2EE08C" text-anchor="end">+1 200</text>
+</g>
+<g id="Строка Максим">
+<rect x="12" y="364" width="336" height="88" rx="18" fill="#13212A" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+<circle cx="46" cy="408" r="19" fill="#2A3B45"/>
+<text x="46" y="414" font-size="16" font-weight="800" fill="#A9BCC0" text-anchor="middle">3</text>
+<clipPath id="av100x408"><circle cx="100" cy="408" r="25"/></clipPath>
+<circle cx="100" cy="408" r="25" fill="#25424F"/>
+<g clip-path="url(#av100x408)">
+<circle cx="100" cy="403.5" r="9" fill="#8AA6B0"/>
+<ellipse cx="100" cy="428.5" rx="16.5" ry="13" fill="#8AA6B0"/>
+</g>
+<circle cx="100" cy="408" r="25" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+<text x="136" y="398" font-size="16" font-weight="800" fill="#F2F7F5" text-anchor="start">Максим</text>
+<text x="136" y="417" font-size="11.5" font-weight="600" fill="#A9BCC0" text-anchor="start">Собрал пару</text>
+<text x="136" y="434" font-size="11" font-weight="700" fill="#2EE08C" text-anchor="start">+6 очков · 9-е место</text>
+<text x="338" y="414" font-size="19" font-weight="800" fill="#F2F7F5" text-anchor="end">−800</text>
+</g>
+<g id="Строка Ольга">
+<rect x="12" y="464" width="336" height="88" rx="18" fill="rgba(242,201,107,0.07)" stroke="#F2C96B" stroke-width="2"/>
+<circle cx="46" cy="508" r="19" fill="#F2C96B"/>
+<text x="46" y="514" font-size="16" font-weight="800" fill="#0D1A12" text-anchor="middle">4</text>
+<clipPath id="av100x508"><circle cx="100" cy="508" r="25"/></clipPath>
+<circle cx="100" cy="508" r="25" fill="#25424F"/>
+<g clip-path="url(#av100x508)">
+<circle cx="100" cy="503.5" r="9" fill="#8AA6B0"/>
+<ellipse cx="100" cy="528.5" rx="16.5" ry="13" fill="#8AA6B0"/>
+</g>
+<circle cx="100" cy="508" r="25" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+<text x="136" y="498" font-size="16" font-weight="800" fill="#F2F7F5" text-anchor="start">Ольга</text>
+<text x="136" y="517" font-size="11.5" font-weight="600" fill="#A9BCC0" text-anchor="start">Без комбинации</text>
+<text x="136" y="534" font-size="11" font-weight="700" fill="#F2C96B" text-anchor="start">−10 очков · 14-е место</text>
+<text x="338" y="514" font-size="19" font-weight="800" fill="#F2C96B" text-anchor="end">−3 850</text>
+</g>
+<g id="Как считали">
+<text x="180" y="592" font-size="11.5" font-weight="600" fill="#6E858B" text-anchor="middle">Фишки — по правилам стола, очки — по рейтингу.</text>
+<text x="180" y="610" font-size="11.5" font-weight="600" fill="#6E858B" text-anchor="middle">Партия доиграна до конца, поэтому зачтена.</text>
+</g>
+<g id="Кнопки">
+<rect x="12" y="686" width="162" height="62" rx="18" fill="transparent" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+<text x="93" y="722.76" font-size="16" font-weight="800" fill="#A9BCC0" text-anchor="middle">Закрыть</text>
+<rect x="186" y="686" width="162" height="62" rx="18" fill="#2EE08C"/>
+<text x="267" y="722.76" font-size="16" font-weight="800" fill="#0A2016" text-anchor="middle">Сыграть ещё</text>
+</g>
+</g>
+</svg>

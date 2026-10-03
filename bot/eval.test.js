@@ -6,7 +6,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { score5, best5, compare, rank, CATEGORY } from './eval.js';
-import { parseHand, shuffled, freshDeck, rankOf, suitOf } from './deck.js';
+import { parseHand, shuffled, freshDeck, rankOf, suitOf, seededRng } from './deck.js';
 
 const S = (s) => score5(parseHand(s));
 const B = (s) => best5(parseHand(s));
@@ -140,13 +140,17 @@ test('rank: группирует ровные руки в один дележ и
   const groups = rank([
     { id: 'p1', cards: [...board, ...parseHand('Ad Kd')] }, // две пары A/K
     { id: 'p2', cards: [...board, ...parseHand('Ah Kh')] }, // те же две пары
-    { id: 'p3', cards: [...board, ...parseHand('7s 7h')] }, // каре семёрок? нет — сет
+    { id: 'p3', cards: [...board, ...parseHand('7s 7h')] }, // сет семёрок — сильнее двух пар
     { id: 'p4', cards: [...board, ...parseHand('3c 4d')] }, // старшая
   ]);
 
-  assert.deepEqual(groups[0].ids.sort(), ['p1', 'p2'], 'две одинаковые руки делят банк');
-  assert.equal(groups[0].name, 'Две пары A/K');
-  assert.equal(groups[groups.length - 1].ids[0], 'p4', 'слабейший — последний');
+  // Полный порядок, а не только «кто первый»: сет > две пары (дележ) > старшая.
+  assert.deepEqual(
+    groups.map((g) => [...g.ids].sort()),
+    [['p3'], ['p1', 'p2'], ['p4']]
+  );
+  assert.equal(groups[0].name, 'Тройка 7');
+  assert.equal(groups[1].name, 'Две пары A/K', 'две одинаковые руки — одна группа, банк делится');
   for (let i = 1; i < groups.length; i++) {
     assert.ok(compare(groups[i - 1].score, groups[i].score) > 0, 'строго по убыванию');
   }
@@ -161,7 +165,7 @@ test('rank: один претендент — один победитель', ()
 /* ---------------------------------------------------------- инвариантный */
 
 test('случайные раздачи: оценка самосогласована и устойчива к порядку', () => {
-  const rnd = (() => { let s = 12345; return (n) => { s = (s * 1103515245 + 12345) >>> 0; return s % n; }; })();
+  const rnd = seededRng(12345);
 
   for (let i = 0; i < 3000; i++) {
     const deck = shuffled(rnd);
@@ -187,7 +191,7 @@ test('случайные раздачи: оценка самосогласова
 });
 
 test('на полной колоде встречаются все девять категорий', () => {
-  const rnd = (() => { let s = 999; return (n) => { s = (s * 1103515245 + 12345) >>> 0; return s % n; }; })();
+  const rnd = seededRng(999);
   const seen = new Set();
   for (let i = 0; i < 40000 && seen.size < 9; i++) {
     seen.add(best5(shuffled(rnd).slice(0, 7)).score[0]);
@@ -196,7 +200,7 @@ test('на полной колоде встречаются все девять 
 });
 
 test('колода: 52 уникальные карты, тасовка ничего не теряет', () => {
-  const rnd = (() => { let s = 7; return (n) => { s = (s * 1103515245 + 12345) >>> 0; return s % n; }; })();
+  const rnd = seededRng(7);
   for (let i = 0; i < 200; i++) {
     const d = shuffled(rnd);
     assert.equal(d.length, 52);
@@ -206,7 +210,7 @@ test('колода: 52 уникальные карты, тасовка ниче�
 });
 
 test('тасовка не оставляет колоду на месте', () => {
-  const rnd = (() => { let s = 42; return (n) => { s = (s * 1103515245 + 12345) >>> 0; return s % n; }; })();
+  const rnd = seededRng(42);
   let identical = 0;
   for (let i = 0; i < 100; i++) {
     const d = shuffled(rnd);
@@ -220,4 +224,43 @@ test('каждая карта разбирается и печатается о�
     assert.ok(rankOf(c) >= 0 && rankOf(c) <= 12);
     assert.ok(suitOf(c) >= 0 && suitOf(c) <= 3);
   }
+});
+
+test('тестовый ГСЧ сам по себе не вырожден — иначе все случайные тесты выше пусты', () => {
+  // Прошлый генератор проходил все тесты, кроме одного, и при этом крутил
+  // цикл из 419 состояний. Проверяем то, что он проваливал: равномерность
+  // младших значений и отсутствие короткого цикла.
+  const rnd = seededRng(999);
+  const counts = new Array(52).fill(0);
+  const N = 52 * 4000;
+  for (let i = 0; i < N; i++) counts[rnd(52)]++;
+  for (const c of counts) {
+    assert.ok(Math.abs(c - 4000) < 400, `перекос распределения: ${c} вместо ~4000`);
+  }
+
+  const seen = new Set();
+  const r2 = seededRng(999);
+  for (let i = 0; i < 100000; i++) seen.add(`${r2(1 << 30)}`);
+  assert.ok(seen.size > 99000, `подозрительно мало разных значений: ${seen.size}`);
+});
+
+test('разные зёрна дают разные колоды, одно зерно — одну и ту же', () => {
+  assert.deepEqual(shuffled(seededRng(5)), shuffled(seededRng(5)));
+  assert.notDeepEqual(shuffled(seededRng(5)), shuffled(seededRng(6)));
+});
+
+test('частоты комбинаций на семи картах совпадают с точной комбинаторикой', () => {
+  // Независимая проверка оценщика: не «я думаю, что правила такие», а
+  // вероятности, посчитанные полным перебором 133 784 560 семёрок. Ошибка в
+  // стрите, колесе или флеше сдвинула бы свою категорию на десятки сигм.
+  const EXACT = [0.174119, 0.438225, 0.234955, 0.048299, 0.046194, 0.030255, 0.025961, 0.001681];
+  const N = 30000;
+  const rnd = seededRng(2024);
+  const c = new Array(9).fill(0);
+  for (let i = 0; i < N; i++) c[best5(shuffled(rnd).slice(0, 7)).score[0]]++;
+  EXACT.forEach((p, k) => {
+    const sd = Math.sqrt((p * (1 - p)) / N);
+    const z = (c[k] / N - p) / sd;
+    assert.ok(Math.abs(z) < 4.5, `категория ${k}: ${(c[k] / N).toFixed(4)} против ${p} (z=${z.toFixed(1)})`);
+  });
 });

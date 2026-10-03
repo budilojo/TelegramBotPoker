@@ -1,0 +1,247 @@
+/* ==========================================================================
+   АДМИНКА — цифры по игре. Только числа: ни имён, ни карт.
+   Палитра общая с игрой; данные — единственное, чему тут можно быть громким.
+   ========================================================================== */
+
+.admin .sub { font-variant-numeric: tabular-nums; }
+
+/* Плитки: одно число, подпись под ним. Числу — вес, подписи — тишина. */
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tile {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  min-width: 0;
+}
+.tile-n {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+.tile.good .tile-n { color: var(--accent); }
+.tile-l { margin-top: 3px; font-size: 12.5px; font-weight: 700; color: var(--text-2); }
+.tile-note { margin-top: 2px; font-size: 11.5px; color: var(--muted); font-weight: 600; }
+
+/* Строка игры: имя, число, полоска доли. */
+.game-row + .game-row { margin-top: 12px; }
+.gr-head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.gr-name { font-weight: 800; font-size: 14.5px; }
+.gr-n { font-size: 12.5px; color: var(--muted); font-weight: 700; white-space: nowrap; }
+.gr-bar { margin-top: 6px; height: 8px; border-radius: 4px; background: var(--panel-hi); overflow: hidden; }
+.gr-bar i { display: block; height: 100%; border-radius: 4px; background: var(--accent); }
+
+/*
+ * График по дням. Одна величина на график — поэтому легенды нет, заголовок
+ * над ним и так говорит, что нарисовано.
+ *
+ * Столбик тонкий и не занимает всю свою ячейку: воздух между соседями делает
+ * зазор, а не обводка. Верх скруглён, низ квадратный — он стоит на базовой
+ * линии, и она общая для всех.
+ */
+.chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 104px;
+  padding-top: 16px; /* место подписи над самым высоким столбиком */
+}
+.chart .bar {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.chart .bar i {
+  display: block;
+  width: 100%;
+  max-width: 14px;
+  border-radius: 4px 4px 0 0;
+  background: var(--accent);
+  transition: height 0.3s var(--ease);
+}
+.chart.people .bar i { background: var(--gold); }
+/* Пустой день — тонкая риска у базовой линии, чтобы было видно: ноль, а не пропуск. */
+.chart .bar i[style*="height: 0%"] { height: 1px !important; background: var(--line-hi); }
+.chart .bar b {
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-2);
+}
+.chart .bar:active i { filter: brightness(1.3); }
+.chart-foot {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 359px) {
+  .tiles { grid-template-columns: 1fr; }
+}
+
+/* ==========================================================================
+   ПУЛЬТ: вкладки, живые сессии, рассылка, обслуживание.
+   Опасное — красным и только после подтверждения; всё остальное тихое.
+   ========================================================================== */
+
+/* Вкладки. Подчёркнута выбранная: рамка вокруг каждой добавила бы четыре
+   лишние линии на экран, где и так много чисел. */
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 3px;
+}
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 7px 2px 6px;
+  border-radius: 11px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--muted);
+  background: transparent;
+  min-width: 0;
+}
+.tab .tab-i { font-size: 15px; line-height: 1; }
+.tab.on { background: var(--panel-hi); color: var(--text); }
+.tab:active { transform: scale(0.97); }
+
+/* Плашка «идёт обслуживание» — первое, что видно, и с кнопкой снять. */
+.down-banner {
+  border: 1px solid rgba(242, 201, 107, 0.45);
+  background: rgba(242, 201, 107, 0.08);
+  border-radius: 18px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 8px;
+}
+.db-head { font-weight: 900; color: var(--gold); }
+.db-text { font-size: 13px; color: var(--text-2); }
+
+/* Живая сессия. Код — моноширинным: его переписывают в команду. */
+.sess-list { display: grid; gap: 8px; }
+.sess {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line-hi);
+  border-radius: 16px;
+  padding: 11px 13px;
+  display: grid;
+  gap: 4px;
+}
+.sess.st-playing { border-left-color: var(--accent); }
+.sess.st-lobby { border-left-color: var(--gold); }
+.sess-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.sess-game { font-weight: 800; font-size: 14.5px; }
+.sess-status { font-size: 11.5px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+.sess-where { font-size: 13px; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sess-line { display: flex; gap: 5px; align-items: baseline; font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.sess-line .num { color: var(--text); font-weight: 800; }
+.sess-detail { font-size: 12px; color: var(--muted); }
+.sess-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 4px; }
+.sess-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  color: var(--text-2);
+  background: var(--panel-hi);
+  border-radius: 8px;
+  padding: 4px 8px;
+  user-select: all;
+}
+.btn.small { height: 34px; font-size: 13px; padding: 0 14px; border-radius: 11px; flex-direction: row; }
+
+/* Аудитории: число крупно, кто это — мелко под ним. */
+.chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.chip {
+  display: grid;
+  gap: 2px;
+  padding: 9px 8px;
+  border-radius: 14px;
+  background: var(--panel);
+  border: 1.5px solid var(--line);
+  min-width: 0;
+}
+.chip b { font-size: 18px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.chip span { font-size: 10.5px; font-weight: 700; color: var(--muted); line-height: 1.25; }
+.chip.on { border-color: var(--accent); background: rgba(46, 224, 140, 0.08); }
+.chip.on b { color: var(--accent); }
+
+/* Поля ввода: подпись над полем, чтобы длинные названия не сжимали поле. */
+/* Одна колонка во всю ширину: без неё колонка сжимается по содержимому —
+   `justify-content: space-between` достаётся от .field из style.css. */
+.admin .field { display: grid; grid-template-columns: minmax(0, 1fr); justify-content: stretch; gap: 4px; padding: 6px 0; }
+.field-l { font-size: 12px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+/* Перебивает узкое поле настроек стола (.field input, style.css): здесь поле
+   во всю ширину — в него пишут фразу, а не число. */
+.admin .field .inp,
+.inp {
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+  height: auto;
+  background: var(--panel-hi);
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  padding: 10px 12px;
+}
+.inp:focus { border-color: var(--accent); outline: none; }
+.inp.area { resize: vertical; min-height: 96px; line-height: 1.35; }
+.check { display: flex; align-items: center; gap: 9px; padding: 8px 0 2px; font-weight: 700; color: var(--text-2); }
+.check input { width: 20px; height: 20px; accent-color: var(--accent); }
+.cast-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sheet-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.cast-preview { white-space: pre-wrap; font-size: 14px; line-height: 1.4; max-height: 40vh; overflow-y: auto; }
+
+/* Строка рассылки: когда, чем кончилась, полоска дошедших. */
+.cast-row + .cast-row { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.cast-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.cast-when { font-weight: 800; font-size: 13.5px; }
+.cast-status { font-size: 11.5px; font-weight: 800; color: var(--muted); }
+.cast-row.cs-sending .cast-status { color: var(--accent); }
+.cast-row.cs-canceled .cast-status { color: #ffb0b0; }
+.cast-text { font-size: 13px; color: var(--text-2); margin: 4px 0 6px; }
+.cast-n { font-size: 11.5px; color: var(--muted); font-weight: 700; margin-top: 4px; }
+.cast-note { font-size: 11.5px; color: #ffb0b0; margin-top: 4px; }
+.cast-row .btn.small { margin-top: 8px; }
+
+.tool-head { font-weight: 900; margin-bottom: 6px; }
+.tool-line { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; font-size: 13.5px; color: var(--muted); }
+.tool-line b { color: var(--text); }
+/* Кнопка внутри коробки — во всю её ширину: `.btn.wide` рассчитан на сетку
+   панели, а тут её нет. */
+.admin .box .btn, .down-banner .btn { margin-top: 10px; width: 100%; box-sizing: border-box; }
+
+/* ------------------------------------------- экран обслуживания у игрока */
+
+.down { align-items: center; text-align: center; justify-content: center; gap: 14px; }
+.down-mark { font-size: 52px; line-height: 1; opacity: 0.9; }
+.down .down-text { color: var(--text-2); font-size: 15px; line-height: 1.45; max-width: 34ch; }
+.down-box { text-align: left; display: grid; gap: 9px; width: 100%; max-width: 36ch; }
+.down-row { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: var(--text-2); line-height: 1.35; }
+.down-row > span:first-child { width: 20px; flex: none; text-align: center; }
+
+@media (max-width: 359px) {
+  .chips { grid-template-columns: 1fr; }
+  .tab span:not(.tab-i) { font-size: 10.5px; }
+}

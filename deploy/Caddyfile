@@ -1,0 +1,25 @@
+# HTTPS для мини-приложения. Caddy сам получает сертификат Let's Encrypt и сам
+# его продлевает — ходить за ним раз в три месяца не нужно.
+#
+# Ставится в /etc/caddy/Caddyfile (это делает install.sh), ДОМЕН подставляется
+# на ваш. Telegram открывает мини-приложения только по https и только с живым
+# сертификатом — самоподписанный не подойдёт.
+
+ДОМЕН {
+	encode zstd gzip
+
+	# Весь трафик — боту на локальный порт. WebSocket Caddy проксирует сам,
+	# отдельной настройки для него не нужно.
+	reverse_proxy 127.0.0.1:8080
+
+	# Карты (SVG) и скрипты не меняются каждый день — пусть телефон их кэширует.
+	@static path /cards/* /*.css /*.js
+	header @static Cache-Control "public, max-age=86400"
+
+	log {
+		output file /var/log/caddy/worldcard.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+	}
+}

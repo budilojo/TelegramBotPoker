@@ -2,20 +2,33 @@
   "name": "chip-table",
   "version": "1.0.0",
   "private": true,
-  "description": "Virtual poker chips for live games with real cards — web app + Telegram bot",
+  "description": "Poker chips for live games with real cards (web app) and Texas hold'em at a Telegram Mini App table (bot)",
   "type": "module",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
+    "go": "node --disable-warning=ExperimentalWarning tools/start.mjs",
     "dev": "node --watch server/index.js",
     "bot": "node --disable-warning=ExperimentalWarning bot/index.js",
     "bot:dev": "node --watch --disable-warning=ExperimentalWarning bot/index.js",
-    "test": "node --test --test-timeout=25000 --disable-warning=ExperimentalWarning server/*.test.js bot/*.test.js",
+    "test": "node --test --test-timeout=25000 --disable-warning=ExperimentalWarning server/*.test.js bot/*.test.js tools/*.test.js",
     "test:bot": "node --test --test-timeout=25000 --disable-warning=ExperimentalWarning bot/*.test.js",
-    "icons": "node tools/make-icons.mjs"
+    "icons": "node tools/make-icons.mjs",
+    "preview": "node --disable-warning=ExperimentalWarning tools/preview.mjs",
+    "e2e": "node --disable-warning=ExperimentalWarning tools/e2e.mjs && node --disable-warning=ExperimentalWarning tools/e2e-durak.mjs && node --disable-warning=ExperimentalWarning tools/e2e-admin.mjs",
+    "cards": "node tools/make-cards.mjs",
+    "brand": "node --disable-warning=ExperimentalWarning tools/make-avatar.mjs",
+    "layout": "node --disable-warning=ExperimentalWarning tools/layout-check.mjs",
+    "cards:colors": "node tools/make-colors-cards.mjs",
+    "colors": "node --disable-warning=ExperimentalWarning tools/colors-check.mjs",
+    "fuzz": "node tools/fuzz-rules.mjs",
+    "load": "node --expose-gc tools/load-check.mjs"
   },
   "engines": {
     "node": ">=22.5"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0"
   },
   "dependencies": {
     "express": "^4.19.2",
