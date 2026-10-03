@@ -146,6 +146,14 @@
   text-overflow: ellipsis;
 }
 .hub .lr-host { color: var(--k-text-2); }
+/* Подробность уходит целиком, а не обрубком: на узком экране остаются
+   число игроков и состояние — то, что помещается и читается. */
+@media (max-width: 420px) {
+  .hub .lr-detail { display: none; }
+}
+
+.hub .gc-go { flex: none; display: grid; place-items: center; color: var(--k-text-2); }
+.hub .gc-go svg { width: var(--k-icon); height: var(--k-icon); display: block; }
 
 /* «Играть» и «Присоединиться» — тот же орган, что кнопка кита. */
 .hub .gc-btn, .hub .btn.sm {

@@ -65,15 +65,20 @@ export function render() {
 const gameIcon = (id) => h(`div.gc-icon.g-${id}`,
   ...(ICON[id] || ICON.poker).map((src, i) => h(`img.gi-card.c${i}`, { src, alt: '' })));
 
+const CHEVRON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+  + 'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>';
+
 function gameRow(g, live) {
-  const on = true; // в списке только то, во что уже можно играть
   return h(`button.game-card.g-${g.id}`, { onclick: () => openCreate(g) },
     gameIcon(g.id),
     h('div.gc-body',
       h('div.gc-title', g.title),
       h('div.gc-blurb', g.blurb),
       h('div.gc-players', live ? `сейчас открыто: ${live}` : `${g.min}–${g.max} игроков`)),
-    h(`span.gc-btn${on ? '.on' : ''}`, 'Играть'));
+    // Шеврон, а не кнопка: нажимается вся строка, и зелёный не тратится на
+    // то, что и так очевидно. Три одинаково ярких кнопки в столбик не задают
+    // приоритета — глазу не за что зацепиться.
+    h('span.gc-go', { html: CHEVRON }));
 }
 
 /** Opened without a group (the bot's profile, a button in private): your groups. */
@@ -105,9 +110,16 @@ function lobbyRow(l) {
     gameIcon(l.game),
     h('div.lr-body',
       h('div.lr-title', l.title, l.host ? h('span.lr-host', ` · ${l.host}`) : null),
-      h('div.lr-sub', h('b.num', `${l.seated}/${l.max}`), ` · ${STATUS[l.status] || ''}`, l.detail ? ` · ${l.detail}` : ''),
+      // Подробность (блайнды, вариант) — отдельным куском: на узком экране
+      // она убирается ЦЕЛИКОМ. Обрубок «· бл…» хуже, чем ничего: человек
+      // видит мусор и не получает смысла.
+      h('div.lr-sub', h('b.num', `${l.seated}/${l.max}`), ` · ${STATUS[l.status] || ''}`,
+        l.detail ? h('span.lr-detail', ` · ${l.detail}`) : null),
       l.names.length ? h('div.lr-names', l.names.join(', ')) : null),
-    h(`button.btn.sm${join ? '.primary' : ''}`, { onclick: () => { haptic.tap(); send({ t: 'join', code: l.code }); } },
+    // Зелёная на экране одна — у СВОЕГО стола, того, что в зелёной рамке:
+    // чаще всего человек заходит именно за ним. Остальные строки нажимаются
+    // так же, но не спорят с ним за внимание.
+    h(`button.btn.sm${l.mine ? '.primary' : ''}`, { onclick: () => { haptic.tap(); send({ t: 'join', code: l.code }); } },
       join ? 'Присоединиться' : 'Открыть'));
 }
 
