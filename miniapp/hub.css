@@ -3,6 +3,18 @@
    the group. Same room, same palette as the poker table.
    ========================================================================== */
 
+/*
+ * ХАБ ГРУППЫ И «МОИ ГРУППЫ» — на ките (фаза 3 редизайна).
+ *
+ * Каждое правило ограничено `.hub`: `.back-link` и `.section-label` — общие
+ * с экранами игр, и неограниченная правка перекрасила бы дурака, UNOQ и
+ * покер, которых эта фаза не касается.
+ */
+
+/*
+ * Базовое правило нужно всем: `.back-link` рисует «← Все игры группы» и на
+ * столах дурака и UNOQ, а их эта фаза не трогает. Оставлено как было.
+ */
 .back-link {
   align-self: flex-start;
   color: var(--accent);
@@ -12,78 +24,158 @@
   margin: -4px 0 -8px;
 }
 
-.hub-head h1 { font-size: 27px; line-height: 1.12; letter-spacing: -0.02em; }
-.hub-head .hh-2 { display: block; color: var(--accent); }
-.hub-foot { text-align: center; font-size: 11.5px; color: var(--faint); font-weight: 600; padding: 4px 0 2px; }
+.hub .back-link {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--k-tap);
+  padding: 0 var(--k-s4);
+  margin-left: calc(var(--k-s4) * -1);
+  color: var(--k-green);
+  font: var(--k-w-semibold) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font);
+  background: none;
+  border: 0;
+}
 
-.game-cards { display: flex; flex-direction: column; gap: 10px; }
-.game-card {
+.hub .hub-head h1 { font: var(--k-w-semibold) var(--k-fs-title)/var(--k-lh-title) var(--k-font); color: var(--k-text); }
+/*
+ * Вторая строка заголовка была зелёной. Зелёный — только смысл: действие,
+ * чей ход, успех (docs/redesign.md §2). Заголовок ни тем, ни другим не
+ * является, поэтому вторая строка теперь вторичным текстом.
+ */
+.hub .hub-head .hh-2 { display: block; color: var(--k-text-2); }
+.hub .sub { font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font); color: var(--k-text-2); }
+.hub .hub-foot {
+  text-align: center;
+  font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font);
+  color: var(--k-text-2);
+  padding: var(--k-s4) 0;
+}
+/* В style.css этот класс капслочный и разрежённый — на экране покера так и
+   останется. Здесь заголовок раздела по киту. */
+.hub .section-label {
+  font: var(--k-w-semibold) var(--k-fs-section)/var(--k-lh-section) var(--k-font);
+  color: var(--k-text);
+  text-transform: none;
+  letter-spacing: normal;
+  margin: 0;
+}
+.hub .hint { font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font); color: var(--k-text-2); }
+
+/* ------------------------------------------------- карточка игры и стола */
+
+.hub .game-cards, .hub .lobby-list { display: flex; flex-direction: column; gap: var(--k-s8); }
+
+/*
+ * Карточка игры и строка стола — одна форма: поверхность, значок слева,
+ * текст, действие справа. Человек читает их подряд, одним движением глаза,
+ * и разводить их по разным формам незачем.
+ */
+.hub .game-card, .hub .lrow {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--k-s12);
   width: 100%;
-  padding: 14px;
-  border-radius: 18px;
+  min-height: var(--k-tap);
+  padding: var(--k-pad-y) var(--k-pad-x);
+  background: var(--k-surface);
+  border: 1px solid transparent;
+  border-radius: var(--k-r-lg);
+  color: var(--k-text);
   text-align: left;
-  background: var(--panel);
-  border: 1px solid rgba(46, 224, 140, 0.3);
-  transition: transform 0.12s var(--ease);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
-.game-card:active { transform: scale(0.985); }
+.hub .game-card:active, .hub .lrow:active { background: var(--k-elevated); }
+.hub .game-card:focus-visible, .hub .lrow:focus-visible { outline: 2px solid var(--k-green); outline-offset: -2px; }
+/* Свой стол — тонкой зелёной рамкой: это состояние, а не украшение. */
+.hub .lrow.mine { border-color: var(--k-green); }
 
-/* Значок — две карты веером из той же колоды, что и за столом. */
-.gc-icon {
+.hub .gc-icon {
   position: relative;
+  width: var(--k-s48);
+  height: var(--k-s48);
   flex: none;
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
+  border-radius: var(--k-r-md);
+  background: var(--k-elevated);
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
 }
-.gc-icon.g-poker { background: radial-gradient(120% 140% at 20% 0%, #17694a, #0b3d28); }
-.gc-icon.g-durak { background: radial-gradient(120% 140% at 20% 0%, #1a6274, #0c3440); }
-.gc-icon.g-colors { background: radial-gradient(120% 140% at 20% 0%, #2b3c66, #141d33); }
-.gi-card { position: absolute; width: 26px; border-radius: 3px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5); }
-.gi-card.c0 { left: 7px; top: 13px; rotate: -10deg; }
-.gi-card.c1 { left: 22px; top: 11px; rotate: 9deg; }
+/* У каждой игры своё сукно — кит, раздел 20: опознавательный знак игры живёт
+   в игровом слое, а не в общем интерфейсе. */
+.hub .gc-icon.g-poker { background: var(--k-felt-poker); }
+.hub .gc-icon.g-durak { background: #103a44; }
+.hub .gc-icon.g-colors { background: #1b2a4a; }
+.hub .gi-card { position: absolute; width: 22px; border-radius: 3px; }
+.hub .gi-card.c0 { left: 7px; top: 13px; rotate: -10deg; }
+.hub .gi-card.c1 { left: 20px; top: 11px; rotate: 9deg; }
+.hub .lrow .gc-icon { width: var(--k-av-md); height: var(--k-av-md); }
+.hub .lrow .gi-card { width: 18px; }
+.hub .lrow .gi-card.c0 { left: 5px; top: 11px; }
+.hub .lrow .gi-card.c1 { left: 16px; top: 9px; }
 
-.gc-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.gc-title { font-size: 17px; font-weight: 900; letter-spacing: -0.01em; }
-.gc-blurb { font-size: 12px; color: var(--text-2); font-weight: 600; }
-.gc-players { font-size: 11px; color: var(--faint); font-weight: 700; margin-top: 2px; }
-.gc-btn {
-  flex: none;
-  padding: 10px 16px;
-  border-radius: 12px;
-  font-size: 13.5px;
-  font-weight: 800;
-  background: var(--panel-hi);
-  color: var(--muted);
+.hub .gc-body, .hub .lr-body { flex: 1; min-width: 0; }
+.hub .gc-title, .hub .lr-title {
+  display: block;
+  font: var(--k-w-semibold) var(--k-fs-component)/var(--k-lh-component) var(--k-font);
+  color: var(--k-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.gc-btn.on { background: var(--accent); color: var(--accent-ink); }
+/* Описание игры переносится, а не обрезается: «Техасский холдем, фишки» в
+   одну строку на телефоне не помещается, а огрызок ничего не объясняет. */
+.hub .gc-blurb {
+  display: block;
+  font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font);
+  color: var(--k-text-2);
+}
+.hub .lr-sub {
+  display: block;
+  font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font);
+  color: var(--k-text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hub .gc-players, .hub .lr-names {
+  display: block;
+  font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font);
+  color: var(--k-text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hub .lr-host { color: var(--k-text-2); }
 
-.lobby-list { display: flex; flex-direction: column; gap: 8px; }
-.lrow {
-  display: flex;
+/* «Играть» и «Присоединиться» — тот же орган, что кнопка кита. */
+.hub .gc-btn, .hub .btn.sm {
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px;
-  border-radius: 16px;
-  background: var(--panel);
-  border: 1px solid var(--line);
+  justify-content: center;
+  flex: none;
+  min-height: var(--k-tap);
+  padding: 0 var(--k-s12);
+  border: 1px solid var(--k-divider);
+  border-radius: var(--k-r-md);
+  background: var(--k-elevated);
+  color: var(--k-text);
+  font: var(--k-w-semibold) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font);
+  white-space: nowrap;
 }
-.lrow.mine { border-color: rgba(46, 224, 140, 0.35); }
-.lrow .gc-icon { width: 42px; height: 42px; border-radius: 12px; }
-.lrow .gi-card { width: 19px; }
-.lrow .gi-card.c0 { left: 5px; top: 10px; }
-.lrow .gi-card.c1 { left: 16px; top: 9px; }
-.lr-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.lr-title { font-weight: 800; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lr-host { color: var(--muted); font-weight: 700; }
-.lr-sub { font-size: 13px; color: var(--text-2); font-weight: 600; }
-.lr-names { font-size: 12px; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.btn.sm { height: 42px; padding: 0 14px; font-size: 14px; border-radius: 13px; flex: none; }
+.hub .gc-btn.on, .hub .btn.sm.primary { background: var(--k-green); color: var(--k-on-green); border-color: transparent; }
+
+/* ------------------------------------------------- строка «Мои группы» */
+
+.hub .lr-icon {
+  display: grid;
+  place-items: center;
+  width: var(--k-av-md);
+  height: var(--k-av-md);
+  flex: none;
+  border-radius: var(--k-r-md);
+  background: var(--k-elevated);
+  font-size: var(--k-fs-component);
+}
 
 /* ==========================================================================
    РЕЙТИНГ — список, своя строка снизу (её видно всегда) и карточка игрока.
@@ -192,36 +284,37 @@
 .rt-last-row b.up { color: var(--accent); }
 .rt-last-row b.down { color: var(--danger); }
 
-.rt-open {
+.hub .rt-open, .rating .rt-open {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--k-s12);
   width: 100%;
-  padding: 14px 16px;
-  border-radius: 18px;
+  min-height: var(--k-tap);
+  padding: var(--k-pad-y) var(--k-pad-x);
+  background: var(--k-surface);
+  border: 1px solid transparent;
+  border-radius: var(--k-r-lg);
+  color: var(--k-text);
   text-align: left;
-  background: linear-gradient(135deg, rgba(242, 201, 107, 0.16), rgba(242, 201, 107, 0.04));
-  border: 1px solid rgba(242, 201, 107, 0.5);
+  cursor: pointer;
 }
-.rt-open:active { transform: scale(0.985); }
-.rt-cup { font-size: 26px; flex: none; }
-.rt-open-body { flex: 1; min-width: 0; }
-.rt-open-title { font-size: 16px; font-weight: 900; }
-.rt-open-sub { font-size: 11.5px; color: var(--text-2); font-weight: 600; margin-top: 2px; }
-.rt-open-go { flex: none; font-size: 22px; font-weight: 800; color: var(--muted); }
+.hub .rt-open:active { background: var(--k-elevated); }
+.hub .rt-open:focus-visible { outline: 2px solid var(--k-green); outline-offset: -2px; }
+.hub .rt-cup { font-size: var(--k-fs-num); line-height: 1; flex: none; }
+.hub .rt-open-body { flex: 1; min-width: 0; }
+.hub .rt-open-title { font: var(--k-w-semibold) var(--k-fs-component)/var(--k-lh-component) var(--k-font); }
+.hub .rt-open-sub { font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font); color: var(--k-text-2); }
+.hub .rt-open small { font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font); color: var(--k-text-2); display: block; }
+.hub .rt-open-go { flex: none; color: var(--k-text-2); font: var(--k-w-semibold) var(--k-fs-section)/1 var(--k-font); }
+/* Закрытый рейтинг не прячется и не бледнеет: он есть, просто ещё не открыт. */
+.hub .rt-soon-tag {
+  flex: none;
+  padding: var(--k-s4) var(--k-s8);
+  border-radius: var(--k-r-sm);
+  background: var(--k-elevated);
+  color: var(--k-text-2);
+  font: var(--k-w-semibold) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font);
+}
 
-/* Рейтинг ещё не открыт: кнопка на месте, но спокойная, а не зовущая. */
-.rt-open.soon { opacity: 0.72; }
-.rt-soon-tag {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: rgba(242, 201, 107, 0.16);
-  color: var(--gold);
-  white-space: nowrap;
-}
 .soon-list { margin: 10px 0 0; padding-left: 18px; color: var(--text-2); font-size: 14px; line-height: 1.5; }
 .soon-list li { margin-bottom: 6px; }
