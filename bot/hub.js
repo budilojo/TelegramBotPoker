@@ -22,7 +22,7 @@
  */
 import { checkInitData } from './webapp-auth.js';
 import { GAMES, GAME_LIST, gameOf } from './games/index.js';
-import { HUB_PREFIX, MAX_LIVE_PER_GROUP, RATING_SOON_TEXT } from './app.js';
+import { HUB_PREFIX, MAX_LIVE_PER_GROUP, RATING_SOON_TEXT, TOO_MANY_GAMES_TEXT } from './app.js';
 import { AUDIENCES, ERRORS as CAST_ERRORS } from './broadcast.js';
 import { GAME_RU, PER_DAY, sign } from './rating.js';
 import { ym } from './fmt.js';
@@ -32,7 +32,7 @@ const CORE_ERRORS = {
   NO_CASTS: 'Рассылка не настроена на этом сервере.',
   NO_ROOM: 'Эта игра уже закончилась или она не из этой группы.',
   BAD_GAME: 'Такой игры нет.',
-  TOO_MANY_GAMES: `В группе уже ${MAX_LIVE_PER_GROUP} незаконченных игр — завершите какую-нибудь.`,
+  TOO_MANY_GAMES: TOO_MANY_GAMES_TEXT,
   NOT_FROM_HUB: 'Список игр группы открывается кнопкой «Выбрать игру» из /game.',
   NOT_YOUR_GROUP: 'Этой группы нет среди ваших — напишите в ней /game.',
   DOWN: 'Идёт обслуживание — игра пока стоит.',

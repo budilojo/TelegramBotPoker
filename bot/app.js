@@ -68,6 +68,14 @@ const WELCOME_DM = '✅ Готово: если приложение будет �
 
 /** Games a group may have going at once. Past this the hub asks to finish one. */
 export const MAX_LIVE_PER_GROUP = 10;
+/**
+ * Отказ на переполнение — ОДИН на все двери.
+ *
+ * Дверей в группу две: кнопка в приложении и команда в чате. Запрет у них
+ * общий, значит и объяснение должно быть общим, слово в слово: человек не
+ * должен гадать, два это разных правила или одно.
+ */
+export const TOO_MANY_GAMES_TEXT = `В группе уже ${MAX_LIVE_PER_GROUP} незаконченных игр — завершите какую-нибудь.`;
 
 /**
  * Рейтинг ещё не открыт людям.
@@ -1039,6 +1047,11 @@ export class App {
               'Новый — после /finish или /cancel. Ещё одна игра — /game.',
             msg
           ));
+        }
+        // Предел общий для обеих дверей: он бережёт группу от свалки
+        // карточек, и команде обходить его не за что.
+        if (this.liveRooms(chatId).length >= MAX_LIVE_PER_GROUP) {
+          return void (await this.reply(chatId, TOO_MANY_GAMES_TEXT, msg));
         }
         // As it always did, a new table replaces a poker table that is over.
         for (const old of this.roomsOf(chatId)) {
