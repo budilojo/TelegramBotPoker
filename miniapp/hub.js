@@ -85,7 +85,9 @@ function renderHome(s) {
       h('div.lr-body',
         h('div.lr-title', g.title),
         h('div.lr-sub', g.live ? `открыто игр: ${g.live}` : 'сейчас ничего не открыто')),
-      h('button.btn.sm.primary', { onclick: () => { haptic.tap(); send({ t: 'group', code: g.code }); } }, 'Открыть')))),
+      // Вторичная, а не зелёная: зелёный — только смысл, а здесь каждая
+      // строка — действие, и стена зелёного перестаёт что-либо значить.
+      h('button.btn.sm', { onclick: () => { haptic.tap(); send({ t: 'group', code: g.code }); } }, 'Открыть')))),
     // Как на хабе группы: пока рейтинг закрыт, кнопка остаётся и честно
     // говорит, чего ждать. Отказ вместо объяснения получал только этот экран.
     h(`button.rt-open${s.ratingSoon ? '.soon' : ''}`, {
