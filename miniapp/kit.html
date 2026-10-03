@@ -180,6 +180,132 @@
   </div>
 </section>
 
+
+<section id="header">
+  <h2>5 · Шапка — один компонент в двух видах</h2>
+  <div class="stack">
+    <div class="k-header">
+      <button class="k-icon-btn" aria-label="Назад"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+      <div class="k-header-mid">
+        <div class="k-header-title">Создать стол</div>
+        <div class="k-header-sub">Покер · Техасский холдем</div>
+      </div>
+      <button class="k-icon-btn" aria-label="Ещё"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+    </div>
+    <div class="k-header k-header--game">
+      <button class="k-icon-btn" aria-label="Назад"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+      <div class="k-header-mid">
+        <div class="k-header-title">Стол TK4Q</div>
+        <div class="k-header-sub">Раздача #12</div>
+      </div>
+      <button class="k-icon-btn" aria-label="Ещё"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+    </div>
+  </div>
+</section>
+
+<section id="avatars">
+  <h2>10 · Аватар</h2>
+  <div class="stack">
+    <div class="row">
+      <span class="k-av" style="--k-hue:160">И</span><span class="k-av k-av--md" style="--k-hue:20">М</span><span class="k-av k-av--sm" style="--k-hue:280">А</span><span class="k-av k-av--xs" style="--k-hue:90">Д</span>
+      <span class="k-caption">48 · 40 · 32 · 24</span>
+    </div>
+    <div class="row">
+      <span class="k-av"><img src="colors/back.svg" alt=""></span>
+      <span class="k-caption">своё фото — настоящее, из initData; у остальных буква</span>
+    </div>
+    <div class="row">
+      <span class="k-avs"><span class="k-av k-av--sm" style="--k-hue:160">И</span><span class="k-av k-av--sm" style="--k-hue:20">М</span><span class="k-av k-av--sm" style="--k-hue:280">А</span><span class="k-av k-av--sm k-av--more">+3</span></span>
+      <span class="k-caption">группа с «+N»</span>
+    </div>
+    <div class="row"><span class="k-av k-av--empty"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0z"/></svg></span><span class="k-caption">пустое место</span></div>
+  </div>
+</section>
+
+<section id="rows">
+  <h2>11 · Строка игрока</h2>
+  <div class="card">
+    <div class="k-player"><span class="k-av k-av--md" style="--k-hue:160">И</span>
+      <div class="k-player-body">
+        <div class="k-player-name">Иван</div>
+        <div class="k-player-marks"><span class="k-dot k-dot--active"></span>Вы · Хост</div>
+      </div>
+    </div>
+    <hr class="k-divider">
+    <div class="k-player"><span class="k-av k-av--md" style="--k-hue:20">М</span>
+      <div class="k-player-body"><div class="k-player-name">Мария</div></div>
+    </div>
+    <hr class="k-divider">
+    <div class="k-player k-player--empty"><span class="k-av k-av--md k-av--empty"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0z"/></svg></span>
+      <div class="k-player-body"><div class="k-player-name">Свободное место</div></div>
+    </div>
+  </div>
+</section>
+
+<section id="rank">
+  <h2>12 · Строка рейтинга</h2>
+  <div class="card">
+    <div class="k-rank"><span class="k-rank-place">1</span><span class="k-av k-av--sm" style="--k-hue:160">И</span><span class="k-rank-name">Иван</span><span class="k-rank-points k-rank-points--up">+248</span></div>
+    <div class="k-rank"><span class="k-rank-place">2</span><span class="k-av k-av--sm" style="--k-hue:20">М</span><span class="k-rank-name">Мария</span><span class="k-rank-points k-rank-points--up">+124</span></div>
+    <div class="k-rank"><span class="k-rank-place">3</span><span class="k-av k-av--sm" style="--k-hue:280">А</span><span class="k-rank-name">Алексей</span><span class="k-rank-points k-rank-points--zero">0</span></div>
+    <div class="k-rank"><span class="k-rank-place">4</span><span class="k-av k-av--sm" style="--k-hue:90">Д</span><span class="k-rank-name">Дима</span><span class="k-rank-points k-rank-points--down">−142</span></div>
+  </div>
+</section>
+
+<section id="tables">
+  <h2>13 · Строка стола</h2>
+  <div class="card">
+    <button class="k-table-row">
+      <span class="k-table-body">
+        <span class="k-table-title">Стол TK4Q</span>
+        <span class="k-table-sub">3 из 6 · 10/20</span>
+      </span>
+      <span class="k-avs"><span class="k-av k-av--sm" style="--k-hue:160">И</span><span class="k-av k-av--sm" style="--k-hue:20">М</span><span class="k-av k-av--sm" style="--k-hue:280">А</span></span>
+      <span class="k-table-state"><span class="k-dot k-dot--active"></span><span class="k-table-state-label">Ждём игроков</span></span>
+      <span class="k-table-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
+    </button>
+    <hr class="k-divider">
+    <button class="k-table-row k-table-row--off" disabled>
+      <span class="k-table-body">
+        <span class="k-table-title">Стол W9BM</span>
+        <span class="k-table-sub">6 из 6 · 25/50</span>
+      </span>
+      <span class="k-avs"><span class="k-av k-av--sm" style="--k-hue:200">С</span><span class="k-av k-av--sm" style="--k-hue:50">Л</span><span class="k-av k-av--sm k-av--more">+2</span></span>
+      <span class="k-table-state"><span class="k-dot k-dot--disabled"></span><span class="k-table-state-label">Идёт игра</span></span>
+      <span class="k-table-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
+    </button>
+  </div>
+</section>
+
+<section id="seats">
+  <h2>19 · Место за столом — один компонент, шесть состояний</h2>
+  <div class="row" style="gap:var(--k-s24);background:var(--k-felt-poker);padding:var(--k-s16);border-radius:var(--k-r-lg)">
+    <span class="k-seat"><span class="k-seat-pod"><span class="k-av" style="--k-hue:280">А</span></span><span class="k-seat-name">Алексей</span><span class="k-seat-stack">920</span></span>
+    <span class="k-seat"><span class="k-seat-pod"><span class="k-av" style="--k-hue:20">М</span></span><span class="k-seat-name">Мария</span><span class="k-seat-stack">1 000</span><span class="k-seat-bet">20</span></span>
+    <span class="k-seat"><span class="k-seat-pod"><span class="k-av" style="--k-hue:90">Д</span><span class="k-seat-badge">D</span></span><span class="k-seat-name">Дима</span><span class="k-seat-stack">990</span></span>
+    <span class="k-seat"><span class="k-seat-pod"><span class="k-av" style="--k-hue:330">А</span><span class="k-seat-badge">SB</span></span><span class="k-seat-name">Анна</span><span class="k-seat-stack">980</span></span>
+    <span class="k-seat k-seat--turn"><span class="k-seat-pod"><span class="k-av" style="--k-hue:160">И</span><span class="k-seat-clock">17</span></span><span class="k-seat-name">Иван</span><span class="k-seat-stack">970</span></span>
+    <span class="k-seat k-seat--folded"><span class="k-seat-pod"><span class="k-av" style="--k-hue:200">С</span></span><span class="k-seat-name">Сергей</span><span class="k-seat-stack">1 000</span></span>
+    <span class="k-seat"><span class="k-seat-pod"><span class="k-av" style="--k-hue:50">Л</span></span><span class="k-seat-name">Лена</span><span class="k-seat-stack">1 240</span><span class="k-seat-win">Победа</span></span>
+  </div>
+</section>
+
+<section id="status-bar">
+  <h2>15 · Статус-бар игры — его не нажимают</h2>
+  <div class="card">
+    <div class="k-status"><div class="k-status-main">Ход Марии</div><div class="k-status-sub">Ожидание действия</div></div>
+  </div>
+</section>
+
+<section id="game-actions">
+  <h2>16 · Зона действий игры</h2>
+  <div class="k-game-actions">
+    <button class="k-btn k-btn--secondary">Сбросить</button>
+    <button class="k-btn k-btn--primary">Уравнять 20</button>
+    <button class="k-btn k-btn--secondary">Повысить</button>
+  </div>
+</section>
+
 <section id="divider">
   <h2>21 · Разделитель</h2>
   <div class="card">

@@ -37,10 +37,12 @@ const VIEWPORTS = [[320, 568], [360, 640], [390, 844], [430, 932], [768, 1024]];
 const FONT_SIZES = [12, 14, 16, 20, 24, 32];
 const RADII = [0, 6, 8, 12, 20, 999]; // 999 — «совсем круглое», отказ от размера
 const SPACE = [0, 4, 8, 12, 16, 24, 32, 48];
+/** Порог попадания в палец — тот же, что в токенах (--k-tap). */
+const TAP = 44;
 
 /** Собрать со страницы всё, что можно сравнить со шкалой. */
 function probe(scales) {
-  const { fontSizes, radii, space } = scales;
+  const { fontSizes, radii, space, TAP } = scales;
   const px = (v) => Math.round(parseFloat(v) || 0);
   const bad = { font: [], radius: [], space: [], small: [] };
   const seen = { font: new Set(), radius: new Set() };
@@ -76,16 +78,32 @@ function probe(scales) {
       const v = px(raw);
       if (!space.includes(v)) bad.space.push(`${where(el)} ${prop}: ${v}px`);
     }
-    // В палец должно попадать.
-    if (el.matches('.k-btn, .k-icon-btn, .k-input, .k-seg, .k-stepper')) {
-      const h = el.getBoundingClientRect().height;
-      if (h > 0 && h < 44) bad.small.push(`${where(el)}: ${Math.round(h)}px`);
+    /*
+     * В палец должно попадать — у КАЖДОГО интерактивного компонента, а не у
+     * списка, который я вспомнил. Поэтому перечисляются не классы кита, а то,
+     * что вообще можно нажать: новый компонент попадает под проверку сам, не
+     * дожидаясь, пока про него вспомнят.
+     */
+    if (el.matches('button, a[href], input, select, textarea, [role="button"], [role="tab"]')
+        && !el.disabled && el.type !== 'hidden') {
+      const r = el.getBoundingClientRect();
+      // Мерим то, что реально нажимают: у скрытого поля тумблера это его метка.
+      const box = el.type === 'checkbox' || el.type === 'radio'
+        ? (el.closest('label') || el).getBoundingClientRect() : r;
+      if (box.height > 0 && box.height < TAP) bad.small.push(`${where(el)}: ${Math.round(box.height)}px в высоту`);
+      if (box.width > 0 && box.width < TAP) bad.small.push(`${where(el)}: ${Math.round(box.width)}px в ширину`);
     }
   }
+
+  // Повторяющийся id — тихая поломка: по нему перестают находиться
+  // и ссылки, и метки полей, и сами проверки.
+  const ids = [...document.querySelectorAll('[id]')].map((el) => el.id);
+  const dupIds = [...new Set(ids.filter((x, i) => ids.indexOf(x) !== i))];
 
   const count = (sel) => document.querySelectorAll(sel).length;
   return {
     bad,
+    dupIds,
     seenFont: [...seen.font].sort((a, b) => a - b),
     seenRadius: [...seen.radius].sort((a, b) => a - b),
     pageOverflow: Math.max(0, document.documentElement.scrollWidth - innerWidth),
@@ -170,7 +188,7 @@ for (const [w, h] of VIEWPORTS) {
   await page.goto(`file://${PAGE}`);
   await page.waitForSelector('.k-btn', { timeout: 8000 });
 
-  const p = await page.evaluate(probe, { fontSizes: FONT_SIZES, radii: RADII, space: SPACE });
+  const p = await page.evaluate(probe, { fontSizes: FONT_SIZES, radii: RADII, space: SPACE, TAP });
   if (!shown) shown = { ...p, contrast: await page.evaluate(contrast) };
 
   const tag = `${w}×${h}`;
@@ -181,7 +199,8 @@ for (const [w, h] of VIEWPORTS) {
   need(!p.bad.font.length, `${tag}: размер шрифта вне шкалы — ${p.bad.font.slice(0, 4).join(', ')}`);
   need(!p.bad.radius.length, `${tag}: скругление вне шкалы — ${p.bad.radius.slice(0, 4).join(', ')}`);
   need(!p.bad.space.length, `${tag}: отступ вне шкалы — ${p.bad.space.slice(0, 4).join(', ')}`);
-  need(!p.bad.small.length, `${tag}: в палец не попасть — ${p.bad.small.slice(0, 4).join(', ')}`);
+  need(!p.bad.small.length, `${tag}: в палец не попасть — ${[...new Set(p.bad.small)].slice(0, 4).join(', ')}`);
+  need(!p.dupIds.length, `${tag}: повторяющийся id — ${p.dupIds.join(', ')}`);
   need(p.pageOverflow === 0, `${tag}: страница шире экрана на ${p.pageOverflow}px — ${p.widest.join(', ')}`);
 
   const q = p.parts;
