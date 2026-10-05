@@ -235,7 +235,10 @@ function plateText(p, s) {
     case 'out': return 'ПРОПУСК';
     case 'broke': return 'БЕЗ ФИШЕК';
     case 'left': return 'ВЫШЕЛ';
-    default: return s.hand?.phase === 'complete' && p.mucked ? 'НЕ ПОКАЗАЛ' : '';
+    // Обычным текстом, а не капслоком: «не показал» — это сноска к
+    // результату, а не сам результат, и кричать ей не о чем. Капслока в
+    // типографике кита нет вовсе.
+    default: return s.hand?.phase === 'complete' && p.mucked ? 'не показал' : '';
   }
 }
 
@@ -349,6 +352,8 @@ function seatEl(p, s) {
   if (h0?.phase === 'complete' && !win && p.handName) {
     text = p.handName;
     kind = 'hand';
+  } else if (h0?.phase === 'complete' && p.mucked) {
+    kind = 'muck';
   }
   const plate = win
     ? animateOnce(h(`div.plate.win${fmt(win.amount).length > 8 ? '.long' : ''}`, `+${fmt(win.amount)}`), `winplate:${h0.no}:${p.seat}`,

@@ -232,3 +232,6 @@ body[data-screen='poker'] .gain {
   box-shadow: none;
   color: var(--k-green);
 }
+
+/* «не показал» — сноска, а не результат: вторичным текстом и без нажима. */
+body[data-screen='poker'] .plate.muck { color: var(--k-text-2); background: transparent; border-color: transparent; }
