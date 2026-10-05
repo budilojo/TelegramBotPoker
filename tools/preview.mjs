@@ -93,7 +93,7 @@ const deck6 = stack({ 101: 'As Kh', 102: 'Qs Qd', 103: '9c 9d', 104: '7h 2c', 10
   play(r, (x) => x.hand.street === 'flop', (x, id, l) => (id === '104' ? ['fold'] : [l.canCheck ? 'check' : 'call']));
   play(r, (x) => x.hand.actorId === '101', (x, id, l) => (l.currentBet === 0 && id === '103' ? ['bet', 100] : [l.canCheck ? 'check' : 'call']));
   scene('02-my-turn-flop', r, 101);
-  scene('03-raise-sheet', r, 101, { click: 'RAISE' });
+  scene('03-raise-sheet', r, 101, { click: 'Повысить' });
   scene('04-small-phone', r, 101, { width: 360, height: 640 });
 }
 // 3. Somebody else's turn — I am waiting.

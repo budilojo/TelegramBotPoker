@@ -387,13 +387,14 @@ test('presets never offer an illegal size, and never duplicate ALL-IN', () => {
   assert.ok(all.some((x) => x.kind === 'size'), 'the test did look at real sizes');
 });
 
-test('snapshot: presets facing the big blind — +BB, ½ POT, POT, ALL-IN', () => {
+test('snapshot: presets facing the big blind — +BB, ½ POT, ¾ POT, POT, ALL-IN', () => {
   const room = fixture();
   deal(room);
   const l = legalActions(room, room.hand.actorId); // Саша: 500 to call, pot 750
   assert.deepEqual(presets(room, l), [
     { label: '+500', total: 1000, kind: 'size' },
     { label: '½ POT', total: 1125, kind: 'size' },
+    { label: '¾ POT', total: 1438, kind: 'size' },
     { label: 'POT', total: 1750, kind: 'size' },
     { label: 'ALL-IN', total: 10000, kind: 'allin' },
   ]);

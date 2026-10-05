@@ -52,7 +52,7 @@ export const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 export const cardImg = (code, cls = '') => h(`img.card${cls ? '.' + cls : ''}`, { src: `/cards/${code}.svg`, alt: code, draggable: 'false' });
 export const backImg = (cls = '') => cardImg('back', cls);
 export const initial = (name) => (String(name || '?').trim()[0] || '?').toUpperCase();
-export const STAGE = { preflop: 'PRE-FLOP', flop: 'FLOP', turn: 'TURN', river: 'RIVER' };
+export const STAGE = { preflop: 'Префлоп', flop: 'Флоп', turn: 'Тёрн', river: 'Ривер' };
 
 export const haptic = {
   tap: () => tg?.HapticFeedback?.impactOccurred?.('medium'),
@@ -275,6 +275,41 @@ export function ringSvg(deadline, total) {
   svg.append(c);
   return svg;
 }
+
+/* --------------------------------------------------------------- клавиатура */
+
+/*
+ * Высота экранной клавиатуры — одним числом на всё приложение.
+ *
+ * Шторка прибита к низу, но к низу РАЗМЕТОЧНОГО окна, а клавиатура ужимает
+ * видимое: шторка остаётся под клавиатурой и не знает об этом. Прокручивать
+ * к кнопке бесполезно — она не в прокрутке, она за краем.
+ *
+ * Поэтому меряем высоту клавиатуры и поднимаем шторку ровно на неё. Два
+ * источника, берём больший: visualViewport знает любой браузер, а Telegram
+ * сообщает свою устойчивую высоту — ту, что остаётся под клавиатурой, — и в
+ * его webview она надёжнее.
+ *
+ * Единственное место, где клавиатура вообще появляется, — ручной ввод суммы
+ * в шторке рейза. Поэтому решение нужно одно и навсегда, а не там.
+ */
+function watchKeyboard() {
+  const vv = window.visualViewport;
+  const apply = () => {
+    const w = tg;
+    const byViewport = vv ? window.innerHeight - vv.height - vv.offsetTop : 0;
+    const byTelegram = w?.viewportHeight && w?.viewportStableHeight
+      ? w.viewportHeight - w.viewportStableHeight : 0;
+    const kb = Math.round(Math.max(0, byViewport, byTelegram));
+    // Мелочь в пару пикселей — это не клавиатура, а округление адресной строки.
+    document.documentElement.style.setProperty('--kb', `${kb > 80 ? kb : 0}px`);
+  };
+  vv?.addEventListener('resize', apply);
+  vv?.addEventListener('scroll', apply);
+  tg?.onEvent?.('viewportChanged', apply);
+  apply();
+}
+watchKeyboard();
 
 /* ------------------------------------------------------------------ sheets */
 

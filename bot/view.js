@@ -54,6 +54,7 @@ export function presets(room, l) {
   const raw = [
     [`+${bb}`, l.currentBet + bb],
     ['½ POT', potRaise(l, 0.5)],
+    ['¾ POT', potRaise(l, 0.75)],
     ['POT', potRaise(l, 1)],
   ];
   const out = [];

@@ -163,19 +163,20 @@ await assertTurn();
 
 // Pre-flop, three-handed: the button (Иван) is first. He raises to POT.
 assert.equal(actorName(), 'Иван');
-await actorPage().getByRole('button', { name: 'RAISE' }).click();
+await actorPage().getByRole('button', { name: 'Повысить' }).click();
 await actorPage().waitForSelector('.sheet');
-const potLabel = await actorPage().locator('.size-btn', { hasText: 'POT' }).filter({ hasNotText: '½' }).first().innerText();
+const potBtn = () => actorPage().locator('.size-btn', { hasText: 'Банк' }).filter({ hasNotText: '½' }).filter({ hasNotText: '¾' }).first();
+const potLabel = await potBtn().innerText();
 const potTotal = Number(potLabel.replace(/\D/g, ''));
-await actorPage().locator('.size-btn', { hasText: 'POT' }).filter({ hasNotText: '½' }).first().click();
+await potBtn().click();
 await until(() => room().hand.currentBet === potTotal, `рейз Ивана до ${potTotal}`);
-step(`Иван: RAISE → POT = ${potTotal} (два тапа)`);
+step(`Иван: Повысить → Банк = ${potTotal} (два тапа)`);
 await assertTurn();
 
 for (const who of ['Макс', 'Дима']) {
   assert.equal(actorName(), who);
   const n = room().hand.log.length;
-  await tap(actorPage(), 'CALL', () => room().hand.log.length > n, `${who} коллирует`);
+  await tap(actorPage(), 'Уравнять', () => room().hand.log.length > n, `${who} коллирует`);
 }
 await until(() => room().hand.street === 'flop', 'флоп');
 for (const page of pages.values()) await page.waitForFunction(() => document.querySelectorAll('.board img.card').length >= 3);
@@ -183,14 +184,14 @@ await assertPrivacy('флоп');
 await noSideways('флоп');
 step('флоп открыт у всех, чужих карт не видно');
 
-// Nobody bets: the free check never shows FOLD.
+// Nobody bets: the free check never shows «Сбросить».
 while (room().hand.phase === 'betting') {
   await assertTurn();
   const page = actorPage();
-  await page.waitForSelector('.panel button:has-text("CHECK")');
-  assert.equal(await page.locator('.panel button', { hasText: 'FOLD' }).count(), 0, 'FOLD спрятан, когда чек бесплатный');
+  await page.waitForSelector('.panel button:has-text("Чек")');
+  assert.equal(await page.locator('.panel button', { hasText: 'Сбросить' }).count(), 0, '«Сбросить» спрятан, когда чек бесплатный');
   const n = room().hand.log.length;
-  await tap(page, 'CHECK', () => room().hand.log.length > n || room().hand.phase !== 'betting', 'чек');
+  await tap(page, 'Чек', () => room().hand.log.length > n || room().hand.phase !== 'betting', 'чек');
 }
 await until(() => room().hand.phase === 'complete', 'конец раздачи #1');
 for (const page of pages.values()) await page.waitForSelector('.result-line');
@@ -206,27 +207,27 @@ await tap(pageOf(dima), 'Следующая раздача', () => room().hand?.
 for (const page of pages.values()) await page.waitForFunction(() => !document.querySelector('.result-line'));
 const shover = actorPage();
 const shoverName = actorName();
-await shover.getByRole('button', { name: 'RAISE' }).click();
+await shover.getByRole('button', { name: 'Повысить' }).click();
 await shover.waitForSelector('.sheet');
-const allin = shover.locator('.size-btn', { hasText: 'ALL-IN' });
+const allin = shover.locator('.size-btn', { hasText: 'Весь стек' });
 const before = room().hand.log.length;
 await allin.click();
 await shover.waitForSelector('.size-btn:has-text("Точно весь стек?")');
-assert.equal(room().hand.log.length, before, 'первый тап по ALL-IN ничего не ставит');
+assert.equal(room().hand.log.length, before, 'первый тап по «Весь стек» ничего не ставит');
 await shover.locator('.size-btn', { hasText: 'Точно весь стек?' }).click();
 await until(() => room().hand.log.length > before, 'олл-ин');
-step(`${shoverName}: ALL-IN — только со второго тапа`);
+step(`${shoverName}: Весь стек — только со второго тапа`);
 
 {
   const n = room().hand.log.length;
   const who = actorName();
-  await tap(actorPage(), 'FOLD', () => room().hand.log.length > n, `${who} сбрасывает`);
-  step(`${who}: FOLD`);
+  await tap(actorPage(), 'Сбросить', () => room().hand.log.length > n, `${who} сбрасывает`);
+  step(`${who}: Сбросить`);
 }
 {
   const n = room().hand.log.length;
   const who = actorName();
-  await tap(actorPage(), 'CALL', () => room().hand.log.length > n, `${who} коллирует олл-ин`);
+  await tap(actorPage(), 'Уравнять', () => room().hand.log.length > n, `${who} коллирует олл-ин`);
   step(`${who}: CALL — олл-ин, борд открывается по улицам`);
 }
 await until(() => room().hand.phase === 'complete' && !room().ui.reveal, 'пошаговое открытие борда', 8000);

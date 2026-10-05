@@ -223,14 +223,14 @@ function plateText(p, s) {
   const a = p.amount ? ` ${fmt(p.amount)}` : '';
   switch (p.status) {
     case 'turn': return 'ХОД';
-    case 'bet': return `BET${a}`;
-    case 'raise': return `RAISE${a}`;
-    case 'call': return `CALL${a}`;
-    case 'check': return 'CHECK';
-    case 'fold': return 'FOLD';
-    case 'allin': return `ALL-IN${a}`;
-    case 'sb': return `SB${a}`;
-    case 'bb': return `BB${a}`;
+    case 'bet': return `Ставка${a}`;
+    case 'raise': return `Повысил${a}`;
+    case 'call': return `Уравнял${a}`;
+    case 'check': return 'Чек';
+    case 'fold': return 'Сбросил';
+    case 'allin': return `Весь стек${a}`;
+    case 'sb': return `МБ${a}`;
+    case 'bb': return `ББ${a}`;
     case 'wait': return 'ЖДЁТ';
     case 'out': return 'ПРОПУСК';
     case 'broke': return 'БЕЗ ФИШЕК';
@@ -371,9 +371,9 @@ function stageLabel(s) {
   const hd = s.hand;
   if (s.room.status === 'paused') return ['ПАУЗА', 'paused'];
   if (!hd) return ['—', ''];
-  if (hd.revealing) return ['ALL-IN', 'show'];
-  if (hd.phase === 'showdown') return ['SHOWDOWN', 'show'];
-  if (hd.phase === 'complete') return [hd.result?.kind === 'fold' ? 'ИТОГ' : 'SHOWDOWN', 'show'];
+  if (hd.revealing) return ['Весь стек', 'show'];
+  if (hd.phase === 'showdown') return ['Вскрытие', 'show'];
+  if (hd.phase === 'complete') return [hd.result?.kind === 'fold' ? 'Итог' : 'Вскрытие', 'show'];
   return [STAGE[hd.street] || hd.street, ''];
 }
 
@@ -591,9 +591,15 @@ function centerEl(s) {
 
   // Once the result is known the pot is pushed to the winners: it drains while their stacks fill.
   const paid = hd?.phase === 'complete' && hd.result && !hd.revealing;
+  /*
+   * Банк роздан — и «Банк 0» читается как ошибка, хотя это правда. Поэтому
+   * после раздачи строка говорит, сколько было РАЗЫГРАНО: то же число, но
+   * про прошедшее, а не про пустоту.
+   */
+  const played = paid ? (hd.result.winners || []).reduce((n, w) => n + (w.amount || 0), 0) : 0;
   return h('div.center',
-    h('div.pot', h('small', 'POT'),
-      counter('b.num', `pot:${hd?.no ?? 0}`, paid ? 0 : hd?.pot || 0,
+    h('div.pot', h('small', paid ? 'Разыграно' : 'Банк'),
+      counter('b.num', `pot:${hd?.no ?? 0}`, paid ? played : hd?.pot || 0,
         { up: { dur: 500, delay: 320 }, down: { dur: 900, delay: (planFor(s)?.pay ?? 100) + 250 } })),
     board,
     line,
@@ -723,13 +729,13 @@ function panelEl(s) {
 
   if (hd?.phase === 'betting') {
     if (L) {
-      if (L.toCall > 0) panel.append(h('button.btn.danger', { onclick: () => act('fold') }, 'FOLD'));
-      if (L.canCheck) panel.append(h('button.btn.primary', { onclick: () => act('check') }, 'CHECK'));
+      if (L.toCall > 0) panel.append(h('button.btn.danger', { onclick: () => act('fold') }, 'Сбросить'));
+      if (L.canCheck) panel.append(h('button.btn.primary', { onclick: () => act('check') }, 'Чек'));
       else if (L.canCall) {
         panel.append(h('button.btn.primary', { onclick: () => act('call') },
-          `CALL ${fmt(L.callAmount)}`, L.isCallAllIn ? h('small', 'это весь стек') : null));
+          `Уравнять ${fmt(L.callAmount)}`, L.isCallAllIn ? h('small', 'это весь стек') : null));
       }
-      if (L.canBet || L.canRaise) panel.append(h('button.btn.gold', { onclick: openRaise }, L.canBet ? 'BET' : 'RAISE'));
+      if (L.canBet || L.canRaise) panel.append(h('button.btn.gold', { onclick: openRaise }, L.canBet ? 'Ставка' : 'Повысить'));
       [...panel.children].forEach((b, i) => animateOnce(b, `btn:${turnId}:${i}`,
         [{ transform: 'translateY(18px) scale(0.92)', opacity: 0, offset: 0 }], { duration: 380, delay: 60 + i * 60 }));
       if (net.busy) panel.classList.add('busy');
@@ -789,6 +795,14 @@ function renderResults() {
 /* --- raise: two taps for a size, a third only for the whole stack */
 
 let allinArmed = false;
+/**
+ * Подписи долей банка приходят с сервера по-английски — там они и остаются:
+ * сервер фазой не трогается. Переводим на странице, в одном месте.
+ */
+const SIZE_RU = { '½ POT': '½ банка', '¾ POT': '¾ банка', 'POT': 'Банк', 'ALL-IN': 'Весь стек' };
+/** То же для банков при нескольких олл-инах. */
+const POT_RU = (label) => label.replace(/^MAIN POT$/, 'Основной банк').replace(/^SIDE POT (\d+)$/, 'Побочный банк $1');
+
 function openRaise() {
   haptic.soft();
   allinArmed = false;
@@ -800,7 +814,7 @@ function openRaise() {
     if (!L || !(L.canBet || L.canRaise)) return null;
     value = clamp(value, L.minTotal, L.maxTotal);
     const verb = L.canBet ? 'bet' : 'raise';
-    const word = L.canBet ? 'BET' : 'RAISE';
+    const word = L.canBet ? 'Ставка' : 'Повысить до';
 
     const sizes = h('div.grid2', L.presets.map((p) => {
       if (p.kind === 'allin') {
@@ -813,9 +827,9 @@ function openRaise() {
             }
             act('allin');
           },
-        }, allinArmed ? 'Точно весь стек?' : 'ALL-IN', h('b.num', fmt(p.total)));
+        }, allinArmed ? 'Точно весь стек?' : 'Весь стек', h('b.num', fmt(p.total)));
       }
-      return h('button.btn.size-btn', { onclick: () => act(verb, p.total) }, p.label, h('b.num', fmt(p.total)));
+      return h('button.btn.size-btn', { onclick: () => act(verb, p.total) }, SIZE_RU[p.label] || p.label, h('b.num', fmt(p.total)));
     }));
 
     /*
@@ -878,7 +892,7 @@ function openRaise() {
       amountEl.classList.toggle('max', value >= L.maxTotal);
       slider.style.setProperty('--pct', `${L.maxTotal === L.minTotal ? 100 : ((value - L.minTotal) / (L.maxTotal - L.minTotal)) * 100}%`);
       sub.textContent = value >= L.maxTotal ? 'Весь стек' : `Добавите ${fmt(value - L.myBet)} · останется ${fmt(L.stack - (value - L.myBet))}`;
-      confirm.textContent = value >= L.maxTotal ? `ALL-IN ${fmt(value)}` : `${word} ДО ${fmt(value)}`;
+      confirm.textContent = value >= L.maxTotal ? `Весь стек ${fmt(value)}` : `${word} ${fmt(value)}`;
     };
     const slider = h('input.slider', {
       type: 'range', min: L.minTotal, max: L.maxTotal, step: 1, value,
@@ -895,7 +909,7 @@ function openRaise() {
       if (value >= L.maxTotal) {
         if (!allinArmed) {
           allinArmed = true;
-          confirm.textContent = `Точно ALL-IN ${fmt(value)}?`;
+          confirm.textContent = `Точно весь стек ${fmt(value)}?`;
           confirm.className = 'btn danger wide lg';
           return;
         }
@@ -905,9 +919,13 @@ function openRaise() {
     };
     sync();
     return h('div',
-      h('h3', L.canBet ? 'Ставка' : 'Рейз'),
+      h('h3', L.canBet ? 'Ставка' : 'Повысить ставку'),
       h('div.sub', `от ${fmt(L.minTotal)} до ${fmt(L.maxTotal)} · сумма — сколько всего будет перед вами`),
-      row, err, slider, sizes, sub, confirm,
+      row, err, slider, sizes, sub,
+      // Подтверждение липкое: содержимое шторки может быть выше её самой, и
+      // тогда кнопка уезжает в прокрутку — а до неё должно хватать одного
+      // движения, особенно когда снизу стоит клавиатура.
+      h('div.sheet-confirm', confirm),
     );
   });
 }
@@ -927,7 +945,7 @@ function openWinner() {
         h('h3', 'Распределение'),
         h('div.sub', 'Фишки двигаются только после подтверждения.'),
         f.pots.map((pot) => h('div.review-row',
-          h('span', pot.label, ' · ', h('span.num', fmt(pot.amount))),
+          h('span', POT_RU(pot.label), ' · ', h('span.num', fmt(pot.amount))),
           h('span', pot.refund ? `${name(pot.winners[0])} (возврат)` : pot.winners.map(name).join(' + ')))),
         h('div.section-label', 'На руки'),
         f.preview.map((x) => h('div.pay-row', h('span', x.name), h('span.num', `+${fmt(x.amount)}`))),
@@ -941,7 +959,7 @@ function openWinner() {
     const at = f.steps.indexOf(f.potIndex);
     return h('div',
       h('h3', 'Кто выиграл?'),
-      h('div.sub', `${pot.label} · ${fmt(pot.amount)}`, f.steps.length > 1 ? ` · банк ${at + 1} из ${f.steps.length}` : '',
+      h('div.sub', `${POT_RU(pot.label)} · ${fmt(pot.amount)}`, f.steps.length > 1 ? ` · банк ${at + 1} из ${f.steps.length}` : '',
         ' — можно отметить нескольких, банк разделится'),
       h('div.pick-grid', pot.eligible.map((seat) => h(`button.pick${pot.winners.includes(seat) ? '.on' : ''}`, {
         onclick: () => { haptic.soft(); send({ t: 'pick', pot: f.potIndex, seat }, { lock: false }); },
