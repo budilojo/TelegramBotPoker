@@ -34,6 +34,10 @@ body[data-screen='poker'] {
      обычная вторичная поверхность. */
   --gold: var(--k-text);
   --gold-ink: var(--k-on-green);
+  /* Красный один на весь кит. Минус в итогах — не ошибка, но и не повод
+     заводить второй оттенок красного. */
+  --danger: var(--k-suit-red);
+  --allin: var(--k-suit-red);
   background: var(--k-bg);
 }
 
@@ -190,10 +194,41 @@ body[data-screen='poker'] .sheet .btn:disabled {
   color: var(--k-disabled);
   box-shadow: none;
 }
-/* Клавиатура закрывает низ: шторка прокручивается, и подтверждение можно
-   довести до видимой части. */
-body[data-screen='poker'] .sheet { max-height: 92vh; overflow-y: auto; }
+/* Высоту шторки задаёт style.css с поправкой на клавиатуру — здесь её
+   переопределять нечем и незачем. */
+body[data-screen='poker'] .sheet-confirm {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  padding-top: var(--k-s8);
+  background: var(--k-bg);
+}
 
 /* Цвет аватара — та же спокойная полоса, что в ките: на зелёном сукне
    полный круг оттенков рябит. */
 body[data-screen='poker'] .av { background: hsl(calc(195 + var(--h, 0) * 0.36) 30% 42%); }
+
+/* ------------------------------------------------------------ вскрытие */
+
+/*
+ * Победителя показывает ЗЕЛЁНЫЙ — он для успеха и существует. Золота,
+ * свечения и градиентов нет: кит запрещает их списком, и на столе их уже не
+ * было, а на вскрытии они оставались.
+ *
+ * Размеры и отступы те же, что были: геометрия этого экрана выверена, и
+ * двадцать три наложения тому причиной.
+ */
+body[data-screen='poker'] #app .card.best {
+  box-shadow: 0 0 0 2px var(--k-green);
+  animation: none;
+}
+body[data-screen='poker'] .seat.win .av { border-color: var(--k-green); box-shadow: none; }
+body[data-screen='poker'] .seat.win .info { border-color: var(--k-green); box-shadow: none; }
+body[data-screen='poker'] .plate.win { background: var(--k-green); color: var(--k-on-green); box-shadow: none; }
+/* Выигрыш — обычное число, а не плашка с сиянием. Поля и скругление
+   оставлены прежними: иначе поедет высота руки. */
+body[data-screen='poker'] .gain {
+  background: none;
+  box-shadow: none;
+  color: var(--k-green);
+}
