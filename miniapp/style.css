@@ -732,10 +732,13 @@ input { font: inherit; color: inherit; }
   z-index: 60;
   padding: 10px 14px;
   border-radius: 14px;
-  background: #221a0a;
-  border: 1px solid rgba(242, 201, 107, 0.4);
-  color: #ffe2a3;
-  font-weight: 700;
+  /* Золота в ките нет — всплывашка была последним его следом, общим на все
+     три игры. Обычная приподнятая поверхность и обычный текст: это
+     сообщение, а не награда. */
+  background: var(--k-elevated);
+  border: 1px solid var(--k-divider);
+  color: var(--k-text);
+  font-weight: 600;
   font-size: 14px;
   text-align: center;
   opacity: 0;
@@ -743,6 +746,18 @@ input { font: inherit; color: inherit; }
   transition: opacity 0.2s, transform 0.2s var(--ease);
 }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* Лобби и итоги начинаются не с игровой шапки в 56px, а с заголовка экрана и
+   подписи под ним — и всплывашка ложилась ровно на подпись: «партий сыграно»
+   читалось сквозь неё (preview/19-durak-results). Экран один (`durak`), а
+   видов два, поэтому спрашиваем у самой страницы, что на ней показано, и на
+   этих двух уводим сообщение вниз — там пусто, и шапка остаётся читаемой. */
+body:has(#app .lobby) #toast {
+  top: auto;
+  bottom: calc(96px + var(--sab));
+  transform: translate(-50%, 10px);
+}
+body:has(#app .lobby) #toast.show { transform: translate(-50%, 0); }
 
 /* ------------------------------------------------------------- small/tall */
 
