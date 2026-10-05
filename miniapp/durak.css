@@ -380,3 +380,11 @@ body[data-screen='durak'] .panel .btn.danger {
 }
 body[data-screen='durak'] .panel .btn.danger small { color: var(--k-text-2); }
 
+/* Итоги: «дурак N» — это счётчик, а не знак числа. Зелёный в ките значит
+   «успех, ход, верно», красный — «ошибка»; ноль поражений не успех, а
+   дважды дурак не ошибка. В макете 17-durak-game-results проигравший
+   подписан обычным текстом, без красного. Поэтому здесь работает вес, а не
+   цвет: кто был дураком — основным текстом, остальные вторичным.
+   В покере ± остаётся цветным: там цвет несёт знак числа, а не оценку. */
+body[data-screen='durak'] .res-row .pl.up { color: var(--k-text-2); }
+body[data-screen='durak'] .res-row .pl.down { color: var(--k-text); }
