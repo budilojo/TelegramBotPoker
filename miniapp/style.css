@@ -534,11 +534,14 @@ input { font: inherit; color: inherit; }
 .sheet {
   position: fixed;
   left: 50%;
-  bottom: 0;
+  /* Поднимается ровно на высоту клавиатуры — её меряет watchKeyboard в
+     ui.js. Без рывка: клавиатура уходит, шторка возвращается плавно. */
+  bottom: var(--kb, 0px);
+  transition: bottom 0.18s var(--ease);
   width: 100%;
   max-width: 520px;
   transform: translateX(-50%);
-  max-height: 88vh;
+  max-height: calc(88vh - var(--kb, 0px));
   overflow-y: auto;
   z-index: 41;
   background: var(--bg-2);
