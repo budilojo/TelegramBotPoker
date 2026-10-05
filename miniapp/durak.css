@@ -257,3 +257,126 @@
   .dk-role { font-size: 11px; padding: 3px 9px; }
   .dk-hand { padding-top: 10px; }
 }
+
+/* ==========================================================================
+   СТОЛ ДУРАКА НА КИТЕ — фаза 5 редизайна.
+
+   ЗДЕСЬ ТОЛЬКО ЦВЕТ И ФОРМА. РАСКЛАДКУ НЕ ДВИГАТЬ.
+
+   Это не осторожность вообще, а вывод из фазы 4: в покере поля зоны
+   действий, поднятые с 10 до 16, дали двадцать три наложения — стол сжался,
+   и плашки мест доехали до банка. Здесь на столе теснее: шесть пар карт,
+   колода с козырем и до шести мест по периметру. Любая правка отступа,
+   высоты или кегля тут обязана проходить через npm run layout, а лучше не
+   делаться вовсе.
+
+   Что меняется по киту (раздел 22): ни золота, ни свечения, ни градиентов.
+   Роли за столом были расписаны тремя цветами — атакующий оранжевым,
+   отбивающийся синим, берущий янтарным. Цветов в ките столько нет, и
+   значения они не несли: важно не «какая роль», а КОГО СЕЙЧАС ЖДУТ. Поэтому
+   ждущий — зелёным, остальные — нейтральной поверхностью. Так и в макете 11:
+   у отбивающегося зелёная точка и зелёная плашка, у прочих ничего.
+   ========================================================================== */
+
+body[data-screen='durak'] {
+  /* Сукно плоское, и то же, что на значке игры в хабе: одна игра — один цвет. */
+  --dk-1: #103a44;
+  --dk-2: #103a44;
+  --dk-3: #103a44;
+  --rim: var(--k-divider);
+  --panel: var(--k-surface);
+  --panel-hi: var(--k-elevated);
+  --bg: var(--k-bg);
+  --bg-2: var(--k-bg);
+  --text: var(--k-text);
+  --text-2: var(--k-text-2);
+  --muted: var(--k-text-2);
+  --faint: var(--k-disabled);
+  --line: var(--k-divider);
+  --line-hi: var(--k-divider);
+  --accent: var(--k-green);
+  --accent-ink: var(--k-on-green);
+  --accent-glow: transparent;
+  --gold: var(--k-text);
+  --gold-ink: var(--k-on-green);
+  --danger: var(--k-suit-red);
+  /* Ролей больше не три цвета, а одно состояние: ждут или не ждут. */
+  --att: var(--k-elevated);
+  --def: var(--k-elevated);
+  background: var(--k-bg);
+}
+
+body[data-screen='durak'] .dk-cloth {
+  background: #103a44;
+  box-shadow: 0 0 0 1px var(--k-divider);
+}
+
+/* Масти: красная — та же, что в ките, чёрная — обычный текст. */
+body[data-screen='durak'] .suit.sH, body[data-screen='durak'] .suit.sD { color: var(--k-suit-red); }
+body[data-screen='durak'] .suit.sS, body[data-screen='durak'] .suit.sC { color: var(--k-text); }
+
+/* ----------------------------------------------------------------- места */
+
+/* Кого ждут — зелёным кольцом, без сияния. Это и есть то, ради чего зелёный. */
+body[data-screen='durak'] .dk-seat.turn .av { box-shadow: 0 0 0 3px var(--k-green); }
+body[data-screen='durak'] .dk-seat.def .av,
+body[data-screen='durak'] .dk-seat.att .av { border-color: var(--k-divider); }
+/* Дурак — не ошибка и не успех: нейтрально, слово само всё говорит. */
+body[data-screen='durak'] .dk-seat.fool .av { border-color: var(--k-divider); box-shadow: none; }
+
+body[data-screen='durak'] .plate.attacker,
+body[data-screen='durak'] .plate.defender,
+body[data-screen='durak'] .plate.taking,
+body[data-screen='durak'] .plate.fool {
+  background: var(--k-elevated);
+  color: var(--k-text);
+  border-color: var(--k-divider);
+}
+/* «ДУМАЕТ» и «БИТО?» — того ждут прямо сейчас. */
+body[data-screen='durak'] .plate.thinking { background: var(--k-green); color: var(--k-on-green); border-color: transparent; }
+body[data-screen='durak'] .plate.passed { color: var(--k-text-2); }
+
+/* ------------------------------------------------------- поле и колода */
+
+/* Карта, которую можно покрыть, — зелёным контуром вместо золотого сияния. */
+body[data-screen='durak'] .dk-pair.target img.att {
+  box-shadow: 0 0 0 2px var(--k-green);
+  animation: none;
+}
+
+/* --------------------------------------------------------------- рука */
+
+body[data-screen='durak'] .dk-role { background: var(--k-elevated); color: var(--k-text); border-color: var(--k-divider); }
+/* Ваш ход — зелёным и без пульсации: подсказка, а не сирена. */
+body[data-screen='durak'] .dk-role.go,
+body[data-screen='durak'] .dk-role.go.def {
+  background: var(--k-green);
+  color: var(--k-on-green);
+  border-color: transparent;
+  animation: none;
+}
+body[data-screen='durak'] .dk-role.go.urgent { background: var(--k-suit-red); color: var(--k-text); }
+body[data-screen='durak'] .dk-role.fool { background: var(--k-elevated); color: var(--k-text); border-color: var(--k-divider); }
+
+body[data-screen='durak'] .hero.turn .dk-card img.ok { box-shadow: 0 0 0 2px var(--k-green), 0 6px 16px rgba(0, 0, 0, 0.5); }
+body[data-screen='durak'] .hero .dk-card img.ok { box-shadow: 0 0 0 1.5px var(--k-green), 0 5px 14px rgba(0, 0, 0, 0.5); }
+/* Выбранная карта — зелёным контуром, без золота и без сияния. */
+body[data-screen='durak'] .hero .dk-card img.picked {
+  box-shadow: 0 0 0 3px var(--k-green);
+  filter: none;
+}
+
+/* Свечения нет. Ваш ход показывает рамка и зелёная подпись над рукой —
+   этого достаточно, сияние вокруг половины экрана уже перебор. */
+body[data-screen='durak'] .hero.turn { box-shadow: 0 0 0 1px var(--k-green); }
+
+/* «Взять» — обычный ход, а не ошибка: красный тут был неправдой. Красный в
+   дураке остаётся только за истекающим временем. */
+body[data-screen='durak'] .panel .btn.danger {
+  background: var(--k-elevated);
+  color: var(--k-text);
+  border: 1px solid var(--k-divider);
+  box-shadow: none;
+}
+body[data-screen='durak'] .panel .btn.danger small { color: var(--k-text-2); }
+
