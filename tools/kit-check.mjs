@@ -166,7 +166,14 @@ function contrast() {
     ['основной текст на поверхности', ratio(v('--k-text'), v('--k-surface'))],
     ['вторичный текст на фоне', ratio(v('--k-text-2'), v('--k-bg'))],
     ['вторичный текст на поверхности', ratio(v('--k-text-2'), v('--k-surface'))],
-    ['текст на зелёной кнопке', ratio(v('--k-bg'), v('--k-green'))],
+    /*
+     * Текст на зелёной кнопке — берём ИМЕННО тот токен, которым он написан.
+     * Было зашито --k-bg: пока зелёный был #2EE08C, тёмная надпись на нём
+     * давала 11.5 и проверка молчала. Зелёный стал #137A43, тёмная надпись
+     * на нём даёт 3.50 — и если кто-то вернёт её, узнать об этом должна
+     * проверка, а не человек с пипеткой.
+     */
+    ['текст на зелёной кнопке', ratio(v('--k-on-green'), v('--k-green'))],
   ];
 }
 
@@ -236,3 +243,97 @@ if (problems.length) {
   process.exit(1);
 }
 console.log('\nкит собран: ни одного размера сверх шкалы');
+
+/* ==========================================================================
+   ШКАЛА ПО ВСЕМ ФАЙЛАМ, А НЕ ТОЛЬКО НА ВИТРИНЕ
+
+   Всё выше смотрит на kit.html в настоящем браузере — и это правильный способ
+   проверить кит. Но правило «размеров текста ровно семь» относится ко всему
+   приложению, а на витрине нет ни стола покера, ни админки: там можно было
+   годами держать 13.5 пикселя, и ни одна проверка бы не возразила.
+
+   Поэтому вторая проверка — по исходникам miniapp/*.css. Она тупая и честная:
+   любой кегль и любое скругление, не принадлежащее шкале, попадает в отчёт,
+   если только не названо исключением здесь же, с причиной.
+   ========================================================================== */
+
+const CSS_DIR = path.join(ROOT, 'miniapp');
+/* UNOQ ждёт фазы 6: miniapp/colors.css ещё не на ките. Строку убрать вместе
+   с переводом экрана, а не раньше. */
+const CSS_SKIP = new Set(['colors.css']);
+const SCALE_FS = new Set([12, 14, 16, 20, 24, 32]);
+const SCALE_R = new Set([0, 6, 8, 12, 20, 999]);
+
+/*
+ * ИСКЛЮЧЕНИЯ — каждое с причиной. Без этого списка проверка заставила бы
+ * сломать то, что проверено другой проверкой.
+ */
+const CSS_EXEMPT = [
+  {
+    file: 'style.css',
+    values: ['10.5px', '9.5px', '8.5px', '10px'],
+    what: 'лестница кегля плашки места (.plate / .long / .xlong / .win.long)',
+    why: 'три ступени существуют, чтобы «ПОВЫСИЛ 10.000.000» влезало целиком и '
+       + 'не наезжало на банк. Это проверяет npm run layout на 23 раскладках и '
+       + '12 размерах экрана; привести их к 12 значит либо обрезать сумму, либо '
+       + 'получить наложение.',
+  },
+  {
+    file: 'durak.css',
+    values: ['50% 50% 34px 34px / 44% 44% 34px 34px'],
+    what: 'силуэт сукна дурака',
+    why: 'это не скругление угла, а форма стола — овал со срезанным низом. '
+       + 'Шкала скруглений про углы компонентов, а не про игровой арт.',
+  },
+];
+const exemptFor = (file, value) =>
+  CSS_EXEMPT.find((e) => e.file === file && e.values.includes(value));
+
+/**
+ * Кегль, выраженный через шкалу стола: `calc(16px * var(--u))` и
+ * `max(12px, calc(14px * var(--u)))`. Множитель --u — это масштаб всего
+ * стола под размер экрана, а не восьмой кегль: на нём число остаётся из
+ * шкалы, а стол целиком становится мельче или крупнее.
+ */
+function scaledOk(v) {
+  const m = v.match(/^(?:max\(\s*(\d+(?:\.\d+)?)px\s*,\s*)?calc\(\s*(\d+(?:\.\d+)?)px\s*\*\s*var\(--u[^)]*\)\s*\)\s*\)?$/);
+  if (!m) return false;
+  return [m[1], m[2]].filter(Boolean).every((n) => SCALE_FS.has(parseFloat(n)));
+}
+
+const cssNotes = [];
+for (const file of fs.readdirSync(CSS_DIR).filter((f) => f.endsWith('.css')).sort()) {
+  if (CSS_SKIP.has(file)) continue;
+  const src = fs.readFileSync(path.join(CSS_DIR, file), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  for (const m of src.matchAll(/font-size\s*:\s*([^;}]+)/g)) {
+    const v = m[1].trim();
+    if (v.startsWith('var(--k-fs-') || /^(inherit|1em|100%)$/.test(v)) continue;
+    if (scaledOk(v)) continue;
+    if (exemptFor(file, v)) continue;
+    cssNotes.push(`${file}: кегль вне шкалы — ${v}`);
+  }
+  for (const m of src.matchAll(/border-radius\s*:\s*([^;}]+)/g)) {
+    const v = m[1].trim();
+    if (exemptFor(file, v)) continue;
+    const parts = v.split(/[\s/]+/).filter(Boolean);
+    const ok = parts.every((p) => {
+      if (/^var\(--k-r-/.test(p) || p === '50%' || p === '0') return true;
+      const n = parseFloat(p);
+      return p.endsWith('px') && SCALE_R.has(n);
+    });
+    if (!ok) cssNotes.push(`${file}: скругление вне шкалы — ${v}`);
+  }
+}
+
+console.log('\nшкала по исходникам miniapp/*.css');
+for (const e of CSS_EXEMPT) {
+  console.log(`  ! ${e.file}: ${e.what}`);
+  for (const line of e.why.match(/.{1,72}(\s|$)/g)) console.log(`      ${line.trim()}`);
+}
+if (CSS_SKIP.size) console.log(`  ! пропущен целиком: ${[...CSS_SKIP].join(', ')} — UNOQ ждёт фазы 6`);
+if (cssNotes.length) {
+  console.log(`\n${cssNotes.length} замечаний по шкале:`);
+  for (const n of cssNotes) console.log('  ✗ ' + n);
+  process.exit(1);
+}
+console.log('  · ни одного кегля и ни одного скругления сверх шкалы');

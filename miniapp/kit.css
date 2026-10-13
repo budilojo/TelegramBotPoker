@@ -11,6 +11,11 @@
    Из принципов кита (раздел 22), которые видно прямо здесь: ни градиентов,
    ни свечения, ни стекла, ни золота, ни «таблеток» в полэкрана. Зелёный
    появляется там, где есть действие или состояние, и больше нигде.
+
+   ЗЕЛЁНЫЙ ТЕПЕРЬ ТЁМНЫЙ (#137A43), и из этого следуют два правила, которые
+   видно в этом файле: надпись на зелёной заливке только светлая (4.98), а
+   зелёным как цветом мелкого текста не пишут вообще (3.04 на поверхности).
+   Поэтому «плюс» в рейтинге получил зелёную точку вместо зелёных цифр.
    ========================================================================== */
 
 /*
@@ -138,7 +143,9 @@
 .k-input:disabled { color: var(--k-disabled); background: var(--k-surface); }
 /* Красный — только ошибка (docs/redesign.md §2). */
 .k-input[aria-invalid='true'] { border-color: var(--k-suit-red); }
-.k-error { font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font); color: var(--k-suit-red); }
+/* Текст ошибки — светлый: красным в 12 пикселей это 3.65 на фоне. Красным
+   остаётся рамка поля, и ей 3:1 достаточно. */
+.k-error { font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font); color: var(--k-text); }
 
 /* Числовое поле со степпером: − значение + */
 .k-stepper {
@@ -254,14 +261,14 @@
 }
 .k-slider input[type='range']::-webkit-slider-runnable-track {
   height: var(--k-s4);
-  border-radius: var(--k-s4);
+  border-radius: var(--k-r-pill);
   /* Заполнено до бегунка — зелёным: это выбранное значение, то есть состояние. */
   background: linear-gradient(to right,
     var(--k-green) 0 var(--k-fill, 50%), var(--k-divider) var(--k-fill, 50%) 100%);
 }
 .k-slider input[type='range']::-moz-range-track {
   height: var(--k-s4);
-  border-radius: var(--k-s4);
+  border-radius: var(--k-r-pill);
   background: linear-gradient(to right,
     var(--k-green) 0 var(--k-fill, 50%), var(--k-divider) var(--k-fill, 50%) 100%);
 }
@@ -296,7 +303,7 @@
 
 /* ------------------------------------------------------------ шторка */
 
-.k-sheet-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); }
+.k-sheet-backdrop { position: fixed; inset: 0; background: var(--scrim); }
 .k-sheet {
   position: fixed;
   left: 0;
@@ -305,7 +312,9 @@
   /* Скругление только сверху — кит, раздел 4. */
   border-radius: var(--k-r-sheet) var(--k-r-sheet) 0 0;
   background: var(--k-surface);
-  box-shadow: var(--k-shadow-sheet);
+  /* Было: тень в 32 пикселя размытия. Тень рисует объём, которого на плоском
+     экране нет, — отделяет шторку от страницы линия. */
+  border-top: var(--k-sheet-line);
   padding: var(--k-s12) var(--k-screen-x) var(--k-sticky-bottom);
   display: flex;
   flex-direction: column;
@@ -338,6 +347,7 @@
 /* Полоса состояния — кит, раздел 8. Цвет здесь и есть смысл. */
 .k-dot { width: var(--k-s12); height: var(--k-s12); border-radius: 50%; display: inline-block; }
 .k-dot--neutral { background: var(--k-text-2); }
+/* Точка несёт смысл цветом, поэтому к ней всегда стоит слово — кит, 8. */
 .k-dot--active, .k-dot--success { background: var(--k-green); }
 .k-dot--disabled { background: var(--k-disabled); }
 
@@ -496,8 +506,23 @@
   font-variant-numeric: tabular-nums;
   flex: none;
 }
-.k-rank-points--up { color: var(--k-green); }
-.k-rank-points--down { color: var(--k-suit-red); }
+/*
+ * Цвет ушёл с цифр на точку перед ними: зелёным это было 3.04, красным
+ * 3.17 — хватает неТексту, но не числу в 16 пикселей. Точке 3:1
+ * достаточно, а знак числа по-прежнему виден боковым зрением.
+ */
+.k-rank-points--up, .k-rank-points--down { color: var(--k-text); }
+.k-rank-points--up::before, .k-rank-points--down::before {
+  content: '';
+  display: inline-block;
+  width: var(--k-s8);
+  height: var(--k-s8);
+  margin-right: var(--k-s4);
+  border-radius: 50%;
+  vertical-align: 0.04em;
+}
+.k-rank-points--up::before { background: var(--color-success); }
+.k-rank-points--down::before { background: var(--color-danger); }
 .k-rank-points--zero { color: var(--k-text-2); }
 
 /* ----------------------------------------------- строка стола (кит, 13) */
@@ -636,7 +661,9 @@
   text-align: center;
 }
 /* Чей ход — зелёное кольцо и число секунд. Цвет здесь и есть смысл. */
-.k-seat--turn .k-av { box-shadow: 0 0 0 2px var(--k-green); }
+/* Чей ход — зелёное кольцо, и светлое снаружи: места стоят на сукне, а
+   зелёное к сукну это 2.24. */
+.k-seat--turn .k-av { box-shadow: 0 0 0 2px var(--k-green), 0 0 0 3px var(--on-felt-accent-line); }
 .k-seat--turn .k-seat-name { color: var(--k-text); }
 .k-seat-clock {
   position: absolute;
@@ -654,10 +681,11 @@
 }
 /* Сбросил — выбыл из раздачи, но со стола не исчез. */
 .k-seat--folded { opacity: 0.45; }
-/* Победитель — зелёная подпись, без золота и без свечения (кит, 22). */
+/* Победитель — светлая подпись: зелёной в 12 пикселях это 2.24 на сукне,
+   где места и стоят. Без золота и без свечения (кит, 22). */
 .k-seat-win {
   font: var(--k-w-semibold) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font);
-  color: var(--k-green);
+  color: var(--k-text);
 }
 
 /* ------------------------------------------- статус-бар игры (кит, 15) */

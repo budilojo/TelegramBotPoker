@@ -31,7 +31,10 @@ import { durakStack } from '../bot/harness.js';
 import { legalActions } from '../server/game.js';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const OUT = path.join(ROOT, 'preview');
+const SIZE_TAG = process.env.PREVIEW_W || process.env.PREVIEW_H
+  ? `preview-${process.env.PREVIEW_W || 'auto'}x${process.env.PREVIEW_H || 'auto'}`
+  : 'preview';
+const OUT = path.join(ROOT, SIZE_TAG);
 const PORT = Number(process.env.PREVIEW_PORT || 8090);
 const TOKEN = `0:${crypto.randomBytes(16).toString('hex')}`;
 const serve = process.argv.includes('--serve');
@@ -70,8 +73,26 @@ function play(room, until, pick) {
   }
 }
 
+/*
+ * ПЕРЕСНЯТЬ ВСЁ ОДНИМ РАЗМЕРОМ:
+ *
+ *   PREVIEW_W=320 PREVIEW_H=568 npm run preview
+ *
+ * Снимки по умолчанию сняты под 390 — размер, под который нарисованы макеты.
+ * Но проверять вёрстку надо и на 320: это самый узкий телефон, который
+ * Telegram ещё показывает, и именно там сначала ломается всё. Без этого
+ * переключателя узкий экран приходилось ловить сценами по одной, и его
+ * ловили не всегда.
+ *
+ * Размер пишется в имя папки, чтобы прогоны не затирали друг друга.
+ */
+const FORCE_W = Number(process.env.PREVIEW_W) || 0;
+const FORCE_H = Number(process.env.PREVIEW_H) || 0;
+
 const scenes = [];
 function scene(name, room, viewer, { width = 390, height = 780, click = null, press = null, start = room.code, tap = [], sq = [], scroll = 0, tab = null, before = null, after = null } = {}) {
+  if (FORCE_W) width = FORCE_W;
+  if (FORCE_H) height = FORCE_H;
   const user = { id: viewer, first_name: PEOPLE.find(([id]) => id === viewer)?.[1] ?? 'Гость' };
   const initData = signInitData({ auth_date: Math.floor(Date.now() / 1000), user, ...(start ? { start_param: start } : {}) }, TOKEN);
   // `before` — то, что надо сделать с ботом ровно перед этой страницей

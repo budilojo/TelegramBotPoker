@@ -11,6 +11,12 @@
    градиентов. Красный — только ошибка, поэтому FOLD перестал быть красным:
    сбросить карты не ошибка. Зелёный — только смысл, поэтому он остался за
    одним действием: тем, которое продолжает раздачу (CHECK или CALL).
+
+   ПРАВИЛО СУКНА. Зелёный #137A43 к сукну #103D32 даёт 2.24, а разделитель
+   #23343B — 1.07: ни заливка, ни контур на сукне сами по себе не видны.
+   Поэтому всё, что лежит поверх сукна, получает контур из --on-felt-line
+   (6.13) или, если под ним зелёная заливка, --on-felt-accent-line (11.18 к
+   сукну и 4.98 к зелёному). Цифры считает npm run contrast.
    ========================================================================== */
 
 body[data-screen='poker'] {
@@ -32,8 +38,10 @@ body[data-screen='poker'] {
   --accent-ink: var(--k-on-green);
   /* Золота нет. Там, где оно было ролью «важное, но не главное», теперь
      обычная вторичная поверхность. */
+  /* Светлая плашка с тёмной надписью — 17.46. Текст на зелёном стал светлым,
+     и брать его в надпись на светлой плашке больше нельзя. */
   --gold: var(--k-text);
-  --gold-ink: var(--k-on-green);
+  --gold-ink: var(--bg-main);
   /* Красный один на весь кит. Минус в итогах — не ошибка, но и не повод
      заводить второй оттенок красного. */
   --danger: var(--k-suit-red);
@@ -41,10 +49,17 @@ body[data-screen='poker'] {
   background: var(--k-bg);
 }
 
-/* Сукно плоское: ни градиента, ни свечения по ободу. */
-body[data-screen='poker'] .cloth {
-  background: var(--k-felt-poker);
-  box-shadow: 0 0 0 1px var(--k-divider);
+/*
+ * Сукно плоское: ни градиента, ни свечения по ободу.
+ *
+ * Селектор был .cloth — класса, которого на этом экране нет: овал покера
+ * рисует .felt (miniapp/games/poker.js), а .dk-cloth это дурак. Правило не
+ * применялось ни к чему, и сукно всё это время оставалось градиентным с
+ * тенью в сорок пикселей. Теперь плоское и сукно, и правило.
+ */
+body[data-screen='poker'] .felt {
+  background: var(--table-felt);
+  box-shadow: 0 0 0 1px var(--border-color);
 }
 
 /* ------------------------------------------------------------ шапка */
@@ -57,7 +72,8 @@ body[data-screen='poker'] .top-meta { color: var(--k-text-2); }
 body[data-screen='poker'] .plate {
   background: var(--k-elevated);
   color: var(--k-text);
-  border-color: var(--k-divider);
+  /* Контур на сукне: --k-divider здесь даёт 1.07, то есть ничего. */
+  border-color: var(--on-felt-line);
 }
 /* Ставка, блайнды, «олл-ин» — это состояния, а не праздник: одна
    поверхность, разный текст. Пульсации у олл-ина больше нет. */
@@ -69,16 +85,26 @@ body[data-screen='poker'] .plate.bb,
 body[data-screen='poker'] .plate.hand {
   background: var(--k-elevated);
   color: var(--k-text);
-  border-color: var(--k-divider);
+  border-color: var(--on-felt-line);
 }
 body[data-screen='poker'] .plate.allin {
   background: var(--k-elevated);
   color: var(--k-text);
+  border-color: var(--on-felt-line);
   animation: none;
 }
-/* Чей ход — зелёным: это и есть состояние, ради которого зелёный существует. */
-body[data-screen='poker'] .plate.turn { background: var(--k-green); color: var(--k-on-green); }
-body[data-screen='poker'] .plate.win { background: var(--k-green); color: var(--k-on-green); box-shadow: none; }
+/*
+ * Чей ход — зелёным: это и есть состояние, ради которого зелёный существует.
+ * Светлая надпись (4.98) и светлый контур, иначе зелёная плашка растворяется
+ * в зелёном сукне (2.24).
+ */
+body[data-screen='poker'] .plate.turn,
+body[data-screen='poker'] .plate.win {
+  background: var(--k-green);
+  color: var(--k-on-green);
+  border-color: var(--on-felt-accent-line);
+  box-shadow: none;
+}
 
 /* ------------------------------------------------------------ центр */
 
@@ -92,6 +118,7 @@ body[data-screen='poker'] .hero { background: var(--k-surface); }
 body[data-screen='poker'] .hero.turn { box-shadow: 0 0 0 1px var(--k-green); }
 body[data-screen='poker'] .your-turn { background: var(--k-green); color: var(--k-on-green); }
 body[data-screen='poker'] .hero-stack { font-variant-numeric: tabular-nums; }
+/* Стек вырос: 24 пикселя полужирным — крупный текст, ему хватает 3:1 (3.04). */
 body[data-screen='poker'] .hero-stack.up { color: var(--k-green); text-shadow: none; }
 
 /* -------------------------------------------------------- зона действий */
@@ -204,10 +231,6 @@ body[data-screen='poker'] .sheet-confirm {
   background: var(--k-bg);
 }
 
-/* Цвет аватара — та же спокойная полоса, что в ките: на зелёном сукне
-   полный круг оттенков рябит. */
-body[data-screen='poker'] .av { background: hsl(calc(195 + var(--h, 0) * 0.36) 30% 42%); }
-
 /* ------------------------------------------------------------ вскрытие */
 
 /*
@@ -218,19 +241,24 @@ body[data-screen='poker'] .av { background: hsl(calc(195 + var(--h, 0) * 0.36) 3
  * Размеры и отступы те же, что были: геометрия этого экрана выверена, и
  * двадцать три наложения тому причиной.
  */
+/* Зелёный контур на сукне не виден (2.24) — поэтому к нему светлый. */
 body[data-screen='poker'] #app .card.best {
-  box-shadow: 0 0 0 2px var(--k-green);
+  box-shadow: 0 0 0 2px var(--k-green), 0 0 0 3px var(--on-felt-accent-line);
   animation: none;
 }
-body[data-screen='poker'] .seat.win .av { border-color: var(--k-green); box-shadow: none; }
-body[data-screen='poker'] .seat.win .info { border-color: var(--k-green); box-shadow: none; }
-body[data-screen='poker'] .plate.win { background: var(--k-green); color: var(--k-on-green); box-shadow: none; }
-/* Выигрыш — обычное число, а не плашка с сиянием. Поля и скругление
-   оставлены прежними: иначе поедет высота руки. */
+body[data-screen='poker'] .seat.win .av {
+  border-color: var(--k-green);
+  box-shadow: 0 0 0 2px var(--k-green), 0 0 0 3px var(--on-felt-accent-line);
+}
+body[data-screen='poker'] .seat.win .info { border-color: var(--on-felt-accent-line); box-shadow: none; }
+/* Выигрыш — обычное число, а не плашка с сиянием. Зелёной надписью в 16
+   пикселей это 3.04, поэтому надпись светлая: зелёный уже сказал своё
+   кольцом вокруг победителя. Поля и скругление прежние — иначе поедет
+   высота руки. */
 body[data-screen='poker'] .gain {
   background: none;
   box-shadow: none;
-  color: var(--k-green);
+  color: var(--k-text);
 }
 
 /* «не показал» — сноска, а не результат: вторичным текстом и без нажима. */

@@ -15,13 +15,23 @@
  * Базовое правило нужно всем: `.back-link` рисует «← Все игры группы» и на
  * столах дурака и UNOQ, а их эта фаза не трогает. Оставлено как было.
  */
+/*
+ * «← Все игры группы» на столах дурака и UNOQ. Была зелёной надписью в 14
+ * пикселей — 3.50 на фоне, а мелкому тексту нужно 4.5. Стала светлой со
+ * зелёным подчёркиванием: читается текст, а зелёным осталась полоса, и ей
+ * хватает 3:1.
+ */
 .back-link {
   align-self: flex-start;
-  color: var(--accent);
+  color: var(--text-primary);
   font-weight: 800;
-  font-size: 14px;
+  font-size: var(--k-fs-secondary);
   padding: 6px 2px;
   margin: -4px 0 -8px;
+  text-decoration: underline;
+  text-decoration-color: var(--color-success);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
 }
 
 .hub .back-link {
@@ -31,10 +41,15 @@
   min-height: var(--k-tap);
   padding: 0 var(--k-s4);
   margin-left: calc(var(--k-s4) * -1);
-  color: var(--k-green);
+  /* Та же причина: зелёная надпись в 14 пикселей это 3.50. */
+  color: var(--k-text);
   font: var(--k-w-semibold) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font);
   background: none;
   border: 0;
+  text-decoration: underline;
+  text-decoration-color: var(--color-success);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
 }
 
 .hub .hub-head h1 { font: var(--k-w-semibold) var(--k-fs-title)/var(--k-lh-title) var(--k-font); color: var(--k-text); }
@@ -102,11 +117,11 @@
 }
 /* У каждой игры своё сукно — кит, раздел 20: опознавательный знак игры живёт
    в игровом слое, а не в общем интерфейсе. */
-.hub .gc-icon.g-poker { background: var(--k-felt-poker); }
-.hub .gc-icon.g-durak { background: #103a44; }
-.hub .gc-icon.g-colors { background: #1b2a4a; }
-.hub .gc-icon.g-chess { background: #2c3d3a; }
-.hub .gi-card { position: absolute; width: 22px; border-radius: 3px; }
+.hub .gc-icon.g-poker { background: var(--table-felt); }
+.hub .gc-icon.g-durak { background: var(--felt-durak); }
+.hub .gc-icon.g-colors { background: var(--felt-colors); }
+.hub .gc-icon.g-chess { background: var(--felt-chess); }
+.hub .gi-card { position: absolute; width: 22px; }
 .hub .gi-card.c0 { left: 7px; top: 13px; rotate: -10deg; }
 .hub .gi-card.c1 { left: 20px; top: 11px; rotate: 9deg; }
 .hub .lrow .gc-icon { width: var(--k-av-md); height: var(--k-av-md); }
@@ -190,10 +205,10 @@
    РЕЙТИНГ — список, своя строка снизу (её видно всегда) и карточка игрока.
    ========================================================================== */
 
-.rating .back-link { font-size: 20px; padding: 6px 12px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); align-self: flex-start; }
+.rating .back-link { font-size: var(--k-fs-section); padding: 6px 12px; border-radius: var(--k-r-lg); background: var(--panel); border: 1px solid var(--line); align-self: flex-start; text-decoration: none; }
 .rt-head { display: flex; align-items: center; gap: 10px; }
-.rt-head-cup { font-size: 30px; flex: none; }
-.rt-head h1 { font-size: 24px; letter-spacing: -0.02em; }
+.rt-head-cup { font-size: var(--k-fs-title); flex: none; }
+.rt-head h1 { font-size: var(--k-fs-num); letter-spacing: -0.02em; }
 
 .rt-tabs { display: flex; gap: 10px; }
 .rt-tab {
@@ -203,25 +218,26 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  border-radius: 22px;
+  border-radius: var(--k-r-lg);
   background: var(--panel);
   border: 1px solid var(--line);
   color: var(--muted);
   font-weight: 800;
-  font-size: 14px;
+  font-size: var(--k-fs-secondary);
 }
+/* Выбранная вкладка — светлый текст на зелёном: 4.98. */
 .rt-tab.on { background: var(--accent); border-color: transparent; color: var(--accent-ink); }
 
 .rt-chips { display: flex; gap: 8px; flex-wrap: wrap; }
 .rt-chips + .rt-chips { margin-top: -4px; }
 .rt-chip {
-  padding: 9px 16px;
-  border-radius: 999px;
+  padding: var(--k-s8) var(--k-s16);
+  border-radius: var(--k-r-pill);
   background: var(--panel);
   border: 1px solid var(--line);
   color: var(--muted);
   font-weight: 800;
-  font-size: 12.5px;
+  font-size: var(--k-fs-caption);
 }
 .rt-chip.on { background: var(--accent); border-color: transparent; color: var(--accent-ink); }
 
@@ -232,37 +248,41 @@
   gap: 10px;
   width: 100%;
   text-align: left;
-  padding: 10px 14px 10px 8px;
-  border-radius: 16px;
+  padding: var(--k-s12) var(--k-s16) var(--k-s12) var(--k-s8);
+  border-radius: var(--k-r-lg);
   background: var(--panel);
   border: 1px solid var(--line);
 }
-.rt-row.me { border-color: rgba(46, 224, 140, 0.55); background: var(--panel-hi); }
+/* Своя строка — зелёная рамка: неТекст, 3.04 к поверхности. */
+.rt-row.me { border-color: var(--color-success); background: var(--panel-hi); }
 .rt-place {
   flex: none;
   min-width: 28px;
   text-align: center;
-  font-size: 15px;
+  font-size: var(--k-fs-component);
   font-weight: 900;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
-.rt-row.me .rt-place { color: var(--accent); }
-.av.rt-av { width: 40px; height: 40px; font-size: 16px; flex: none; box-shadow: none; border-width: 1.5px; }
+/* Было зелёной цифрой в 14 пикселей (3.04). Своя строка и так обведена
+   зелёным и подписана «вы». */
+.rt-row.me .rt-place { color: var(--text); }
+.av.rt-av { width: 40px; height: 40px; font-size: var(--k-fs-component); flex: none; box-shadow: none; border-width: 1px; }
 .rt-body { flex: 1; min-width: 0; }
-.rt-name { font-weight: 800; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rt-you { color: var(--accent); font-weight: 900; }
-.rt-sub { font-size: 11.5px; color: var(--faint); font-weight: 700; margin-top: 2px; }
+.rt-name { font-weight: 800; font-size: var(--k-fs-component); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rt-you { color: var(--text); font-weight: 900; }
+/* --faint это «выключено» (2.07 на фоне) — подпись строки не выключена. */
+.rt-sub { font-size: var(--k-fs-caption); color: var(--text-2); font-weight: 700; margin-top: 2px; }
 .rt-points { flex: none; text-align: right; line-height: 1.1; }
-.rt-points b { font-size: 17px; font-weight: 900; color: var(--gold); }
-.rt-points small { display: block; font-size: 10px; color: var(--faint); font-weight: 700; }
-.rt-why { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; margin: 2px 0 6px; }
+.rt-points b { font-size: var(--k-fs-component); font-weight: 900; color: var(--gold); }
+.rt-points small { display: block; font-size: var(--k-fs-caption); color: var(--text-2); font-weight: 700; }
+.rt-why { display: flex; flex-direction: column; gap: 4px; font-size: var(--k-fs-caption); margin: 2px 0 6px; }
 
 .panel.rt-me { padding-top: 8px; }
 
 .rt-big { display: flex; align-items: baseline; gap: 10px; padding: 2px 0 10px; }
-.rt-big b { font-size: 34px; color: var(--gold); line-height: 1; }
-.rt-big small { color: var(--muted); font-weight: 800; font-size: 13px; }
+.rt-big b { font-size: var(--k-fs-title); color: var(--gold); line-height: 1; font-variant-numeric: tabular-nums; }
+.rt-big small { color: var(--muted); font-weight: 800; font-size: var(--k-fs-secondary); }
 .rt-stats { display: flex; gap: 8px; }
 .rt-stat {
   flex: 1;
@@ -270,13 +290,13 @@
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 10px 6px;
-  border-radius: 14px;
+  padding: var(--k-s12) var(--k-s8);
+  border-radius: var(--k-r-lg);
   background: var(--panel-hi);
   border: 1px solid var(--line);
 }
-.rt-stat b { font-size: 18px; }
-.rt-stat small { font-size: 10.5px; color: var(--muted); font-weight: 800; text-align: center; }
+.rt-stat b { font-size: var(--k-fs-section); }
+.rt-stat small { font-size: var(--k-fs-caption); color: var(--muted); font-weight: 800; text-align: center; }
 .rt-last { margin-top: 12px; }
 .rt-last-row {
   display: flex;
@@ -286,12 +306,24 @@
   padding: 8px 2px;
   border-bottom: 1px solid var(--line);
   font-weight: 700;
-  font-size: 13.5px;
+  font-size: var(--k-fs-secondary);
 }
-.rt-when { color: var(--muted); font-size: 12px; flex: 1; text-align: right; }
+.rt-when { color: var(--muted); font-size: var(--k-fs-caption); flex: 1; text-align: right; }
 .rt-last-row b { min-width: 46px; text-align: right; }
-.rt-last-row b.up { color: var(--accent); }
-.rt-last-row b.down { color: var(--danger); }
+/* Знак числа — точкой, как в рейтинге кита: зелёным это 3.04, красным 3.17,
+   а числу в 14 пикселей нужно 4.5. */
+.rt-last-row b.up, .rt-last-row b.down { color: var(--text); }
+.rt-last-row b.up::before, .rt-last-row b.down::before {
+  content: '';
+  display: inline-block;
+  width: var(--k-s8);
+  height: var(--k-s8);
+  margin-right: var(--k-s4);
+  border-radius: 50%;
+  vertical-align: 0.04em;
+}
+.rt-last-row b.up::before { background: var(--color-success); }
+.rt-last-row b.down::before { background: var(--color-danger); }
 
 .hub .rt-open, .rating .rt-open {
   display: flex;
@@ -325,7 +357,7 @@
   font: var(--k-w-semibold) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font);
 }
 
-.soon-list { margin: 10px 0 0; padding-left: 18px; color: var(--text-2); font-size: 14px; line-height: 1.5; }
+.soon-list { margin: var(--k-s12) 0 0; padding-left: var(--k-s16); color: var(--text-2); font-size: var(--k-fs-secondary); line-height: 1.5; }
 .soon-list li { margin-bottom: 6px; }
 
 /* «+ Ещё один стол» — заметная, но не зелёная: зелёный на хабе один (своя игра). */

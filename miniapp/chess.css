@@ -2,10 +2,14 @@
    ШАХМАТЫ — доска на всю ширину, плашки игроков с часами сверху и снизу,
    запись ходов под доской, кнопки внизу.
 
-   Свои цвета у игры только одни — клетки доски. Всё остальное — токены кита.
-   Зелёный здесь значит ровно две вещи: «ваш ход» (полоса статуса, рамка
-   плашки) и «сюда можно» (выбранная клетка и точки ходов). Красный — шах.
-   Последний ход подсвечен нейтрально: это память, а не действие.
+   Свои цвета у игры только одни — клетки доски. Всё остальное — токены.
+
+   ЗЕЛЁНОГО НА ДОСКЕ БОЛЬШЕ НЕТ. #137A43 к тёмной клетке #5F7F76 даёт 1.23:
+   зелёная точка на тёмной клетке не видна вообще. Поэтому «сюда можно»
+   показывают светлый маркер с тёмным кольцом — на светлой клетке его держит
+   кольцо (14.17), на тёмной сам маркер (4.05). Зелёный остался за полосой
+   «чей ход» над доской: это неТекст на обычном фоне, и ему хватает 3.50.
+   Красный шах — красное кольцо со светлым: 3.88 на светлой, 4.05 на тёмной.
    ========================================================================== */
 
 :root {
@@ -92,7 +96,9 @@
 }
 .ch-clock.run { color: var(--k-text); background: var(--k-elevated); }
 .ch-bar.turn .ch-clock.run { border-color: var(--k-green); }
-.ch-clock.run.urgent { color: var(--k-suit-red); border-color: var(--k-suit-red); }
+/* Время кончается — красная заливка со светлыми цифрами (4.78). Красными
+   цифрами на поверхности это 3.17. */
+.ch-clock.run.urgent { background: var(--color-danger); color: var(--text-primary); border-color: transparent; }
 .ch-clock.off { visibility: hidden; }
 
 /* ------------------------------------------------------------------ доска */
@@ -130,38 +136,62 @@
   inset: 0;
   background: color-mix(in srgb, var(--k-text) 24%, transparent);
 }
-/* Выбранная фигура: рамка зелёным — «сюда можно». */
-.ch-sq.sel { box-shadow: inset 0 0 0 3px var(--k-green); }
+/*
+ * МАРКЕРЫ ХОДА — светлое с тёмным, а не зелёное.
+ *
+ * Клетки доски это игровой арт, менять их нельзя, а на тёмной клетке
+ * #5F7F76 зелёный даёт 1.23. Один цвет тут не работает в принципе: что
+ * видно на светлой клетке, пропадает на тёмной. Поэтому маркер ДВУХСЛОЙНЫЙ
+ * — светлое ядро и тёмное кольцо, — и на любой клетке читается хотя бы один
+ * слой: на светлой кольцо (14.17), на тёмной ядро (4.05) и кольцо (4.31).
+ */
+.ch-sq.sel,
+.ch-sq.cap {
+  box-shadow:
+    inset 0 0 0 3px var(--text-primary),
+    inset 0 0 0 5px var(--bg-main);
+}
 .ch-sq.dot::after {
   content: '';
   position: absolute;
   width: 28%;
   height: 28%;
   border-radius: 50%;
-  background: var(--k-green);
-  opacity: 0.85;
+  background: var(--text-primary);
+  box-shadow: 0 0 0 2px var(--bg-main);
 }
-.ch-sq.cap { box-shadow: inset 0 0 0 3px var(--k-green); }
-/* Король под шахом: красное свечение под фигурой. */
+/* Король под шахом: плоское красное кольцо со светлым внутри — было
+   красное свечение радиальным градиентом. */
 .ch-sq.check::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle, var(--k-suit-red) 0%, transparent 72%);
+  box-shadow:
+    inset 0 0 0 3px var(--color-danger),
+    inset 0 0 0 5px var(--text-primary);
 }
-.ch-sq:focus-visible { outline: 2px solid var(--k-green); outline-offset: -2px; z-index: 1; }
+.ch-sq:focus-visible { outline: 2px solid var(--text-primary); outline-offset: -2px; z-index: 1; }
 
-/* Координаты: мелко, по краю, цветом соседней клетки. */
+/*
+ * КООРДИНАТЫ — один тёмный цвет на обеих клетках, и это ЛУЧШЕЕ ВОЗМОЖНОЕ, а
+ * не выбранное на глаз. Было по цвету соседней клетки: 3.29 и там и там.
+ * Стало 14.17 на светлой и 4.31 на тёмной.
+ *
+ * До 4.5 на тёмной клетке не дотянуть ничем: яркость #5F7F76 такова, что
+ * даже чистый белый даёт 4.28, а чистый чёрный — 4.47. Порог недостижим без
+ * правки цвета клеток, а клетки — игровой арт. Отмечено исключением в
+ * tools/contrast-check.mjs и в docs/redesign.md; буквы и цифры по краю доски
+ * к тому же дублируются записью ходов под ней.
+ */
 .ch-rank, .ch-file {
   position: absolute;
-  font: var(--k-w-semibold) 10px/1 var(--k-font);
+  font: var(--k-w-semibold) var(--k-fs-caption)/1 var(--k-font);
   font-style: normal;
   pointer-events: none;
+  color: var(--bg-main);
 }
 .ch-rank { top: 2px; left: 3px; }
 .ch-file { bottom: 2px; right: 3px; }
-.ch-sq.light .ch-rank, .ch-sq.light .ch-file { color: var(--ch-dark); }
-.ch-sq.dark .ch-rank, .ch-sq.dark .ch-file { color: var(--ch-light); }
 
 /* ------------------------------------------------------------ статус, ходы */
 
@@ -177,9 +207,21 @@
   font: var(--k-w-semibold) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font);
   color: var(--k-text-2);
 }
-.ch-status.mine { color: var(--k-green); }
+/*
+ * «ВАШ ХОД» — светлый текст на зелёной плашке. Зелёной надписью в 14
+ * пикселей это 3.50 на фоне, а мелкому тексту нужно 4.5; на плашке —
+ * 4.98. Полоса над плашкой игрока осталась зелёной: она неТекст.
+ */
+.ch-status.mine {
+  color: var(--k-on-green);
+  background: var(--color-success);
+  border-radius: var(--k-r-pill);
+  padding: var(--k-s4) var(--k-s12);
+  align-self: center;
+}
 .ch-status.over { color: var(--k-text); }
-.ch-status.over.won { color: var(--k-green); }
+/* Победа названа словом — цвет ей не нужен. */
+.ch-status.over.won { color: var(--k-text); }
 .ch-status.offer { flex-wrap: wrap; color: var(--k-text); }
 .ch-offer-btns { display: flex; gap: var(--k-s8); }
 
@@ -200,7 +242,9 @@
 }
 .ch-moves::-webkit-scrollbar { display: none; }
 .ch-moves.empty { justify-content: center; align-content: center; }
-.ch-n { color: var(--k-disabled); }
+/* Номер хода — вторичный текст, а не выключенный: выключенного цвета на
+   фоне 2.07, и прочесть номер нельзя. */
+.ch-n { color: var(--k-text-2); }
 .ch-mv.last { color: var(--k-text); font-weight: var(--k-w-semibold); }
 
 /* ----------------------------------------------------- действия и шторки */

@@ -1,35 +1,54 @@
 /* ==========================================================================
-   POKER TABLE — Telegram Mini App
-   Mobile first: a portrait phone inside Telegram, one thumb. Dark room,
-   green felt, white cards, big numbers. The palette is the web app's.
+   СТОЛ ПОКЕРА — Telegram Mini App. Основа, на которой стоят ещё дурак и
+   UNOQ: телефон в портрете, один палец, тёмная комната, плоское сукно.
+
+   ЦВЕТ ЗДЕСЬ БОЛЬШЕ НЕ ЖИВЁТ. Имена ниже унаследованы (на них стоят три
+   игровых экрана), но ни одного своего значения у них не осталось — каждое
+   смотрит в токен из tokens.css. Поэтому палитра правится в одном файле, а
+   не в семи.
    ========================================================================== */
 
 :root {
-  --bg: #0a0f0c;
-  --bg-2: #0e1511;
-  --panel: #131b16;
-  --panel-hi: #1a241e;
-  --line: rgba(255, 255, 255, 0.08);
-  --line-hi: rgba(255, 255, 255, 0.16);
+  --bg: var(--bg-main);
+  --bg-2: var(--bg-main);
+  --panel: var(--bg-surface);
+  --panel-hi: var(--bg-elevated);
+  --line: var(--border-color);
+  --line-hi: var(--border-color);
 
-  --text: #f1f6f2;
-  --text-2: #b8c4bb;
-  --muted: #7f8d83;
-  --faint: #56625a;
+  --text: var(--text-primary);
+  --text-2: var(--text-secondary);
+  /*
+   * Было три степени серого: --text-2, --muted, --faint. В ките их два —
+   * вторичный текст и выключенное. Третьей степени неоткуда взяться, и
+   * «чуть тусклее вторичного» это и есть тот самый подобранный на глаз
+   * оттенок, от которого токены и защищают.
+   */
+  --muted: var(--text-secondary);
+  --faint: var(--color-muted);
 
-  --accent: #2ee08c;
-  --accent-deep: #13b877;
-  --accent-ink: #03130b;
-  --accent-glow: rgba(46, 224, 140, 0.45);
-  --gold: #f2c96b;
-  --gold-ink: #2a1d02;
-  --danger: #ff5f5f;
-  --allin: #ff4d5e;
+  --accent: var(--color-success);
+  /* Второго зелёного нет: градиент кнопки убран, и глубокий оттенок остался
+     без работы. */
+  --accent-deep: var(--color-success);
+  /* Текст на зелёном — светлый. Тёмный на #137A43 даёт 3.50, а надо 4.5. */
+  --accent-ink: var(--text-on-success);
+  /*
+   * Золота нет (docs/redesign.md §2). Роль «важное, но не главное» играли
+   * жёлтая плашка с тёмной надписью — остаётся та же пара, но из палитры:
+   * светлая плашка и тёмная надпись на ней, 17.46.
+   */
+  --gold: var(--text-primary);
+  --gold-ink: var(--bg-main);
+  --danger: var(--color-danger);
+  /* Олл-ин не ошибка, но и второго красного в ките нет. */
+  --allin: var(--color-danger);
 
-  --felt-1: #1c7a4f;
-  --felt-2: #11583a;
-  --felt-3: #0b3d28;
-  --rim: #1a1410;
+  /* Сукно плоское: три остановки градиента стали одним цветом. */
+  --felt-1: var(--table-felt);
+  --felt-2: var(--table-felt);
+  --felt-3: var(--table-felt);
+  --rim: var(--border-color);
 
   --card-w: clamp(34px, 10.4vw, 50px);
   --hero-w: clamp(64px, 20vw, 86px);
@@ -37,7 +56,7 @@
 
   --sat: env(safe-area-inset-top, 0px);
   --sab: env(safe-area-inset-bottom, 0px);
-  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease: var(--k-ease);
 
   color-scheme: dark;
 }
@@ -47,8 +66,8 @@ html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: non
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, 'Segoe UI', Roboto, system-ui, sans-serif;
-  font-size: 15px;
+  font-family: var(--k-font);
+  font-size: var(--k-fs-body);
   line-height: 1.3;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
@@ -67,10 +86,8 @@ input { font: inherit; color: inherit; }
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(130% 60% at 50% 0%, #10201a 0%, transparent 60%),
-    radial-gradient(120% 50% at 50% 100%, #0e1a14 0%, transparent 65%),
-    var(--bg);
+  /* Плоский фон. Два радиальных градиента рисовали свет из ниоткуда. */
+  background: var(--bg);
 }
 
 /* ---------------------------------------------------------------- boot */
@@ -86,8 +103,10 @@ input { font: inherit; color: inherit; }
   text-align: center;
   padding: 24px;
 }
-.boot-logo { font-size: 44px; color: var(--accent); animation: breathe 1.4s ease-in-out infinite; }
-.fatal h2 { color: var(--text); margin: 0; font-size: 20px; }
+/* Зелёный как цвет текста разрешён только крупному: 32 пикселя — это уже
+   крупный текст по WCAG, и ему хватает 3:1 (здесь 3.50). */
+.boot-logo { font-size: var(--k-fs-title); color: var(--accent); animation: breathe 1.4s ease-in-out infinite; }
+.fatal h2 { color: var(--text); margin: 0; font-size: var(--k-fs-section); }
 @keyframes breathe { 50% { opacity: 0.45; transform: scale(0.94); } }
 
 /* ------------------------------------------------------------- top bar */
@@ -102,26 +121,27 @@ input { font: inherit; color: inherit; }
 }
 .stage {
   font-weight: 800;
-  font-size: 12px;
+  font-size: var(--k-fs-caption);
   letter-spacing: 0.08em;
   padding: 6px 10px;
-  border-radius: 999px;
+  border-radius: var(--k-r-pill);
   background: var(--panel-hi);
-  border: 1px solid var(--line-hi);
-  color: var(--accent);
+  /* Был зелёный текст в 12 пикселей — 3.04 на этой поверхности. Плашка и так
+     отделена, а смысл «какая улица» несёт слово, не цвет. */
+  color: var(--text);
   white-space: nowrap;
 }
-.stage.paused { color: var(--gold); }
-.stage.show { color: var(--gold); }
-.top-meta { flex: 1; min-width: 0; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stage.paused { color: var(--text-2); }
+.stage.show { color: var(--text-2); }
+.top-meta { flex: 1; min-width: 0; font-size: var(--k-fs-caption); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .top-meta b { color: var(--text-2); font-weight: 700; }
 .icon-btn {
   width: 38px;
   height: 38px;
-  border-radius: 12px;
+  border-radius: var(--k-r-lg);
   display: grid;
   place-items: center;
-  font-size: 20px;
+  font-size: var(--k-fs-section);
   color: var(--text-2);
   background: var(--panel);
   border: 1px solid var(--line);
@@ -134,13 +154,14 @@ input { font: inherit; color: inherit; }
   left: 50%;
   transform: translateX(-50%);
   z-index: 30;
-  background: #3a2c07;
-  color: var(--gold);
-  border: 1px solid rgba(242, 201, 107, 0.4);
-  font-size: 12.5px;
+  /* «Нет связи» — сообщение, а не награда: обычная приподнятая поверхность. */
+  background: var(--panel-hi);
+  color: var(--text);
+  border: 1px solid var(--line);
+  font-size: var(--k-fs-caption);
   font-weight: 700;
   padding: 6px 12px;
-  border-radius: 999px;
+  border-radius: var(--k-r-pill);
   white-space: nowrap;
 }
 
@@ -159,22 +180,23 @@ input { font: inherit; color: inherit; }
   width: 70%;
   height: 85%;
   border-radius: 50%;
-  background:
-    radial-gradient(90% 60% at 50% 45%, var(--felt-1) 0%, var(--felt-2) 58%, var(--felt-3) 100%);
-  box-shadow:
-    0 0 0 7px var(--rim),
-    0 0 0 8px rgba(255, 255, 255, 0.06),
-    0 18px 40px rgba(0, 0, 0, 0.55),
-    inset 0 0 0 2px rgba(255, 255, 255, 0.05),
-    inset 0 10px 40px rgba(0, 0, 0, 0.35);
+  /*
+   * СУКНО ПЛОСКОЕ. Было: радиальный градиент из трёх зелёных, обод в семь
+   * пикселей, белый блик по канту, тень в сорок пикселей размытия и два
+   * внутренних затемнения. Всё это рисовало объём, которого на экране нет.
+   * Осталась заливка и одна линия канта.
+   */
+  background: var(--felt-1);
+  box-shadow: 0 0 0 1px var(--rim);
 }
 .felt::after {
-  /* the printed betting line */
+  /* Разметочная линия стола — украшение, а не состояние: ей не нужно 3:1,
+     и прочитать её никто не должен. */
   content: '';
   position: absolute;
   inset: 9%;
   border-radius: 50%;
-  border: 1.5px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid color-mix(in srgb, var(--text-secondary) 14%, transparent);
   pointer-events: none;
 }
 
@@ -195,41 +217,43 @@ input { font: inherit; color: inherit; }
   align-items: baseline;
   gap: 6px;
   padding: calc(4px * var(--u, 1)) calc(12px * var(--u, 1));
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--k-r-pill);
+  /*
+   * ПОВЕРХ СУКНА. Прозрачная чёрная подложка на сукне почти не видна, а
+   * контур --border-color не виден совсем: 1.07. Поэтому сплошная
+   * поверхность плюс контур, который на сукне читается: 6.13.
+   */
+  background: var(--panel);
+  border: 1px solid var(--on-felt-line);
 }
-.pot small { font-size: calc(11px * var(--u, 1)); font-weight: 800; letter-spacing: 0.1em; color: var(--gold); }
-.pot b { font-size: calc(20px * var(--u, 1)); font-weight: 800; transition: color 0.3s, text-shadow 0.3s; }
-.pot b.up { color: #fff6d8; text-shadow: 0 0 12px rgba(242, 201, 107, 0.7); }
+.pot small { font-size: calc(12px * var(--u, 1)); font-weight: 800; letter-spacing: 0.1em; color: var(--text-2); }
+.pot b { font-size: calc(20px * var(--u, 1)); font-weight: 800; transition: color 0.3s; }
+/* Банк вырос — это число стало больше, а не засияло. */
+.pot b.up { color: var(--text); }
 .board { display: flex; gap: 4px; }
 .slot {
   width: var(--card-w);
   aspect-ratio: 200 / 280;
-  border-radius: 6px;
-  border: 1.5px dashed rgba(255, 255, 255, 0.18);
+  border-radius: var(--k-r-sm);
+  border: 1px dashed var(--on-felt-line);
 }
 .card {
   display: block;
   width: var(--card-w);
   aspect-ratio: 200 / 280;
-  border-radius: 6px;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+  border-radius: var(--k-r-sm);
 }
-/* The showdown: the winning five lift up in gold, the other cards go dark. */
+/* Вскрытие: пять выигравших карт приподняты и обведены, остальные тускнеют.
+   Было золотое сияние на полэкрана — стал контур в два пикселя. */
 #app .card.best {
   translate: 0 -7px;
-  box-shadow: 0 0 0 2px var(--gold), 0 0 18px rgba(242, 201, 107, 0.85);
-  animation: best-glow 1.6s ease-in-out infinite;
-}
-@keyframes best-glow {
-  50% { box-shadow: 0 0 0 2px #ffe39a, 0 0 28px rgba(242, 201, 107, 1); }
+  box-shadow: 0 0 0 2px var(--gold);
 }
 #app .card.dim { filter: brightness(0.5) saturate(0.6); }
 #app .minis.shown .card.best { translate: 0 -4px; }
-.bet-line { font-size: max(10px, calc(12px * var(--u, 1))); color: rgba(255, 255, 255, 0.72); font-weight: 600; min-height: 15px; text-align: center; }
+.bet-line { font-size: max(12px, calc(12px * var(--u, 1))); color: var(--text); font-weight: 600; min-height: 15px; text-align: center; }
 .result-line {
-  font-size: max(10px, calc(13px * var(--u, 1)));
+  font-size: max(12px, calc(14px * var(--u, 1)));
   font-weight: 700;
   color: var(--gold);
   text-align: center;
@@ -270,20 +294,48 @@ input { font: inherit; color: inherit; }
   display: grid;
   place-items: center;
   font-weight: 800;
-  font-size: 18px;
-  color: #fff;
-  background: hsl(var(--h) 42% 34%);
-  border: 2px solid rgba(0, 0, 0, 0.5);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+  font-size: var(--k-fs-component);
+  color: var(--text);
+  /*
+   * Цвет буквы отличает людей — и только. Полный круг оттенков рябит,
+   * особенно на сукне, поэтому приходящий тон сжимается в спокойную полосу
+   * от синего к сливовому — та же формула, что у .k-av в ките. Раньше это
+   * правило было только у покера, а дурак и UNOQ рябили.
+   */
+  background: hsl(calc(195 + var(--h, 0) * 0.36) 30% 42%);
+  border: 2px solid var(--bg-main);
 }
+/*
+ * ЧЕЙ ХОД — ПОВЕРХ СУКНА. Зелёное кольцо к сукну даёт 2.24: на зелёном
+ * сукне зелёный ободок не виден. Поэтому кольцо двойное — зелёное внутри и
+ * светлое снаружи (11.18 к сукну). Пульсации нет: место и так одно.
+ */
 .seat.turn .av {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(46, 224, 140, 0.25), 0 0 22px var(--accent-glow);
-  animation: pulse 1.3s ease-in-out infinite;
+  box-shadow: 0 0 0 2px var(--accent), 0 0 0 3px var(--on-felt-accent-line);
 }
-.seat.win .av { border-color: var(--gold); box-shadow: 0 0 22px rgba(242, 201, 107, 0.55); }
-@keyframes pulse { 50% { box-shadow: 0 0 0 7px rgba(46, 224, 140, 0.12), 0 0 26px var(--accent-glow); } }
-.ring { position: absolute; inset: -5px; width: 54px; height: 54px; transform: rotate(-90deg); pointer-events: none; }
+.seat.win .av { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold); }
+/*
+ * КОЛЬЦО ОТСЧЁТА — ПОВЕРХ СУКНА, и это главная сложность. Зелёное кольцо к
+ * сукну даёт 2.24, красное — 2.34: на зелёном сукне таймер не читается ни в
+ * обычном состоянии, ни в тревожном.
+ *
+ * Поэтому у кольца появилась ДОРОЖКА — светлая полоса той же толщины, по
+ * которой идёт отсчёт. Кольцо читается относительно неё, а не сукна: зелёное
+ * к светлому 4.98, красное 4.78. Дорожка нарисована на самом svg.ring, а не
+ * на .pod: у трёх игр аватары разного размера, а кольцо везде одно и то же
+ * — 54 пикселя, — и только на нём дорожка встаёт ровно под дугу.
+ */
+.ring {
+  position: absolute;
+  inset: -5px;
+  width: 54px;
+  height: 54px;
+  transform: rotate(-90deg);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 3px var(--on-felt-accent-line);
+  pointer-events: none;
+}
 .ring circle { fill: none; stroke: var(--accent); stroke-width: 3; stroke-linecap: round; transition: stroke-dashoffset 0.25s linear; }
 .ring.low circle { stroke: var(--danger); }
 .dbtn {
@@ -293,23 +345,24 @@ input { font: inherit; color: inherit; }
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #fff;
-  color: #111;
-  font-size: 11px;
+  background: var(--text);
+  color: var(--bg-main);
+  font-size: var(--k-fs-caption);
   font-weight: 900;
   display: grid;
   place-items: center;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
 }
-.host-mark { position: absolute; left: -6px; top: -6px; font-size: 13px; }
+.host-mark { position: absolute; left: -6px; top: -6px; font-size: var(--k-fs-caption); }
 
 /* the two cards: face down at the avatar's shoulder, face up on top of it */
 .minis { position: absolute; left: 29px; top: -2px; display: flex; z-index: 2; pointer-events: none; }
-.minis img { width: 18px; aspect-ratio: 200 / 280; border-radius: 3px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5); }
+/* Скругление снято, а не приведено к шкале: на картинке в 18 пикселей
+   шириной 6 пикселей это уже не угол, а клякса. Свои углы у карты нарисованы. */
+.minis img { width: 18px; aspect-ratio: 200 / 280; }
 .minis img:first-child { rotate: -8deg; }
 .minis img + img { margin-left: -10px; rotate: 8deg; }
 .minis.shown { left: 50%; top: 50%; transform: translate(-50%, -50%); }
-.minis.shown img { width: 30px; border-radius: 4px; rotate: -5deg; }
+.minis.shown img { width: 30px; rotate: -5deg; }
 .minis.shown img + img { margin-left: -9px; rotate: 5deg; }
 
 /* name and stack in one pill under the avatar */
@@ -319,25 +372,28 @@ input { font: inherit; color: inherit; }
   margin-top: -5px;
   max-width: 92px;
   padding: 2px 8px 3px;
-  border-radius: 9px;
-  background: rgba(6, 12, 9, 0.78);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--k-r-md);
+  /* Поверх сукна: сплошная поверхность и контур, видимый на сукне. */
+  background: var(--panel);
+  border: 1px solid var(--on-felt-line);
   text-align: center;
   line-height: 1.1;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s;
 }
-.seat.turn .info { border-color: var(--accent); box-shadow: 0 0 12px rgba(46, 224, 140, 0.35); }
-.seat.win .info { border-color: var(--gold); box-shadow: 0 0 12px rgba(242, 201, 107, 0.45); }
+/* Зелёный контур на сукне не виден (2.24) — поэтому светлый, а зелёное
+   кольцо чей-ход рисует аватар выше. */
+.seat.turn .info { border-color: var(--on-felt-accent-line); }
+.seat.win .info { border-color: var(--gold); }
 .nm {
   max-width: 76px;
-  font-size: 11.5px;
+  font-size: var(--k-fs-caption);
   font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.stk { font-size: 12.5px; font-weight: 800; color: var(--text-2); transition: color 0.3s, text-shadow 0.3s; }
-.stk.up { color: var(--gold); text-shadow: 0 0 10px rgba(242, 201, 107, 0.6); }
+.stk { font-size: var(--k-fs-caption); font-weight: 800; color: var(--text-2); transition: color 0.3s; }
+.stk.up { color: var(--gold); }
 
 /* what the player just did, or how the hand ended for them */
 .plate {
@@ -350,27 +406,41 @@ input { font: inherit; color: inherit; }
   max-width: 104px;
   overflow: hidden;
   text-overflow: ellipsis;
+  /*
+   * КЕГЕЛЬ ПЛАШКИ — ЕДИНСТВЕННОЕ МЕСТО, ГДЕ ШКАЛА НЕ ДОСТАЛАСЬ ДО КОНЦА.
+   * Три ступени (10.5 / 9.5 / 8.5) существуют, чтобы «RAISE 10.000.000»
+   * влезало целиком и не наезжало на банк: npm run layout проверяет это на
+   * 23 раскладках и 12 размерах экрана. Привести их к 12 значит либо
+   * обрезать сумму, либо получить наложение — и то и другое хуже, чем
+   * ступенька в полпиксела. Отмечено в docs/redesign.md.
+   */
   font-size: 10.5px;
   font-weight: 900;
   letter-spacing: 0.03em;
   padding: 2px 7px;
-  border-radius: 999px;
+  border-radius: var(--k-r-pill);
   white-space: nowrap;
-  background: rgba(0, 0, 0, 0.6);
+  /* Поверх сукна: сплошная поверхность и контур, видимый на сукне (6.13). */
+  background: var(--panel);
   color: var(--text-2);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--on-felt-line);
   z-index: 2;
 }
 .plate.long { font-size: 9.5px; letter-spacing: 0; padding: 2px 6px; }
-.plate.xlong { font-size: 8.5px; letter-spacing: -0.01em; padding: 2px 5px; } /* RAISE 10.000.000 — whole, never cut */
-.plate.turn { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
-.plate.bet, .plate.raise, .plate.call { background: var(--gold); color: var(--gold-ink); border-color: transparent; }
-.plate.sb, .plate.bb { background: #3a2f12; color: var(--gold); border-color: rgba(242, 201, 107, 0.35); }
-.plate.allin { background: var(--allin); color: #fff; border-color: transparent; animation: allin-throb 1.6s ease-in-out infinite; }
-@keyframes allin-throb { 50% { box-shadow: 0 0 14px rgba(255, 77, 94, 0.75); } }
+.plate.xlong { font-size: 8.5px; letter-spacing: -0.01em; padding: 2px 5px; }
+/*
+ * Зелёная заливка НА СУКНЕ: 2.24, то есть сама по себе не видна. Поэтому к
+ * ней светлый контур — ровно то, что требует правило сукна.
+ */
+.plate.turn { background: var(--accent); color: var(--accent-ink); border-color: var(--on-felt-accent-line); }
+/* Ставка и блайнды — состояния, а не праздник: одна поверхность, разный текст. */
+.plate.bet, .plate.raise, .plate.call { background: var(--panel-hi); color: var(--text); border-color: var(--on-felt-line); }
+.plate.sb, .plate.bb { background: var(--panel-hi); color: var(--text-2); border-color: var(--on-felt-line); }
+/* Олл-ин больше не пульсирует: это ставка, а не сирена. */
+.plate.allin { background: var(--allin); color: var(--text); border-color: var(--on-felt-accent-line); }
 .plate.fold, .plate.out, .plate.wait, .plate.broke, .plate.left, .plate.in { color: var(--muted); }
-.plate.hand { color: var(--gold); background: rgba(20, 16, 4, 0.85); border-color: rgba(242, 201, 107, 0.3); }
-.plate.win { background: var(--gold); color: var(--gold-ink); border-color: transparent; font-size: 12px; box-shadow: 0 0 14px rgba(242, 201, 107, 0.55); }
+.plate.hand { color: var(--text); background: var(--panel-hi); border-color: var(--on-felt-line); }
+.plate.win { background: var(--accent); color: var(--accent-ink); border-color: var(--on-felt-accent-line); font-size: var(--k-fs-caption); }
 .plate.win.long { font-size: 10px; }
 
 /* ----------------------------------------------------------------- hero */
@@ -379,72 +449,72 @@ input { font: inherit; color: inherit; }
   flex: none;
   margin: 0 10px;
   padding: 10px 12px;
-  border-radius: 20px;
+  border-radius: var(--k-r-lg);
   background: var(--panel);
-  border: 1.5px solid var(--line);
+  border: 1px solid var(--line);
   display: flex;
   align-items: center;
   gap: 14px;
   min-height: calc(var(--hero-w) * 1.4 + 20px);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s;
 }
-.hero.turn {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(46, 224, 140, 0.16), 0 0 30px rgba(46, 224, 140, 0.25);
-}
+/* Ваш ход — зелёная рамка руки. Сияния в треть экрана больше нет. */
+.hero.turn { border-color: var(--accent); }
 .hero-cards { display: flex; flex: none; padding-left: 4px; }
-.hero-cards .card { width: var(--hero-w); border-radius: 9px; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5); }
+.hero-cards .card { width: var(--hero-w); border-radius: var(--k-r-md); }
 .hero-cards .card:first-child { transform: rotate(-5deg); }
 .hero-cards .card + .card { margin-left: calc(var(--hero-w) * -0.18); transform: rotate(5deg) translateY(2px); }
 .hero.folded .hero-cards { opacity: 0.35; filter: grayscale(0.6); }
 .hero-cards.none {
   width: calc(var(--hero-w) * 1.82);
   height: calc(var(--hero-w) * 1.4);
-  border-radius: 12px;
-  border: 1.5px dashed var(--line-hi);
+  border-radius: var(--k-r-lg);
+  border: 1px dashed var(--line-hi);
   display: grid;
   place-items: center;
   color: var(--faint);
-  font-size: 12px;
+  font-size: var(--k-fs-caption);
   text-align: center;
   padding: 6px;
 }
 .hero-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.hero-name { font-weight: 700; color: var(--text-2); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hero-name { font-weight: 700; color: var(--text-2); font-size: var(--k-fs-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hero-stack-row { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 14px; min-width: 0; }
-.hero-stack { font-size: 24px; font-weight: 800; transform-origin: left center; transition: color 0.3s, transform 0.3s var(--ease), text-shadow 0.3s; }
-.hero-stack.up { color: var(--gold); transform: scale(1.05); text-shadow: 0 0 16px rgba(242, 201, 107, 0.55); }
+.hero-stack { font-size: var(--k-fs-num); font-weight: 800; transform-origin: left center; transition: color 0.3s, transform 0.3s var(--ease); }
+.hero-stack.up { color: var(--gold); transform: scale(1.05); }
+/* Выигрыш — плашка со светлой подложкой и тёмной надписью (17.46), а не
+   жёлтый градиент со сиянием. */
 .gain {
-  font-size: 17px;
+  font-size: var(--k-fs-component);
   font-weight: 900;
   color: var(--gold-ink);
-  background: linear-gradient(180deg, #ffe39a, var(--gold));
+  background: var(--gold);
   padding: 2px 9px;
-  border-radius: 999px;
-  box-shadow: 0 0 16px rgba(242, 201, 107, 0.6);
+  border-radius: var(--k-r-pill);
   white-space: nowrap;
 }
-.hero-hand { color: var(--gold); font-weight: 700; font-size: 13.5px; min-height: 17px; }
-.hero-state { font-size: 13px; color: var(--muted); font-weight: 600; }
+.hero-hand { color: var(--gold); font-weight: 700; font-size: var(--k-fs-secondary); min-height: 17px; }
+.hero-state { font-size: var(--k-fs-secondary); color: var(--muted); font-weight: 600; }
 .your-turn {
   align-self: flex-start;
   display: inline-flex;
   gap: 6px;
   align-items: center;
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: var(--k-r-pill);
+  /*
+   * «ВАШ ХОД» — светлый текст на зелёной плашке, 4.98. Зелёной надписью в
+   * 12 пикселей это было бы 3.04 — ниже порога для мелкого текста.
+   * Свечения и подёргивания нет: подсказка, а не сирена.
+   */
   background: var(--accent);
   color: var(--accent-ink);
   font-weight: 900;
-  font-size: 12.5px;
+  font-size: var(--k-fs-caption);
   letter-spacing: 0.06em;
-  animation: glow 1.3s ease-in-out infinite;
   transition: background 0.3s, color 0.3s;
 }
-@keyframes glow { 50% { box-shadow: 0 0 16px var(--accent-glow); } }
-.your-turn.urgent { background: var(--danger); color: #fff; animation: glow-red 0.7s ease-in-out infinite, nudge 0.7s ease-in-out infinite; }
-@keyframes glow-red { 50% { box-shadow: 0 0 18px rgba(255, 95, 95, 0.8); } }
-@keyframes nudge { 0%, 100% { transform: none; } 20% { transform: translateX(-2px); } 40% { transform: translateX(2px); } 60% { transform: none; } }
+.your-turn.urgent { background: var(--danger); color: var(--text); }
 
 /* ---------------------------------------------------------------- panel */
 
@@ -463,15 +533,15 @@ input { font: inherit; color: inherit; }
   justify-content: center;
   color: var(--muted);
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--k-fs-secondary);
   text-align: center;
 }
 .panel.note b { color: var(--text); }
 .btn {
   height: var(--tap);
-  border-radius: 16px;
+  border-radius: var(--k-r-lg);
   font-weight: 900;
-  font-size: 16px;
+  font-size: var(--k-fs-component);
   letter-spacing: 0.02em;
   display: flex;
   flex-direction: column;
@@ -482,16 +552,23 @@ input { font: inherit; color: inherit; }
   border: 1.5px solid var(--line-hi);
   transition: transform 0.08s, opacity 0.2s;
 }
-.btn small { font-size: 11px; font-weight: 700; opacity: 0.75; letter-spacing: 0; margin-top: 2px; }
+.btn small { font-size: var(--k-fs-caption); font-weight: 700; opacity: 0.75; letter-spacing: 0; margin-top: 2px; }
 .btn:active { transform: scale(0.97); }
-.btn:disabled { opacity: 0.35; }
-.btn.primary { background: linear-gradient(180deg, var(--accent), var(--accent-deep)); color: var(--accent-ink); border-color: transparent; }
-.btn.gold { background: linear-gradient(180deg, #f7d88a, var(--gold)); color: var(--gold-ink); border-color: transparent; }
-.btn.danger { color: #ffb0b0; border-color: rgba(255, 95, 95, 0.4); background: rgba(255, 95, 95, 0.08); }
+/*
+ * Выключенная кнопка отличается не только цветом: ни контура, ни нажатия —
+ * это форма, а не оттенок. Прозрачность 0.35 оставлена: она и есть «форма».
+ */
+.btn:disabled { opacity: 0.35; border-color: transparent; }
+/* Заливка вместо градиента: зелёный один, второго оттенка нет. */
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.btn.gold { background: var(--gold); color: var(--gold-ink); border-color: transparent; }
+/* Красный как цвет текста в 16 пикселей даёт 3.17 — ниже порога. Поэтому
+   светлый текст и красный контур: цвет остаётся на неТексте. */
+.btn.danger { color: var(--text); border-color: var(--danger); background: transparent; }
 .btn.ghost { background: transparent; }
 .btn.wide { grid-column: 1 / -1; }
 .sheet .btn.wide { width: 100%; }
-.btn.lg { height: 60px; font-size: 17px; }
+.btn.lg { height: 60px; font-size: var(--k-fs-component); }
 .panel.busy .btn { opacity: 0.5; pointer-events: none; }
 
 /* ---------------------------------------------------------------- lobby */
@@ -505,20 +582,32 @@ input { font: inherit; color: inherit; }
   flex-direction: column;
   gap: 16px;
 }
-.lobby h1 { margin: 0; font-size: 24px; letter-spacing: -0.02em; }
-.lobby .sub { color: var(--muted); font-size: 14px; margin-top: 2px; }
-.box { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 14px; }
+.lobby h1 { margin: 0; font-size: var(--k-fs-num); letter-spacing: -0.02em; }
+.lobby .sub { color: var(--muted); font-size: var(--k-fs-secondary); margin-top: 2px; }
+.box { background: var(--panel); border: 1px solid var(--line); border-radius: var(--k-r-lg); padding: var(--k-s16); }
 .seats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px 6px; }
 .lseat { display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 0; }
-.lseat .av { width: 50px; height: 50px; font-size: 20px; }
-.lseat .nm { font-size: 12px; max-width: 76px; }
-.lseat.empty .av { background: transparent; border: 1.5px dashed var(--line-hi); box-shadow: none; color: var(--faint); font-size: 14px; }
+.lseat .av { width: 50px; height: 50px; font-size: var(--k-fs-section); }
+.lseat .nm { font-size: var(--k-fs-caption); max-width: 76px; }
+.lseat.empty .av { background: transparent; border: 1px dashed var(--line-hi); color: var(--faint); font-size: var(--k-fs-secondary); }
 .lseat.empty .nm { color: var(--faint); font-weight: 600; }
 .lseat.me .av { border-color: var(--accent); }
 .tags { display: flex; flex-wrap: wrap; gap: 6px; }
-.tag { font-size: 12.5px; font-weight: 700; color: var(--text-2); background: var(--panel-hi); border: 1px solid var(--line); padding: 5px 9px; border-radius: 999px; }
-.hint { font-size: 13px; color: var(--muted); line-height: 1.4; }
-.hint a, .link { color: var(--accent); font-weight: 700; text-decoration: none; }
+.tag { font-size: var(--k-fs-caption); font-weight: 700; color: var(--text-2); background: var(--panel-hi); border: 1px solid var(--line); padding: 5px 9px; border-radius: var(--k-r-pill); }
+.hint { font-size: var(--k-fs-secondary); color: var(--muted); line-height: 1.4; }
+/*
+ * ССЫЛКА. Была зелёной надписью в 13 пикселей — 3.50 на фоне, а мелкому
+ * тексту нужно 4.5. Стала светлой надписью с зелёным подчёркиванием: текст
+ * читается (17.46), а зелёным осталась полоса, и ей хватает 3:1 (3.50).
+ */
+.hint a, .link {
+  color: var(--text);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
 .lobby-actions { display: grid; gap: 8px; margin-top: auto; }
 
 /* --------------------------------------------------------------- sheets */
@@ -526,7 +615,7 @@ input { font: inherit; color: inherit; }
 .backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--scrim);
   z-index: 40;
   animation: fade 0.2s both;
 }
@@ -544,23 +633,24 @@ input { font: inherit; color: inherit; }
   max-height: calc(88vh - var(--kb, 0px));
   overflow-y: auto;
   z-index: 41;
-  background: var(--bg-2);
+  background: var(--panel);
   border: 1px solid var(--line-hi);
   border-bottom: 0;
-  border-radius: 24px 24px 0 0;
+  /* Скругление только сверху, и ровно 20 — кит, раздел 4. */
+  border-radius: var(--k-r-sheet) var(--k-r-sheet) 0 0;
   padding: 10px 16px calc(16px + var(--sab));
   animation: sheet-in 0.28s var(--ease) both;
 }
 @keyframes sheet-in { from { transform: translate(-50%, 40px); opacity: 0; } }
-.grab { width: 40px; height: 5px; border-radius: 3px; background: var(--line-hi); margin: 0 auto 12px; }
-.sheet h3 { margin: 0 0 4px; font-size: 20px; }
-.sheet .sub { color: var(--muted); font-size: 13.5px; margin-bottom: 14px; }
+.grab { width: 40px; height: 5px; border-radius: var(--k-r-pill); background: var(--line-hi); margin: 0 auto 12px; }
+.sheet h3 { margin: 0 0 4px; font-size: var(--k-fs-section); }
+.sheet .sub { color: var(--muted); font-size: var(--k-fs-secondary); margin-bottom: 14px; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .size-btn { height: 64px; }
-.size-btn b { font-size: 19px; }
-.amount { text-align: center; font-size: 34px; font-weight: 800; margin: 16px 0 4px; }
+.size-btn b { font-size: var(--k-fs-section); }
+.amount { text-align: center; font-size: var(--k-fs-title); font-weight: 800; margin: 16px 0 4px; }
 .amount.max { color: var(--gold); }
-.amount-sub { text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+.amount-sub { text-align: center; color: var(--muted); font-size: var(--k-fs-secondary); margin-bottom: 12px; }
 .slider {
   -webkit-appearance: none;
   appearance: none;
@@ -570,9 +660,15 @@ input { font: inherit; color: inherit; }
   margin: 4px 0 14px;
   --pct: 0%;
 }
+/*
+ * Дорожка ползунка — ДВЕ заливки с жёсткой границей, а не градиент: один
+ * цвет до бегунка, другой после, никакого перехода между ними. Браузер
+ * умеет это только через linear-gradient, и это единственное его
+ * применение, которое кит оставляет.
+ */
 .slider::-webkit-slider-runnable-track {
   height: 8px;
-  border-radius: 4px;
+  border-radius: var(--k-r-pill);
   background: linear-gradient(90deg, var(--accent) var(--pct), var(--panel-hi) var(--pct));
 }
 .slider::-webkit-slider-thumb {
@@ -581,12 +677,11 @@ input { font: inherit; color: inherit; }
   height: 30px;
   margin-top: -11px;
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  background: var(--text);
 }
-.slider::-moz-range-track { height: 8px; border-radius: 4px; background: var(--panel-hi); }
-.slider::-moz-range-progress { height: 8px; border-radius: 4px; background: var(--accent); }
-.slider::-moz-range-thumb { width: 30px; height: 30px; border-radius: 50%; background: #fff; border: 0; }
+.slider::-moz-range-track { height: 8px; border-radius: var(--k-r-pill); background: var(--panel-hi); }
+.slider::-moz-range-progress { height: 8px; border-radius: var(--k-r-pill); background: var(--accent); }
+.slider::-moz-range-thumb { width: 30px; height: 30px; border-radius: 50%; background: var(--text); border: 0; }
 .menu-list { display: flex; flex-direction: column; gap: 6px; }
 .menu-item {
   display: flex;
@@ -596,23 +691,25 @@ input { font: inherit; color: inherit; }
   gap: 2px;
   width: 100%;
   min-height: 52px;
-  padding: 10px 14px;
-  border-radius: 14px;
+  padding: var(--k-s12) var(--k-s16);
+  border-radius: var(--k-r-lg);
   background: var(--panel);
   border: 1px solid var(--line);
   font-weight: 700;
   text-align: left;
 }
-.menu-item small { color: var(--muted); font-weight: 600; font-size: 12.5px; }
-.menu-item.danger { color: #ffb0b0; }
+.menu-item small { color: var(--muted); font-weight: 600; font-size: var(--k-fs-caption); }
+/* Опасный пункт: красный контур, а надпись светлая — красным текстом в 16
+   пикселей это 3.17. */
+.menu-item.danger { color: var(--text); border-color: var(--danger); }
 .menu-item:active { background: var(--panel-hi); }
-.section-label { font-size: 12px; font-weight: 800; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; margin: 14px 2px 6px; }
+.section-label { font-size: var(--k-fs-caption); font-weight: 800; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; margin: 14px 2px 6px; }
 .field { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; }
 .field label { font-weight: 700; color: var(--text-2); }
 .field input {
   width: 110px;
   height: 44px;
-  border-radius: 12px;
+  border-radius: var(--k-r-lg);
   background: var(--panel);
   border: 1px solid var(--line-hi);
   text-align: right;
@@ -626,11 +723,11 @@ input { font: inherit; color: inherit; }
   flex: 1;
   min-width: 62px;
   height: 44px;
-  border-radius: 12px;
+  border-radius: var(--k-r-lg);
   background: var(--panel);
   border: 1px solid var(--line-hi);
   font-weight: 800;
-  font-size: 14px;
+  font-size: var(--k-fs-secondary);
 }
 .seg button.on { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
 
@@ -639,7 +736,7 @@ input { font: inherit; color: inherit; }
 .pick {
   position: relative;
   min-height: 92px;
-  border-radius: 18px;
+  border-radius: var(--k-r-lg);
   background: var(--panel);
   border: 2px solid var(--line-hi);
   display: flex;
@@ -648,10 +745,12 @@ input { font: inherit; color: inherit; }
   justify-content: center;
   gap: 6px;
   font-weight: 800;
-  font-size: 16px;
+  font-size: var(--k-fs-component);
 }
-.pick .av { width: 40px; height: 40px; font-size: 16px; }
-.pick.on { border-color: var(--gold); background: rgba(242, 201, 107, 0.12); }
+.pick .av { width: 40px; height: 40px; font-size: var(--k-fs-component); }
+/* Выбранный победитель — зелёная рамка и приподнятая подложка: выбранное
+   верное это как раз то, ради чего зелёный существует. */
+.pick.on { border-color: var(--accent); background: var(--panel-hi); }
 .pick.on::after {
   content: '✓';
   position: absolute;
@@ -660,64 +759,94 @@ input { font: inherit; color: inherit; }
   width: 24px;
   height: 24px;
   border-radius: 50%;
+  /* Галочка выбора — светлый кружок с тёмным знаком: 17.46. Зелёная заливка
+     со светлым знаком тут тоже годится, но зелёный уже взяла рамка. */
   background: var(--gold);
   color: var(--gold-ink);
   display: grid;
   place-items: center;
-  font-size: 14px;
+  font-size: var(--k-fs-secondary);
 }
 .review-row { display: flex; justify-content: space-between; gap: 10px; padding: 9px 2px; border-bottom: 1px solid var(--line); font-weight: 700; }
 .review-row span:last-child { color: var(--gold); white-space: nowrap; }
-.pay-row { display: flex; justify-content: space-between; padding: 7px 2px; font-weight: 800; font-size: 16px; }
-.pay-row span:last-child { color: var(--accent); }
+.pay-row { display: flex; justify-content: space-between; padding: 7px 2px; font-weight: 800; font-size: var(--k-fs-component); }
+/* Было зелёной надписью в 16 пикселей — 3.04 на поверхности. Сумма к выплате
+   и так главное число строки: ей хватает веса. */
+.pay-row span:last-child { color: var(--text); }
 
 /* results */
 .res-row { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; padding: 11px 4px; border-bottom: 1px solid var(--line); }
 .res-row .n { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .res-row .s { color: var(--text-2); font-weight: 700; }
 .res-row .pl { font-weight: 900; min-width: 70px; text-align: right; }
-.pl.up { color: var(--accent); }
-.pl.down { color: var(--danger); }
+/*
+ * ПЛЮС И МИНУС. Зелёным и красным это было 3.50 и 3.65 — хватает неТексту,
+ * но не числу в 14 пикселей. Поэтому число светлое, а цвет ушёл на точку
+ * перед ним: точке 3:1 достаточно, и знак числа остаётся виден боковым
+ * зрением, как и был.
+ */
+.pl.up, .pl.down { color: var(--text); }
+.pl.up::before, .pl.down::before {
+  content: '';
+  display: inline-block;
+  width: var(--k-s8);
+  height: var(--k-s8);
+  margin-right: var(--k-s4);
+  border-radius: 50%;
+  vertical-align: 0.04em;
+}
+.pl.up::before { background: var(--accent); }
+.pl.down::before { background: var(--danger); }
 
 /* -------------------------------------------------------------- effects */
 
 /* Things in flight — chips, mucked cards, a winner's sparks — live above the table and vanish. */
 #fx { position: fixed; inset: 0; pointer-events: none; z-index: 35; overflow: hidden; }
 #fx > * { position: absolute; will-change: transform, opacity; opacity: 0; }
+/*
+ * ФИШКА — игровой арт, как рубашка карты: круг с белой вставкой и пунктиром
+ * по канту, три номинала тремя цветами. Это содержание игры, а не
+ * оформление интерфейса, поэтому её цвета остались (они вынесены в токены
+ * игрового слоя). Убрана только тень под ней: фишка летит по экрану, а не
+ * висит над ним.
+ *
+ * Радиальная заливка здесь — жёсткие остановки, то есть концентрические
+ * полосы, а не переход цвета.
+ */
 .fx-chip {
   width: 18px;
   height: 18px;
   margin: -9px 0 0 -9px;
   border-radius: 50%;
-  background: radial-gradient(circle, var(--c) 0 38%, #fff 39% 46%, var(--c) 47% 100%);
-  border: 2px dashed rgba(255, 255, 255, 0.85);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55);
-  --c: #d9a93a;
+  background: radial-gradient(circle, var(--c) 0 38%, var(--card-face) 39% 46%, var(--c) 47% 100%);
+  border: 2px dashed var(--card-face);
+  --c: var(--chip-1);
 }
-.fx-chip.c1 { --c: #d23c4b; }
-.fx-chip.c2 { --c: #2c6fd1; }
+.fx-chip.c1 { --c: var(--chip-2); }
+.fx-chip.c2 { --c: var(--chip-3); }
 .fx-card { width: calc(var(--card-w) * 0.62); margin: calc(var(--card-w) * -0.43) 0 0 calc(var(--card-w) * -0.31); }
+/* Победа: расходящееся кольцо и искры. Сияние вокруг них убрано — осталось
+   то, что и было видно: кольцо и точки. */
 .fx-burst {
   width: 60px;
   height: 60px;
   margin: -30px 0 0 -30px;
   border-radius: 50%;
-  border: 3px solid var(--gold);
-  box-shadow: 0 0 24px rgba(242, 201, 107, 0.8), inset 0 0 18px rgba(242, 201, 107, 0.5);
+  border: 3px solid var(--accent);
 }
 .fx-spark {
   width: 7px;
   height: 7px;
   margin: -3.5px 0 0 -3.5px;
   border-radius: 50%;
-  background: #ffe39a;
-  box-shadow: 0 0 8px 2px rgba(242, 201, 107, 0.9);
+  background: var(--text);
 }
+/* Вспышка по краю экрана — плоская линия, а не свет из-за рамки. */
 .fx-edge {
   inset: 0;
   left: 0 !important;
   top: 0 !important;
-  box-shadow: inset 0 0 0 3px rgba(46, 224, 140, 0.55), inset 0 0 60px rgba(46, 224, 140, 0.35);
+  box-shadow: inset 0 0 0 3px var(--accent);
   border-radius: 0;
 }
 
@@ -730,8 +859,8 @@ input { font: inherit; color: inherit; }
   transform: translate(-50%, -10px);
   max-width: calc(100% - 32px);
   z-index: 60;
-  padding: 10px 14px;
-  border-radius: 14px;
+  padding: var(--k-s12) var(--k-s16);
+  border-radius: var(--k-r-lg);
   /* Золота в ките нет — всплывашка была последним его следом, общим на все
      три игры. Обычная приподнятая поверхность и обычный текст: это
      сообщение, а не награда. */
@@ -739,7 +868,7 @@ input { font: inherit; color: inherit; }
   border: 1px solid var(--k-divider);
   color: var(--k-text);
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--k-fs-secondary);
   text-align: center;
   opacity: 0;
   pointer-events: none;
@@ -768,11 +897,11 @@ body:has(#app .lobby) #toast.show { transform: translate(-50%, 0); }
 @media (max-height: 560px) {
   :root { --hero-w: 46px; --tap: 44px; }
   .hero { padding: 6px 10px; gap: 10px; min-height: 0; }
-  .hero-stack { font-size: 19px; }
-  .hero-name, .hero-hand, .hero-state { font-size: 12px; }
-  .your-turn { font-size: 11px; padding: 3px 8px; }
+  .hero-stack { font-size: var(--k-fs-section); }
+  .hero-name, .hero-hand, .hero-state { font-size: var(--k-fs-caption); }
+  .your-turn { font-size: var(--k-fs-caption); padding: 3px 8px; }
   .panel { padding-top: 6px; padding-bottom: calc(6px + var(--sab)); min-height: 0; }
-  .btn { font-size: 14px; }
+  .btn { font-size: var(--k-fs-secondary); }
   .top { height: 40px; }
 }
 @media (min-width: 521px) {

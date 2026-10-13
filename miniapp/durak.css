@@ -5,11 +5,18 @@
    ========================================================================== */
 
 :root {
-  --dk-1: #237587;
-  --dk-2: #155061;
-  --dk-3: #0c3440;
-  --att: #ff7a59;
-  --def: #52b8ff;
+  /* Сукно дурака — плоское и одним цветом: три остановки градиента стали
+     одним токеном. */
+  --dk-1: var(--felt-durak);
+  --dk-2: var(--felt-durak);
+  --dk-3: var(--felt-durak);
+  /*
+   * Ролей больше не три цвета. Было: атакующий оранжевым, отбивающийся
+   * синим, берущий янтарным — пять цветов мимо палитры ради того, что и так
+   * написано словом. Важно не «какая роль», а КОГО СЕЙЧАС ЖДУТ.
+   */
+  --att: var(--bg-elevated);
+  --def: var(--bg-elevated);
   --hw: clamp(52px, 16.5vw, 70px);
 }
 
@@ -17,17 +24,14 @@
 .dk-cloth {
   position: absolute;
   border-radius: 50% 50% 34px 34px / 44% 44% 34px 34px;
-  background: radial-gradient(90% 70% at 50% 40%, var(--dk-1) 0%, var(--dk-2) 60%, var(--dk-3) 100%);
-  box-shadow:
-    0 0 0 6px var(--rim),
-    0 0 0 7px rgba(255, 255, 255, 0.06),
-    0 18px 40px rgba(0, 0, 0, 0.55),
-    inset 0 10px 40px rgba(0, 0, 0, 0.3);
+  background: var(--dk-1);
+  box-shadow: 0 0 0 1px var(--rim);
 }
 
-.top-meta .suit { font-size: 15px; }
-.suit.sH, .suit.sD { color: #ff6b6b; }
-.suit.sS, .suit.sC { color: #f1f6f2; }
+.top-meta .suit { font-size: var(--k-fs-secondary); }
+/* Красная масть — тот же красный, что в ките; чёрная — обычный текст. */
+.suit.sH, .suit.sD { color: var(--color-danger); }
+.suit.sS, .suit.sC { color: var(--text-primary); }
 
 /* ---------------------------------------------------------------- seats */
 
@@ -46,18 +50,20 @@
 }
 .dk-seat.away { opacity: 0.45; }
 .dk-seat .pod { position: relative; width: 44px; height: 44px; flex: none; }
+/* Кого ждут — зелёное кольцо со светлым снаружи: на сукне дурака зелёный
+   даёт 2.28, и один он не виден. Пульсации нет. */
 .dk-seat.turn .av {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(46, 224, 140, 0.25), 0 0 22px var(--accent-glow);
-  animation: pulse 1.3s ease-in-out infinite;
+  box-shadow: 0 0 0 2px var(--accent), 0 0 0 3px var(--on-felt-accent-line);
 }
 .dk-seat.def .av { border-color: var(--def); }
 .dk-seat.att .av { border-color: var(--att); }
-.dk-seat.fool .av { border-color: var(--gold); box-shadow: 0 0 22px rgba(242, 201, 107, 0.6); }
+.dk-seat.fool .av { border-color: var(--gold); box-shadow: none; }
 .dk-seat .info { max-width: 90px; }
-.dk-seat .sub2 { font-size: 10px; color: var(--muted); font-weight: 700; white-space: nowrap; }
+.dk-seat .sub2 { font-size: var(--k-fs-caption); color: var(--muted); font-weight: 700; white-space: nowrap; }
 .dk-backs { position: absolute; left: 30px; top: 2px; display: flex; pointer-events: none; }
-.dk-backs img { width: 15px; aspect-ratio: 200 / 280; border-radius: 2px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); }
+/* Углы и тень сняты: на картинке в 15 пикселей шириной это след, а не форма. */
+.dk-backs img { width: 15px; aspect-ratio: 200 / 280; }
 .dk-backs img + img { margin-left: -12px; }
 .dk-backs img.b0 { rotate: -10deg; } .dk-backs img.b1 { rotate: -5deg; } .dk-backs img.b3 { rotate: 5deg; }
 .dk-backs img.b4 { rotate: 10deg; }
@@ -68,23 +74,22 @@
   min-width: 20px;
   height: 20px;
   padding: 0 5px;
-  border-radius: 10px;
-  background: #fff;
-  color: #111;
-  font-size: 12px;
+  border-radius: var(--k-r-pill);
+  background: var(--text-primary);
+  color: var(--bg-main);
+  font-size: var(--k-fs-caption);
   font-weight: 900;
   display: grid;
   place-items: center;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
   z-index: 4;
 }
-.fool-mark { position: absolute; right: -8px; top: -8px; font-size: 14px; }
+.fool-mark { position: absolute; right: -8px; top: -8px; font-size: var(--k-fs-secondary); }
 .dk-seat .plate { max-width: 118px; }
-.plate.attacker { background: var(--att); color: #2a0b02; border-color: transparent; }
-.plate.defender { background: var(--def); color: #03192a; border-color: transparent; }
-.plate.taking { background: #ffb347; color: #2a1602; border-color: transparent; }
+.plate.attacker { background: var(--att); color: var(--text); border-color: var(--on-felt-line); }
+.plate.defender { background: var(--def); color: var(--text); border-color: var(--on-felt-line); }
+.plate.taking { background: var(--panel-hi); color: var(--text); border-color: var(--on-felt-line); }
 .plate.passed { color: var(--muted); }
-.plate.thinking { color: var(--gold); border-color: rgba(242, 201, 107, 0.4); }
+.plate.thinking { color: var(--text); border-color: var(--on-felt-line); }
 .plate.out { color: var(--muted); }
 .plate.fool { background: var(--gold); color: var(--gold-ink); border-color: transparent; }
 
@@ -126,9 +131,11 @@
   font-size: calc(12px * var(--u, 1));
   font-weight: 900;
   padding: 2px 7px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--k-r-pill);
+  /* Поверх сукна: сплошная поверхность и контур, который на сукне виден. */
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--on-felt-line);
   white-space: nowrap;
   z-index: 2;
 }
@@ -140,11 +147,11 @@
 /* Подпись растёт влево от края экрана — вправо ей некуда. */
 .dk-discard .dk-deck-n { left: auto; right: 2px; bottom: calc(var(--dcw) * -0.24); }
 .dk-empty {
-  font-size: calc(10px * var(--u, 1));
-  color: rgba(255, 255, 255, 0.35);
+  font-size: calc(12px * var(--u, 1));
+  color: var(--text-2);
   font-weight: 800;
-  border: 1.5px dashed rgba(255, 255, 255, 0.18);
-  border-radius: 6px;
+  border: 1px dashed var(--on-felt-line);
+  border-radius: var(--k-r-sm);
   width: var(--dcw);
   height: calc(var(--dcw) * 1.4);
   display: grid;
@@ -162,15 +169,14 @@
 .dk-pair { position: relative; width: calc(var(--tcw) + 12px * var(--u, 1)); height: calc(var(--tcw) * 1.4 + 18px * var(--u, 1)); }
 .dk-pair img { position: absolute; width: var(--tcw); }
 .dk-pair img.att { left: 0; top: 0; }
-.dk-pair img.def { left: calc(12px * var(--u, 1)); top: calc(18px * var(--u, 1)); rotate: 9deg; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); }
-.dk-pair.target img.att {
-  box-shadow: 0 0 0 2px var(--gold), 0 0 18px rgba(242, 201, 107, 0.9);
-  animation: best-glow 1.2s ease-in-out infinite;
-}
+.dk-pair img.def { left: calc(12px * var(--u, 1)); top: calc(18px * var(--u, 1)); rotate: 9deg; }
+/* Карту можно покрыть — контур, а не золотое мигание. Keyframes best-glow
+   больше не существует: сияние убрано вместе с ним. */
+.dk-pair.target img.att { box-shadow: 0 0 0 2px var(--gold); }
 .dk-line {
-  font-size: max(11px, calc(13px * var(--u, 1)));
+  font-size: max(12px, calc(14px * var(--u, 1)));
   font-weight: 800;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text);
   text-align: center;
   max-width: 92%;
   line-height: 1.25;
@@ -181,11 +187,11 @@
 .hero.dk-hero { flex-direction: column; align-items: stretch; gap: 8px; padding: 8px 10px 10px; min-height: 0; }
 .dk-role {
   align-self: center;
-  font-size: 12.5px;
+  font-size: var(--k-fs-caption);
   font-weight: 900;
   letter-spacing: 0.05em;
   padding: 4px 12px;
-  border-radius: 999px;
+  border-radius: var(--k-r-pill);
   background: var(--panel-hi);
   border: 1px solid var(--line-hi);
   color: var(--text-2);
@@ -194,11 +200,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.dk-role.go { background: var(--accent); color: var(--accent-ink); border-color: transparent; animation: glow 1.3s ease-in-out infinite; }
-.dk-role.go.def { background: var(--def); color: #03192a; }
-.dk-role.go.urgent { background: var(--danger); color: #fff; }
+/* «Ваш ход» — светлый текст на зелёной плашке (4.98), без пульсации.
+   Зелёной надписью в 12 пикселей это было бы 3.04. */
+.dk-role.go { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.dk-role.go.def { background: var(--accent); color: var(--accent-ink); }
+.dk-role.go.urgent { background: var(--danger); color: var(--text); }
 .dk-role.fool { background: var(--gold); color: var(--gold-ink); border-color: transparent; }
-.dk-role.won { color: var(--accent); }
+/* «Вы вышли» — светлым: зелёной надписью в 12 пикселей это 3.04. */
+.dk-role.won { color: var(--text); }
 .dk-hand {
   --ov: 0px;
   display: flex;
@@ -209,22 +218,22 @@
 }
 .dk-hand { flex-direction: column; align-items: stretch; row-gap: 6px; }
 .dk-row { display: flex; justify-content: center; align-items: flex-end; }
-.dk-empty-hand { align-self: center; color: var(--faint); font-size: 13px; }
+.dk-empty-hand { align-self: center; color: var(--faint); font-size: var(--k-fs-secondary); }
 .dk-hand.none {
   align-items: center;
   color: var(--faint);
-  font-size: 13px;
-  border: 1.5px dashed var(--line-hi);
-  border-radius: 14px;
+  font-size: var(--k-fs-secondary);
+  border: 1px dashed var(--line-hi);
+  border-radius: var(--k-r-lg);
   min-height: calc(var(--hw) * 1.1);
   padding: 8px;
 }
 .dk-card { position: relative; flex: none; transition: transform 0.15s var(--ease); }
 .dk-row .dk-card + .dk-card { margin-left: calc(var(--ov) * -1); }
-.dk-card img.card { width: var(--hw); border-radius: 8px; box-shadow: 0 5px 14px rgba(0, 0, 0, 0.5); transition: filter 0.2s, translate 0.15s var(--ease), box-shadow 0.2s; }
+.dk-card img.card { width: var(--hw); border-radius: var(--k-r-md); transition: filter 0.2s, translate 0.15s var(--ease), box-shadow 0.2s; }
 .dk-card img.no { filter: brightness(0.5) saturate(0.6); }
-.hero.turn .dk-card img.ok { box-shadow: 0 0 0 2px rgba(46, 224, 140, 0.9), 0 6px 16px rgba(0, 0, 0, 0.5); }
-.hero .dk-card img.picked { translate: 0 -16px; box-shadow: 0 0 0 3px var(--gold), 0 0 20px rgba(242, 201, 107, 0.8); filter: none; }
+.hero.turn .dk-card img.ok { box-shadow: 0 0 0 2px var(--accent); }
+.hero .dk-card img.picked { translate: 0 -16px; box-shadow: 0 0 0 3px var(--gold); filter: none; }
 .dk-card:active img { translate: 0 -6px; }
 
 .dk-score { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; padding: 4px 0 2px; }
@@ -233,28 +242,28 @@
   gap: 8px;
   align-items: baseline;
   padding: 6px 12px;
-  border-radius: 12px;
+  border-radius: var(--k-r-lg);
   background: var(--panel-hi);
   border: 1px solid var(--line);
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--k-fs-secondary);
 }
-.dk-sc.me { border-color: rgba(46, 224, 140, 0.4); }
-.dk-sc b { color: var(--gold); font-size: 16px; }
-.dk-sc-cap { width: 100%; text-align: center; font-size: 11.5px; color: var(--muted); font-weight: 700; }
-.hero .dk-card img.ok { box-shadow: 0 0 0 1.5px rgba(46, 224, 140, 0.55), 0 5px 14px rgba(0, 0, 0, 0.5); }
+.dk-sc.me { border-color: var(--accent); }
+.dk-sc b { color: var(--gold); font-size: var(--k-fs-component); }
+.dk-sc-cap { width: 100%; text-align: center; font-size: var(--k-fs-caption); color: var(--muted); font-weight: 700; }
+.hero .dk-card img.ok { box-shadow: 0 0 0 2px var(--accent); }
 
 .dk-fly { width: calc(var(--tcw, 44px) * 0.9); }
 
 .seats-grid.six { grid-template-columns: repeat(3, 1fr); }
-.rules p { margin: 0 0 10px; color: var(--text-2); line-height: 1.45; font-size: 14px; }
+.rules p { margin: 0 0 10px; color: var(--text-2); line-height: 1.45; font-size: var(--k-fs-secondary); }
 
 @media (max-height: 640px) {
   :root { --hw: clamp(46px, 14vw, 60px); }
 }
 @media (max-height: 560px) {
   :root { --hw: 42px; }
-  .dk-role { font-size: 11px; padding: 3px 9px; }
+  .dk-role { font-size: var(--k-fs-caption); padding: 3px 9px; }
   .dk-hand { padding-top: 10px; }
 }
 
@@ -280,9 +289,9 @@
 
 body[data-screen='durak'] {
   /* Сукно плоское, и то же, что на значке игры в хабе: одна игра — один цвет. */
-  --dk-1: #103a44;
-  --dk-2: #103a44;
-  --dk-3: #103a44;
+  --dk-1: var(--felt-durak);
+  --dk-2: var(--felt-durak);
+  --dk-3: var(--felt-durak);
   --rim: var(--k-divider);
   --panel: var(--k-surface);
   --panel-hi: var(--k-elevated);
@@ -303,12 +312,13 @@ body[data-screen='durak'] {
   /* Ролей больше не три цвета, а одно состояние: ждут или не ждут. */
   --att: var(--k-elevated);
   --def: var(--k-elevated);
+  --gold-ink: var(--bg-main);
   background: var(--k-bg);
 }
 
 body[data-screen='durak'] .dk-cloth {
-  background: #103a44;
-  box-shadow: 0 0 0 1px var(--k-divider);
+  background: var(--felt-durak);
+  box-shadow: 0 0 0 1px var(--border-color);
 }
 
 /* Масти: красная — та же, что в ките, чёрная — обычный текст. */
@@ -318,11 +328,12 @@ body[data-screen='durak'] .suit.sS, body[data-screen='durak'] .suit.sC { color: 
 /* ----------------------------------------------------------------- места */
 
 /* Кого ждут — зелёным кольцом, без сияния. Это и есть то, ради чего зелёный. */
-body[data-screen='durak'] .dk-seat.turn .av { box-shadow: 0 0 0 3px var(--k-green); }
+/* Зелёное кольцо на сукне — 2.28, поэтому к нему светлое снаружи. */
+body[data-screen='durak'] .dk-seat.turn .av { box-shadow: 0 0 0 2px var(--k-green), 0 0 0 3px var(--on-felt-accent-line); }
 body[data-screen='durak'] .dk-seat.def .av,
-body[data-screen='durak'] .dk-seat.att .av { border-color: var(--k-divider); }
+body[data-screen='durak'] .dk-seat.att .av { border-color: var(--on-felt-line); }
 /* Дурак — не ошибка и не успех: нейтрально, слово само всё говорит. */
-body[data-screen='durak'] .dk-seat.fool .av { border-color: var(--k-divider); box-shadow: none; }
+body[data-screen='durak'] .dk-seat.fool .av { border-color: var(--on-felt-line); box-shadow: none; }
 
 body[data-screen='durak'] .plate.attacker,
 body[data-screen='durak'] .plate.defender,
@@ -330,23 +341,24 @@ body[data-screen='durak'] .plate.taking,
 body[data-screen='durak'] .plate.fool {
   background: var(--k-elevated);
   color: var(--k-text);
-  border-color: var(--k-divider);
+  border-color: var(--on-felt-line);
 }
-/* «ДУМАЕТ» и «БИТО?» — того ждут прямо сейчас. */
-body[data-screen='durak'] .plate.thinking { background: var(--k-green); color: var(--k-on-green); border-color: transparent; }
+/* «ДУМАЕТ» и «БИТО?» — того ждут прямо сейчас. Светлый контур: зелёная
+   плашка на сукне иначе не видна (2.28). */
+body[data-screen='durak'] .plate.thinking { background: var(--k-green); color: var(--k-on-green); border-color: var(--on-felt-accent-line); }
 body[data-screen='durak'] .plate.passed { color: var(--k-text-2); }
 
 /* ------------------------------------------------------- поле и колода */
 
 /* Карта, которую можно покрыть, — зелёным контуром вместо золотого сияния. */
 body[data-screen='durak'] .dk-pair.target img.att {
-  box-shadow: 0 0 0 2px var(--k-green);
+  box-shadow: 0 0 0 2px var(--k-green), 0 0 0 3px var(--on-felt-accent-line);
   animation: none;
 }
 
 /* --------------------------------------------------------------- рука */
 
-body[data-screen='durak'] .dk-role { background: var(--k-elevated); color: var(--k-text); border-color: var(--k-divider); }
+body[data-screen='durak'] .dk-role { background: var(--k-elevated); color: var(--k-text); border-color: var(--border-color); }
 /* Ваш ход — зелёным и без пульсации: подсказка, а не сирена. */
 body[data-screen='durak'] .dk-role.go,
 body[data-screen='durak'] .dk-role.go.def {
@@ -358,8 +370,8 @@ body[data-screen='durak'] .dk-role.go.def {
 body[data-screen='durak'] .dk-role.go.urgent { background: var(--k-suit-red); color: var(--k-text); }
 body[data-screen='durak'] .dk-role.fool { background: var(--k-elevated); color: var(--k-text); border-color: var(--k-divider); }
 
-body[data-screen='durak'] .hero.turn .dk-card img.ok { box-shadow: 0 0 0 2px var(--k-green), 0 6px 16px rgba(0, 0, 0, 0.5); }
-body[data-screen='durak'] .hero .dk-card img.ok { box-shadow: 0 0 0 1.5px var(--k-green), 0 5px 14px rgba(0, 0, 0, 0.5); }
+body[data-screen='durak'] .hero.turn .dk-card img.ok { box-shadow: 0 0 0 2px var(--k-green); }
+body[data-screen='durak'] .hero .dk-card img.ok { box-shadow: 0 0 0 2px var(--k-green); }
 /* Выбранная карта — зелёным контуром, без золота и без сияния. */
 body[data-screen='durak'] .hero .dk-card img.picked {
   box-shadow: 0 0 0 3px var(--k-green);
