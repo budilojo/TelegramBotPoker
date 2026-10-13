@@ -127,7 +127,7 @@
   -webkit-tap-highlight-color: transparent;
 }
 .ch-sq.dark { background: var(--ch-dark); }
-.ch-sq .ch-pc { width: 92%; height: 92%; pointer-events: none; }
+.ch-sq .ch-pc { position: relative; z-index: 1; width: 92%; height: 92%; pointer-events: none; } /* над подсветкой хода: фигура не тускнеет */
 
 /* Последний ход: нейтральная подложка поверх цвета клетки. */
 .ch-sq.last::before {

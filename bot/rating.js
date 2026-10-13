@@ -32,6 +32,7 @@ export const WHY = {
   ABORTED: 'партия не доиграна — она не засчитывается',
   TOO_FEW: 'играл один — партии не было',
   DRAW: 'ничья — очков нет: делить победу нечем, а договорная ничья не должна кормить рейтинг',
+  SHORT: 'партия короче 10 ходов — очков нет: сдаться на втором ходу не значит победить',
   FARMED: `партия без очков: с этим составом сегодня уже ${PER_DAY}`,
 };
 
@@ -78,9 +79,10 @@ export function split(places, loserId = null) {
  * `{ skipped, why }` — почему партия не в счёт. Отказ всегда объясним словами:
  * человек должен понимать, почему за эту партию ничего не дали.
  */
-export function apply(store, { game, round, places, loserId = null, aborted = false, draw = false, chatId = null, at = Date.now() }) {
+export function apply(store, { game, round, places, loserId = null, aborted = false, draw = false, short = false, chatId = null, at = Date.now() }) {
   if (aborted) return { skipped: 'ABORTED', why: WHY.ABORTED };
   if (draw) return { skipped: 'DRAW', why: WHY.DRAW };
+  if (short) return { skipped: 'SHORT', why: WHY.SHORT };
   const people = places.filter((p) => p && p.id != null);
   if (people.length < 2) return { skipped: 'TOO_FEW', why: WHY.TOO_FEW };
 

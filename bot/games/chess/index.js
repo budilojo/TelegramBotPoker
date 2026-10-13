@@ -86,6 +86,10 @@ export default {
       return {
         id: `${room.code}#${g.no}`,
         aborted: !!g.aborted,
+        // Сдача или время на втором-третьем ходу — самая дешёвая накрутка: двое
+        // договорились, и +20 за полминуты. Короткая партия очков не даёт;
+        // мат, пат и остальные естественные концы считаются при любой длине.
+        short: !g.aborted && !!win && ['resign', 'time'].includes(g.kind) && g.plies < C.RATED_MIN_PLIES,
         draw: !g.aborted && !win,
         loserId: lose,
         places: order.map((id) => ({ id, name: name(id) })),

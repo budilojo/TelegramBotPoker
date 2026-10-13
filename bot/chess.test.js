@@ -24,6 +24,12 @@ const DIMA = user(303, 'Дима');
 
 const groupPosts = (t) => t.tg.calls.filter((c) => c.method === 'sendMessage' && c.chatId === String(t.chatId));
 const live = (t, game = 'chess') => t.app.liveRooms(String(t.chatId)).filter((r) => r.game === game);
+/** 10 ходов каждым (20 полуходов) без повторов: достаточно для рейтинга. */
+const LONG = [
+  ['e2', 'e4'], ['e7', 'e5'], ['g1', 'f3'], ['b8', 'c6'], ['f1', 'c4'], ['f8', 'c5'], ['c2', 'c3'], ['g8', 'f6'],
+  ['d2', 'd3'], ['d7', 'd6'], ['e1', 'g1'], ['e8', 'g8'], ['b1', 'd2'], ['a7', 'a6'], ['d2', 'b3'], ['c5', 'b6'],
+  ['c1', 'g5'], ['h7', 'h6'], ['g5', 'h4'], ['c8', 'g4'],
+];
 const FOOLS = [['f2', 'f3'], ['e7', 'e5'], ['g2', 'g4'], ['d8', 'h4']];
 
 async function lobby(t, host = IVAN, settings = { base: 0 }, reqId = 'c1') {
@@ -315,7 +321,7 @@ test('группа молчит про позицию: карточка и ит�
   const texts = t.tg.calls.filter((c) => c.method === 'sendMessage' || c.method === 'editMessageText').map((c) => c.text);
   const card = texts.filter((x) => /Шахматы/.test(x)).at(-1);
   assert.match(card, /Партия #1/);
-  assert.match(card, /Ход: <b>Макс<\/b> \(чёрные\) · 2\. Nf3/, 'последний ход записью, чей ход теперь');
+  assert.match(card, /Идёт игра — доска в приложении/, 'карточка говорит, где смотреть, а не пересказывает позицию');
   assert.doesNotMatch(texts.join('\n'), /rnbqkbnr|♞|♘|♟️?[a-h][1-8]/, 'позиция в чат не уходит');
   await play(t, room, [['b8', 'c6'], ['f1', 'c4'], ['g8', 'f6'], ['d2', 'd3']]);
   await t.send(MAX, { t: 'resign' });
@@ -342,7 +348,7 @@ test('«ваш ход» уходит в личку тому, чей ход, ес
 test('часы: время вышло — выигрывает соперник, у всех на экране, в рейтинге +20 и −10', async () => {
   const t = new Table({ store: new Store(':memory:') });
   const room = await duel(t, { base: 60 });
-  await play(t, room, [['e2', 'e4'], ['e7', 'e5']]);
+  await play(t, room, LONG);
   const s = t.state(IVAN);
   assert.equal(s.match.clock.timed, true);
   assert.equal(s.match.clock.mover, 'w');
@@ -360,6 +366,39 @@ test('часы: время вышло — выигрывает соперник,
   assert.equal(t.app.store.ratingOf(101, 'chess').points, 0);
   assert.equal(t.app.store.ratingOf(101, 'chess').played, 1, 'а партия проигравшему записана');
   assert.equal(room.rated[`${room.code}#1`].rows.find((r) => r.userId === '101').delta, LAST);
+  t.app.store.close();
+});
+
+test('карточка в группе не правится от хода к ходу: блиц не засыпает Telegram запросами', async () => {
+  const t = new Table();
+  const room = await duel(t);
+  const edits = () => t.tg.calls.filter((c) => c.method === 'editMessageText').length;
+  const before = edits();
+  await play(t, room, LONG);
+  assert.equal(edits(), before, 'двадцать ходов — ни одной правки карточки');
+  await t.send(MAX, { t: 'resign' });
+  assert.ok(edits() > before, 'а итог партии на карточке появился');
+});
+
+test('рейтинг: короткая сдача очков не даёт, длинная — даёт', async () => {
+  const t = new Table({ store: new Store(':memory:') });
+  const room = await duel(t);
+  await play(t, room, [['e2', 'e4'], ['e7', 'e5'], ['g1', 'f3'], ['b8', 'c6']]);
+  await t.send(MAX, { t: 'resign' });
+  assert.equal(t.app.store.ratingOf(101, 'chess'), null, 'сдался на втором ходу — очков нет');
+  assert.match(room.rated[`${room.code}#1`].why, /короче 10 ходов/);
+  await t.send(IVAN, { t: 'next' });
+  await play(t, room, LONG);
+  await t.send(IVAN, { t: 'resign' });
+  assert.equal(t.app.store.ratingOf(202, 'chess').points, PLACE[0], 'Иван сдался в длинной партии — победа Макса засчитана');
+  t.app.store.close();
+});
+
+test('рейтинг: мат на пятом ходу считается — короткий конец естественный', async () => {
+  const t = new Table({ store: new Store(':memory:') });
+  const room = await duel(t);
+  await play(t, room, FOOLS);
+  assert.equal(t.app.store.ratingOf(202, 'chess').points, PLACE[0]);
   t.app.store.close();
 });
 

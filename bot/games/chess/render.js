@@ -54,8 +54,11 @@ function statusLines(room) {
   if (m) {
     const vs = `${DOT.w} ${nameOf(room, m.white)} — ${DOT.b} ${nameOf(room, m.black)}`;
     if (live(room)) {
-      out.push(`▶️ Партия #${m.no} · ${vs}`);
-      out.push(`Ход: <b>${nameOf(room, mover(m) === 'w' ? m.white : m.black)}</b> (${COLOR_RU[mover(m)]})${m.moves.length ? ` · ${moveText(m)}` : ''}`);
+      // Карточка НЕ меняется от хода к ходу: каждая правка — запрос к Telegram, а
+      // в блице их набралось бы по две в секунду на стол (лимит группы — около
+      // двадцати в минуту, и страдали бы карточки других игр). Позиция и чей ход —
+      // в приложении и в личном «ваш ход».
+      out.push(`▶️ Партия #${m.no} · ${vs}`, 'Идёт игра — доска в приложении.');
       if (m.drawOffer) out.push(`🤝 ${nameOf(room, m.drawOffer.by)} предлагает ничью`);
     } else {
       const o = m.over;
