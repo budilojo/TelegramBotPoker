@@ -17,3 +17,6 @@ data/bot.db-*
 
 # скриншоты стола (npm run preview) — собираются заново, в git не нужны
 preview/
+
+# бэкапы базы: их снимает deploy/backup.sh на сервере, в git им делать нечего
+backups/
