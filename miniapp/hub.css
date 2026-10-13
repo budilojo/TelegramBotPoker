@@ -326,3 +326,15 @@
 
 .soon-list { margin: 10px 0 0; padding-left: 18px; color: var(--text-2); font-size: 14px; line-height: 1.5; }
 .soon-list li { margin-bottom: 6px; }
+
+/* «+ Ещё один стол» — заметная, но не зелёная: зелёный на хабе один (своя игра). */
+.again { margin: 4px 0 16px; gap: 8px; }
+.again-plus { font-weight: var(--k-w-semibold); font-size: var(--k-fs-section); line-height: 1; }
+.again-off {
+  padding: var(--k-s12) var(--k-s16);
+  border-radius: var(--k-r-md);
+  border: 1px solid var(--k-divider);
+  color: var(--k-text-2);
+}
+.again-title { font-weight: var(--k-w-semibold); color: var(--k-text); }
+.again-sub { font-size: var(--k-fs-caption); margin-top: 2px; }

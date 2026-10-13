@@ -51,6 +51,8 @@ export function render() {
         h('div.rt-open-sub', s.ratingSoon ? 'Совсем скоро' : 'Лидеры и своя статистика')),
       h('div.rt-open-go', s.ratingSoon ? h('span.rt-soon-tag', 'скоро') : '›')),
 
+    s.again ? againButton(s) : null,
+
     h('div.section-label', 'Открытые игры'),
     s.lobbies.length
       ? h('div.lobby-list', s.lobbies.map(lobbyRow))
@@ -121,6 +123,26 @@ function lobbyRow(l) {
     // так же, но не спорят с ним за внимание.
     h(`button.btn.sm${l.mine ? '.primary' : ''}`, { onclick: () => { haptic.tap(); send({ t: 'join', code: l.code }); } },
       join ? 'Присоединиться' : 'Открыть'));
+}
+
+/** Идентификатор запроса: повтор того же тапа сервер узнаёт и не плодит стол. */
+const newReqId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+/**
+ * «+ Ещё один стол в эту группу»: та же игра и настройки, что у самого свежего
+ * стола группы. Лимит проверяет сервер, но кнопку выключаем заранее, чтобы
+ * человек не тапал в пустоту и видел причину.
+ */
+function againButton(s) {
+  const a = s.again;
+  if (s.full) {
+    return h('div.again.again-off',
+      h('div.again-title', `Лимит: ${s.maxLive} игр в группе`),
+      h('div.again-sub', 'Завершите одну, чтобы добавить стол.'));
+  }
+  return h('button.k-btn.k-btn--secondary.k-btn--block.again', {
+    onclick: () => { haptic.tap(); send({ t: 'again', from: a.from, reqId: newReqId() }); },
+  }, h('span.again-plus', '+'), ` Ещё один стол · ${a.title}`);
 }
 
 /** «Совсем скоро» — что это значит и чего ждать. */

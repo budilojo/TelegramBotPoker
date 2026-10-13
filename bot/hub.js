@@ -45,7 +45,7 @@ export const ERRORS = Object.assign({}, ...Object.values(GAMES).map((g) => g.err
 /** What a page may say whatever it is looking at. */
 const COMMON = new Set(['visible']);
 /** What a page may say on a group's hub. */
-const HUB_ACTIONS = new Set(['create', 'join', 'home', 'rating']);
+const HUB_ACTIONS = new Set(['create', 'again', 'join', 'home', 'rating']);
 /** Код, по которому открывается админка. Пускает не он, а список в `.env`. */
 const ADMIN_CODE = 'admin';
 /** Что страница админки может попросить. Всё остальное — отказ. */
@@ -71,6 +71,8 @@ export class Hub {
     this.byGroup = new Map();
     /** Открытые страницы админки: им нужно досылать состояние, а не ждать «Обновить». */
     this.adminPages = new Set();
+    /** «Ещё один стол»: последний запрос хоста по reqId — повтор не плодит стол. */
+    this.lastAgain = new Map();
     this.nextId = 1;
   }
 
@@ -633,6 +635,8 @@ export class Hub {
       return this.enterRoom(session, room);
     }
 
+    if (msg.t === 'again') return this.againHere(session, group, msg);
+
     // create
     const game = GAMES[String(msg.game || '')];
     if (!game) return this.refuse(session, 'BAD_GAME');
@@ -647,6 +651,40 @@ export class Hub {
     const settings = msg.settings && typeof msg.settings === 'object' ? msg.settings : null;
     const room = app.createGame(game.id, { chatId: group.chatId, title: group.title, host: session.user, settings });
     if (room.error) return this.refuse(session, room.error);
+    this.enterRoom(session, room);
+    await app.newCard(room);
+    this.broadcastGroup(group.chatId);
+  }
+
+  /**
+   * «Ещё один стол в эту группу». Та же игра и те же настройки, что у стола
+   * `msg.from` из этой же группы, и тот же хост — тот, кто нажал. Старые
+   * столы и их карточки не трогаем: у каждого стола своя карточка в чате.
+   *
+   * Правило «одно открытое лобби на хоста» здесь намеренно не действует — это
+   * и есть повод для кнопки. От случайного двойного тапа защищает `reqId`:
+   * повтор того же запроса возвращает уже созданный стол.
+   */
+  async againHere(session, group, msg) {
+    const app = this.app;
+    // Источник берётся из этой группы, не из страницы: чужой стол не подставить.
+    const from = app.roomByCode(String(msg.from || ''));
+    if (!from || from.chatId !== group.chatId) return this.refuse(session, 'NO_ROOM');
+
+    const key = `${session.user.id}:${group.chatId}`;
+    const reqId = msg.reqId ? String(msg.reqId) : null;
+    const last = this.lastAgain.get(key);
+    if (reqId && last && last.reqId === reqId && Date.now() - last.at < 10_000) {
+      const again = app.roomByCode(last.code);
+      if (again) return this.enterRoom(session, again);
+    }
+
+    if (app.liveRooms(group.chatId).length >= MAX_LIVE_PER_GROUP) return this.refuse(session, 'TOO_MANY_GAMES');
+    // Настройки копируются, а не ссылкой: у старого стола они могут меняться.
+    const settings = JSON.parse(JSON.stringify(from.settings || {}));
+    const room = app.createGame(from.game, { chatId: group.chatId, title: group.title, host: session.user, settings });
+    if (room.error) return this.refuse(session, room.error);
+    this.lastAgain.set(key, { reqId, code: room.code, at: Date.now() });
     this.enterRoom(session, room);
     await app.newCard(room);
     this.broadcastGroup(group.chatId);
@@ -679,10 +717,20 @@ export function hubView(app, group, user, { home = false } = {}) {
       inside: room.players.some((p) => p.id === uid && !p.left && !p.kicked),
     };
   });
+  // «Ещё один стол»: берём игру и настройки самого свежего стола группы. Если
+  // столов нет — кнопки нет, и первый стол по-прежнему создаётся через выбор игры.
+  const live = app.liveRooms(group.chatId);
+  const newest = live.at(-1) || null;
+  const again = newest
+    ? { from: newest.code, game: newest.game, title: gameOf(newest).title, icon: gameOf(newest).icon }
+    : null;
   return {
     kind: 'hub',
     bot: app.botUsername,
     group: { title: group.title || '', code: group.code },
+    again,
+    full: live.length >= MAX_LIVE_PER_GROUP, // лимит достигнут — кнопка выключена
+    maxLive: MAX_LIVE_PER_GROUP,
     home, // opened without a group: «← Мои группы»
     me: { name: user.name },
     ratingSoon: app.ratingSoon ? RATING_SOON_TEXT : null,
