@@ -18,7 +18,7 @@
  * сходить. Пешка у края — шторка «в кого превратить».
  */
 import {
-  tg, $app, h, haptic, toast, showSheet, closeSheet, refreshSheet, avatar, animateOnce,
+  tg, $app, h, haptic, toast, showSheet, closeSheet, refreshSheet, avatar, animateOnce, REDUCED, EASE,
 } from '../ui.js';
 import { net, bus, send } from '../net.js';
 
@@ -26,6 +26,14 @@ let state = null;
 let prev = null;
 /** Выбранная клетка со своей фигурой, или null. */
 let sel = null;
+/** Фигура в руке: { from, id, x0, y0, moved, pc, cell, rect, hover, board } — пока палец не отпущен. */
+let drag = null;
+/** Свой ход, уже положенный на доску рукой: когда сервер его подтвердит, второй раз не двигаем. */
+let ownMove = null;
+/** На каком состоянии ход уже показан анимацией — перерисовка того же состояния не повторяет её. */
+let animatedSeq = null;
+/** Когда закончилось перетаскивание: клик, который за ним следует, — не тап. */
+let droppedAt = 0;
 
 const FILES = 'abcdefgh';
 const PIECE_RU = { p: 'пешка', n: 'конь', b: 'слон', r: 'ладья', q: 'ферзь', k: 'король' };
@@ -53,6 +61,7 @@ const myMove = (s) => !!s?.legal?.myTurn;
 export function onState(s, p) {
   state = s;
   prev = p;
+  drag = null; // пришла новая позиция: то, что было в руке, уже не про неё
   // Выбор живёт ровно до смены позиции или очереди: чужой ход его снимает.
   if (sel && (!myMove(s) || s.match?.plies !== p?.match?.plies || s.match?.no !== p?.match?.no)) sel = null;
 
@@ -157,6 +166,41 @@ function renderTable() {
   $app.append(root, actions);
   const strip = root.querySelector('.ch-moves');
   if (strip) strip.scrollTop = strip.scrollHeight; // свежие ходы — внизу
+  slideLastMove(root.querySelector('.ch-board'));
+}
+
+/**
+ * Ход — не прыжок: фигура скользит с прежней клетки на новую (и ладья при
+ * рокировке). Только когда ровно один ход назад позиция была другой, ход не
+ * наш (свой, положенный рукой, уже на месте) и состояние показывается впервые.
+ */
+function slideLastMove(board) {
+  const s = state;
+  const m = s.match;
+  const was = prev?.match;
+  const fresh = animatedSeq !== s.seq;
+  animatedSeq = s.seq;
+  if (!fresh || REDUCED || !board || !m.last || !was || was.no !== m.no || m.plies !== was.plies + 1) return;
+  if (ownMove && ownMove.no === m.no && ownMove.plies === m.plies) { ownMove = null; return; }
+  slide(board, m.last.from, m.last.to);
+  if (m.last.san.startsWith('O-O')) {
+    const rank = m.turn === 'w' ? '8' : '1'; // сходил тот, чей ход теперь не наступил
+    const [a, b] = m.last.san.startsWith('O-O-O') ? ['a', 'd'] : ['h', 'f'];
+    slide(board, a + rank, b + rank);
+  }
+}
+
+function slide(board, from, to) {
+  const a = board.querySelector(`[data-sq="${from}"]`);
+  const pc = board.querySelector(`[data-sq="${to}"] .ch-pc`);
+  if (!a || !pc) return;
+  const ra = a.getBoundingClientRect();
+  const rb = pc.parentElement.getBoundingClientRect();
+  // zIndex в обоих кадрах: скользящая фигура идёт поверх остальных, а не под ними.
+  pc.animate([
+    { transform: `translate(${ra.left - rb.left}px, ${ra.top - rb.top}px)`, zIndex: 5 },
+    { transform: 'none', zIndex: 5 },
+  ], { duration: 200, easing: EASE });
 }
 
 const backIcon = () => h('span', { html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>' });
@@ -197,8 +241,6 @@ function boardEl(bottom) {
   const s = state;
   const m = s.match;
   const flip = bottom === 'b';
-  const L = s.legal;
-  const targets = sel && L.myTurn ? new Set(L.to[sel] || []) : new Set();
   const board = h(`div.ch-board${flip ? '.flip' : ''}`, { role: 'grid', 'aria-label': 'Шахматная доска' });
   for (let r = 0; r < 8; r++) {
     for (let f = 0; f < 8; f++) {
@@ -210,8 +252,6 @@ function boardEl(bottom) {
       const cls = ['ch-sq', dark ? 'dark' : 'light'];
       if (m.last && (m.last.from === name || m.last.to === name)) cls.push('last');
       if (m.check === name) cls.push('check');
-      if (sel === name) cls.push('sel');
-      if (targets.has(name)) cls.push(piece ? 'cap' : 'dot');
       const label = `${name}${piece ? `, ${isMineColor(piece, 'w') ? 'белая' : 'чёрная'} ${PIECE_RU[piece.toLowerCase()]}` : ''}`;
       const cell = h(`button.${cls.join('.')}`, { type: 'button', 'aria-label': label, 'data-sq': name, onclick: () => tapSquare(name) },
         piece ? img(code(piece)) : null,
@@ -221,11 +261,124 @@ function boardEl(bottom) {
       board.append(cell);
     }
   }
+  paintMarks(board);
+  // Перетаскивание: один набор обработчиков на всю доску, а не по клетке.
+  board.addEventListener('pointerdown', (e) => dragStart(e, board));
+  board.addEventListener('pointermove', dragMove);
+  board.addEventListener('pointerup', dragEnd);
+  board.addEventListener('pointercancel', dragCancel);
   return board;
+}
+
+/**
+ * Метки «сюда можно»: точка в центре пустой клетки, рамка на съедобной и на
+ * выбранной фигуре. Красятся по `sel` и по тому, что сказал сервер (`legal`),
+ * без перестройки доски — поэтому годятся и посреди перетаскивания.
+ */
+function paintMarks(board) {
+  const L = state.legal;
+  const targets = sel && L.myTurn ? new Set(L.to[sel] || []) : new Set();
+  for (const cell of board.querySelectorAll('.ch-sq')) {
+    const name = cell.dataset.sq;
+    cell.classList.toggle('sel', sel === name);
+    cell.classList.toggle('dot', targets.has(name) && !cell.querySelector('.ch-pc'));
+    cell.classList.toggle('cap', targets.has(name) && !!cell.querySelector('.ch-pc'));
+  }
+}
+
+/* ------------------------------------------------------- перетаскивание */
+
+const DRAG_PX = 6;
+
+function dragStart(e, board) {
+  if (e.button > 0 || net.busy || drag) return; // мышью — только левой
+  const L = state.legal;
+  if (!L.myTurn) return;
+  const cell = e.target.closest?.('.ch-sq');
+  const from = cell?.dataset.sq;
+  const pc = cell?.querySelector('.ch-pc');
+  if (!pc || !L.to[from]) return; // не своя фигура или ей некуда ходить: это обычный тап
+  drag = { from, id: e.pointerId, x0: e.clientX, y0: e.clientY, moved: false, pc, cell, rect: cell.getBoundingClientRect(), hover: null, board };
+}
+
+/** Фигура под пальцем; на сенсорном экране — чуть выше него, чтобы палец её не закрывал. */
+const lift = (e, d) => (e.pointerType === 'touch' ? -d.rect.height * 0.55 : 0);
+
+function dragMove(e) {
+  const d = drag;
+  if (!d || e.pointerId !== d.id) return;
+  if (!d.moved) {
+    if (Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < DRAG_PX) return;
+    d.moved = true;
+    sel = d.from;
+    paintMarks(d.board);
+    d.board.setPointerCapture?.(e.pointerId);
+    d.pc.classList.add('drag');
+    haptic.soft();
+  }
+  const cx = d.rect.left + d.rect.width / 2;
+  const cy = d.rect.top + d.rect.height / 2;
+  const dy = lift(e, d);
+  d.pc.style.transform = `translate(${e.clientX - cx}px, ${e.clientY - cy + dy}px) scale(1.15)`;
+  const over = document.elementFromPoint(e.clientX, e.clientY + dy)?.closest('.ch-sq');
+  const target = over && state.legal.to[d.from]?.includes(over.dataset.sq) ? over : null;
+  if (target !== d.hover) {
+    d.hover?.classList.remove('hover');
+    target?.classList.add('hover');
+    d.hover = target;
+  }
+}
+
+function dragEnd(e) {
+  const d = drag;
+  if (!d || e.pointerId !== d.id) return;
+  drag = null;
+  d.hover?.classList.remove('hover');
+  if (!d.moved) return; // тап без движения — дальше сработает click
+  droppedAt = performance.now();
+  const over = document.elementFromPoint(e.clientX, e.clientY + lift(e, d))?.closest('.ch-sq');
+  const to = over?.dataset.sq;
+  if (to && to !== d.from && state.legal.to[d.from]?.includes(to)) {
+    if (state.legal.promo.includes(d.from + to)) {
+      springBack(d); // фигура ещё не ушла: сначала выбор, в кого превратиться
+      return openPromo(d.from, to);
+    }
+    // Положить фигуру на клетку сразу, не дожидаясь сервера; он подтвердит ход
+    // новым состоянием, и оно перерисует доску честно.
+    over.querySelector('.ch-pc')?.remove();
+    over.append(d.pc);
+    d.pc.classList.remove('drag');
+    d.pc.style.transform = '';
+    ownMove = { no: state.match.no, plies: state.match.plies + 1 };
+    sel = null;
+    paintMarks(d.board);
+    haptic.tap();
+    if (!send({ t: 'move', from: d.from, to, ply: state.match.plies })) bus.render(); // нет связи: вернуть позицию
+    return;
+  }
+  springBack(d); // отпустили не туда: фигура возвращается, выбор остаётся — можно тапнуть клетку
+}
+
+function springBack(d) {
+  d.pc.style.transition = REDUCED ? 'none' : 'transform 150ms ease-out';
+  d.pc.style.transform = '';
+  setTimeout(() => {
+    d.pc.classList.remove('drag');
+    d.pc.style.transition = '';
+  }, 170);
+}
+
+function dragCancel(e) {
+  const d = drag;
+  if (!d || e.pointerId !== d.id) return;
+  drag = null;
+  d.hover?.classList.remove('hover');
+  if (d.moved) springBack(d);
 }
 
 function tapSquare(name) {
   const s = state;
+  if (performance.now() - droppedAt < 350) return; // это хвост перетаскивания, а не тап
   if (net.busy) return; // ответ на прошлый ход ещё не пришёл
   const L = s.legal;
   if (!L.myTurn) {
@@ -288,8 +441,7 @@ function statusEl() {
         h('button.k-btn.k-btn--secondary.k-btn--compact', { onclick: () => send({ t: 'decline' }) }, 'Отклонить')));
   }
   if (m.drawOffer?.mine) return h('div.ch-status', 'Вы предложили ничью — ждём ответа');
-  const first = m.clock.first;
-  if (myMove(s)) return h('div.ch-status.mine', m.check ? 'Шах! Ваш ход' : first && m.plies < 2 ? 'Ваш ход — походите, пока соперник не ушёл' : 'Ваш ход');
+  if (myMove(s)) return h('div.ch-status.mine', m.check ? 'Шах! Ваш ход' : 'Ваш ход');
   if (!me) return h('div.ch-status', `Ходят ${COLOR_RU[m.turn]}${m.check ? ' — шах' : ''}`);
   return h('div.ch-status', m.check ? 'Вам поставили шах — ждите ход соперника' : 'Ход соперника');
 }
@@ -320,7 +472,7 @@ function actionsEl() {
     panel.append(h('span', 'Вы смотрите партию — ходят ', h('b', 'двое')));
     return panel;
   }
-  if (s.canAbort) panel.append(h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: confirmAbort }, 'Отменить партию'));
+  if (s.canAbort) panel.append(h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: confirmAbort }, 'Отменить'));
   panel.append(
     h('button.k-btn.k-btn--secondary.k-btn--block', { disabled: !s.canOfferDraw, onclick: () => { haptic.tap(); send({ t: 'draw' }); } }, 'Ничья'),
     h('button.k-btn.k-btn--secondary.k-btn--block', { disabled: !s.canResign, onclick: confirmResign }, 'Сдаться'));
