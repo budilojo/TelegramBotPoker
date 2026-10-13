@@ -1126,9 +1126,20 @@ export class App {
     return live[0] || (finished ? mine(this.roomsOf(chatId)).at(-1) || null : null);
   }
 
-  /** «У вас несколько игр» — какую именно, пусть скажет сам хост кодом. */
+  /**
+   * «У вас несколько игр» — какую именно, пусть скажет сам хост кодом.
+   *
+   * К названию добавлена подробность игры: у дуэлей несколько столов одного
+   * хоста это норма, и строки «♟ Шахматы — /cancel ABCD» отличались бы только
+   * кодом. По коду выбрать можно, но узнать в нём нужный стол нельзя — а
+   * «5 мин + 2 с · партия 2» человек со своей партией сопоставит.
+   */
   whichGame(rooms, cmd) {
-    const lines = rooms.map((r) => `${gameOf(r).icon} ${gameOf(r).title} — /${cmd} ${r.code}`);
+    const lines = rooms.map((r) => {
+      const g = gameOf(r);
+      const detail = g.summary(r)?.detail || '';
+      return `${g.icon} ${g.title}${detail ? ` · ${detail}` : ''} — /${cmd} ${r.code}`;
+    });
     return ['У вас несколько игр — какая именно?', ...lines].join('\n');
   }
 

@@ -159,6 +159,36 @@ test('/cancel и /finish при нескольких своих играх: бо
   assert.equal(live(t).length, 0, 'осталась одна — команда без кода работает, как раньше');
 });
 
+test('несколько дуэлей одного хоста различимы: и в хабе, и в ответе бота', async () => {
+  const t = new Table();
+  // Худший случай: оба стола одной игры, одного хоста, с одними соперниками.
+  // Отличаются только часами — и кодом.
+  const a = await lobby(t, IVAN, { base: 300, inc: 2 }, 'a');
+  t.openHub(IVAN);
+  await t.send(IVAN, { t: 'create', game: 'chess', settings: { base: 60, inc: 0 }, reqId: 'b' });
+  const b = live(t)[1];
+
+  // 1. Хаб отдаёт строке то, чем стол опознаётся: свой код и свою подробность.
+  t.openHub(IVAN);
+  const hub = t.state(IVAN);
+  assert.equal(hub.kind, 'hub');
+  const rows = hub.lobbies.filter((l) => l.game === 'chess');
+  assert.equal(rows.length, 2);
+  assert.equal(new Set(rows.map((r) => r.code)).size, 2, 'коды разные');
+  assert.ok(rows.every((r) => r.detail), 'у каждой строки есть подробность');
+  assert.equal(new Set(rows.map((r) => r.detail)).size, 2, 'подробности разные — столы различимы по смыслу');
+
+  // 2. Бот, спрашивая «какая именно», тоже называет не только код.
+  await t.cmd(IVAN, '/cancel');
+  const asked = t.lastPost();
+  assert.match(asked, /несколько игр/);
+  for (const r of [a, b]) assert.ok(asked.includes(`/cancel ${r.code}`), `код ${r.code} назван`);
+  const lines = asked.split('\n').filter((l) => l.includes('/cancel '));
+  assert.equal(lines.length, 2);
+  assert.equal(new Set(lines.map((l) => l.replace(/ — \/cancel \w+$/, ''))).size, 2,
+    'строки отличаются не только кодом: по ним видно, какая партия какая');
+});
+
 test('/cancel с чужим кодом: чужую игру не удалить', async () => {
   const t = new Table();
   const a = await lobby(t, IVAN, {}, 'a');

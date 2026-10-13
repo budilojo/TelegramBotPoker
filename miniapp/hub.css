@@ -162,10 +162,44 @@
   text-overflow: ellipsis;
 }
 .hub .lr-host { color: var(--k-text-2); }
-/* Подробность уходит целиком, а не обрубком: на узком экране остаются
-   число игроков и состояние — то, что помещается и читается. */
+/* Разделитель рисует CSS, а не текст: на своей строке точка не нужна. */
+.hub .lr-detail::before { content: ' · '; }
+/*
+ * КОД СТОЛА — последнее, чем столы различаются, когда совпало всё остальное.
+ * Своей строкой: код длинный (десять знаков), и в строке названия он съедал
+ * имя хоста — то самое, по которому стол узнают в обычном случае.
+ *
+ * Моноширинным, потому что его переписывают в команду (/cancel, /stop), а в
+ * пропорциональном шрифте код читается с ошибками. Появляется только у
+ * строк-двойников: там, где столы и так различимы, он был бы шумом.
+ */
+.hub .lr-code {
+  display: inline-block;
+  margin-top: var(--k-s4);
+  padding: 0 var(--k-s4);
+  border: 1px solid var(--border-color);
+  border-radius: var(--k-r-sm);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--k-fs-caption);
+  line-height: var(--k-lh-caption);
+  color: var(--k-text-2);
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+/*
+ * На узком экране подробность УХОДИТ НА СВОЮ СТРОКУ, а не исчезает.
+ *
+ * Пряталась она потому, что обрубок «· бл…» хуже, чем ничего. Но пряталась
+ * она и на дуэлях, где «5 мин + 2 с · партия 2» — единственное, чем два
+ * стола одного хоста отличаются по смыслу: пять одинаковых строк, и выбрать
+ * из них нечем. На своей строке обрубка не бывает, и прятать нечего.
+ */
 @media (max-width: 420px) {
-  .hub .lr-detail { display: none; }
+  .hub .lr-detail { display: block; }
+  .hub .lr-detail::before { content: none; }
 }
 
 .hub .gc-go { flex: none; display: grid; place-items: center; color: var(--k-text-2); }
