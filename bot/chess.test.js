@@ -678,3 +678,28 @@ test('поделиться: Telegram не принял заготовку — с
   assert.match(msg.text, /Победил Макс/);
   assert.equal(msg.link, 'https://t.me/ChipTableBot/table');
 });
+
+test('КД на просьбы: нажатия чаще раза в 20 секунд не доходят до соперника; страница видит, сколько ждать', async () => {
+  const t = new Table();
+  const room = await duel(t);
+  await play(t, room, [['e2', 'e4'], ['e7', 'e5'], ['g1', 'f3'], ['b8', 'c6']]);
+  const t0 = t.clock.now();
+  await t.send(IVAN, { t: 'takeback' });
+  assert.equal(t.state(IVAN).askUntil.takeback, t0 + 20_000, 'у просящего кнопка на КД до этого времени (по часам сервера)');
+  assert.ok(t.state(MAX).askUntil.takeback <= t.clock.now(), 'у соперника КД нет');
+  await t.send(MAX, { t: 'declinetb' });
+  await play(t, room, [['f1', 'c4'], ['g8', 'f6']]); // правило «два хода после отказа» отпустило
+  const pings = room.match.takeback;
+  await t.send(IVAN, { t: 'takeback' });
+  assert.equal(errors(t, IVAN).at(-1).code, 'ASK_TOO_FAST');
+  assert.match(errors(t, IVAN).at(-1).text, /подождите ещё 20 с/);
+  assert.equal(room.match.takeback, pings, 'Макс окна не получил');
+  assert.equal(t.state(MAX).canAnswerTakeback, false);
+  await t.send(IVAN, { t: 'draw' }); // ничья — своя просьба со своим КД: проходит
+  assert.ok(room.match.drawOffer, 'ничья не заблокирована откатом');
+  await t.send(IVAN, { t: 'draw' });
+  await t.advance(20_000);
+  await t.send(MAX, { t: 'decline' });
+  await t.send(IVAN, { t: 'takeback' });
+  assert.equal(room.match.takeback?.by, '101', 'через 20 секунд — снова можно');
+});

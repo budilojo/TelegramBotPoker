@@ -396,6 +396,13 @@ function playOut(room) {
   go(offer, ITALIAN);
   C.offerDraw(offer, '101');
   scene('33-chess-draw-offer', offer, 102);
+
+  // Откат: соперник просит вернуть ход — у второго игрока всплывает окно.
+  const take = duel();
+  C.startGame(take, '101', { rand: () => 0.1 });
+  go(take, ITALIAN);
+  C.requestTakeback(take, '101');
+  scene('33б-chess-takeback-popup', take, 102);
 }
 
 app.syncClocks(); // turn deadlines, as the running bot would have them

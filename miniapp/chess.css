@@ -132,11 +132,11 @@
 .ch-sq .ch-pc { position: relative; z-index: 1; width: 92%; height: 92%; pointer-events: none; } /* над подсветкой хода: фигура не тускнеет */
 
 /*
- * Последний ход. КЛЕТКА, ОТКУДА сошла фигура, — контрастнее клетки, куда она
- * пришла: на пустой клетке глаз ищет «здесь что-то было», и слабая подложка
- * терялась. Подложка тёмная на обеих клетках (контраст к клетке ≥ 3), плюс
- * внутренний контур: тёмный на светлой клетке, светлый на тёмной. Клетка «куда» — мягче:
- * там и так стоит фигура.
+ * Последний ход: подчёркнуты ОБЕ клетки — откуда сошла фигура и куда пришла, —
+ * но мягко, лёгкой тёмной тенью без рамок: рамка тут была бы громче маркеров
+ * «сюда можно», а они важнее. «Откуда» чуть темнее «куда»: по пустой клетке
+ * глаз находит «здесь что-то было», а на «куда» и так стоит сама фигура.
+ * Название хода — буквами по краю и строкой под доской.
  */
 .ch-sq.last-from::before,
 .ch-sq.last-to::before {
@@ -144,10 +144,8 @@
   position: absolute;
   inset: 0;
 }
-.ch-sq.light.last-from::before { background: color-mix(in srgb, var(--bg-main) 56%, transparent); box-shadow: inset 0 0 0 3px var(--bg-main); }
-.ch-sq.dark.last-from::before  { background: color-mix(in srgb, var(--bg-main) 72%, transparent); box-shadow: inset 0 0 0 3px var(--text-primary); }
-.ch-sq.light.last-to::before   { background: color-mix(in srgb, var(--bg-main) 18%, transparent); }
-.ch-sq.dark.last-to::before    { background: color-mix(in srgb, var(--text-primary) 24%, transparent); }
+.ch-sq.last-from::before { background: color-mix(in srgb, var(--bg-main) 30%, transparent); }
+.ch-sq.last-to::before   { background: color-mix(in srgb, var(--bg-main) 20%, transparent); }
 /*
  * МАРКЕРЫ ХОДА — светлое с тёмным, а не зелёное.
  *
@@ -311,6 +309,7 @@
 
 .ch ~ .panel { grid-auto-flow: column; }
 .ch ~ .panel .k-btn { padding: 0 var(--k-s8); }
+.ch ~ .panel .k-btn[data-cd] { font-variant-numeric: tabular-nums; }
 
 .ch-promo { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--k-s8); }
 .ch-promo-btn {

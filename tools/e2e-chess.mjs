@@ -239,16 +239,38 @@ assert.ok(await pm.locator('.ch-sq.dot').count() > 0, 'а в настоящей 
 await sq(pm, 'b8').click(); // снять выбор
 step('просмотр: ◀ показывает прошлую позицию, ходить нельзя (и тому, чей ход), тап по записи и ⏭ работают');
 
-// Откат: Иван просит вернуть Nf3, Макс разрешает.
+// Откат: Иван просит вернуть Nf3. У Макса всплывает окно; сначала он отказывает, потом разрешает.
 await pi.getByRole('button', { name: 'Откат' }).click();
 await until(() => room.match.takeback?.by === '101', 'просьба об откате');
-await pm.waitForSelector('button:has-text("Разрешить")');
-assert.match(await pm.locator('.ch-status').innerText(), /просит вернуть свой ход/);
-assert.equal(await pi.locator('button:has-text("Разрешить")').count(), 0, 'своей просьбе Иван ничего не разрешает');
-await pm.getByRole('button', { name: 'Разрешить' }).click();
+await pm.waitForSelector('.sheet:has-text("Вернуть ход?")');
+const sheetText = await pm.locator('.sheet').innerText();
+assert.match(sheetText, /Иван просит вернуть ход Nf3 \(g1 → f3\)/, 'в окне сказано, какой ход и чей');
+assert.equal(await pi.locator('.sheet').count(), 0, 'у самого просящего окна нет');
+assert.equal(await pi.locator('.sheet button:has-text("Разрешить")').count(), 0, 'своей просьбе Иван ничего не разрешает');
+// КД: у просящего кнопка выключена и показывает секунды.
+const cd = pi.locator('button[data-cd="takeback"]');
+assert.equal(await cd.isDisabled(), true, 'кнопка «Откат» на КД');
+assert.match(await cd.innerText(), /^Откат · \d+$/, 'на ней — сколько ждать');
+step('откат: у Макса всплыло окно «Вернуть ход?» с ходом Nf3; у Ивана кнопка «Откат · N» на КД');
+
+await pm.locator('.sheet').getByRole('button', { name: 'Отказать' }).click();
+await until(() => room.match.takeback == null, 'Макс отказал');
+assert.equal(await pm.locator('.sheet').count(), 0, 'окно закрылось');
+assert.equal(room.match.moves.length, 5, 'ход остался');
+step('Макс нажал «Отказать» в окне: окно закрылось, ход на месте');
+
+// Тест не ждёт реальных 20 секунд: КД и правило «два хода после отказа» сбрасываем руками.
+room.match.asked = {};
+room.match.noTake = {};
+app.hub.broadcast(room);
+await pi.waitForFunction(() => { const b = document.querySelector('button[data-cd="takeback"]'); return b && !b.disabled; });
+await pi.getByRole('button', { name: 'Откат' }).click();
+await pm.waitForSelector('.sheet:has-text("Вернуть ход?")');
+await pm.locator('.sheet').getByRole('button', { name: 'Разрешить' }).click();
 await until(() => room.match.moves.length === 4, 'откат принят');
 await pi.waitForFunction(() => !document.querySelector('.ch-sq[data-sq="f3"] .ch-pc'));
-step('откат: Иван просит, Макс разрешает — Nf3 возвращён, позиция у обоих обновилась');
+assert.equal(await pm.locator('.sheet').count(), 0, 'окно закрылось после ответа');
+step('откат: после КД Иван просит снова, Макс разрешает в окне — Nf3 возвращён, позиция у обоих обновилась');
 
 /* --------------------------------------------- рокировка: ладья тоже едет */
 

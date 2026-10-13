@@ -155,12 +155,12 @@ test('ничья по согласию: предложить, принять —
 test('ничья: отказ, ход гасит предложение, а повторять сразу нельзя', () => {
   const room = table();
   play(room, [['e2', 'e4'], ['e7', 'e5']]);
-  C.offerDraw(room, '1');
+  C.offerDraw(room, '1', T0);
   assert.equal(C.declineDraw(room, '1').error, 'NO_OFFER', 'свою ничью не «отклонить»');
   assert.ok(C.declineDraw(room, '2').ok);
-  assert.equal(C.offerDraw(room, '1').error, 'OFFER_COOLDOWN');
+  assert.equal(C.offerDraw(room, '1', T0 + 30_000).error, 'OFFER_COOLDOWN');
   play(room, [['g1', 'f3'], ['b8', 'c6']]);
-  assert.ok(C.offerDraw(room, '1').offered, 'через два хода — снова можно');
+  assert.ok(C.offerDraw(room, '1', T0 + 30_000).offered, 'через два хода (и больше 20 секунд) — снова можно');
   play(room, [['f1', 'c4']]);
   assert.equal(room.match.drawOffer, null, 'после хода предложение снято');
 });
@@ -380,15 +380,15 @@ test('откат: просить нельзя, пока не сходил; не�
 test('откат: отказ, ход и конец партии гасят просьбу; повторять сразу нельзя', () => {
   const room = table();
   play(room, [['e2', 'e4'], ['e7', 'e5']]);
-  C.requestTakeback(room, '1');
+  C.requestTakeback(room, '1', T0);
   assert.equal(C.declineTakeback(room, '1').error, 'NO_TAKEBACK', 'свою просьбу «отклонить» нельзя');
   assert.ok(C.declineTakeback(room, '2').ok);
-  assert.equal(C.requestTakeback(room, '1').error, 'TAKEBACK_COOLDOWN');
+  assert.equal(C.requestTakeback(room, '1', T0 + 30_000).error, 'TAKEBACK_COOLDOWN');
   play(room, [['g1', 'f3'], ['b8', 'c6']]);
-  assert.ok(C.requestTakeback(room, '1').offered, 'через два хода — снова можно');
+  assert.ok(C.requestTakeback(room, '1', T0 + 30_000).offered, 'через два хода (и больше 20 секунд) — снова можно');
   C.move(room, '1', { from: 'f1', to: 'c4' }, T0);
   assert.equal(room.match.takeback, null, 'ход гасит просьбу');
-  C.requestTakeback(room, '1');
+  C.requestTakeback(room, '1', T0 + 60_000);
   C.resign(room, '1');
   assert.equal(room.match.takeback, null, 'конец партии — тоже');
   assert.equal(C.requestTakeback(room, '1').error, 'NOT_PLAYING');
@@ -448,4 +448,41 @@ test('откат: стол, сохранённый до появления от�
   C.requestTakeback(back, '1');
   assert.ok(C.requestTakeback(back, '2').accepted);
   assert.deepEqual(back.match.moves.map((x) => x.san), ['e4', 'e5']);
+});
+
+/* ------------------------------------------------------------------- КД */
+
+test('КД: откат можно просить не чаще раза в 20 секунд — даже если отказ и два хода уже прошли', () => {
+  const room = table();
+  play(room, [['e2', 'e4'], ['e7', 'e5']]);
+  assert.ok(C.requestTakeback(room, '1', T0).offered);
+  C.declineTakeback(room, '2');
+  play(room, [['g1', 'f3'], ['b8', 'c6']]); // два хода прошли — правило отказа отпустило
+  const r = C.requestTakeback(room, '1', T0 + 5_000);
+  assert.equal(r.error, 'ASK_TOO_FAST');
+  assert.match(r.text, /раз в 20 секунд — подождите ещё 15 с/, 'сказано, сколько ждать');
+  assert.equal(room.match.takeback, null, 'просьба не создана и соперник не потревожен');
+  assert.equal(C.requestTakeback(room, '1', T0 + 19_999).error, 'ASK_TOO_FAST');
+  assert.ok(C.requestTakeback(room, '1', T0 + 20_000).offered, 'ровно через 20 секунд — можно');
+});
+
+test('КД: ничью тоже не чаще раза в 20 секунд, а у соперника он свой', () => {
+  const room = table();
+  play(room, [['e2', 'e4'], ['e7', 'e5']]);
+  assert.ok(C.offerDraw(room, '1', T0).offered);
+  C.declineDraw(room, '2');
+  play(room, [['g1', 'f3'], ['b8', 'c6']]);
+  assert.equal(C.offerDraw(room, '1', T0 + 1_000).error, 'ASK_TOO_FAST');
+  assert.ok(C.offerDraw(room, '2', T0 + 1_000).offered, 'Макс не ждёт: его КД начинается с его первой просьбы');
+  assert.ok(C.offerDraw(room, '1', T0 + 1_000).accepted, 'а принять предложение соперника можно когда угодно — это не просьба');
+});
+
+test('КД: откат и ничья считаются раздельно; принять откат КД не мешает', () => {
+  const room = table();
+  play(room, [['e2', 'e4'], ['e7', 'e5'], ['g1', 'f3'], ['b8', 'c6']]);
+  assert.ok(C.offerDraw(room, '1', T0).offered);
+  C.declineDraw(room, '2');
+  C.requestTakeback(room, '1', T0 + 1_000); // ничья отклонена и ждёт два хода; откат — другая просьба со своим КД
+  assert.equal(room.match.takeback?.by, '1', 'просьба об откате создана, хотя ничью просили секунду назад');
+  assert.ok(C.requestTakeback(room, '2', T0 + 1_000).accepted, 'Макс разрешил — его КД не нужен');
 });

@@ -30,6 +30,12 @@ export const MAX_SEATS = 2;
 export const MIN_PLAYERS = 2;
 /** Сдача и время засчитываются в рейтинг, только если сыграно не меньше 10 ходов каждым (20 полуходов). */
 export const RATED_MIN_PLIES = 20;
+/**
+ * КД на просьбы: ничью и откат один и тот же игрок может предлагать не чаще
+ * раза в 20 секунд — иначе соперника можно закидать окнами «ответьте мне». К
+ * отказу это не относится: после отказа ещё и два хода подряд нельзя.
+ */
+export const ASK_COOLDOWN_MS = 20_000;
 /** На первый ход каждому — столько, независимо от часов партии. */
 export const FIRST_MS = 60_000;
 /** Секунды на партию; 0 — без часов. */
@@ -181,6 +187,7 @@ function newMatch(room, white, black) {
     noOffer: {}, // id -> с какого хода снова можно предлагать
     takeback: null, // { by, ply } — просьба вернуть свой последний ход
     noTake: {}, // id -> с какого хода снова можно просить
+    asked: {}, // `id:draw` | `id:takeback` -> когда в последний раз просил (по часам приложения)
     // Позиция и часы ПОСЛЕ каждого хода: по ним откат возвращает доску и время.
     hist: [], // FEN после хода i+1
     clk: [], // { w, b } после хода i+1
@@ -370,8 +377,17 @@ export function abortMatch(room, userId) {
   return { ok: true };
 }
 
+/** Через сколько миллисекунд игрок снова вправе просить (0 — уже можно). */
+export function askWait(m, userId, kind, now) {
+  const at = m?.asked?.[`${userId}:${kind}`];
+  return at == null ? 0 : Math.max(0, at + ASK_COOLDOWN_MS - now);
+}
+
+/** Отказ с КД: сказать, сколько ждать. */
+const tooFast = (ms) => ({ error: 'ASK_TOO_FAST', text: `Не так часто: просить можно раз в ${ASK_COOLDOWN_MS / 1000} секунд — подождите ещё ${Math.ceil(ms / 1000)} с.` });
+
 /** Предложить ничью — или принять предложение соперника. */
-export function offerDraw(room, userId) {
+export function offerDraw(room, userId, now = Date.now()) {
   const m = live(room);
   if (!m) return { error: 'NOT_PLAYING' };
   const mine = colorOfPlayer(room, userId);
@@ -385,6 +401,9 @@ export function offerDraw(room, userId) {
   if (firstPhase(m)) return { error: 'TOO_EARLY' };
   const until = m.noOffer[String(userId)] ?? 0;
   if (m.moves.length < until) return { error: 'OFFER_COOLDOWN' };
+  const wait = askWait(m, userId, 'draw', now);
+  if (wait) return tooFast(wait);
+  (m.asked ??= {})[`${userId}:draw`] = now;
   m.drawOffer = { by: String(userId), ply: m.moves.length };
   room.notice = `${nameOf(room, userId)} предлагает ничью`;
   touch(room);
@@ -429,7 +448,7 @@ export function takebackBlocker(room, userId) {
  * возвращаются к тому моменту: время, потраченное на отменённые ходы, не
  * сгорает ни у кого.
  */
-export function requestTakeback(room, userId) {
+export function requestTakeback(room, userId, now = Date.now()) {
   const m = live(room);
   if (!m) return { error: 'NOT_PLAYING' };
   const mine = colorOfPlayer(room, userId);
@@ -438,6 +457,9 @@ export function requestTakeback(room, userId) {
   if (m.takeback) return { ok: true, noop: true }; // своя просьба ещё висит
   const why = takebackBlocker(room, userId);
   if (why) return { error: why };
+  const wait = askWait(m, userId, 'takeback', now);
+  if (wait) return tooFast(wait);
+  (m.asked ??= {})[`${userId}:takeback`] = now;
   m.takeback = { by: String(userId), ply: m.moves.length };
   room.notice = `${nameOf(room, userId)} просит вернуть ход`;
   touch(room);

@@ -20,7 +20,7 @@
 import {
   tg, $app, h, haptic, toast, showSheet, closeSheet, refreshSheet, avatar, animateOnce, REDUCED, EASE,
 } from '../ui.js';
-import { net, bus, send } from '../net.js';
+import { net, bus, send, serverNow } from '../net.js';
 
 /** Идентификатор запроса: повтор того же тапа сервер узнаёт и не плодит лобби. */
 const newReqId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -137,7 +137,7 @@ export function onState(s, p) {
   if (myMove(s) && !(p && myMove(p))) haptic.turn();
   // Итог и предложение ничьей уже написаны на самом экране — второй раз тостом не нужно,
   // он к тому же закрывает плашку соперника.
-  const said = !!s.match?.over || s.canAnswerDraw || s.match?.drawOffer?.mine;
+  const said = !!s.match?.over || s.canAnswerDraw || s.match?.drawOffer?.mine || s.canAnswerTakeback || s.match?.takeback?.mine;
   if (s.room.notice && s.room.notice !== p?.room?.notice && !said) toast(s.room.notice, 3200);
   // Партия закончилась на глазах: победа и поражение — пальцем, а не словом.
   const over = s.match?.over;
@@ -146,6 +146,12 @@ export function onState(s, p) {
   }
   bus.render();
   refreshSheet();
+  // Соперник просит вернуть ход — окно поверх доски, а не только строка под ней:
+  // на ответ ждут двое, и промолчать «случайно» не должно получаться.
+  if (s.canAnswerTakeback && !p?.canAnswerTakeback) {
+    haptic.turn();
+    openTakebackSheet();
+  }
 }
 
 export function render() {
@@ -592,13 +598,36 @@ function actionsEl() {
   }
   // Три кнопки: откат, ничья и «сдаться» — а до второго хода вместо сдачи отмена партии.
   panel.append(
-    h('button.k-btn.k-btn--secondary.k-btn--block', { disabled: !s.canTakeback, onclick: () => { haptic.tap(); send({ t: 'takeback' }); } }, 'Откат'),
-    h('button.k-btn.k-btn--secondary.k-btn--block', { disabled: !s.canOfferDraw, onclick: () => { haptic.tap(); send({ t: 'draw' }); } }, 'Ничья'),
+    askBtn('Откат', s.askUntil.takeback, s.canTakeback, 'takeback'),
+    askBtn('Ничья', s.askUntil.draw, s.canOfferDraw, 'draw'),
     s.canAbort
       ? h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: confirmAbort }, 'Отменить')
       : h('button.k-btn.k-btn--secondary.k-btn--block', { disabled: !s.canResign, onclick: confirmResign }, 'Сдаться'));
   if (net.busy) panel.classList.add('busy');
   return panel;
+}
+
+/**
+ * Окно «Вернуть ход?». Живёт, пока просьба висит: build() возвращает null,
+ * когда на неё ответили или она погасла (соперник сходил) — окно закрывается
+ * само. Закрыли в сторону — строка под доской с теми же кнопками остаётся.
+ */
+function openTakebackSheet() {
+  showSheet('takeback', () => {
+    const s = state;
+    if (!s.canAnswerTakeback) return null;
+    const by = s.match.takeback.byColor;
+    const log = s.match.log;
+    let at = -1;
+    for (let i = log.length - 1; i >= 0; i--) if ((i % 2 === 0 ? 'w' : 'b') === by) { at = i; break; }
+    const who = s.players.find((x) => x.color === by)?.name ?? 'Соперник';
+    return h('div',
+      h('h3', 'Вернуть ход?'),
+      h('div.sub', `${who} просит вернуть ${at >= 0 ? `ход ${log[at].san} (${log[at].from} → ${log[at].to})` : 'свой ход'}. Позиция и часы вернутся к тому моменту.`),
+      h('div.grid2',
+        h('button.btn', { onclick: () => { closeSheet(); send({ t: 'declinetb' }); } }, 'Отказать'),
+        h('button.btn.primary', { onclick: () => { closeSheet(); haptic.tap(); send({ t: 'takeback' }); } }, 'Разрешить')));
+  });
 }
 
 /** «Поделиться итогом»: сервер готовит сообщение, Telegram даёт выбрать чат (net.js → ui.js:openShare). */
@@ -612,6 +641,34 @@ function newLobby() {
   haptic.tap();
   send({ t: 'again', reqId: newReqId() });
 }
+
+/**
+ * Кнопка просьбы (откат, ничья) с КД: пока сервер не разрешил просить снова
+ * (`askUntil`, по часам сервера), она выключена и показывает секунды. Это
+ * подсказка, а не защита: сервер всё равно откажет и объяснит.
+ */
+function askBtn(label, until, allowed, msg) {
+  const left = until - serverNow();
+  const b = h('button.k-btn.k-btn--secondary.k-btn--block', {
+    'data-cd': msg, 'data-until': String(until), 'data-label': label, 'data-enabled': allowed ? '1' : '0',
+    disabled: !allowed || left > 0,
+    onclick: () => { haptic.tap(); send({ t: msg }); },
+  }, left > 0 ? `${label} · ${Math.ceil(left / 1000)}` : label);
+  return b;
+}
+
+/** Секунды на кнопках с КД идут сами — без перерисовки доски (она сорвала бы перетаскивание). */
+function tickCooldowns() {
+  const now = serverNow();
+  for (const b of document.querySelectorAll('[data-cd]')) {
+    const left = Number(b.dataset.until) - now;
+    const cooling = left > 0;
+    const text = cooling ? `${b.dataset.label} · ${Math.ceil(left / 1000)}` : b.dataset.label;
+    if (b.textContent !== text) b.textContent = text;
+    b.disabled = cooling || b.dataset.enabled !== '1';
+  }
+}
+setInterval(tickCooldowns, 400);
 
 /* ------------------------------------------------------------- results */
 

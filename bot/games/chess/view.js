@@ -14,7 +14,7 @@
  */
 import { sqName, legalMoves, inCheck, kingSquare } from './board.js';
 import {
-  live, isHost, findPlayer, isSeated, seatedPlayers, startBlocker, colorOfPlayer, mover, leftOf, score, takebackBlocker,
+  live, isHost, findPlayer, isSeated, seatedPlayers, startBlocker, colorOfPlayer, mover, leftOf, score, takebackBlocker, askWait,
   MAX_SEATS, controlRu, KIND_RU, SIDE_RU,
 } from './rules.js';
 
@@ -149,6 +149,11 @@ export function chessView(room, viewerId, { now = Date.now(), botUsername = '' }
     canTakeback: player && !takebackBlocker(room, uid),
     // Поделиться — игроку стола и итогом сыгранной партии (отменённая — не итог).
     canShare: !!color && !!m?.over && m.over.kind !== 'aborted',
+    // До какого времени (по часам сервера) кнопка «Откат» / «Ничья» на КД: страница
+    // показывает обратный отсчёт и сама не даёт нажать раньше.
+    askUntil: player
+      ? { takeback: now + askWait(m, uid, 'takeback', now), draw: now + askWait(m, uid, 'draw', now) }
+      : { takeback: 0, draw: 0 },
     canAnswerTakeback: player && !!m.takeback && m.takeback.by !== uid,
     canStart: room.status === 'lobby' && isHost(room, uid) && !startBlocker(room),
     canNext: room.status === 'playing' && !!m && !!m.over && (isSeated(meP) || isHost(room, uid)) && !startBlocker(room),

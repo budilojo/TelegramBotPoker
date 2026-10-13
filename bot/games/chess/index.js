@@ -34,6 +34,7 @@ export const ERRORS = {
   NO_TAKEBACK: 'Просьбы вернуть ход нет.',
   NOTHING_TO_TAKE: 'Вы ещё не сделали ни одного хода — возвращать нечего.',
   OFFER_PENDING: 'Сначала ответьте на предложение соперника — или дождитесь ответа на своё.',
+  ASK_TOO_FAST: 'Не так часто — подождите немного.',
   TAKEBACK_COOLDOWN: 'Соперник уже отказал — попросите ещё раз через пару ходов.',
   NOT_SEATED: 'Сначала сядьте за стол.',
   NOT_HOST: 'Это может только хост.',
@@ -180,7 +181,7 @@ export default {
         return app.afterAction(room);
 
       case 'draw': {
-        const r = C.offerDraw(room, uid);
+        const r = C.offerDraw(room, uid, app.clock.now());
         if (fail(r, { resync: true })) return;
         if (r.noop) return;
         return r.accepted ? app.afterAction(room) : app.afterChange(room);
@@ -192,7 +193,7 @@ export default {
       // Откат своего последнего хода: просьба или разрешение. После согласия
       // позиция и часы возвращаются — это новый «ход партии» для всех.
       case 'takeback': {
-        const r = C.requestTakeback(room, uid);
+        const r = C.requestTakeback(room, uid, app.clock.now());
         if (fail(r, { resync: true })) return;
         if (r.noop) return;
         return r.accepted ? app.afterAction(room) : app.afterChange(room);
