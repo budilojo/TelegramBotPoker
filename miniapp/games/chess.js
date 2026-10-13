@@ -22,6 +22,9 @@ import {
 } from '../ui.js';
 import { net, bus, send } from '../net.js';
 
+/** Идентификатор запроса: повтор того же тапа сервер узнаёт и не плодит лобби. */
+const newReqId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
+
 let state = null;
 let prev = null;
 /** Выбранная клетка со своей фигурой, или null. */
@@ -34,6 +37,12 @@ let ownMove = null;
 let animatedSeq = null;
 /** Когда закончилось перетаскивание: клик, который за ним следует, — не тап. */
 let droppedAt = 0;
+/**
+ * Просмотр: сколько полуходов от начала показано на доске, или null — идёт
+ * сама партия. Только показ: ходить по прошлой позиции нельзя, и страница ей
+ * не верит — законные ходы сервер присылает лишь для настоящей.
+ */
+let viewPly = null;
 
 const FILES = 'abcdefgh';
 const PIECE_RU = { p: 'пешка', n: 'конь', b: 'слон', r: 'ладья', q: 'ферзь', k: 'король' };
@@ -53,6 +62,64 @@ const clock = (ms) => {
   return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
 };
 
+/* ---------------------------------------------------------------- просмотр */
+
+const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
+const idxOf = (name) => FILES.indexOf(name[0]) + (Number(name[1]) - 1) * 8;
+
+function startBoard() {
+  const b = Array(64).fill('');
+  START.split('/').forEach((row, i) => {
+    let f = 0;
+    for (const ch of row) {
+      if (/[1-8]/.test(ch)) f += Number(ch);
+      else b[(7 - i) * 8 + f++] = ch;
+    }
+  });
+  return b;
+}
+
+/**
+ * Позиция после `n` полуходов, собранная из записи (клетки откуда–куда).
+ * Это только показ, не правила: рокировку узнаём по ходу короля на две
+ * клетки, взятие на проходе — по пешке, ушедшей по диагонали на пустую.
+ */
+function replay(log, n) {
+  const b = startBoard();
+  for (let i = 0; i < n; i++) {
+    const { from, to, promo } = log[i];
+    const f = idxOf(from);
+    const t = idxOf(to);
+    const p = b[f];
+    const white = p === p.toUpperCase();
+    if (p.toUpperCase() === 'K' && Math.abs(t - f) === 2) {
+      const rookFrom = t > f ? t + 1 : t - 2;
+      const rookTo = t > f ? t - 1 : t + 1;
+      b[rookTo] = b[rookFrom];
+      b[rookFrom] = '';
+    }
+    if (p.toUpperCase() === 'P' && (f & 7) !== (t & 7) && !b[t]) b[t + (white ? -8 : 8)] = '';
+    b[t] = promo ? (white ? promo.toUpperCase() : promo) : p;
+    b[f] = '';
+  }
+  return b;
+}
+
+/** Что показывать на доске: настоящую позицию или прошлую. */
+function shown() {
+  const m = state.match;
+  if (viewPly === null) return { board: m.board, last: m.last, check: m.check, reviewing: false, ply: m.plies };
+  const mv = viewPly ? m.log[viewPly - 1] : null;
+  return { board: replay(m.log, viewPly), last: mv, check: null, reviewing: true, ply: viewPly };
+}
+
+function goto(n) {
+  const total = state.match.plies;
+  viewPly = n >= total ? null : Math.max(0, n);
+  sel = null;
+  bus.render();
+}
+
 /* ------------------------------------------------------------------ state */
 
 /** Ждёт ли партия меня? */
@@ -62,6 +129,8 @@ export function onState(s, p) {
   state = s;
   prev = p;
   drag = null; // пришла новая позиция: то, что было в руке, уже не про неё
+  // Другая партия — смотреть снова текущее; откат укоротил запись — не стоять на несуществующем ходе.
+  if (!p?.match || p.match.no !== s.match?.no || (viewPly !== null && viewPly >= (s.match?.plies ?? 0))) viewPly = null;
   // Выбор живёт ровно до смены позиции или очереди: чужой ход его снимает.
   if (sel && (!myMove(s) || s.match?.plies !== p?.match?.plies || s.match?.no !== p?.match?.no)) sel = null;
 
@@ -127,6 +196,7 @@ function renderLobby() {
     notifyHint(),
     me.isHost ? h('button.menu-item', { onclick: openSettings }, 'Настройки', h('small', 'часы, цвет')) : null,
     me.isHost ? h('button.menu-item', { onclick: () => openPlayers('host') }, 'Хост', h('small', 'удалить, передать')) : null,
+    s.hub ? h('button.menu-item', { onclick: newLobby }, '+ Новое лобби', h('small', 'ещё один стол с теми же настройками')) : null,
   );
   const actions = h('div.panel');
   if (me.kicked) actions.append(h('div.hint', 'Хост удалил вас из этой игры.'));
@@ -160,6 +230,7 @@ function renderTable() {
     h('div.ch-board-wrap', boardEl(bottom)),
     playerBar(bottom),
     statusEl(),
+    navEl(),
     movesEl(),
   );
   const actions = actionsEl();
@@ -180,7 +251,7 @@ function slideLastMove(board) {
   const was = prev?.match;
   const fresh = animatedSeq !== s.seq;
   animatedSeq = s.seq;
-  if (!fresh || REDUCED || !board || !m.last || !was || was.no !== m.no || m.plies !== was.plies + 1) return;
+  if (!fresh || REDUCED || viewPly !== null || !board || !m.last || !was || was.no !== m.no || m.plies !== was.plies + 1) return;
   if (ownMove && ownMove.no === m.no && ownMove.plies === m.plies) { ownMove = null; return; }
   slide(board, m.last.from, m.last.to);
   if (m.last.san.startsWith('O-O')) {
@@ -239,26 +310,25 @@ function clockEl(color, running) {
 
 function boardEl(bottom) {
   const s = state;
-  const m = s.match;
   const flip = bottom === 'b';
+  const v = shown();
   const board = h(`div.ch-board${flip ? '.flip' : ''}`, { role: 'grid', 'aria-label': 'Шахматная доска' });
   for (let r = 0; r < 8; r++) {
     for (let f = 0; f < 8; f++) {
       const rank = flip ? r : 7 - r;
       const file = flip ? 7 - f : f;
       const name = sqOf(file, rank);
-      const piece = m.board[rank * 8 + file];
+      const piece = v.board[rank * 8 + file];
       const dark = (file + rank) % 2 === 0;
       const cls = ['ch-sq', dark ? 'dark' : 'light'];
-      if (m.last && (m.last.from === name || m.last.to === name)) cls.push('last');
-      if (m.check === name) cls.push('check');
+      // Откуда сошла фигура — заметнее, чем куда пришла: по пустой клетке глаз
+      // находит «здесь что-то было», а по фигуре — «вот она».
+      if (v.last?.from === name) cls.push('last-from');
+      if (v.last?.to === name) cls.push('last-to');
+      if (v.check === name) cls.push('check');
       const label = `${name}${piece ? `, ${isMineColor(piece, 'w') ? 'белая' : 'чёрная'} ${PIECE_RU[piece.toLowerCase()]}` : ''}`;
-      const cell = h(`button.${cls.join('.')}`, { type: 'button', 'aria-label': label, 'data-sq': name, onclick: () => tapSquare(name) },
-        piece ? img(code(piece)) : null,
-        // Координаты — только по краям и мелко: это подсказка, а не разметка.
-        f === 0 ? h('i.ch-rank', String(rank + 1)) : null,
-        r === 7 ? h('i.ch-file', FILES[file]) : null);
-      board.append(cell);
+      board.append(h(`button.${cls.join('.')}`, { type: 'button', 'aria-label': label, 'data-sq': name, onclick: () => tapSquare(name) },
+        piece ? img(code(piece)) : null));
     }
   }
   paintMarks(board);
@@ -267,7 +337,19 @@ function boardEl(bottom) {
   board.addEventListener('pointermove', dragMove);
   board.addEventListener('pointerup', dragEnd);
   board.addEventListener('pointercancel', dragCancel);
-  return board;
+
+  // Рамка с буквами и цифрами ВНЕ клеток: по ней читается «куда сходил соперник».
+  // Буква и цифра клеток последнего хода подсвечены — достаточно глянуть на край.
+  const hot = new Set([v.last?.from, v.last?.to].filter(Boolean));
+  const hotFile = new Set([...hot].map((n) => n[0]));
+  const hotRank = new Set([...hot].map((n) => n[1]));
+  const order = flip ? [...FILES].reverse() : [...FILES];
+  const ranks = (flip ? [1, 2, 3, 4, 5, 6, 7, 8] : [8, 7, 6, 5, 4, 3, 2, 1]);
+  return h('div.ch-frame',
+    h('div.ch-ranks', ranks.map((n) => h(`span${hotRank.has(String(n)) ? '.hot' : ''}`, String(n)))),
+    board,
+    h('span'),
+    h('div.ch-files', order.map((c) => h(`span${hotFile.has(c) ? '.hot' : ''}`, c))));
 }
 
 /**
@@ -277,7 +359,7 @@ function boardEl(bottom) {
  */
 function paintMarks(board) {
   const L = state.legal;
-  const targets = sel && L.myTurn ? new Set(L.to[sel] || []) : new Set();
+  const targets = sel && L.myTurn && viewPly === null ? new Set(L.to[sel] || []) : new Set();
   for (const cell of board.querySelectorAll('.ch-sq')) {
     const name = cell.dataset.sq;
     cell.classList.toggle('sel', sel === name);
@@ -291,7 +373,7 @@ function paintMarks(board) {
 const DRAG_PX = 6;
 
 function dragStart(e, board) {
-  if (e.button > 0 || net.busy || drag) return; // мышью — только левой
+  if (e.button > 0 || net.busy || drag || viewPly !== null) return; // мышью — только левой; в просмотре ходить нельзя
   const L = state.legal;
   if (!L.myTurn) return;
   const cell = e.target.closest?.('.ch-sq');
@@ -379,7 +461,7 @@ function dragCancel(e) {
 function tapSquare(name) {
   const s = state;
   if (performance.now() - droppedAt < 350) return; // это хвост перетаскивания, а не тап
-  if (net.busy) return; // ответ на прошлый ход ещё не пришёл
+  if (net.busy || viewPly !== null) return; // ответ на прошлый ход ещё не пришёл
   const L = s.legal;
   if (!L.myTurn) {
     if (sel) { sel = null; bus.render(); }
@@ -433,6 +515,15 @@ function statusEl() {
         : `${o.winner === me ? 'Вы выиграли' : me ? 'Вы проиграли' : `Победа: ${COLOR_RU[o.winner]}`} — ${o.why}`;
     return h(`div.ch-status.over${o.winner && o.winner === me ? '.won' : ''}`, text);
   }
+  if (viewPly !== null) return h('div.ch-status.review', 'Вы смотрите прошлую позицию — ходить пока нельзя');
+  if (s.canAnswerTakeback) {
+    return h('div.ch-status.offer',
+      h('span', 'Соперник просит вернуть свой ход'),
+      h('div.ch-offer-btns',
+        h('button.k-btn.k-btn--primary.k-btn--compact', { onclick: () => { haptic.tap(); send({ t: 'takeback' }); } }, 'Разрешить'),
+        h('button.k-btn.k-btn--secondary.k-btn--compact', { onclick: () => send({ t: 'declinetb' }) }, 'Отказать')));
+  }
+  if (m.takeback?.mine) return h('div.ch-status', 'Вы просите вернуть ход — ждём ответа');
   if (s.canAnswerDraw) {
     return h('div.ch-status.offer',
       h('span', 'Соперник предлагает ничью'),
@@ -446,14 +537,40 @@ function statusEl() {
   return h('div.ch-status', m.check ? 'Вам поставили шах — ждите ход соперника' : 'Ход соперника');
 }
 
-/** Запись партии: «1. e4 e5 2. Nf3», последний ход выделен. */
+/**
+ * Одна строка под статусом: листалка по записи и последний ход словами и
+ * буквами — «Артём: e7 → e5 · e5». По буквам рамки доски и этой строке видно,
+ * куда пошёл соперник, даже если глаз пропустил, как скользила фигура.
+ * Листалка — только показ: в начало, назад, вперёд, к текущей.
+ */
+function navEl() {
+  const s = state;
+  const m = s.match;
+  if (!m.plies) return h('div.ch-nav.empty');
+  const at = viewPly ?? m.plies;
+  const mv = m.log[at - 1];
+  const color = at % 2 === 1 ? 'w' : 'b'; // кто сделал этот ход
+  const p = s.players.find((x) => x.color === color);
+  const who = viewPly !== null ? `Ход ${Math.ceil(at / 2)}` : p?.isMe ? 'Вы' : p?.name ?? COLOR_RU[color];
+  const text = at ? h('span.ch-sub', `${who}: `, h('b', `${mv.from} → ${mv.to}`), ` · ${mv.san}`) : h('span.ch-sub', 'Начало партии');
+  const btn = (label, aria, to, off) => h('button.k-icon-btn.ch-nav-btn', { type: 'button', 'aria-label': aria, disabled: off, onclick: () => { haptic.tap(); goto(to); } }, label);
+  return h('div.ch-nav',
+    btn('⏮', 'В начало партии', 0, at === 0),
+    btn('◀', 'Ход назад', at - 1, at === 0),
+    text,
+    btn('▶', 'Ход вперёд', at + 1, viewPly === null),
+    btn('⏭', 'К текущей позиции', m.plies, viewPly === null));
+}
+
+/** Запись партии: «1. e4 e5 2. Nf3». Тап по ходу — посмотреть позицию после него. */
 function movesEl() {
   const m = state.match;
   if (!m.moves.length) return h('div.ch-moves.empty', 'Ходов ещё нет');
   const out = [];
+  const at = viewPly ?? m.plies;
   m.moves.forEach((san, i) => {
     if (i % 2 === 0) out.push(h('span.ch-n', `${i / 2 + 1}.`));
-    out.push(h(`span.ch-mv${i === m.moves.length - 1 ? '.last' : ''}`, san));
+    out.push(h(`button.ch-mv${i + 1 === at ? '.cur' : ''}`, { type: 'button', onclick: () => { haptic.tap(); goto(i + 1); } }, san));
   });
   return h('div.ch-moves', { 'aria-label': 'Записанные ходы' }, ...out);
 }
@@ -464,7 +581,8 @@ function actionsEl() {
   const panel = h('div.panel');
   if (m.over) {
     if (s.canNext) panel.append(h('button.k-btn.k-btn--primary.k-btn--block', { onclick: () => { haptic.tap(); send({ t: 'next' }); } }, '▶ Ещё партия'));
-    if (s.me.isHost || s.me.seated) panel.append(h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: confirmFinish }, 'Завершить игру'));
+    if (s.canShare) panel.append(h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: shareResult }, 'Поделиться'));
+    if (s.me.isHost || s.me.seated) panel.append(h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: confirmFinish }, 'Завершить'));
     return panel;
   }
   if (!s.me.color) {
@@ -472,12 +590,27 @@ function actionsEl() {
     panel.append(h('span', 'Вы смотрите партию — ходят ', h('b', 'двое')));
     return panel;
   }
-  if (s.canAbort) panel.append(h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: confirmAbort }, 'Отменить'));
+  // Три кнопки: откат, ничья и «сдаться» — а до второго хода вместо сдачи отмена партии.
   panel.append(
+    h('button.k-btn.k-btn--secondary.k-btn--block', { disabled: !s.canTakeback, onclick: () => { haptic.tap(); send({ t: 'takeback' }); } }, 'Откат'),
     h('button.k-btn.k-btn--secondary.k-btn--block', { disabled: !s.canOfferDraw, onclick: () => { haptic.tap(); send({ t: 'draw' }); } }, 'Ничья'),
-    h('button.k-btn.k-btn--secondary.k-btn--block', { disabled: !s.canResign, onclick: confirmResign }, 'Сдаться'));
+    s.canAbort
+      ? h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: confirmAbort }, 'Отменить')
+      : h('button.k-btn.k-btn--secondary.k-btn--block', { disabled: !s.canResign, onclick: confirmResign }, 'Сдаться'));
   if (net.busy) panel.classList.add('busy');
   return panel;
+}
+
+/** «Поделиться итогом»: сервер готовит сообщение, Telegram даёт выбрать чат (net.js → ui.js:openShare). */
+function shareResult() {
+  haptic.tap();
+  send({ t: 'share' }, { lock: false });
+}
+
+/** «+ Новое лобби»: та же игра и настройки, ты — хост. Доступно со страницы, открытой из хаба группы. */
+function newLobby() {
+  haptic.tap();
+  send({ t: 'again', reqId: newReqId() });
 }
 
 /* ------------------------------------------------------------- results */
@@ -496,7 +629,10 @@ function renderResults() {
       : h('div.hint', 'Ни одной партии не сыграно.')),
     h('div.hint', 'Победы · ничьи · поражения. Итоги бот отправил и в группу.'),
   );
-  $app.append(box, h('div.panel', h('button.btn.primary.wide.lg', { onclick: () => tg.close() }, 'Закрыть')));
+  $app.append(box, h('div.panel',
+    state.canShare ? h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: shareResult }, 'Поделиться') : null,
+    state.hub ? h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: newLobby }, '+ Новое лобби') : null,
+    h('button.btn.primary.wide.lg', { onclick: () => tg.close() }, 'Закрыть')));
 }
 
 /* --------------------------------------------------------------- sheets */
@@ -511,6 +647,7 @@ function openMenu() {
     const items = [];
     const item = (text, sub, onclick, cls = '') => items.push(h(`button.menu-item${cls ? '.' + cls : ''}`, { onclick }, text, sub ? h('small', sub) : null));
     if (s.hub) item('← Все игры группы', 'партия останется, как есть', () => { closeSheet(); send({ t: 'hub' }, { lock: false }); });
+    if (s.hub) item('+ Новое лобби', 'ещё один стол с теми же настройками', () => { closeSheet(); newLobby(); });
     if (me.seated && !live) item('Встать из-за стола', 'место освободится', () => { closeSheet(); send({ t: 'leave' }); });
     else if (!me.seated && !me.kicked && s.players.filter((p) => p.seated).length < 2) item('Сесть за доску', 'со следующей партии', () => { closeSheet(); send({ t: 'sit' }); });
     if (!me.notify && s.bot) item('🔔 Напоминать о ходе', 'нажмите Start у бота', () => tg.openTelegramLink(`https://t.me/${s.bot}?start=notify`));

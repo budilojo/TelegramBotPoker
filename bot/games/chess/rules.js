@@ -23,7 +23,7 @@
 import { newRoomCode } from '../../room.js';
 import { cleanName } from '../../fmt.js';
 import {
-  startPosition, findMove, san, make, legalMoves, outcome, key, canMate, other, inCheck, sqName,
+  startPosition, findMove, san, make, legalMoves, outcome, key, canMate, other, inCheck, sqName, fromFen, toFen,
 } from './board.js';
 
 export const MAX_SEATS = 2;
@@ -179,6 +179,11 @@ function newMatch(room, white, black) {
     over: null, // { winner: 'w'|'b'|null, kind }
     drawOffer: null, // { by, ply }
     noOffer: {}, // id -> с какого хода снова можно предлагать
+    takeback: null, // { by, ply } — просьба вернуть свой последний ход
+    noTake: {}, // id -> с какого хода снова можно просить
+    // Позиция и часы ПОСЛЕ каждого хода: по ним откат возвращает доску и время.
+    hist: [], // FEN после хода i+1
+    clk: [], // { w, b } после хода i+1
   };
   room.turn = null;
 }
@@ -226,6 +231,7 @@ function conclude(room, winner, kind, why = null) {
   const m = room.match;
   m.over = { winner, kind };
   m.drawOffer = null;
+  m.takeback = null;
   const aborted = kind === 'aborted';
   room.history.push({
     no: m.no,
@@ -327,7 +333,10 @@ export function move(room, userId, { from, to, promo = '' }, now = Date.now(), p
   m.pos = make(m.pos, mv);
   const k = key(m.pos);
   m.seen[k] = (m.seen[k] || 0) + 1;
+  m.hist.push(toFen(m.pos));
+  m.clk.push({ w: m.clock.w, b: m.clock.b });
   m.drawOffer = null; // предложение живёт до ближайшего хода
+  m.takeback = null; // и просьба об откате — тоже
   room.turn = null; // часы следующего пересоздаст ядро (syncClocks)
   room.notice = null;
 
@@ -372,6 +381,7 @@ export function offerDraw(room, userId) {
     return { ok: true, accepted: true };
   }
   if (m.drawOffer) return { ok: true, noop: true }; // своё же предложение, ещё висит
+  if (m.takeback) return { error: 'OFFER_PENDING' }; // сначала ответ на просьбу об откате
   if (firstPhase(m)) return { error: 'TOO_EARLY' };
   const until = m.noOffer[String(userId)] ?? 0;
   if (m.moves.length < until) return { error: 'OFFER_COOLDOWN' };
@@ -390,6 +400,88 @@ export function declineDraw(room, userId) {
   m.noOffer[m.drawOffer.by] = m.moves.length + 2;
   m.drawOffer = null;
   room.notice = `${nameOf(room, userId)} отклонил ничью`;
+  touch(room);
+  return { ok: true };
+}
+
+/* ---------------------------------------------------------------- откат */
+
+/** Сколько ходов в этой партии сделал игрок этого цвета. */
+const movesOf = (m, color) => (color === 'w' ? Math.ceil(m.moves.length / 2) : Math.floor(m.moves.length / 2));
+
+/** Почему игрок не может сейчас просить откат, или null. */
+export function takebackBlocker(room, userId) {
+  const m = live(room);
+  if (!m) return 'NOT_PLAYING';
+  const mine = colorOfPlayer(room, userId);
+  if (!mine) return 'NOT_IN_GAME';
+  if (m.takeback) return 'OFFER_PENDING';
+  if (m.drawOffer) return 'OFFER_PENDING';
+  if (!movesOf(m, mine)) return 'NOTHING_TO_TAKE';
+  if (m.moves.length < (m.noTake[String(userId)] ?? 0)) return 'TAKEBACK_COOLDOWN';
+  return null;
+}
+
+/**
+ * Откат: попросить соперника вернуть свой последний ход — или разрешить его
+ * просьбу. Возвращается позиция ДО последнего хода просящего: если он только
+ * что сходил — один полуход, если соперник уже ответил — два. Часы тоже
+ * возвращаются к тому моменту: время, потраченное на отменённые ходы, не
+ * сгорает ни у кого.
+ */
+export function requestTakeback(room, userId) {
+  const m = live(room);
+  if (!m) return { error: 'NOT_PLAYING' };
+  const mine = colorOfPlayer(room, userId);
+  if (!mine) return { error: 'NOT_IN_GAME' };
+  if (m.takeback && m.takeback.by !== String(userId)) return acceptTakeback(room);
+  if (m.takeback) return { ok: true, noop: true }; // своя просьба ещё висит
+  const why = takebackBlocker(room, userId);
+  if (why) return { error: why };
+  m.takeback = { by: String(userId), ply: m.moves.length };
+  room.notice = `${nameOf(room, userId)} просит вернуть ход`;
+  touch(room);
+  return { ok: true, offered: true };
+}
+
+function acceptTakeback(room) {
+  const m = live(room);
+  const by = m.takeback.by;
+  const pop = mover(m) === colorOfPlayer(room, by) ? 2 : 1; // соперник уже ответил — вернуть и его ход
+  revertTo(room, m.moves.length - pop);
+  room.notice = `${nameOf(room, by)} вернул ход — соперник разрешил`;
+  touch(room);
+  return { ok: true, accepted: true };
+}
+
+/** Вернуть партию к тому, что было после `n` полуходов. */
+function revertTo(room, n) {
+  const m = room.match;
+  const base = room.settings.base * 1000;
+  m.moves.length = n;
+  m.hist.length = n;
+  m.clk.length = n;
+  m.pos = n ? fromFen(m.hist[n - 1]) : startPosition();
+  m.clock = n ? { ...m.clk[n - 1] } : { w: base, b: base };
+  // Сколько раз встречалась каждая позиция — заново, по оставшейся истории.
+  m.seen = { [key(startPosition())]: 1 };
+  for (const fen of m.hist) {
+    const k = key(fromFen(fen));
+    m.seen[k] = (m.seen[k] || 0) + 1;
+  }
+  m.takeback = null;
+  m.drawOffer = null;
+  room.turn = null; // часы пересоздаст ядро: ключ другой
+}
+
+export function declineTakeback(room, userId) {
+  const m = live(room);
+  if (!m) return { error: 'NOT_PLAYING' };
+  if (!colorOfPlayer(room, userId)) return { error: 'NOT_IN_GAME' };
+  if (!m.takeback || m.takeback.by === String(userId)) return { error: 'NO_TAKEBACK' };
+  m.noTake[m.takeback.by] = m.moves.length + 2; // не засыпать соперника просьбами
+  m.takeback = null;
+  room.notice = `${nameOf(room, userId)} отказал в откате`;
   touch(room);
   return { ok: true };
 }
@@ -527,5 +619,26 @@ export function deserialize(data) {
   room.ui.lastMsgId = room.ui.lastMsgId || 0;
   room.ui.pings = room.ui.pings || {};
   room.code = room.code || newRoomCode();
+  if (room.match && !room.match.hist) rebuildHistory(room.match); // стол, сохранённый до отката
   return room;
+}
+
+/**
+ * Столы, начатые до появления отката, не хранят позиции по ходам: восстановим
+ * их, переиграв записанные ходы. Часы такой партии уже не вернуть по ходам —
+ * откат вернёт их к нынешним значениям (лучше, чем потерять откат вовсе).
+ */
+function rebuildHistory(m) {
+  let pos = startPosition();
+  m.hist = [];
+  m.clk = [];
+  for (const mv of m.moves) {
+    const found = findMove(pos, mv.from, mv.to, mv.uci.slice(4));
+    if (!found) break;
+    pos = make(pos, found);
+    m.hist.push(toFen(pos));
+    m.clk.push({ ...m.clock });
+  }
+  m.takeback ??= null;
+  m.noTake ??= {};
 }

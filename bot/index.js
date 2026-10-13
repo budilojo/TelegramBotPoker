@@ -192,6 +192,9 @@ web.server.on('error', (err) => {
 /** The "/" menu: the games are played in the Mini App, the chat only needs these. */
 const GROUP_COMMANDS = [
   ['game', 'во что играем — выбрать игру и создать стол'],
+  ['chess', 'шахматы — новое лобби одной командой'],
+  ['durak', 'дурак — новое лобби одной командой'],
+  ['unoq', 'UNOQ — новое лобби одной командой'],
   ['table', 'показать игры внизу чата'],
   ['finish', 'завершить свою игру (хост)'],
   ['help', 'как играть'],

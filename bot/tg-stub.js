@@ -80,6 +80,18 @@ export class TelegramStub {
     return { message_id: id, chat: { id: chatId }, text };
   }
 
+  /**
+   * Bot API 8.0: сообщение, которое человек потом отправит ОТ СВОЕГО ИМЕНИ в
+   * любой чат (`Telegram.WebApp.shareMessage`). В заглушке — только запись.
+   */
+  async savePreparedInlineMessage(userId, result, opts = {}) {
+    this.#record('savePreparedInlineMessage', { userId: String(userId), result, opts });
+    this.prepared ??= [];
+    const row = { id: `prep${this.prepared.length + 1}`, userId: String(userId), result, opts };
+    this.prepared.push(row);
+    return { id: row.id, expiration_date: 0 };
+  }
+
   async editMessageText(chatId, messageId, text, opts = {}) {
     this.#record('editMessageText', { chatId: String(chatId), messageId, text });
     this.#checkKeyboard(opts.reply_markup, chatId);

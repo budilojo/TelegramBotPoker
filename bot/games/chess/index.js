@@ -9,11 +9,11 @@
  */
 import * as C from './rules.js';
 import { chessView } from './view.js';
-import { renderCard, renderResults, renderTurnPing } from './render.js';
+import { renderCard, renderResults, renderTurnPing, shareText } from './render.js';
 
 /** Что страница вправе просить у шахматного стола — и больше ничего. */
 const ACTIONS = new Set([
-  'sit', 'leave', 'start', 'next', 'move', 'resign', 'abort', 'draw', 'decline',
+  'sit', 'leave', 'start', 'next', 'move', 'resign', 'abort', 'draw', 'decline', 'takeback', 'declinetb',
   'settings', 'kick', 'host', 'finish',
 ]);
 
@@ -31,6 +31,10 @@ export const ERRORS = {
   TOO_LATE: 'Отменить можно только до второго хода. Теперь — сдаться.',
   OFFER_COOLDOWN: 'Соперник уже отказал — предложите ещё раз через пару ходов.',
   NO_OFFER: 'Предложения ничьей нет.',
+  NO_TAKEBACK: 'Просьбы вернуть ход нет.',
+  NOTHING_TO_TAKE: 'Вы ещё не сделали ни одного хода — возвращать нечего.',
+  OFFER_PENDING: 'Сначала ответьте на предложение соперника — или дождитесь ответа на своё.',
+  TAKEBACK_COOLDOWN: 'Соперник уже отказал — попросите ещё раз через пару ходов.',
   NOT_SEATED: 'Сначала сядьте за стол.',
   NOT_HOST: 'Это может только хост.',
   ALREADY_STARTED: 'Игра уже идёт.',
@@ -70,6 +74,7 @@ export default {
   view: (room, viewerId, ctx) => chessView(room, viewerId, ctx),
 
   card: (room, opts) => renderCard(room, opts),
+  shareText: (room, userId, opts) => shareText(room, userId, opts),
   results: (room) => renderResults(room),
 
   /**
@@ -182,6 +187,18 @@ export default {
       }
       case 'decline':
         if (fail(C.declineDraw(room, uid), { resync: true })) return;
+        return app.afterChange(room);
+
+      // Откат своего последнего хода: просьба или разрешение. После согласия
+      // позиция и часы возвращаются — это новый «ход партии» для всех.
+      case 'takeback': {
+        const r = C.requestTakeback(room, uid);
+        if (fail(r, { resync: true })) return;
+        if (r.noop) return;
+        return r.accepted ? app.afterAction(room) : app.afterChange(room);
+      }
+      case 'declinetb':
+        if (fail(C.declineTakeback(room, uid), { resync: true })) return;
         return app.afterChange(room);
 
       case 'settings': {

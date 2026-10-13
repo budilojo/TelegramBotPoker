@@ -37,6 +37,9 @@ import { apply as rateRound } from './rating.js';
  * выбирают в приложении. Какие там игры, он увидит на экране, где они и
  * живут.
  */
+/** Команда → игра: лобби одной командой в группе. Покер живёт на /poker и /newgame. */
+export const QUICK_GAMES = { chess: 'chess', durak: 'durak', unoq: 'colors', colors: 'colors' };
+
 const HELP = [
   '🎮 <b>Игры в Telegram</b> — играем прямо в чате, в мини-приложении.',
   '',
@@ -160,6 +163,8 @@ export class App {
     this.api = api;
     this.store = store;
     this.botUsername = botUsername;
+    /** Когда человек последний раз просил «поделиться»: заготовка — запрос к Telegram, чаще раза в две секунды не нужна. */
+    this.lastShare = new Map();
     this.deck = deck;
     this.durakDeck = durakDeck;
     this.clock = clock;
@@ -1020,7 +1025,7 @@ export class App {
     if (this.down) {
       // Обслуживание: ни одной новой игры и ни одной карточки. Ответить всё
       // равно надо — иначе похоже, что бот умер.
-      if (['game', 'play', 'games', 'newgame', 'poker', 'table', 'finish', 'cancel'].includes(cmd.cmd)) {
+      if (['game', 'play', 'games', 'newgame', 'poker', 'table', 'finish', 'cancel', ...Object.keys(QUICK_GAMES)].includes(cmd.cmd)) {
         return void (await this.reply(chatId, `⏸ <b>Идёт обслуживание</b>\n${esc(this.downText)}`, msg));
       }
     }
@@ -1106,9 +1111,39 @@ export class App {
         return;
       }
 
-      default:
+      default: {
+        // /chess, /durak, /unoq — лобби одной командой, без захода в приложение.
+        const gameId = QUICK_GAMES[cmd.cmd];
+        if (gameId) return this.quickLobby(chatId, msg, user, gameId);
         return;
+      }
     }
+  }
+
+  /**
+   * Быстрое лобби: `/chess` — и в группе уже карточка с «Присоединиться».
+   * Настройки — по умолчанию; их можно поменять в приложении, не выходя из
+   * лобби. У дуэли хост может открыть несколько лобби подряд; у остальных игр
+   * действует прежнее правило «одно открытое лобби на хоста» — тогда бот
+   * просто напоминает о нём (карточка снова внизу чата).
+   */
+  async quickLobby(chatId, msg, user, gameId) {
+    const g = GAMES[gameId];
+    this.ensureGroup(chatId, msg.chat.title);
+    if (g.maxPlayers !== 2) {
+      const mine = this.liveRooms(chatId).find((r) => r.game === gameId && r.status === 'lobby' && r.hostId === String(user.id));
+      if (mine) {
+        await this.newCard(mine);
+        return void (await this.reply(chatId, `У вас уже есть открытое лобби: ${g.icon} ${g.title}. Карточка выше.`, msg));
+      }
+    }
+    if (this.liveRooms(chatId).length >= MAX_LIVE_PER_GROUP) {
+      return void (await this.reply(chatId, TOO_MANY_GAMES_TEXT, msg));
+    }
+    const room = this.createGame(gameId, { chatId, title: msg.chat.title, host: user });
+    if (room.error) return void (await this.reply(chatId, 'Не получилось создать лобби. Попробуйте ещё раз.', msg));
+    await this.newCard(room);
+    this.hub?.broadcastGroup(chatId);
   }
 
   /**
@@ -1287,6 +1322,55 @@ export class App {
       this.log(err);
       return null;
     }
+  }
+
+  /** Ссылка на приложение для рекламы в шеринге — без привязки к группе или столу. */
+  appLink() {
+    if (!this.botUsername) return null;
+    return this.miniAppName ? `https://t.me/${this.botUsername}/${this.miniAppName}` : `https://t.me/${this.botUsername}`;
+  }
+
+  /**
+   * «Поделиться итогом»: сообщение, которое игрок отправит В ВЫБРАННЫЙ ЧАТ ОТ
+   * СВОЕГО ИМЕНИ (Bot API 8.0: `savePreparedInlineMessage` → в приложении
+   * `Telegram.WebApp.shareMessage`). Бот сам ничего никуда не шлёт: человек
+   * выбирает чат и жмёт «отправить». Внизу сообщения — имя бота и кнопка
+   * «играть»: это и есть реклама.
+   *
+   * Поделиться может только игрок этого стола и только итогом сыгранной
+   * партии. Если Telegram не принял заготовку (старый клиент, старое API), в
+   * ответе остаются текст и ссылка — страница откроет обычное «поделиться
+   * ссылкой».
+   *
+   * @returns {{ error: string } | { id: string|null, plain: string, link: string }}
+   */
+  async prepareShare(room, user) {
+    const me = room.players.find((p) => p.id === String(user.id) && !p.kicked);
+    if (!me) return { error: 'NOT_IN_GAME' };
+    const g = gameOf(room);
+    const link = this.appLink();
+    const card = g.shareText?.(room, String(user.id), { botUsername: this.botUsername });
+    if (!card) return { error: 'NOT_SHAREABLE' };
+    if (!link) return { error: 'SHARE_UNAVAILABLE' };
+    const now = this.clock.now();
+    const last = this.lastShare.get(String(user.id)) ?? 0;
+    if (now - last < 2000) return { error: 'TOO_FAST' };
+    this.lastShare.set(String(user.id), now);
+    let id = null;
+    try {
+      const prepared = await this.api.savePreparedInlineMessage?.(Number(user.tgId), {
+        type: 'article',
+        id: crypto.randomBytes(8).toString('hex'),
+        title: card.title,
+        description: card.plain.split('\n')[0],
+        input_message_content: { message_text: card.html, parse_mode: 'HTML', link_preview_options: { is_disabled: true } },
+        reply_markup: { inline_keyboard: [[{ text: card.button, url: link }]] },
+      }, { allow_user_chats: true, allow_bot_chats: false, allow_group_chats: true, allow_channel_chats: false });
+      id = prepared?.id ?? null;
+    } catch (err) {
+      this.log(err); // не вышло — страница обойдётся ссылкой
+    }
+    return { id, plain: card.plain, link };
   }
 
   hostOnly(room) {

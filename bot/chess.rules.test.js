@@ -10,7 +10,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as C from './games/chess/rules.js';
-import { fromFen, toFen } from './games/chess/board.js';
+import { fromFen, toFen, key } from './games/chess/board.js';
 import chess from './games/chess/index.js';
 
 const IVAN = { id: 1, name: 'Иван' };
@@ -330,4 +330,122 @@ test('серию закрывает хост; между партиями — л
   const live = table();
   C.endGame(live, '1');
   assert.equal(live.history[0].aborted, true);
+});
+
+/* ------------------------------------------------------------------ откат */
+
+test('откат: просящий только что сходил — возвращается один полуход, позиция и запись как были', () => {
+  const room = table();
+  play(room, [['e2', 'e4'], ['e7', 'e5'], ['g1', 'f3']]);
+  const before = toFen(room.match.pos);
+  play(room, [['b8', 'c6']]);
+  C.move(room, '1', { from: 'f1', to: 'c4' }, T0);
+  assert.equal(room.match.moves.length, 5);
+  assert.ok(C.requestTakeback(room, '1').offered, 'Иван просит вернуть Bc4');
+  assert.equal(room.match.moves.length, 5, 'пока соперник не ответил — ничего не меняется');
+  assert.ok(C.requestTakeback(room, '2').accepted, 'Макс разрешил');
+  assert.equal(room.match.moves.length, 4);
+  assert.deepEqual(room.match.moves.map((x) => x.san), ['e4', 'e5', 'Nf3', 'Nc6']);
+  assert.notEqual(toFen(room.match.pos), before, 'до Nc6 мы не вернулись — вернули только Bc4');
+  assert.equal(room.match.pos.t, 'w', 'ход снова у Ивана');
+  assert.equal(room.match.takeback, null);
+  assert.ok(C.move(room, '1', { from: 'f1', to: 'b5' }, T0).ok, 'и он может сходить иначе');
+});
+
+test('откат: соперник уже ответил — возвращаются оба хода (свой и его)', () => {
+  const room = table();
+  play(room, [['e2', 'e4'], ['e7', 'e5']]);
+  const fen = toFen(room.match.pos);
+  play(room, [['d2', 'd4'], ['e5', 'd4']]);
+  assert.ok(C.requestTakeback(room, '1').offered, 'Иван просит вернуть d4, хотя Макс уже взял');
+  assert.ok(C.requestTakeback(room, '2').accepted);
+  assert.equal(room.match.moves.length, 2);
+  assert.equal(toFen(room.match.pos), fen, 'позиция — ровно до d4');
+});
+
+test('откат: просить нельзя, пока не сходил; нельзя второй раз, пока висит; нельзя поверх ничьей', () => {
+  const room = table();
+  assert.equal(C.requestTakeback(room, '2').error, 'NOTHING_TO_TAKE', 'чёрные ещё не ходили');
+  assert.equal(C.requestTakeback(room, '1').error, 'NOTHING_TO_TAKE', 'и белые');
+  play(room, [['e2', 'e4'], ['e7', 'e5'], ['g1', 'f3'], ['b8', 'c6']]);
+  assert.equal(C.requestTakeback(room, '3').error, 'NOT_IN_GAME');
+  assert.ok(C.requestTakeback(room, '1').offered);
+  assert.ok(C.requestTakeback(room, '1').noop, 'своя же просьба — ничего нового');
+  assert.equal(C.offerDraw(room, '1').error, 'OFFER_PENDING', 'ничью поверх просьбы об откате не предложить');
+  C.declineTakeback(room, '2');
+  C.offerDraw(room, '2');
+  assert.equal(C.requestTakeback(room, '1').error, 'OFFER_PENDING', 'и откат — поверх ничьей');
+});
+
+test('откат: отказ, ход и конец партии гасят просьбу; повторять сразу нельзя', () => {
+  const room = table();
+  play(room, [['e2', 'e4'], ['e7', 'e5']]);
+  C.requestTakeback(room, '1');
+  assert.equal(C.declineTakeback(room, '1').error, 'NO_TAKEBACK', 'свою просьбу «отклонить» нельзя');
+  assert.ok(C.declineTakeback(room, '2').ok);
+  assert.equal(C.requestTakeback(room, '1').error, 'TAKEBACK_COOLDOWN');
+  play(room, [['g1', 'f3'], ['b8', 'c6']]);
+  assert.ok(C.requestTakeback(room, '1').offered, 'через два хода — снова можно');
+  C.move(room, '1', { from: 'f1', to: 'c4' }, T0);
+  assert.equal(room.match.takeback, null, 'ход гасит просьбу');
+  C.requestTakeback(room, '1');
+  C.resign(room, '1');
+  assert.equal(room.match.takeback, null, 'конец партии — тоже');
+  assert.equal(C.requestTakeback(room, '1').error, 'NOT_PLAYING');
+});
+
+test('откат: повторения считаются заново — отменённая позиция не остаётся «призраком»', () => {
+  const room = table();
+  const shuffle = [['g1', 'f3'], ['g8', 'f6'], ['f3', 'g1'], ['f6', 'g8']];
+  play(room, [...shuffle, ['g1', 'f3'], ['g8', 'f6'], ['f3', 'g1']]); // начальная позиция уже дважды
+  const ghost = key(room.match.pos);
+  assert.equal(room.match.seen[ghost], 2, 'такая позиция была и после третьего полухода');
+  C.requestTakeback(room, '1');
+  C.requestTakeback(room, '2');
+  assert.equal(room.match.moves.length, 6);
+  assert.equal(room.match.seen[ghost], 1, 'отменённый ход из счёта убран: осталась только старая встреча');
+  play(room, [['f3', 'g1']]); // тот же ход заново
+  assert.equal(room.match.seen[ghost], 2, 'снова две встречи, а не три: отмена не оставила следа');
+  play(room, [['f6', 'g8']]);
+  assert.deepEqual(room.match.over, { winner: null, kind: 'repetition' }, 'а настоящее третье повторение по-прежнему ловится');
+});
+
+test('откат: часы возвращаются к моменту до отменённого хода, а время не сгорает', () => {
+  const room = table({ base: 300, inc: 5 });
+  play(room, [['e2', 'e4'], ['e7', 'e5']], T0);
+  C.syncTurn(room, T0);
+  assert.equal(C.move(room, '1', { from: 'g1', to: 'f3' }, T0 + 40_000).ok, true);
+  assert.equal(room.match.clock.w, 265_000);
+  C.requestTakeback(room, '1');
+  C.requestTakeback(room, '2');
+  assert.equal(room.match.clock.w, 300_000, 'белые снова при своих 5 минутах — Nf3 как будто не было');
+  assert.equal(room.match.moves.length, 2);
+  C.syncTurn(room, T0 + 50_000);
+  assert.equal(room.turn.remaining, 300_000);
+});
+
+test('откат: до первого хода белых — стол как в начале, цвета и счёт те же', () => {
+  const room = table();
+  play(room, [['e2', 'e4']]);
+  C.requestTakeback(room, '1');
+  C.requestTakeback(room, '2');
+  assert.equal(room.match.moves.length, 0);
+  assert.equal(toFen(room.match.pos), 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+  assert.equal(C.syncTurn(room, T0).remaining, C.FIRST_MS, 'снова идёт срок на первый ход');
+});
+
+test('откат: стол, сохранённый до появления отката, переживает перезапуск — историю восстановим', () => {
+  const room = table();
+  play(room, [['e2', 'e4'], ['e7', 'e5'], ['g1', 'f3']]);
+  const saved = JSON.parse(JSON.stringify(C.serialize(room, T0)));
+  delete saved.match.hist;
+  delete saved.match.clk;
+  delete saved.match.takeback;
+  delete saved.match.noTake;
+  const back = C.deserialize(saved);
+  assert.equal(back.match.hist.length, 3);
+  assert.equal(back.match.hist.at(-1), toFen(room.match.pos));
+  C.requestTakeback(back, '1');
+  assert.ok(C.requestTakeback(back, '2').accepted);
+  assert.deepEqual(back.match.moves.map((x) => x.san), ['e4', 'e5']);
 });

@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { App } from '../bot/app.js';
 import { Hub } from '../bot/hub.js';
 import { startServer } from '../bot/server.js';
-import { TelegramStub, user } from '../bot/tg-stub.js';
+import { TelegramStub, cmdUpdate, user } from '../bot/tg-stub.js';
 import { signInitData } from '../bot/webapp-auth.js';
 import * as C from '../bot/games/chess/rules.js';
 import { fromFen } from '../bot/games/chess/board.js';
@@ -52,12 +52,13 @@ async function until(cond, what, ms = 4000) {
   }
 }
 
-const sdkStub = (initData) => `
+const sdkStub = (initData, { share = true } = {}) => `
   window.Telegram = { WebApp: {
     initData: ${JSON.stringify(initData)},
     initDataUnsafe: { start_param: new URLSearchParams(${JSON.stringify(initData)}).get('start_param') },
     ready(){}, expand(){}, close(){}, disableVerticalSwipes(){}, setHeaderColor(){}, setBackgroundColor(){}, setBottomBarColor(){},
-    onEvent(){}, openTelegramLink(){},
+    onEvent(){}, openTelegramLink(url){ window.__opened = url; },
+    ${share ? 'shareMessage(id, cb){ window.__shared = id; cb && cb(true); },' : ''}
     BackButton: { show(){}, hide(){}, onClick(){} },
     HapticFeedback: { impactOccurred(){}, notificationOccurred(){}, selectionChanged(){} },
   } };
@@ -70,13 +71,13 @@ const sdkStub = (initData) => `
   };`;
 
 const browser = await chromium.launch();
-async function openPage(u, code, { touch = false } = {}) {
+async function openPage(u, code, { touch = false, share = true } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 360, height: 740 }, deviceScaleFactor: 2, hasTouch: touch, isMobile: touch });
   const page = await ctx.newPage();
   page.on('pageerror', (e) => problems.push(`${u.first_name}: ${e.message}`));
   page.on('console', (m) => m.type() === 'error' && problems.push(`${u.first_name}: ${m.text()}`));
   const initData = signInitData({ auth_date: Math.floor(Date.now() / 1000), user: u, start_param: code }, TOKEN);
-  await page.route('https://telegram.org/**', (r) => r.fulfill({ contentType: 'text/javascript', body: sdkStub(initData) }));
+  await page.route('https://telegram.org/**', (r) => r.fulfill({ contentType: 'text/javascript', body: sdkStub(initData, { share }) }));
   await page.goto(`http://localhost:${PORT}/`);
   return page;
 }
@@ -187,7 +188,7 @@ step('Макс взял перетаскиванием: e5×d4');
 
 /* ------------------------------------------------ палец: сенсорное касание */
 
-const pt = await openPage(ivan, room.code, { touch: true });
+const pt = await openPage(ivan, room.code, { touch: true, share: false });
 await pt.waitForSelector('.ch-board');
 const cdp = await pt.context().newCDPSession(pt);
 const touch = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y, id: 1 }] });
@@ -204,6 +205,51 @@ await until(() => room.match.moves.length === 5, 'Nf3 пальцем');
 assert.equal(room.match.moves[4].san, 'Nf3');
 step('пальцем: конь g1→f3 — фигура идёт чуть выше пальца, страница не едет');
 
+/* ---------------------- просмотр истории: что сыграл соперник, и откат */
+
+assert.equal(room.match.moves.length, 5);
+await pi.waitForSelector('.ch-nav');
+// Буквы по краю и строка под доской называют последний ход.
+assert.equal(await pi.locator('.ch-files span.hot').count(), 2, 'на рамке подсвечены буквы клеток последнего хода (g и f)');
+assert.match(await pi.locator('.ch-sub').innerText(), /g1 → f3 · Nf3/);
+assert.equal(await pi.locator('.ch-sq.last-from').count(), 1, 'клетка «откуда» отмечена отдельно');
+step('рамка и строка: последний ход — g1 → f3, буквы g и f подсвечены, клетка «откуда» отмечена');
+
+await pi.getByRole('button', { name: 'Ход назад' }).click();
+assert.ok(await sq(pi, 'g1').locator('.ch-pc').count(), 'в просмотре конь снова на g1');
+assert.equal(await sq(pi, 'f3').locator('.ch-pc').count(), 0, 'и f3 пуста');
+assert.match(await pi.locator('.ch-status').innerText(), /смотрите прошлую позицию/);
+await sq(pi, 'e2').click(); // ходить в просмотре нельзя
+assert.equal(await pi.locator('.ch-sq.sel, .ch-sq.dot').count(), 0, 'в просмотре точек нет');
+assert.equal(room.match.moves.length, 5, 'и ничего не сыграно');
+await pi.locator('.ch-mv').first().click(); // тап по записи — позиция после первого хода
+assert.ok(await sq(pi, 'e3').locator('.ch-pc').count(), 'после 1.e3 пешка на e3');
+assert.equal(await sq(pi, 'e7').locator('.ch-pc').count(), 1, 'чёрные ещё не ходили');
+await pi.getByRole('button', { name: 'К текущей позиции' }).click();
+assert.ok(await sq(pi, 'f3').locator('.ch-pc').count(), 'вернулись к текущей: конь на f3');
+assert.equal(await pi.locator('.ch-status.review').count(), 0);
+// Тот, чей сейчас ход (Макс, чёрные), в просмотре тоже ходить не может: точки не появляются.
+assert.equal(await pm.evaluate(() => !!document.querySelector('.ch-status.mine')), true, 'у Макса сейчас ход');
+await pm.getByRole('button', { name: 'Ход назад' }).click();
+await sq(pm, 'b8').click();
+assert.equal(await pm.locator('.ch-sq.sel, .ch-sq.dot').count(), 0, 'в просмотре у Макса тоже нет точек');
+await pm.getByRole('button', { name: 'К текущей позиции' }).click();
+await sq(pm, 'b8').click();
+assert.ok(await pm.locator('.ch-sq.dot').count() > 0, 'а в настоящей позиции — есть');
+await sq(pm, 'b8').click(); // снять выбор
+step('просмотр: ◀ показывает прошлую позицию, ходить нельзя (и тому, чей ход), тап по записи и ⏭ работают');
+
+// Откат: Иван просит вернуть Nf3, Макс разрешает.
+await pi.getByRole('button', { name: 'Откат' }).click();
+await until(() => room.match.takeback?.by === '101', 'просьба об откате');
+await pm.waitForSelector('button:has-text("Разрешить")');
+assert.match(await pm.locator('.ch-status').innerText(), /просит вернуть свой ход/);
+assert.equal(await pi.locator('button:has-text("Разрешить")').count(), 0, 'своей просьбе Иван ничего не разрешает');
+await pm.getByRole('button', { name: 'Разрешить' }).click();
+await until(() => room.match.moves.length === 4, 'откат принят');
+await pi.waitForFunction(() => !document.querySelector('.ch-sq[data-sq="f3"] .ch-pc'));
+step('откат: Иван просит, Макс разрешает — Nf3 возвращён, позиция у обоих обновилась');
+
 /* --------------------------------------------- рокировка: ладья тоже едет */
 
 room.match.pos = fromFen('r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w KQkq - 0 1');
@@ -217,6 +263,47 @@ await pm.waitForFunction(() => window.__slides.length >= 3);
 const moved = await pm.evaluate(() => window.__slides.slice(-2));
 assert.deepEqual(moved.sort(), ['f1', 'g1'], 'у соперника поехали и король, и ладья');
 step('рокировка: у соперника скользят и король, и ладья');
+
+/* ----------------------- конец партии: поделиться от своего имени */
+
+await pm.getByRole('button', { name: 'Сдаться' }).click();
+await pm.locator('.sheet button.danger').click();
+await until(() => room.match.over?.kind === 'resign', 'Макс сдался');
+await pi.waitForSelector('button:has-text("Поделиться")');
+await pi.getByRole('button', { name: 'Поделиться' }).click();
+await pi.waitForFunction(() => window.__shared);
+assert.equal(await pi.evaluate(() => window.__shared), 'prep1', 'страница передала Telegram заготовку: он даст выбрать чат и отправит от имени Ивана');
+assert.equal(api.prepared[0].userId, '101');
+step('«Поделиться» после победы: у Ивана открылся выбор чата Telegram с заготовкой сообщения');
+
+await new Promise((r) => setTimeout(r, 2200)); // между заготовками одного человека — пауза
+await pt.getByRole('button', { name: 'Поделиться' }).click();
+await pt.waitForFunction(() => window.__opened);
+const opened = await pt.evaluate(() => window.__opened);
+assert.match(opened, /^https:\/\/t\.me\/share\/url\?url=/, 'на старом клиенте — обычное «поделиться ссылкой»');
+assert.match(decodeURIComponent(opened), /Победил Иван — сдался/);
+assert.match(decodeURIComponent(opened), /@All_InPoker_bot/, 'реклама бота в тексте');
+step('на клиенте без shareMessage — запасной путь: t.me/share/url с тем же текстом и ссылкой на бота');
+
+/* -------------------------------------- быстрое новое лобби: команда и кнопка */
+
+await app.handleUpdate(cmdUpdate(CHAT, ivan, '/chess', { message_id: 900 }));
+await app.settle();
+const lobbiesNow = () => app.liveRooms(String(CHAT)).filter((r) => r.status === 'lobby').length;
+assert.equal(lobbiesNow(), 1, '/chess в группе — лобби одной командой');
+const card = api.message(app.liveRooms(String(CHAT)).find((r) => r.status === 'lobby').ui.tableMessageId);
+assert.equal(card.markup.inline_keyboard[0][0].text, '♟ Присоединиться');
+step('/chess в группе: лобби создано одной командой, в чате карточка «Присоединиться»');
+
+const group = app.groups.get(String(CHAT));
+const ph = await openPage(ivan, `g_${group.code}`);
+await ph.waitForSelector('.lrow');
+await ph.locator('.lrow', { hasText: 'Шахматы' }).filter({ hasText: '1/2' }).getByRole('button').click();
+await ph.waitForSelector('h1:has-text("Шахматы")');
+await ph.getByRole('button', { name: '+ Новое лобби' }).click();
+await until(() => lobbiesNow() === 2, 'кнопка «+ Новое лобби» создала второе лобби');
+await ph.waitForSelector('h1:has-text("Шахматы")');
+step('в лобби кнопка «+ Новое лобби»: второй стол с теми же настройками, Иван сразу в нём');
 
 /* ------------------------------------------------------ формат и ошибки */
 

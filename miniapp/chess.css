@@ -16,7 +16,8 @@
   --ch-light: #d9e1db;
   --ch-dark: #5f7f76;
   /* Сторона доски: ширина экрана, но не выше того, что остаётся от плашек. */
-  --ch-size: min(100vw, 520px, calc(100dvh - 312px - env(safe-area-inset-top, 0px)));
+  --ch-axis: 20px; /* ширина столбца цифр и высота строки букв вокруг доски */
+  --ch-size: min(calc(100vw - var(--ch-axis)), 500px, calc(100dvh - 400px - env(safe-area-inset-top, 0px)));
 }
 
 .ch { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
@@ -130,13 +131,23 @@
 .ch-sq.dark { background: var(--ch-dark); }
 .ch-sq .ch-pc { position: relative; z-index: 1; width: 92%; height: 92%; pointer-events: none; } /* над подсветкой хода: фигура не тускнеет */
 
-/* Последний ход: нейтральная подложка поверх цвета клетки. */
-.ch-sq.last::before {
+/*
+ * Последний ход. КЛЕТКА, ОТКУДА сошла фигура, — контрастнее клетки, куда она
+ * пришла: на пустой клетке глаз ищет «здесь что-то было», и слабая подложка
+ * терялась. Подложка тёмная на обеих клетках (контраст к клетке ≥ 3), плюс
+ * внутренний контур: тёмный на светлой клетке, светлый на тёмной. Клетка «куда» — мягче:
+ * там и так стоит фигура.
+ */
+.ch-sq.last-from::before,
+.ch-sq.last-to::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: color-mix(in srgb, var(--k-text) 24%, transparent);
 }
+.ch-sq.light.last-from::before { background: color-mix(in srgb, var(--bg-main) 56%, transparent); box-shadow: inset 0 0 0 3px var(--bg-main); }
+.ch-sq.dark.last-from::before  { background: color-mix(in srgb, var(--bg-main) 72%, transparent); box-shadow: inset 0 0 0 3px var(--text-primary); }
+.ch-sq.light.last-to::before   { background: color-mix(in srgb, var(--bg-main) 18%, transparent); }
+.ch-sq.dark.last-to::before    { background: color-mix(in srgb, var(--text-primary) 24%, transparent); }
 /*
  * МАРКЕРЫ ХОДА — светлое с тёмным, а не зелёное.
  *
@@ -177,25 +188,33 @@
 .ch-sq:focus-visible { outline: 2px solid var(--text-primary); outline-offset: -2px; z-index: 1; }
 
 /*
- * КООРДИНАТЫ — один тёмный цвет на обеих клетках, и это ЛУЧШЕЕ ВОЗМОЖНОЕ, а
- * не выбранное на глаз. Было по цвету соседней клетки: 3.29 и там и там.
- * Стало 14.17 на светлой и 4.31 на тёмной.
- *
- * До 4.5 на тёмной клетке не дотянуть ничем: яркость #5F7F76 такова, что
- * даже чистый белый даёт 4.28, а чистый чёрный — 4.47. Порог недостижим без
- * правки цвета клеток, а клетки — игровой арт. Отмечено исключением в
- * tools/contrast-check.mjs и в docs/redesign.md; буквы и цифры по краю доски
- * к тому же дублируются записью ходов под ней.
+ * Рамка с координатами — ВНЕ клеток. Раньше буквы и цифры жили внутри клеток
+ * мелким шрифтом поверх фигур, на тёмной клетке не дотягивали до 4.5 и по ним
+ * нельзя было прочитать ход. Теперь они по краям доски, на фоне экрана
+ * (--text-secondary даёт там 9.6), а у клеток последнего хода — на светлой
+ * плашке: взгляд на край сразу даёт «e7 → e5».
  */
-.ch-rank, .ch-file {
-  position: absolute;
-  font: var(--k-w-semibold) var(--k-fs-caption)/1 var(--k-font);
-  font-style: normal;
-  pointer-events: none;
-  color: var(--bg-main);
+.ch-frame {
+  display: grid;
+  grid-template-columns: var(--ch-axis) var(--ch-size);
+  grid-template-rows: var(--ch-size) var(--ch-axis);
 }
-.ch-rank { top: 2px; left: 3px; }
-.ch-file { bottom: 2px; right: 3px; }
+.ch-ranks { display: grid; grid-template-rows: repeat(8, 1fr); }
+.ch-files { display: grid; grid-template-columns: repeat(8, 1fr); }
+.ch-ranks span, .ch-files span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: var(--k-w-semibold) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font);
+  color: var(--text-secondary);
+}
+.ch-ranks span.hot, .ch-files span.hot {
+  color: var(--bg-main);
+  background: var(--text-primary);
+  border-radius: var(--k-r-sm);
+}
+.ch-ranks span.hot { margin: 0 2px; }
+.ch-files span.hot { margin: 2px 0; }
 
 /* ------------------------------------------------------------ статус, ходы */
 
@@ -229,6 +248,29 @@
 .ch-status.offer { flex-wrap: wrap; color: var(--k-text); }
 .ch-offer-btns { display: flex; gap: var(--k-s8); }
 
+.ch-nav {
+  flex: none;
+  display: flex;
+  align-items: center;
+  min-height: var(--k-tap);
+  padding: 0 var(--k-s4);
+}
+.ch-nav.empty { display: none; }
+.ch-nav-btn { flex: none; font-size: var(--k-fs-component); color: var(--text-primary); }
+.ch-nav-btn:disabled { color: var(--color-muted); }
+.ch-sub {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font);
+  color: var(--text-secondary);
+}
+.ch-sub b { color: var(--text-primary); font-weight: var(--k-w-semibold); font-variant-numeric: tabular-nums; }
+.ch-status.review { color: var(--text-primary); }
+
 .ch-moves {
   flex: 1;
   min-height: var(--k-s32);
@@ -245,11 +287,25 @@
   font-variant-numeric: tabular-nums;
 }
 .ch-moves::-webkit-scrollbar { display: none; }
+/* Низкий экран: доске нужнее место, чем записи; листать ходы можно кнопками выше. */
+@media (max-height: 700px) {
+  :root { --ch-size: min(calc(100vw - var(--ch-axis)), 500px, calc(100dvh - 345px - env(safe-area-inset-top, 0px))); }
+  .ch-moves { display: none; }
+}
 .ch-moves.empty { justify-content: center; align-content: center; }
 /* Номер хода — вторичный текст, а не выключенный: выключенного цвета на
    фоне 2.07, и прочесть номер нельзя. */
 .ch-n { color: var(--k-text-2); }
-.ch-mv.last { color: var(--k-text); font-weight: var(--k-w-semibold); }
+.ch-mv {
+  padding: 0 var(--k-s4);
+  min-height: var(--k-s24);
+  border: 0;
+  border-radius: var(--k-r-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+}
+.ch-mv.cur { color: var(--bg-main); background: var(--text-primary); font-weight: var(--k-w-semibold); }
 
 /* ----------------------------------------------------- действия и шторки */
 

@@ -1700,3 +1700,7 @@
 | Ответ на `/cancel` и `/finish` при нескольких играх | `bot/app.js` — `whichGame` |
 | Экраны Mini App: лобби, доска, статус, шторки, правила | `miniapp/games/chess.js` |
 | Форма «новое лобби» (часы, прибавка, цвет) | `miniapp/games/chess.js` — `lobby` |
+| Откат, просмотр, «Поделиться», «+ Новое лобби» | `miniapp/games/chess.js` — `statusEl`, `navEl`, `actionsEl`, `shareResult`, `newLobby` |
+| Текст сообщения «Поделиться» и кнопка «Сыграть со мной» | `bot/games/chess/render.js` — `shareText` |
+| Ошибки отката и шеринга | `bot/games/chess/index.js` — `ERRORS`; `bot/hub.js` — `CORE_ERRORS` (`NOT_SHAREABLE`, `TOO_FAST`…) |
+| Быстрые команды `/chess` `/durak` `/unoq` | `bot/app.js` — `QUICK_GAMES`, `quickLobby`; меню команд — `bot/index.js` — `GROUP_COMMANDS` |

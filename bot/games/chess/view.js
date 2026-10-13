@@ -14,7 +14,7 @@
  */
 import { sqName, legalMoves, inCheck, kingSquare } from './board.js';
 import {
-  live, isHost, findPlayer, isSeated, seatedPlayers, startBlocker, colorOfPlayer, mover, leftOf, score,
+  live, isHost, findPlayer, isSeated, seatedPlayers, startBlocker, colorOfPlayer, mover, leftOf, score, takebackBlocker,
   MAX_SEATS, controlRu, KIND_RU, SIDE_RU,
 } from './rules.js';
 
@@ -84,11 +84,16 @@ export function chessView(room, viewerId, { now = Date.now(), botUsername = '' }
       blackSeat: seat(m.black),
       plies: m.moves.length,
       moves: m.moves.map((x) => x.san),
+      // Ходы с клетками: по ним страница пересобирает позицию на любом ходу
+      // (посмотреть, что сыграл соперник). Это показ, а не правила: ходить по
+      // такой позиции нельзя, законные ходы приходят только для текущей.
+      log: m.moves.map((x) => ({ san: x.san, from: x.from, to: x.to, promo: x.uci.slice(4) })),
       last: last ? { from: last.from, to: last.to, san: last.san } : null,
       check: inCheck(m.pos) ? sqName(kingSquare(m.pos.b, m.pos.t)) : null,
       captured: caps,
       material: material(m.pos.b),
       over: m.over ? { winner: m.over.winner, kind: m.over.kind, why: KIND_RU[m.over.kind] } : null,
+      takeback: m.takeback ? { byColor: m.white === m.takeback.by ? 'w' : 'b', mine: m.takeback.by === uid } : null,
       drawOffer: m.drawOffer ? { byColor: m.white === m.drawOffer.by ? 'w' : 'b', mine: m.drawOffer.by === uid } : null,
       clock: {
         timed: room.settings.base > 0,
@@ -141,6 +146,10 @@ export function chessView(room, viewerId, { now = Date.now(), botUsername = '' }
     canAbort: playing && m.moves.length < 2 && (!!color || isHost(room, uid)),
     canOfferDraw: player && m.moves.length >= 2 && !m.drawOffer,
     canAnswerDraw: player && !!m.drawOffer && m.drawOffer.by !== uid,
+    canTakeback: player && !takebackBlocker(room, uid),
+    // Поделиться — игроку стола и итогом сыгранной партии (отменённая — не итог).
+    canShare: !!color && !!m?.over && m.over.kind !== 'aborted',
+    canAnswerTakeback: player && !!m.takeback && m.takeback.by !== uid,
     canStart: room.status === 'lobby' && isHost(room, uid) && !startBlocker(room),
     canNext: room.status === 'playing' && !!m && !!m.over && (isSeated(meP) || isHost(room, uid)) && !startBlocker(room),
     score: score(room),

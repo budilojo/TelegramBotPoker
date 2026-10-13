@@ -6,7 +6,7 @@
  * The page is a view, never a judge: every tap is a request the server
  * re-checks against the player's signed identity.
  */
-import { tg, toast, haptic } from './ui.js';
+import { tg, toast, haptic, openShare } from './ui.js';
 
 export const initData = tg?.initData || '';
 /** What the link opened: a room code, or `g_<code>` — a group's hub. Signed by Telegram. */
@@ -28,6 +28,7 @@ export const bus = {
   onState: () => {},
   render: () => {},
   onNotice: (text) => toast(text, 3200),
+  onShare: openShare,
 };
 
 let ws = null;
@@ -71,6 +72,8 @@ export function connect() {
       setBusy(false);
       haptic.err();
       toast(msg.text || 'Не получилось');
+    } else if (msg.t === 'share') {
+      bus.onShare(msg);
     } else if (msg.t === 'notice') {
       bus.onNotice(msg.text);
     } else if (msg.t === 'fatal' || (msg.t === 'gone' && startCode && !startCode.startsWith('g_'))) {

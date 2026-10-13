@@ -478,3 +478,203 @@ test('зритель смотрит партию: видит доску и хо�
   await play(t, room, [['e2', 'e4']]);
   assert.deepEqual(t.state(DIMA).match.moves, ['e4'], 'зритель видит ход');
 });
+
+/* ------------------------------------------------------------------- откат */
+
+test('откат через приложение: просит один, разрешает другой; зритель и сам просящий ничего не решают', async () => {
+  const t = new Table();
+  const room = await duel(t);
+  await t.start(DIMA);
+  t.openRoom(DIMA, room);
+  await play(t, room, [['e2', 'e4'], ['e7', 'e5'], ['g1', 'f3']]);
+
+  assert.equal(t.state(IVAN).canTakeback, true);
+  assert.equal(t.state(DIMA).canTakeback, false, 'зрителю кнопки нет');
+  await t.send(DIMA, { t: 'takeback' });
+  assert.equal(errors(t, DIMA).at(-1).code, 'NOT_IN_GAME');
+  assert.equal(room.match.takeback, null);
+
+  await t.send(IVAN, { t: 'takeback' });
+  assert.equal(room.match.takeback.by, '101');
+  assert.equal(t.state(MAX).canAnswerTakeback, true, 'у соперника — «Разрешить / Отказать»');
+  assert.equal(t.state(IVAN).canAnswerTakeback, false, 'свою просьбу самому не разрешить');
+  assert.equal(t.state(MAX).match.takeback.byColor, 'w');
+  await t.send(IVAN, { t: 'takeback' }); // повтор — не разрешение
+  assert.equal(room.match.moves.length, 3, 'сам себе не разрешил');
+  await t.send(DIMA, { t: 'declinetb' });
+  assert.equal(room.match.takeback.by, '101', 'зритель отказать за Макса не может');
+
+  // Макс (чёрные) пытается «разрешить» от имени Ивана: чужие поля игнорируются.
+  await t.send(MAX, { t: 'takeback', uid: '101', color: 'w' });
+  assert.equal(room.match.moves.length, 2, 'Макс разрешил — вернулся ход Nf3');
+  assert.deepEqual(t.state(DIMA).match.moves, ['e4', 'e5'], 'зритель видит вернувшуюся позицию');
+  assert.equal(t.state(IVAN).legal.myTurn, true);
+  assert.match(t.state(IVAN).room.notice ?? '', /вернул ход|Иван/);
+});
+
+test('откат: отказ объясняется, запись и позиции для просмотра приходят со всеми клетками', async () => {
+  const t = new Table();
+  const room = await duel(t);
+  await play(t, room, [['e2', 'e4'], ['e7', 'e5'], ['g1', 'f3'], ['b8', 'c6']]);
+  await t.send(MAX, { t: 'takeback' });
+  await t.send(IVAN, { t: 'declinetb' });
+  assert.equal(room.match.takeback, null);
+  await t.send(MAX, { t: 'takeback' });
+  assert.equal(errors(t, MAX).at(-1).code, 'TAKEBACK_COOLDOWN');
+  assert.match(errors(t, MAX).at(-1).text, /ещё раз через пару ходов/);
+  const log = t.state(IVAN).match.log;
+  assert.deepEqual(log.map((x) => [x.from, x.to]), [['e2', 'e4'], ['e7', 'e5'], ['g1', 'f3'], ['b8', 'c6']]);
+  assert.equal(log[3].san, 'Nc6');
+});
+
+/* ------------------------------------------------- быстрое лобби и «поделиться» */
+
+const lobbies = (t, game = 'chess') => t.app.liveRooms(String(t.chatId)).filter((r) => r.game === game && r.status === 'lobby');
+
+test('/chess в группе: лобби одной командой, и повторно — ещё одно (дуэль); карточка с «Присоединиться»', async () => {
+  const t = new Table();
+  await t.start(IVAN);
+  await t.cmd(IVAN, '/chess');
+  assert.equal(lobbies(t).length, 1);
+  const room = lobbies(t)[0];
+  assert.equal(room.hostId, '101');
+  assert.deepEqual(room.settings, { base: 600, inc: 0, side: 'random' }, 'настройки по умолчанию');
+  const card = t.app.outbox ? t.tg.message(room.ui.tableMessageId) : null;
+  assert.match(card.text, /Шахматы/);
+  assert.equal(card.markup.inline_keyboard[0][0].text, '♟ Присоединиться');
+  await t.cmd(IVAN, '/chess');
+  assert.equal(lobbies(t).length, 2, 'у дуэли — несколько лобби подряд');
+});
+
+test('/durak и /unoq: одно лобби на хоста, повтор напоминает о нём; чужое лобби не мешает', async () => {
+  const t = new Table();
+  await t.start(IVAN);
+  await t.cmd(IVAN, '/durak');
+  await t.cmd(IVAN, '/durak');
+  assert.equal(lobbies(t, 'durak').length, 1, 'второе не создано');
+  assert.match(t.lastPost(), /уже есть открытое лобби: 🃏 Дурак/);
+  await t.cmd(MAX, '/durak');
+  assert.equal(lobbies(t, 'durak').length, 2, 'у другого хоста — своё');
+  await t.cmd(IVAN, '/unoq');
+  assert.equal(lobbies(t, 'colors').length, 1);
+  assert.equal(lobbies(t, 'colors')[0].hostId, '101');
+});
+
+test('быстрые команды: лимит 10 столов и обслуживание действуют и на них', async () => {
+  const t = new Table({ admins: ['101'] });
+  await t.start(IVAN);
+  for (let i = 0; i < 12; i++) await t.cmd(IVAN, '/chess');
+  assert.equal(lobbies(t).length, 10);
+  assert.match(t.lastPost(), /незаконченных игр/);
+  const t2 = new Table({ admins: ['101'] });
+  await t2.start(IVAN);
+  t2.app.setMaintenance(true, 'Скоро вернёмся');
+  await t2.cmd(IVAN, '/chess');
+  assert.equal(lobbies(t2).length, 0, 'во время обслуживания лобби не создаётся');
+  assert.match(t2.lastPost(), /Идёт обслуживание/);
+});
+
+test('«+ Новое лобби» из лобби: та же игра и настройки, хост — тот, кто нажал; только со страницы из хаба', async () => {
+  const t = new Table();
+  const first = await lobby(t, IVAN, { base: 180, inc: 2, side: 'black' }, 'q1');
+  const posts = groupPosts(t).length;
+  await t.send(IVAN, { t: 'again', reqId: 'quick1' });
+  assert.equal(lobbies(t).length, 2);
+  const second = lobbies(t)[1];
+  assert.deepEqual(second.settings, first.settings, 'те же часы и цвет');
+  assert.equal(second.hostId, '101');
+  assert.equal(groupPosts(t).length, posts + 1, 'своя карточка в группе');
+  assert.equal(t.state(IVAN).room.code, second.code, 'хост сразу в новом лобби');
+  await t.send(IVAN, { t: 'again', reqId: 'quick1' });
+  assert.equal(lobbies(t).length, 2, 'повтор того же reqId — не третье');
+
+  // Страница, открытая по карточке (не из хаба), этой кнопки не имеет.
+  await t.start(MAX);
+  t.openRoom(MAX, first);
+  await t.send(MAX, { t: 'again', reqId: 'x' });
+  assert.equal(errors(t, MAX).at(-1).code, 'NOT_FROM_HUB');
+  assert.equal(lobbies(t).length, 2);
+});
+
+test('«+ Новое лобби»: страница группы A не создаёт лобби по столу группы B', async () => {
+  const t = new Table();
+  await lobby(t, IVAN, {}, 'a1');
+  const foreign = t.app.createGame('chess', { chatId: '-777', title: 'Чужая', host: { id: 555, tgId: 555, name: 'Чужой' } });
+  t.openHub(IVAN);
+  t.hub.enterRoom(t.page(IVAN).session, foreign); // страница каким-то образом оказалась за чужим столом
+  await t.send(IVAN, { t: 'again', reqId: 'steal' });
+  assert.equal(errors(t, IVAN).at(-1).code, 'NOT_FROM_HUB');
+  assert.equal(t.app.liveRooms('-777').length, 1, 'в чужой группе ничего не появилось');
+  assert.equal(lobbies(t).length, 1, 'и в нашей тоже');
+});
+
+test('поделиться итогом: игрок получает заготовку сообщения; в ней имена, исход и реклама бота', async () => {
+  const t = new Table({ botUsername: 'ChipTableBot', miniAppName: 'table' });
+  const room = await duel(t);
+  await play(t, room, FOOLS);
+  await t.send(MAX, { t: 'share' });
+  const msg = t.page(MAX).inbox.filter((m) => m.t === 'share').at(-1);
+  assert.ok(msg, 'страница получила ответ');
+  assert.equal(msg.id, 'prep1', 'id заготовки — по нему страница вызовет shareMessage');
+  assert.equal(msg.link, 'https://t.me/ChipTableBot/table');
+  assert.match(msg.text, /Шахматы: Иван ⚪ — ⚫ Макс/);
+  assert.match(msg.text, /Победил Макс — мат, 2 хода/);
+  assert.match(msg.text, /@ChipTableBot/, 'в тексте — имя бота');
+  const sent = t.tg.prepared.at(-1);
+  assert.equal(sent.userId, '202', 'заготовка — для того, кто нажал, и отправит её он сам');
+  assert.equal(sent.result.reply_markup.inline_keyboard[0][0].url, 'https://t.me/ChipTableBot/table', 'кнопка «Сыграть со мной» ведёт в бота');
+  assert.equal(sent.result.input_message_content.parse_mode, 'HTML');
+  assert.equal(sent.opts.allow_group_chats, true);
+  assert.equal(sent.opts.allow_channel_chats, false);
+  assert.ok(!/legal|FEN|rnbqk/.test(sent.result.input_message_content.message_text), 'позиции в сообщении нет');
+});
+
+test('поделиться: только игрок стола и только итогом сыгранной партии; имена экранируются; частые нажатия не плодят запросы', async () => {
+  const t = new Table({ botUsername: 'ChipTableBot', miniAppName: 'table' });
+  const room = await duel(t);
+  await t.start(DIMA);
+  t.openRoom(DIMA, room);
+  await play(t, room, FOOLS);
+  await t.send(DIMA, { t: 'share' });
+  assert.equal(errors(t, DIMA).at(-1).code, 'NOT_IN_GAME', 'зритель чужой итог от своего имени не отправляет');
+  assert.equal(t.tg.prepared ?? undefined, undefined, 'заготовка не создана');
+  await t.send(IVAN, { t: 'share' });
+  await t.send(IVAN, { t: 'share' });
+  assert.equal(errors(t, IVAN).at(-1).code, 'TOO_FAST');
+  assert.equal(t.tg.prepared.length, 1, 'второе нажатие подряд не ушло в Telegram');
+
+  // Пока партия идёт, делиться нечем.
+  const t4 = new Table({ botUsername: 'ChipTableBot', miniAppName: 'table' });
+  await duel(t4);
+  await t4.send(IVAN, { t: 'share' });
+  assert.equal(errors(t4, IVAN).at(-1).code, 'NOT_SHAREABLE');
+
+  // Отменённая партия — не итог.
+  const t2 = new Table({ botUsername: 'ChipTableBot', miniAppName: 'table' });
+  const r2 = await duel(t2);
+  await t2.send(IVAN, { t: 'abort' });
+  await t2.send(IVAN, { t: 'share' });
+  assert.equal(errors(t2, IVAN).at(-1).code, 'NOT_SHAREABLE');
+
+  // Имя игрока с разметкой не ломает HTML сообщения.
+  const t3 = new Table({ botUsername: 'ChipTableBot', miniAppName: 'table' });
+  const r3 = await duel(t3);
+  r3.players.find((p) => p.id === '101').name = '<b>Иван</b> & Ко';
+  await play(t3, r3, FOOLS);
+  await t3.send(MAX, { t: 'share' });
+  const html = t3.tg.prepared.at(-1).result.input_message_content.message_text;
+  assert.match(html, /&lt;b&gt;Иван&lt;\/b&gt; &amp; Ко/);
+  assert.ok(!html.includes('<b>'), 'чужая разметка не прошла');
+});
+
+test('поделиться: Telegram не принял заготовку — страница всё равно получает текст и ссылку для запасного пути', async () => {
+  const t = new Table({ botUsername: 'ChipTableBot', miniAppName: 'table' });
+  const room = await duel(t);
+  await play(t, room, FOOLS);
+  t.tg.failNext = { method: 'savePreparedInlineMessage', error: new Error('Bad Request: method not found') };
+  await t.send(IVAN, { t: 'share' });
+  const msg = t.page(IVAN).inbox.filter((m) => m.t === 'share').at(-1);
+  assert.equal(msg.id, null, 'заготовки нет');
+  assert.match(msg.text, /Победил Макс/);
+  assert.equal(msg.link, 'https://t.me/ChipTableBot/table');
+});

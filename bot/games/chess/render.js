@@ -107,3 +107,38 @@ export function renderResults(room) {
     ...(tags.length ? ['', `<i>${tags.join('; ')}</i>`] : []),
   ].join('\n');
 }
+
+/* ----------------------------------------------------------- поделиться */
+
+/**
+ * Что игрок отправит в чужой чат от своего имени после партии. Пишет только
+ * то, что и так видно обоим игрокам: имена, чем кончилась, длину партии, —
+ * и строку рекламы: что это за бот и куда идти.
+ *
+ * Без рода и «я»: «победил Иван», а не «я победил» — сообщение уходит от
+ * имени того, кто нажал, и это может быть как победитель, так и проигравший.
+ *
+ * Делимся итогом СЫГРАННОЙ партии: отменённая — не итог.
+ *
+ * @returns {{ title: string, html: string, plain: string, button: string } | null}
+ */
+export function shareText(room, userId, { botUsername = '' } = {}) {
+  const m = room.match;
+  const o = m?.over;
+  if (!o || o.kind === 'aborted') return null;
+  const white = findPlayer(room, m.white)?.name ?? '—';
+  const black = findPlayer(room, m.black)?.name ?? '—';
+  const moves = Math.ceil(m.moves.length / 2);
+  const winnerName = o.winner ? (o.winner === 'w' ? white : black) : null;
+  const how = KIND_RU[o.kind];
+  const n = `${moves} ${moves === 1 ? 'ход' : moves < 5 ? 'хода' : 'ходов'}`;
+  const verdict = winnerName ? `🏆 Победил ${winnerName} — ${how}, ${n}` : `🤝 Ничья — ${how}, ${n}`;
+  const head = `♟ Шахматы: ${white} ⚪ — ⚫ ${black}`;
+  const promo = `Играем в шахматы, дурака, покер и UNOQ прямо в Telegram${botUsername ? ` — @${botUsername}` : ''}`;
+  return {
+    title: winnerName ? `Шахматы: победил ${winnerName}` : 'Шахматы: ничья',
+    html: `${esc(head)}\n${esc(verdict)}\n\n${esc(promo)}`,
+    plain: `${head}\n${verdict}\n\n${promo}`,
+    button: '♟ Сыграть со мной',
+  };
+}

@@ -36,6 +36,10 @@ const CORE_ERRORS = {
   NOT_FROM_HUB: 'Список игр группы открывается кнопкой «Выбрать игру» из /game.',
   NOT_YOUR_GROUP: 'Этой группы нет среди ваших — напишите в ней /game.',
   DOWN: 'Идёт обслуживание — игра пока стоит.',
+  NOT_IN_GAME: 'Вы не играли за этим столом.',
+  NOT_SHAREABLE: 'Поделиться можно итогом сыгранной партии — когда она закончится.',
+  SHARE_UNAVAILABLE: 'Бот не знает своего адреса — поделиться пока нельзя.',
+  TOO_FAST: 'Подождите секунду и нажмите ещё раз.',
   RATING_SOON: RATING_SOON_TEXT,
 };
 
@@ -446,6 +450,17 @@ export class Hub {
       return this.enterHub(session);
     }
 
+    // «+ Новое лобби» прямо из лобби или с экрана партии: та же игра и настройки,
+    // тот же хост — тот, кто нажал. Только со страницы, открытой из хаба группы,
+    // и только для игры этой же группы.
+    if (msg.t === 'again') {
+      const group = session.group ? app.groupByCode(session.group) : null;
+      if (!group || group.chatId !== room.chatId) return this.refuse(session, 'NOT_FROM_HUB');
+      return this.againHere(session, group, { from: room.code, reqId: msg.reqId });
+    }
+    // «Поделиться итогом»: заготовка сообщения, которое человек сам отправит от своего имени.
+    if (msg.t === 'share') return this.shareResult(session, room);
+
     // Что бы страница ни просила у стола — за ним кто-то есть.
     this.app.noteLive(room);
     const game = gameOf(room);
@@ -665,6 +680,12 @@ export class Hub {
     this.enterRoom(session, room);
     await app.newCard(room);
     this.broadcastGroup(group.chatId);
+  }
+
+  async shareResult(session, room) {
+    const r = await this.app.prepareShare(room, session.user);
+    if (r.error) return this.refuse(session, r.error);
+    session.send({ t: 'share', id: r.id, text: r.plain, link: r.link });
   }
 
   /** Стол, созданный этим же запросом (`reqId`) меньше 10 секунд назад, или null. */

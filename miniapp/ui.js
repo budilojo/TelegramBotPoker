@@ -240,6 +240,29 @@ export function toast(text, ms = 2600) {
   toastTimer = setTimeout(() => $toast.classList.remove('show'), ms);
 }
 
+/* ------------------------------------------------------------------- share */
+
+/**
+ * «Поделиться»: сервер прислал заготовку сообщения (`id`) и запасные текст со
+ * ссылкой. Лучший путь — `shareMessage`: Telegram даёт выбрать чат и отправляет
+ * сообщение ОТ ИМЕНИ человека, а внизу — имя бота и кнопка «играть».
+ * Не вышло (старый клиент Telegram, заготовки нет) — обычное «поделиться
+ * ссылкой» с тем же текстом: тоже от имени человека, тоже с адресом бота.
+ */
+export function openShare({ id, text, link }) {
+  if (id && typeof tg?.shareMessage === 'function') {
+    try {
+      tg.shareMessage(id, (sent) => { if (sent) haptic.win(); });
+      return;
+    } catch {
+      /* клиент не умеет — запасной путь ниже */
+    }
+  }
+  const url = `https://t.me/share/url?url=${encodeURIComponent(link || '')}&text=${encodeURIComponent(text || '')}`;
+  if (tg?.openTelegramLink) tg.openTelegramLink(url);
+  else window.open(url, '_blank', 'noopener');
+}
+
 /* ------------------------------------------------------------------ clocks */
 
 /** Deadlines tick on the page; the server keeps the real time (`now` is its clock). */
