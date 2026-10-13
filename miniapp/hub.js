@@ -10,10 +10,11 @@ import { bus, send } from './net.js';
 import { lobby as pokerLobby, iconCards as pokerIcon } from './games/poker.js';
 import { lobby as durakLobby, iconCards as durakIcon } from './games/durak.js';
 import { lobby as colorsLobby, iconCards as colorsIcon } from './games/colors.js';
+import { lobby as chessLobby, iconCards as chessIcon } from './games/chess.js';
 
 /** Форма «новое лобби» у каждой игры своя — хаб берёт её у игры. */
-const LOBBY = { poker: pokerLobby, durak: durakLobby, colors: colorsLobby };
-const ICON = { poker: pokerIcon, durak: durakIcon, colors: colorsIcon };
+const LOBBY = { poker: pokerLobby, durak: durakLobby, colors: colorsLobby, chess: chessLobby };
+const ICON = { poker: pokerIcon, durak: durakIcon, colors: colorsIcon, chess: chessIcon };
 
 let state = null;
 

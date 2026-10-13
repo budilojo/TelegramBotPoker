@@ -105,6 +105,7 @@
 .hub .gc-icon.g-poker { background: var(--k-felt-poker); }
 .hub .gc-icon.g-durak { background: #103a44; }
 .hub .gc-icon.g-colors { background: #1b2a4a; }
+.hub .gc-icon.g-chess { background: #2c3d3a; }
 .hub .gi-card { position: absolute; width: 22px; border-radius: 3px; }
 .hub .gi-card.c0 { left: 7px; top: 13px; rotate: -10deg; }
 .hub .gi-card.c1 { left: 20px; top: 11px; rotate: 9deg; }

@@ -248,7 +248,7 @@ export function tickClocks(now) {
     const left = Math.max(0, Number(el.dataset.count) - now);
     const sec = Math.ceil(left / 1000);
     el.textContent = `${el.dataset.prefix || ''}${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
-    el.closest('.your-turn, .dk-role')?.classList.toggle('urgent', left > 0 && left < 10_000);
+    el.closest('.your-turn, .dk-role, .ch-clock')?.classList.toggle('urgent', left > 0 && left < 10_000);
   }
   for (const svg of document.querySelectorAll('svg.ring')) {
     const total = Number(svg.dataset.total) || 1;

@@ -25,6 +25,8 @@ import { signInitData } from '../bot/webapp-auth.js';
 import { stack } from '../bot/harness.js';
 import * as R from '../bot/room.js';
 import * as D from '../bot/games/durak/rules.js';
+import * as C from '../bot/games/chess/rules.js';
+import { fromFen } from '../bot/games/chess/board.js';
 import { durakStack } from '../bot/harness.js';
 import { legalActions } from '../server/game.js';
 
@@ -69,12 +71,12 @@ function play(room, until, pick) {
 }
 
 const scenes = [];
-function scene(name, room, viewer, { width = 390, height = 780, click = null, press = null, start = room.code, tap = [], scroll = 0, tab = null, before = null, after = null } = {}) {
+function scene(name, room, viewer, { width = 390, height = 780, click = null, press = null, start = room.code, tap = [], sq = [], scroll = 0, tab = null, before = null, after = null } = {}) {
   const user = { id: viewer, first_name: PEOPLE.find(([id]) => id === viewer)?.[1] ?? 'Гость' };
   const initData = signInitData({ auth_date: Math.floor(Date.now() / 1000), user, ...(start ? { start_param: start } : {}) }, TOKEN);
   // `before` — то, что надо сделать с ботом ровно перед этой страницей
   // (включить обслуживание): иначе оно попало бы на все остальные снимки.
-  scenes.push({ name, code: start, initData, width, height, click, press, tap, scroll, tab, before, after });
+  scenes.push({ name, code: start, initData, width, height, click, press, tap, sq, scroll, tab, before, after });
 }
 
 const deck6 = stack({ 101: 'As Kh', 102: 'Qs Qd', 103: '9c 9d', 104: '7h 2c', 105: 'Jd 10d', 106: '5s 4s' }, '10s Jh Qc 3d 8s');
@@ -320,6 +322,61 @@ function playOut(room) {
   scene('28-rating-who', open, 101, { start: `g_${g.code}`, press: ['Рейтинг', 'Артём'], before: openRating, after: closeRating });
 }
 
+// 26. Шахматы — дуэль: лобби, партия за белых и за чёрных, превращение,
+//     мат, предложение ничьей, зритель, маленький телефон.
+{
+  const chatId = String(chat--);
+  const g = app.ensureGroup(chatId, 'Шахматный клуб');
+  const host = { id: 101, tgId: 101, name: 'Иван' };
+  const guest = { id: 102, tgId: 102, name: 'Артём', dm: 'ok' };
+  const duel = (opts = {}) => {
+    const r = app.createGame('chess', { chatId, title: 'Шахматный клуб', host, settings: { base: 300, inc: 2, side: 'white', ...opts } });
+    C.addPlayer(r, guest);
+    return r;
+  };
+  const go = (r, moves) => {
+    for (const [from, to] of moves) {
+      const m = r.match;
+      const id = m.pos.t === 'w' ? m.white : m.black;
+      const x = C.move(r, id, { from, to, promo: 'q' }, Date.now());
+      if (x.error) throw new Error(`${from}${to}: ${x.error}`);
+    }
+  };
+  const ITALIAN = [['e2', 'e4'], ['e7', 'e5'], ['g1', 'f3'], ['b8', 'c6'], ['f1', 'c4'], ['g8', 'f6'], ['d2', 'd3'], ['f8', 'c5'], ['c1', 'g5']];
+
+  const lone = app.createGame('chess', { chatId, title: 'Шахматный клуб', host, settings: { base: 600, inc: 0, side: 'random' } });
+  scene('29-chess-lobby', lone, 101);
+  scene('29б-hub-new-chess', lone, 101, { start: `g_${g.code}`, click: 'Шахматы' });
+  scene('29в-hub-chess-list', lone, 101, { start: `g_${g.code}`, height: 1100 });
+
+  const mid = duel();
+  C.startGame(mid, '101', { rand: () => 0.1 });
+  go(mid, ITALIAN);
+  scene('30-chess-black-to-move', mid, 102);
+  go(mid, [['d7', 'd6']]);
+  scene('30б-chess-my-turn', mid, 101);
+  scene('30в-chess-selected', mid, 101, { sq: ['b1'] });
+  scene('30г-chess-spectator', mid, 103);
+  scene('30д-chess-small-phone', mid, 101, { width: 360, height: 640, sq: ['g5'] });
+
+  const promo = duel({ base: 0, inc: 0 });
+  C.startGame(promo, '101', { rand: () => 0.1 });
+  promo.match.moves.push({ uci: 'a1a2', san: 'a3', from: 'a1', to: 'a2', cap: '' }, { uci: 'a8a7', san: 'a6', from: 'a8', to: 'a7', cap: '' });
+  promo.match.pos = fromFen('4k3/P7/8/8/8/8/8/4K3 w - - 0 40');
+  scene('31-chess-promotion', promo, 101, { sq: ['a7', 'a8'] });
+
+  const mate = duel();
+  C.startGame(mate, '101', { rand: () => 0.1 });
+  go(mate, [['f2', 'f3'], ['e7', 'e5'], ['g2', 'g4'], ['d8', 'h4']]);
+  scene('32-chess-mate', mate, 101);
+
+  const offer = duel();
+  C.startGame(offer, '101', { rand: () => 0.1 });
+  go(offer, ITALIAN);
+  C.offerDraw(offer, '101');
+  scene('33-chess-draw-offer', offer, 102);
+}
+
 app.syncClocks(); // turn deadlines, as the running bot would have them
 const web = startServer({ hub, port: PORT, root: path.join(ROOT, 'miniapp'), log: () => {} });
 await new Promise((r) => web.server.once('listening', r));
@@ -354,7 +411,7 @@ if (serve) {
     await page.route('https://telegram.org/**', (route) =>
       route.fulfill({ contentType: 'text/javascript', body: sdkStub(s.initData) }));
     await page.goto(`http://localhost:${PORT}/`);
-    await page.waitForSelector('.top, .lobby, .fatal', { timeout: 5000 });
+    await page.waitForSelector('.top, .lobby, .fatal, .ch', { timeout: 5000 });
     if (s.tab) {
       await page.locator('.tab', { hasText: s.tab }).click();
       await page.waitForTimeout(80);
@@ -374,6 +431,10 @@ if (serve) {
       await page.waitForTimeout(220);
     }
     for (const card of s.tap) await page.locator(`.dk-card[data-card="${card}"]`).click();
+    for (const name of s.sq) {
+      await page.locator(`.ch-sq[data-sq="${name}"]`).click();
+      await page.waitForTimeout(120);
+    }
     if (s.scroll) await page.evaluate((y) => document.querySelector('.lobby')?.scrollTo(0, y), s.scroll);
     await page.waitForTimeout(700); // let the deal animations settle
     await page.screenshot({ path: path.join(OUT, `${s.name}.png`) });

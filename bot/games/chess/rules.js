@@ -54,6 +54,12 @@ const pick = (v, list, dflt) => (list.includes(Number(v)) ? Number(v) : dflt);
 
 /* ------------------------------------------------------------------ model */
 
+/** Настройки из чего угодно: значения только из списков; без часов нет и прибавки. */
+const settingsOf = (base, inc, side) => {
+  const b = pick(base, BASES, 600);
+  return { base: b, inc: b ? pick(inc, INCS, 0) : 0, side: SIDES.includes(side) ? side : 'random' };
+};
+
 export function createRoom({ chatId, host, title = '', code = newRoomCode(), base = 600, inc = 0, side = 'random' }) {
   const room = {
     game: 'chess',
@@ -63,7 +69,7 @@ export function createRoom({ chatId, host, title = '', code = newRoomCode(), bas
     createdAt: Date.now(),
     touchedAt: Date.now(),
     status: 'lobby', // lobby | playing | finished — между партиями серии он остаётся `playing`
-    settings: { base: pick(base, BASES, 600), inc: pick(inc, INCS, 0), side: SIDES.includes(side) ? side : 'random' },
+    settings: settingsOf(base, inc, side),
     players: [],
     hostId: null,
     gameNo: 0,

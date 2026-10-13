@@ -16,8 +16,9 @@ import * as down from './down.js';
 import * as poker from './games/poker.js';
 import * as durak from './games/durak.js';
 import * as colors from './games/colors.js';
+import * as chess from './games/chess.js';
 
-const SCREENS = { hub, rating, admin, down, poker, durak, colors };
+const SCREENS = { hub, rating, admin, down, poker, durak, colors, chess };
 
 /** Which module draws this state. Rooms saved before the hub carry no `game`: poker. */
 const screenOf = (s) =>
@@ -26,7 +27,8 @@ const screenOf = (s) =>
       : s?.kind === 'rating' ? 'rating'
         : s?.kind === 'hub' || s?.kind === 'home' ? 'hub'
         : s?.game === 'durak' ? 'durak'
-          : s?.game === 'colors' ? 'colors' : 'poker';
+          : s?.game === 'colors' ? 'colors'
+            : s?.game === 'chess' ? 'chess' : 'poker';
 /** A different screen (another room, or the hub) starts without a "before". */
 const placeOf = (s) => (s ? `${s.kind || screenOf(s)}:${s.kind === 'hub' ? s.group?.code : s.kind === 'home' ? '' : s.room?.code}` : '');
 

@@ -1683,3 +1683,20 @@
 | ${x.place}-е из ${x.of} | 126 | `showSheet` |
 | Закрыть | 130 | `showSheet` |
 
+
+---
+
+## 8. Шахматы (дуэль)
+
+Тексты живут в тех же местах, что и у остальных игр; подробности — `docs/duels.md`.
+
+| Что | Где |
+|---|---|
+| Карточка в группе, итоги серии, «ваш ход» в личку | `bot/games/chess/render.js` — `renderCard`, `renderResults`, `renderTurnPing` |
+| Отказы игроку (все коды) | `bot/games/chess/index.js` — `ERRORS` |
+| Названия исходов («мат», «сдался», «время вышло»…) | `bot/games/chess/rules.js` — `KIND_RU`, `SIDE_RU`, `controlRu` |
+| Заметки стола («Макс выиграл: мат», «предлагает ничью»…) | `bot/games/chess/rules.js` — `conclude`, `offerDraw`, `declineDraw` |
+| Почему ничья не в рейтинге | `bot/rating.js` — `WHY.DRAW` |
+| Ответ на `/cancel` и `/finish` при нескольких играх | `bot/app.js` — `whichGame` |
+| Экраны Mini App: лобби, доска, статус, шторки, правила | `miniapp/games/chess.js` |
+| Форма «новое лобби» (часы, прибавка, цвет) | `miniapp/games/chess.js` — `lobby` |

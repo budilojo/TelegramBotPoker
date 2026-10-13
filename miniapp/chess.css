@@ -1,0 +1,233 @@
+/* ==========================================================================
+   ШАХМАТЫ — доска на всю ширину, плашки игроков с часами сверху и снизу,
+   запись ходов под доской, кнопки внизу.
+
+   Свои цвета у игры только одни — клетки доски. Всё остальное — токены кита.
+   Зелёный здесь значит ровно две вещи: «ваш ход» (полоса статуса, рамка
+   плашки) и «сюда можно» (выбранная клетка и точки ходов). Красный — шах.
+   Последний ход подсвечен нейтрально: это память, а не действие.
+   ========================================================================== */
+
+:root {
+  --ch-light: #d9e1db;
+  --ch-dark: #5f7f76;
+  /* Сторона доски: ширина экрана, но не выше того, что остаётся от плашек. */
+  --ch-size: min(100vw, 520px, calc(100dvh - 312px - env(safe-area-inset-top, 0px)));
+}
+
+.ch { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ------------------------------------------------------------------ шапка */
+
+.ch-head {
+  flex: none;
+  display: grid;
+  grid-template-columns: var(--k-tap) 1fr var(--k-tap);
+  align-items: center;
+  padding: calc(var(--k-s4) + var(--sat, 0px)) var(--k-s4) 0;
+}
+.ch-head-gap { width: var(--k-tap); }
+.ch-title {
+  min-width: 0;
+  text-align: center;
+  font: var(--k-w-semibold) var(--k-fs-component)/var(--k-lh-component) var(--k-font);
+  color: var(--k-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ch-title small {
+  display: block;
+  font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font);
+  color: var(--k-text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ----------------------------------------------------------------- плашка */
+
+.ch-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--k-s8);
+  padding: var(--k-s8) var(--k-s12);
+  border-top: 2px solid transparent;
+  transition: border-color 0.2s var(--k-ease);
+}
+.ch-bar.turn { border-top-color: var(--k-green); }
+.ch-bar.away { opacity: 0.55; }
+.ch-bar .av.sm { flex: none; width: var(--k-av-sm); height: var(--k-av-sm); font-size: var(--k-fs-caption); }
+.ch-who { flex: 1; min-width: 0; }
+.ch-name {
+  font: var(--k-w-semibold) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font);
+  color: var(--k-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ch-name small { color: var(--k-text-2); font-weight: var(--k-w-regular); }
+.ch-eaten {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  min-height: var(--k-s16);
+  color: var(--k-text-2);
+  font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font);
+}
+.ch-pc.mini { width: var(--k-s16); height: var(--k-s16); margin-right: -4px; }
+.ch-lead { margin-left: var(--k-s8); }
+
+.ch-clock {
+  flex: none;
+  min-width: 72px;
+  padding: var(--k-s4) var(--k-s8);
+  border-radius: var(--k-r-md);
+  background: var(--k-surface);
+  border: 1px solid var(--k-divider);
+  text-align: center;
+  font: var(--k-w-semibold) var(--k-fs-section)/var(--k-lh-section) var(--k-font);
+  font-variant-numeric: tabular-nums;
+  color: var(--k-text-2);
+}
+.ch-clock.run { color: var(--k-text); background: var(--k-elevated); }
+.ch-bar.turn .ch-clock.run { border-color: var(--k-green); }
+.ch-clock.run.urgent { color: var(--k-suit-red); border-color: var(--k-suit-red); }
+.ch-clock.off { visibility: hidden; }
+
+/* ------------------------------------------------------------------ доска */
+
+.ch-board-wrap { flex: none; display: flex; justify-content: center; }
+.ch-board {
+  width: var(--ch-size);
+  height: var(--ch-size);
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+.ch-sq {
+  position: relative;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--ch-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.ch-sq.dark { background: var(--ch-dark); }
+.ch-sq .ch-pc { width: 92%; height: 92%; pointer-events: none; }
+
+/* Последний ход: нейтральная подложка поверх цвета клетки. */
+.ch-sq.last::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--k-text) 24%, transparent);
+}
+/* Выбранная фигура: рамка зелёным — «сюда можно». */
+.ch-sq.sel { box-shadow: inset 0 0 0 3px var(--k-green); }
+.ch-sq.dot::after {
+  content: '';
+  position: absolute;
+  width: 28%;
+  height: 28%;
+  border-radius: 50%;
+  background: var(--k-green);
+  opacity: 0.85;
+}
+.ch-sq.cap { box-shadow: inset 0 0 0 3px var(--k-green); }
+/* Король под шахом: красное свечение под фигурой. */
+.ch-sq.check::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, var(--k-suit-red) 0%, transparent 72%);
+}
+.ch-sq:focus-visible { outline: 2px solid var(--k-green); outline-offset: -2px; z-index: 1; }
+
+/* Координаты: мелко, по краю, цветом соседней клетки. */
+.ch-rank, .ch-file {
+  position: absolute;
+  font: var(--k-w-semibold) 10px/1 var(--k-font);
+  font-style: normal;
+  pointer-events: none;
+}
+.ch-rank { top: 2px; left: 3px; }
+.ch-file { bottom: 2px; right: 3px; }
+.ch-sq.light .ch-rank, .ch-sq.light .ch-file { color: var(--ch-dark); }
+.ch-sq.dark .ch-rank, .ch-sq.dark .ch-file { color: var(--ch-light); }
+
+/* ------------------------------------------------------------ статус, ходы */
+
+.ch-status {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--k-s12);
+  min-height: var(--k-s32);
+  padding: var(--k-s4) var(--k-s16);
+  text-align: center;
+  font: var(--k-w-semibold) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font);
+  color: var(--k-text-2);
+}
+.ch-status.mine { color: var(--k-green); }
+.ch-status.over { color: var(--k-text); }
+.ch-status.over.won { color: var(--k-green); }
+.ch-status.offer { flex-wrap: wrap; color: var(--k-text); }
+.ch-offer-btns { display: flex; gap: var(--k-s8); }
+
+.ch-moves {
+  flex: 1;
+  min-height: var(--k-s32);
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  align-items: baseline;
+  gap: var(--k-s4) var(--k-s8);
+  padding: var(--k-s4) var(--k-s16) var(--k-s8);
+  overflow-y: auto;
+  scrollbar-width: none;
+  font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font);
+  color: var(--k-text-2);
+  font-variant-numeric: tabular-nums;
+}
+.ch-moves::-webkit-scrollbar { display: none; }
+.ch-moves.empty { justify-content: center; align-content: center; }
+.ch-n { color: var(--k-disabled); }
+.ch-mv.last { color: var(--k-text); font-weight: var(--k-w-semibold); }
+
+/* ----------------------------------------------------- действия и шторки */
+
+.ch ~ .panel { grid-auto-flow: column; }
+.ch ~ .panel .k-btn { padding: 0 var(--k-s8); }
+
+.ch-promo { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--k-s8); }
+.ch-promo-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--k-s4);
+  min-height: var(--k-tap);
+  padding: var(--k-s8) 0;
+  border: 1px solid var(--k-divider);
+  border-radius: var(--k-r-md);
+  background: var(--k-surface);
+  color: var(--k-text-2);
+  font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font);
+}
+.ch-promo-btn:active { background: var(--k-elevated); }
+.ch-promo-btn .ch-pc { width: 48px; height: 48px; background: var(--ch-light); border-radius: var(--k-r-sm); }
+
+/* Лобби дуэли: два места, а не шесть. */
+.seats-grid.duo { grid-template-columns: repeat(2, 1fr); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ch-bar { transition: none; }
+}
