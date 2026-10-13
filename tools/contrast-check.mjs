@@ -33,12 +33,8 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIR = path.join(ROOT, 'miniapp');
 
-/*
- * UNOQ ждёт фазы 6: miniapp/colors.css ещё не переведён на кит, и его пары
- * заведомо не прошли бы. Файл исключён целиком и НАЗВАН здесь — чтобы при
- * закрытии фазы 6 строку убрали, а не искали, почему экран не проверяется.
- */
-const SKIP_FILES = new Set(['colors.css']);
+/* Пропусков нет: после фазы 6 под проверку попали все файлы без исключения. */
+const SKIP_FILES = new Set();
 
 const AA_TEXT = 4.5;
 const AA_LARGE = 3.0;
@@ -184,8 +180,12 @@ const felt = tok('--table-felt');
 const feltD = tok('--felt-durak');
 const chL = tok('--ch-light');
 const chD = tok('--ch-dark');
+const feltU = tok('--felt-colors');
 
-/** kind: 'text' — мелкий текст (4.5); 'nontext' — контур, точка, полоса (3.0). */
+/**
+ * kind: 'text' — мелкий текст (4.5); 'large' — крупный текст, от 24px либо
+ * от 18.66px полужирным (3.0); 'nontext' — контур, точка, полоса (3.0).
+ */
 const TABLE = [
   /* --- текст на заливках --- */
   ['светлый текст на зелёной заливке', tok('--text-on-success'), tok('--color-success'), 'text'],
@@ -225,6 +225,26 @@ const TABLE = [
   ['маркер хода: ядро к своему кольцу', tok('--text-primary'), tok('--bg-main'), 'nontext'],
   ['шах: красное кольцо на светлой клетке', tok('--color-danger'), chL, 'nontext'],
   ['шах: светлое кольцо на тёмной клетке', tok('--text-primary'), chD, 'nontext'],
+
+  /* --- UNOQ: четыре цвета карт — игровой арт, и порогов кита они не держат.
+     Поэтому проверяется не «цвет как текст», а то, как он применён: словом
+     светлым, цветом на фигуре, надписью на кнопке — тёмной. --- */
+  ['текст и контур на сукне UNOQ', tok('--text-primary'), feltU, 'text'],
+  ['вторичный текст на сукне UNOQ', tok('--text-secondary'), feltU, 'text'],
+  ['контур плашки на сукне UNOQ', tok('--on-felt-line'), feltU, 'nontext'],
+  ['светлый контур на сукне UNOQ', tok('--on-felt-accent-line'), feltU, 'nontext'],
+  ['надпись на кнопке «красный»', tok('--bg-main'), tok('--cl-R'), 'large'],
+  ['надпись на кнопке «жёлтый»', tok('--bg-main'), tok('--cl-Y'), 'large'],
+  ['надпись на кнопке «зелёный»', tok('--bg-main'), tok('--cl-G'), 'large'],
+  ['надпись на кнопке «синий»', tok('--bg-main'), tok('--cl-B'), 'large'],
+  ['фигура «красный» на поверхности', tok('--cl-R'), tok('--bg-surface'), 'nontext'],
+  ['фигура «жёлтый» на поверхности', tok('--cl-Y'), tok('--bg-surface'), 'nontext'],
+  ['фигура «зелёный» на поверхности', tok('--cl-G'), tok('--bg-surface'), 'nontext'],
+  ['фигура «синий» на поверхности', tok('--cl-B'), tok('--bg-surface'), 'nontext'],
+  ['фигура «красный» на фоне', tok('--cl-R'), tok('--bg-main'), 'nontext'],
+  ['фигура «жёлтый» на фоне', tok('--cl-Y'), tok('--bg-main'), 'nontext'],
+  ['фигура «зелёный» на фоне', tok('--cl-G'), tok('--bg-main'), 'nontext'],
+  ['фигура «синий» на фоне', tok('--cl-B'), tok('--bg-main'), 'nontext'],
 ];
 
 /* ------------------------------------------------------- C. исключения */
@@ -307,7 +327,7 @@ for (const o of autoOff) {
   console.log(`  ! ${pad(o.where, 42)} ${o.r.toFixed(2).padStart(6)}  порог ${o.need} — выключенное состояние`);
 }
 if (SKIP_FILES.size) {
-  console.log(`\n  ! не проверяется целиком: ${[...SKIP_FILES].join(', ')} — UNOQ ждёт фазы 6`);
+  console.log(`\n  ! не проверяется целиком: ${[...SKIP_FILES].join(', ')}`);
 }
 
 if (problems.length) {

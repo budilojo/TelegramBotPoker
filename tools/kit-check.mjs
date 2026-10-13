@@ -258,9 +258,8 @@ console.log('\nкит собран: ни одного размера сверх 
    ========================================================================== */
 
 const CSS_DIR = path.join(ROOT, 'miniapp');
-/* UNOQ ждёт фазы 6: miniapp/colors.css ещё не на ките. Строку убрать вместе
-   с переводом экрана, а не раньше. */
-const CSS_SKIP = new Set(['colors.css']);
+/* Пропусков нет: после фазы 6 под шкалу попали все файлы без исключения. */
+const CSS_SKIP = new Set();
 const SCALE_FS = new Set([12, 14, 16, 20, 24, 32]);
 const SCALE_R = new Set([0, 6, 8, 12, 20, 999]);
 
@@ -330,7 +329,7 @@ for (const e of CSS_EXEMPT) {
   console.log(`  ! ${e.file}: ${e.what}`);
   for (const line of e.why.match(/.{1,72}(\s|$)/g)) console.log(`      ${line.trim()}`);
 }
-if (CSS_SKIP.size) console.log(`  ! пропущен целиком: ${[...CSS_SKIP].join(', ')} — UNOQ ждёт фазы 6`);
+if (CSS_SKIP.size) console.log(`  ! пропущен целиком: ${[...CSS_SKIP].join(', ')}`);
 if (cssNotes.length) {
   console.log(`\n${cssNotes.length} замечаний по шкале:`);
   for (const n of cssNotes) console.log('  ✗ ' + n);
