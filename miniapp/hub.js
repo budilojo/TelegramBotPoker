@@ -168,6 +168,9 @@ function openCreate(g) {
   // у людей «подкидной или переводной».
   const form = LOBBY[g.id];
   const st = { ...(form?.defaults || { turnSeconds: 0 }) };
+  // Один запрос на одно открытие формы: игре на двоих это и есть защита от
+  // двойного тапа (сервер не плодит стол на повтор того же reqId).
+  const reqId = newReqId();
 
   showSheet('create', () => {
     const seg = (options, key) => h('div.seg', options.map(([v, label]) => h(`button${st[key] === v ? '.on' : ''}`, {
@@ -184,7 +187,7 @@ function openCreate(g) {
       ...fields,
       h('button.btn.primary.wide.lg', { style: { marginTop: '16px', width: '100%' }, onclick: () => {
         haptic.tap();
-        send({ t: 'create', game: g.id, settings: { ...st } });
+        send({ t: 'create', game: g.id, settings: { ...st }, reqId });
         closeSheet();
       } }, 'Создать лобби'),
     );

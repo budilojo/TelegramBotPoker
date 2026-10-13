@@ -559,6 +559,8 @@ export class App {
 
   /** `{ deck }` for the room layer: stacked in tests, shuffled otherwise. */
   dealOpts(room) {
+    // Жребий цвета в шахматах: в тестах подставляется, в игре — настоящий.
+    if (room.game === 'chess') return this.chessRand ? { rand: this.chessRand } : {};
     if (room.game === 'durak') return this.durakDeck ? { deck: () => this.durakDeck(room) } : {};
     return this.deck ? { deck: () => this.deck(room) } : {};
   }
@@ -1079,7 +1081,8 @@ export class App {
       }
 
       case 'finish': {
-        const room = this.hostTarget(chatId, user.id, { finished: true });
+        const room = this.hostTarget(chatId, user.id, { finished: true, code: cmd.rest });
+        if (room?.ambiguous) return void (await this.reply(chatId, this.whichGame(room.ambiguous, 'finish'), msg));
         if (!room) {
           const any = this.liveRooms(chatId).at(-1) || this.room(chatId);
           return void (await this.reply(chatId, any ? this.hostOnly(any) : 'Стола нет.', msg));
@@ -1091,7 +1094,8 @@ export class App {
       }
 
       case 'cancel': {
-        const room = this.hostTarget(chatId, user.id, { finished: true });
+        const room = this.hostTarget(chatId, user.id, { finished: true, code: cmd.rest });
+        if (room?.ambiguous) return void (await this.reply(chatId, this.whichGame(room.ambiguous, 'cancel'), msg));
         if (!room) {
           const any = this.liveRooms(chatId).at(-1) || this.room(chatId);
           if (any) await this.reply(chatId, this.hostOnly(any), msg);
@@ -1107,10 +1111,25 @@ export class App {
     }
   }
 
-  /** The game a host's command is about: the newest one they run in this chat. */
-  hostTarget(chatId, userId, { finished = false } = {}) {
-    const mine = (list) => list.filter((r) => r.hostId === String(userId)).at(-1) || null;
-    return mine(this.liveRooms(chatId)) || (finished ? mine(this.roomsOf(chatId)) : null);
+  /**
+   * The game a host's command is about: the newest one they run in this chat.
+   * Хост нескольких живых игр (дуэли разрешают несколько лобби сразу) без
+   * кода не получает угадывания: бот не знает, какую из них он имел в виду, и
+   * удалять «самую свежую» наугад нельзя — вернётся `{ ambiguous }`.
+   */
+  hostTarget(chatId, userId, { finished = false, code = '' } = {}) {
+    const mine = (list) => list.filter((r) => r.hostId === String(userId));
+    const live = mine(this.liveRooms(chatId));
+    const want = String(code || '').trim().toUpperCase();
+    if (want) return [...live, ...(finished ? mine(this.roomsOf(chatId)) : [])].find((r) => r.code.toUpperCase() === want) || null;
+    if (live.length > 1) return { ambiguous: live };
+    return live[0] || (finished ? mine(this.roomsOf(chatId)).at(-1) || null : null);
+  }
+
+  /** «У вас несколько игр» — какую именно, пусть скажет сам хост кодом. */
+  whichGame(rooms, cmd) {
+    const lines = rooms.map((r) => `${gameOf(r).icon} ${gameOf(r).title} — /${cmd} ${r.code}`);
+    return ['У вас несколько игр — какая именно?', ...lines].join('\n');
   }
 
   /** «🎮 Во что играем?» — the card that opens the Mini App for this group. */

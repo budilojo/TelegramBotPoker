@@ -233,7 +233,7 @@ export class Table {
   constructor({
     chatId = -1001234, minIntervalMs = 0, store = new NullStore(), botUsername = 'ChipTableBot', deck = seededDecks(1),
     clock = new FakeClock(), runoutStepMs = 0, miniAppName = 'table', webappUrl = 'https://poker.example',
-    durakDeck = durakDecks(1), colorsDeck = null, colorsRand = null, tg = null, admins = [],
+    durakDeck = durakDecks(1), colorsDeck = null, colorsRand = null, chessRand = null, tg = null, admins = [],
     // Рейтинг закрыт, как в проде; тесты экрана открывают его явно.
     ratingSoon = true,
   } = {}) {
@@ -250,6 +250,8 @@ export class Table {
     // ради новой игры в bot/app.js не меняется ни строки.
     if (colorsDeck) this.app.colorsDeck = colorsDeck;
     if (colorsRand) this.app.colorsRand = colorsRand;
+    // Жребий цвета в шахматах: по умолчанию хост играет белыми (< 0.5).
+    this.app.chessRand = chessRand || (() => 0.1);
     this.hub = new Hub(this.app, { botToken: TEST_TOKEN, adminToken: ADMIN_TEST_TOKEN });
     this.app.attachHub(this.hub);
     /** Рассылки — как в проде: через игрового бота. */
@@ -284,6 +286,11 @@ export class Table {
   useDurakDeck(fn) {
     this.app.durakDeck = fn;
     return this;
+  }
+
+  /** Самая новая шахматная партия-стол этой группы. */
+  get chess() {
+    return this.app.roomsOf(this.chatId).filter((r) => r.game === 'chess').at(-1) || null;
   }
 
   /** Самая новая «UNOQ» этой группы. */

@@ -226,7 +226,7 @@ test('an unknown game or a strange message on the hub is refused, with words', a
   const ivan = user(101, 'Иван');
   await t.cmd(ivan, '/play');
   t.openHub(ivan);
-  await t.send(ivan, { t: 'create', game: 'chess' });
+  await t.send(ivan, { t: 'create', game: 'backgammon' });
   assert.equal(t.lastError(ivan).code, 'BAD_GAME');
   await t.send(ivan, { t: 'act', action: 'fold' });
   assert.equal(t.lastError(ivan).code, 'BAD_REQUEST');

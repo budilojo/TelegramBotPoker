@@ -26,11 +26,12 @@ export const LAST = -10;
 /** Больше десяти зачётных партий в сутки один и тот же состав не наиграет. */
 export const PER_DAY = 10;
 
-export const GAME_RU = { durak: 'Дурак', poker: 'Покер', colors: 'UNOQ' };
+export const GAME_RU = { durak: 'Дурак', poker: 'Покер', colors: 'UNOQ', chess: 'Шахматы' };
 
 export const WHY = {
   ABORTED: 'партия не доиграна — она не засчитывается',
   TOO_FEW: 'играл один — партии не было',
+  DRAW: 'ничья — очков нет: делить победу нечем, а договорная ничья не должна кормить рейтинг',
   FARMED: `партия без очков: с этим составом сегодня уже ${PER_DAY}`,
 };
 
@@ -77,8 +78,9 @@ export function split(places, loserId = null) {
  * `{ skipped, why }` — почему партия не в счёт. Отказ всегда объясним словами:
  * человек должен понимать, почему за эту партию ничего не дали.
  */
-export function apply(store, { game, round, places, loserId = null, aborted = false, chatId = null, at = Date.now() }) {
+export function apply(store, { game, round, places, loserId = null, aborted = false, draw = false, chatId = null, at = Date.now() }) {
   if (aborted) return { skipped: 'ABORTED', why: WHY.ABORTED };
+  if (draw) return { skipped: 'DRAW', why: WHY.DRAW };
   const people = places.filter((p) => p && p.id != null);
   if (people.length < 2) return { skipped: 'TOO_FEW', why: WHY.TOO_FEW };
 

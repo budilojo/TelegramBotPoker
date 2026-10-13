@@ -641,19 +641,38 @@ export class Hub {
     const game = GAMES[String(msg.game || '')];
     if (!game) return this.refuse(session, 'BAD_GAME');
     const uid = session.user.id;
-    // A double tap must not put two cards in the group: one open lobby per host.
-    const mine = app.liveRooms(group.chatId).find((r) => r.status === 'lobby' && r.hostId === uid && r.game === game.id);
-    if (mine) {
-      session.send({ t: 'notice', text: 'У вас уже есть открытое лобби — вот оно.' });
-      return this.enterRoom(session, mine);
+    // Игра на двоих — «дуэль»: у хоста может быть несколько лобби сразу (каждое
+    // ждёт своего соперника). От двойного тапа тогда защищает `reqId`: повтор
+    // того же запроса возвращает уже созданный стол. Клиент без `reqId` и
+    // остальные игры живут по старому правилу: одно открытое лобби на хоста.
+    const duel = game.maxPlayers === 2;
+    const reqId = duel && msg.reqId ? String(msg.reqId) : null;
+    if (reqId) {
+      const again = this.repeated(session, group, reqId);
+      if (again) return this.enterRoom(session, again);
+    } else {
+      const mine = app.liveRooms(group.chatId).find((r) => r.status === 'lobby' && r.hostId === uid && r.game === game.id);
+      if (mine) {
+        session.send({ t: 'notice', text: 'У вас уже есть открытое лобби — вот оно.' });
+        return this.enterRoom(session, mine);
+      }
     }
     if (app.liveRooms(group.chatId).length >= MAX_LIVE_PER_GROUP) return this.refuse(session, 'TOO_MANY_GAMES');
     const settings = msg.settings && typeof msg.settings === 'object' ? msg.settings : null;
     const room = app.createGame(game.id, { chatId: group.chatId, title: group.title, host: session.user, settings });
     if (room.error) return this.refuse(session, room.error);
+    if (reqId) this.lastAgain.set(`${uid}:${group.chatId}`, { reqId, code: room.code, at: Date.now() });
     this.enterRoom(session, room);
     await app.newCard(room);
     this.broadcastGroup(group.chatId);
+  }
+
+  /** Стол, созданный этим же запросом (`reqId`) меньше 10 секунд назад, или null. */
+  repeated(session, group, reqId) {
+    const last = this.lastAgain.get(`${session.user.id}:${group.chatId}`);
+    if (!reqId || !last || last.reqId !== reqId || Date.now() - last.at >= 10_000) return null;
+    const room = this.app.roomByCode(last.code);
+    return room && room.chatId === group.chatId ? room : null;
   }
 
   /**
@@ -671,13 +690,10 @@ export class Hub {
     const from = app.roomByCode(String(msg.from || ''));
     if (!from || from.chatId !== group.chatId) return this.refuse(session, 'NO_ROOM');
 
-    const key = `${session.user.id}:${group.chatId}`;
     const reqId = msg.reqId ? String(msg.reqId) : null;
-    const last = this.lastAgain.get(key);
-    if (reqId && last && last.reqId === reqId && Date.now() - last.at < 10_000) {
-      const again = app.roomByCode(last.code);
-      if (again) return this.enterRoom(session, again);
-    }
+    const key = `${session.user.id}:${group.chatId}`;
+    const again = reqId && this.repeated(session, group, reqId);
+    if (again) return this.enterRoom(session, again);
 
     if (app.liveRooms(group.chatId).length >= MAX_LIVE_PER_GROUP) return this.refuse(session, 'TOO_MANY_GAMES');
     // Настройки копируются, а не ссылкой: у старого стола они могут меняться.
