@@ -122,18 +122,18 @@ test('троекратное повторение — ничья сама', () =
 
 test('сдаться можно, когда оба сходили; раньше — отмена партии', () => {
   const room = table();
-  assert.equal(C.resign(room, '1').error, 'TOO_EARLY');
+  assert.equal(C.resign(room, '1', T0).error, 'TOO_EARLY');
   play(room, [['e2', 'e4'], ['e7', 'e5']]);
-  assert.equal(C.abortMatch(room, '1').error, 'TOO_LATE');
-  assert.equal(C.resign(room, '3').error, 'NOT_IN_GAME');
-  assert.ok(C.resign(room, '2').ok, 'сдаться может и тот, чей сейчас не ход');
+  assert.equal(C.abortMatch(room, '1', T0).error, 'TOO_LATE');
+  assert.equal(C.resign(room, '3', T0).error, 'NOT_IN_GAME');
+  assert.ok(C.resign(room, '2', T0).ok, 'сдаться может и тот, чей сейчас не ход');
   assert.deepEqual(room.match.over, { winner: 'w', kind: 'resign' });
 });
 
 test('отмена до начала игры — без результата, и в счёт не идёт', () => {
   const room = table();
-  assert.equal(C.abortMatch(room, '3').error, 'NOT_IN_GAME');
-  assert.ok(C.abortMatch(room, '2').ok);
+  assert.equal(C.abortMatch(room, '3', T0).error, 'NOT_IN_GAME');
+  assert.ok(C.abortMatch(room, '2', T0).ok);
   assert.equal(room.match.over.kind, 'aborted');
   assert.equal(room.history[0].aborted, true);
   assert.equal(C.score(room).every((r) => r.games === 0), true);
@@ -142,13 +142,13 @@ test('отмена до начала игры — без результата, �
 
 test('ничья по согласию: предложить, принять — и только вторым человеком', () => {
   const room = table();
-  assert.equal(C.offerDraw(room, '1').error, 'TOO_EARLY');
+  assert.equal(C.offerDraw(room, '1', T0).error, 'TOO_EARLY');
   play(room, [['e2', 'e4'], ['e7', 'e5']]);
-  assert.ok(C.offerDraw(room, '1').offered);
-  assert.ok(C.offerDraw(room, '1').noop, 'своё же предложение «принять» нельзя');
+  assert.ok(C.offerDraw(room, '1', T0).offered);
+  assert.ok(C.offerDraw(room, '1', T0).noop, 'своё же предложение «принять» нельзя');
   assert.equal(room.match.over, null);
-  assert.equal(C.offerDraw(room, '3').error, 'NOT_IN_GAME');
-  assert.ok(C.offerDraw(room, '2').accepted);
+  assert.equal(C.offerDraw(room, '3', T0).error, 'NOT_IN_GAME');
+  assert.ok(C.offerDraw(room, '2', T0).accepted);
   assert.deepEqual(room.match.over, { winner: null, kind: 'agreed' });
 });
 
@@ -267,10 +267,10 @@ test('rounds(): победа — места 1 и 2, ничья и отмена �
   play(room, FOOLS);
   C.nextGame(room, '1');
   play(room, [['e2', 'e4'], ['e7', 'e5']]);
-  C.offerDraw(room, '1');
-  C.offerDraw(room, '2');
+  C.offerDraw(room, '1', T0);
+  C.offerDraw(room, '2', T0);
   C.nextGame(room, '1');
-  C.abortMatch(room, '1');
+  C.abortMatch(room, '1', T0);
   const [won, drew, aborted] = chess.rounds(room);
   assert.deepEqual(won.places.map((p) => p.id), ['2', '1']);
   assert.equal(won.loserId, '1');
@@ -283,7 +283,7 @@ test('rounds(): победа — места 1 и 2, ничья и отмена �
 
 test('вышел из чата посреди партии — партия отменена, хост передан', () => {
   const room = table();
-  C.markLeft(room, '1');
+  C.markLeft(room, '1', T0);
   assert.equal(room.match.over.kind, 'aborted');
   assert.equal(room.hostId, '2');
   assert.match(room.notice, /Иван вышел из чата/);
@@ -291,12 +291,12 @@ test('вышел из чата посреди партии — партия от
 
 test('хост удаляет гостя: в лобби — просто место, в партии — отмена', () => {
   const lobby = table({ start: false });
-  assert.ok(C.kickPlayer(lobby, '1', '2').ok);
+  assert.ok(C.kickPlayer(lobby, '1', '2', T0).ok);
   assert.equal(C.seatedPlayers(lobby).length, 1);
   const game = table();
-  assert.equal(C.kickPlayer(game, '2', '1').error, 'NOT_HOST');
-  assert.equal(C.kickPlayer(game, '1', '1').error, 'CANNOT_KICK_HOST');
-  C.kickPlayer(game, '1', '2');
+  assert.equal(C.kickPlayer(game, '2', '1', T0).error, 'NOT_HOST');
+  assert.equal(C.kickPlayer(game, '1', '1', T0).error, 'CANNOT_KICK_HOST');
+  C.kickPlayer(game, '1', '2', T0);
   assert.equal(game.match.over.kind, 'aborted');
   assert.equal(C.addPlayer(game, MAX).error, 'KICKED');
 });
@@ -323,12 +323,12 @@ test('настройки: хост, не в партии, значения то�
 
 test('серию закрывает хост; между партиями — любой из двоих; идущая партия не в счёт', () => {
   const room = table();
-  assert.equal(C.endGame(room, '2').error, 'NOT_HOST', 'посреди партии гость серию не закроет');
+  assert.equal(C.endGame(room, '2', T0).error, 'NOT_HOST', 'посреди партии гость серию не закроет');
   play(room, FOOLS);
-  assert.ok(C.endGame(room, '2').ok, 'после партии — может');
+  assert.ok(C.endGame(room, '2', T0).ok, 'после партии — может');
   assert.equal(room.status, 'finished');
   const live = table();
-  C.endGame(live, '1');
+  C.endGame(live, '1', T0);
   assert.equal(live.history[0].aborted, true);
 });
 
@@ -341,9 +341,9 @@ test('откат: просящий только что сходил — возв
   play(room, [['b8', 'c6']]);
   C.move(room, '1', { from: 'f1', to: 'c4' }, T0);
   assert.equal(room.match.moves.length, 5);
-  assert.ok(C.requestTakeback(room, '1').offered, 'Иван просит вернуть Bc4');
+  assert.ok(C.requestTakeback(room, '1', T0).offered, 'Иван просит вернуть Bc4');
   assert.equal(room.match.moves.length, 5, 'пока соперник не ответил — ничего не меняется');
-  assert.ok(C.requestTakeback(room, '2').accepted, 'Макс разрешил');
+  assert.ok(C.requestTakeback(room, '2', T0).accepted, 'Макс разрешил');
   assert.equal(room.match.moves.length, 4);
   assert.deepEqual(room.match.moves.map((x) => x.san), ['e4', 'e5', 'Nf3', 'Nc6']);
   assert.notEqual(toFen(room.match.pos), before, 'до Nc6 мы не вернулись — вернули только Bc4');
@@ -357,24 +357,24 @@ test('откат: соперник уже ответил — возвращаю�
   play(room, [['e2', 'e4'], ['e7', 'e5']]);
   const fen = toFen(room.match.pos);
   play(room, [['d2', 'd4'], ['e5', 'd4']]);
-  assert.ok(C.requestTakeback(room, '1').offered, 'Иван просит вернуть d4, хотя Макс уже взял');
-  assert.ok(C.requestTakeback(room, '2').accepted);
+  assert.ok(C.requestTakeback(room, '1', T0).offered, 'Иван просит вернуть d4, хотя Макс уже взял');
+  assert.ok(C.requestTakeback(room, '2', T0).accepted);
   assert.equal(room.match.moves.length, 2);
   assert.equal(toFen(room.match.pos), fen, 'позиция — ровно до d4');
 });
 
 test('откат: просить нельзя, пока не сходил; нельзя второй раз, пока висит; нельзя поверх ничьей', () => {
   const room = table();
-  assert.equal(C.requestTakeback(room, '2').error, 'NOTHING_TO_TAKE', 'чёрные ещё не ходили');
-  assert.equal(C.requestTakeback(room, '1').error, 'NOTHING_TO_TAKE', 'и белые');
+  assert.equal(C.requestTakeback(room, '2', T0).error, 'NOTHING_TO_TAKE', 'чёрные ещё не ходили');
+  assert.equal(C.requestTakeback(room, '1', T0).error, 'NOTHING_TO_TAKE', 'и белые');
   play(room, [['e2', 'e4'], ['e7', 'e5'], ['g1', 'f3'], ['b8', 'c6']]);
-  assert.equal(C.requestTakeback(room, '3').error, 'NOT_IN_GAME');
-  assert.ok(C.requestTakeback(room, '1').offered);
-  assert.ok(C.requestTakeback(room, '1').noop, 'своя же просьба — ничего нового');
-  assert.equal(C.offerDraw(room, '1').error, 'OFFER_PENDING', 'ничью поверх просьбы об откате не предложить');
+  assert.equal(C.requestTakeback(room, '3', T0).error, 'NOT_IN_GAME');
+  assert.ok(C.requestTakeback(room, '1', T0).offered);
+  assert.ok(C.requestTakeback(room, '1', T0).noop, 'своя же просьба — ничего нового');
+  assert.equal(C.offerDraw(room, '1', T0).error, 'OFFER_PENDING', 'ничью поверх просьбы об откате не предложить');
   C.declineTakeback(room, '2');
-  C.offerDraw(room, '2');
-  assert.equal(C.requestTakeback(room, '1').error, 'OFFER_PENDING', 'и откат — поверх ничьей');
+  C.offerDraw(room, '2', T0);
+  assert.equal(C.requestTakeback(room, '1', T0).error, 'OFFER_PENDING', 'и откат — поверх ничьей');
 });
 
 test('откат: отказ, ход и конец партии гасят просьбу; повторять сразу нельзя', () => {
@@ -389,9 +389,9 @@ test('откат: отказ, ход и конец партии гасят пр�
   C.move(room, '1', { from: 'f1', to: 'c4' }, T0);
   assert.equal(room.match.takeback, null, 'ход гасит просьбу');
   C.requestTakeback(room, '1', T0 + 60_000);
-  C.resign(room, '1');
+  C.resign(room, '1', T0);
   assert.equal(room.match.takeback, null, 'конец партии — тоже');
-  assert.equal(C.requestTakeback(room, '1').error, 'NOT_PLAYING');
+  assert.equal(C.requestTakeback(room, '1', T0).error, 'NOT_PLAYING');
 });
 
 test('откат: повторения считаются заново — отменённая позиция не остаётся «призраком»', () => {
@@ -400,8 +400,8 @@ test('откат: повторения считаются заново — от�
   play(room, [...shuffle, ['g1', 'f3'], ['g8', 'f6'], ['f3', 'g1']]); // начальная позиция уже дважды
   const ghost = key(room.match.pos);
   assert.equal(room.match.seen[ghost], 2, 'такая позиция была и после третьего полухода');
-  C.requestTakeback(room, '1');
-  C.requestTakeback(room, '2');
+  C.requestTakeback(room, '1', T0);
+  C.requestTakeback(room, '2', T0);
   assert.equal(room.match.moves.length, 6);
   assert.equal(room.match.seen[ghost], 1, 'отменённый ход из счёта убран: осталась только старая встреча');
   play(room, [['f3', 'g1']]); // тот же ход заново
@@ -416,8 +416,8 @@ test('откат: часы возвращаются к моменту до от�
   C.syncTurn(room, T0);
   assert.equal(C.move(room, '1', { from: 'g1', to: 'f3' }, T0 + 40_000).ok, true);
   assert.equal(room.match.clock.w, 265_000);
-  C.requestTakeback(room, '1');
-  C.requestTakeback(room, '2');
+  C.requestTakeback(room, '1', T0);
+  C.requestTakeback(room, '2', T0);
   assert.equal(room.match.clock.w, 300_000, 'белые снова при своих 5 минутах — Nf3 как будто не было');
   assert.equal(room.match.moves.length, 2);
   C.syncTurn(room, T0 + 50_000);
@@ -427,8 +427,8 @@ test('откат: часы возвращаются к моменту до от�
 test('откат: до первого хода белых — стол как в начале, цвета и счёт те же', () => {
   const room = table();
   play(room, [['e2', 'e4']]);
-  C.requestTakeback(room, '1');
-  C.requestTakeback(room, '2');
+  C.requestTakeback(room, '1', T0);
+  C.requestTakeback(room, '2', T0);
   assert.equal(room.match.moves.length, 0);
   assert.equal(toFen(room.match.pos), 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
   assert.equal(C.syncTurn(room, T0).remaining, C.FIRST_MS, 'снова идёт срок на первый ход');
@@ -445,8 +445,8 @@ test('откат: стол, сохранённый до появления от�
   const back = C.deserialize(saved);
   assert.equal(back.match.hist.length, 3);
   assert.equal(back.match.hist.at(-1), toFen(room.match.pos));
-  C.requestTakeback(back, '1');
-  assert.ok(C.requestTakeback(back, '2').accepted);
+  C.requestTakeback(back, '1', T0);
+  assert.ok(C.requestTakeback(back, '2', T0).accepted);
   assert.deepEqual(back.match.moves.map((x) => x.san), ['e4', 'e5']);
 });
 

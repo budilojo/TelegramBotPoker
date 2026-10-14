@@ -304,6 +304,14 @@ export function timeoutMove(room, k, now) {
   return { ok: true, kind: 'time' };
 }
 
+/** Callback мог задержаться: исход по сроку фиксируем до действия, тем же путём. */
+function expireTurn(room, now) {
+  const t = room.turn;
+  if (!t || t.deadline == null || now < t.deadline) return null;
+  const r = timeoutMove(room, t.key, now);
+  return r.ok ? { error: 'TIME_UP', ended: true } : null;
+}
+
 /** У того, чей ход, упал флажок. Если у соперника нечем ставить мат — это ничья. */
 function flagFall(room) {
   const m = live(room);
@@ -326,14 +334,12 @@ export function move(room, userId, { from, to, promo = '' }, now = Date.now(), p
   const mv = findMove(m.pos, from, to, promo);
   if (!mv) return { error: mustPromote(m, from, to, promo) ? 'NEED_PROMO' : 'ILLEGAL' };
 
+  const expired = expireTurn(room, now);
+  if (expired) return expired;
+
   // Часы: потратили `left`, получили прибавку. Первые два хода — без часов партии.
-  // Флажок уже упал, а таймер ещё не сработал: ход не принимается — время вышло.
   if (!firstPhase(m) && timed(room)) {
     const left = leftOf(room, now);
-    if (left <= 0) {
-      flagFall(room);
-      return { error: 'TIME_UP', ended: true };
-    }
     m.clock[mine] = left + room.settings.inc * 1000;
   }
   m.moves.push({ uci: `${sqName(mv.from)}${sqName(mv.to)}${mv.promo}`, san: san(m.pos, mv), from: sqName(mv.from), to: sqName(mv.to), cap: mv.cap });
@@ -357,22 +363,26 @@ function mustPromote(m, from, to, promo) {
   return !promo && legalMoves(m.pos).some((x) => sqName(x.from) === from && sqName(x.to) === to && x.promo);
 }
 
-export function resign(room, userId) {
+export function resign(room, userId, now = Date.now()) {
   const m = live(room);
   if (!m) return { error: 'NOT_PLAYING' };
   const mine = colorOfPlayer(room, userId);
   if (!mine) return { error: 'NOT_IN_GAME' };
   if (firstPhase(m)) return { error: 'TOO_EARLY' };
+  const expired = expireTurn(room, now);
+  if (expired) return expired;
   conclude(room, other(mine), 'resign');
   return { ok: true };
 }
 
 /** Пока каждый не сходил, партию можно отменить — без результата и рейтинга. */
-export function abortMatch(room, userId) {
+export function abortMatch(room, userId, now = Date.now()) {
   const m = live(room);
   if (!m) return { error: 'NOT_PLAYING' };
   if (!colorOfPlayer(room, userId) && !isHost(room, userId)) return { error: 'NOT_IN_GAME' };
   if (!firstPhase(m)) return { error: 'TOO_LATE' };
+  const expired = expireTurn(room, now);
+  if (expired) return expired;
   conclude(room, null, 'aborted', `${nameOf(room, userId)} отменил её до начала игры`);
   return { ok: true };
 }
@@ -392,6 +402,8 @@ export function offerDraw(room, userId, now = Date.now()) {
   if (!m) return { error: 'NOT_PLAYING' };
   const mine = colorOfPlayer(room, userId);
   if (!mine) return { error: 'NOT_IN_GAME' };
+  const expired = expireTurn(room, now);
+  if (expired) return expired;
   if (m.drawOffer && m.drawOffer.by !== String(userId)) {
     conclude(room, null, 'agreed');
     return { ok: true, accepted: true };
@@ -453,6 +465,8 @@ export function requestTakeback(room, userId, now = Date.now()) {
   if (!m) return { error: 'NOT_PLAYING' };
   const mine = colorOfPlayer(room, userId);
   if (!mine) return { error: 'NOT_IN_GAME' };
+  const expired = expireTurn(room, now);
+  if (expired) return expired;
   if (m.takeback && m.takeback.by !== String(userId)) return acceptTakeback(room);
   if (m.takeback) return { ok: true, noop: true }; // своя просьба ещё висит
   const why = takebackBlocker(room, userId);
@@ -543,12 +557,12 @@ export function transferHost(room, userId, targetId) {
   return { ok: true };
 }
 
-export function kickPlayer(room, userId, targetId) {
+export function kickPlayer(room, userId, targetId, now = Date.now()) {
   if (!isHost(room, userId)) return { error: 'NOT_HOST' };
   if (String(targetId) === room.hostId) return { error: 'CANNOT_KICK_HOST' };
   const p = findPlayer(room, targetId);
   if (!p || p.kicked) return { error: 'NO_PLAYER' };
-  let stopped = false;
+  let stopped = !!expireTurn(room, now);
   if (room.status === 'lobby') {
     room.players.splice(room.players.indexOf(p), 1);
   } else {
@@ -565,12 +579,12 @@ export function kickPlayer(room, userId, targetId) {
 }
 
 /** Игрок вышел из Telegram-группы: партия, в которой он играл, отменяется. */
-export function markLeft(room, targetId) {
+export function markLeft(room, targetId, now = Date.now()) {
   const p = findPlayer(room, targetId);
   if (!p || p.left) return { error: 'NO_PLAYER' };
   p.left = true;
   p.seated = false;
-  let stopped = false;
+  let stopped = !!expireTurn(room, now);
   if (live(room) && colorOfPlayer(room, p.id)) {
     conclude(room, null, 'aborted', `${p.name} вышел из чата`);
     stopped = true;
@@ -582,11 +596,12 @@ export function markLeft(room, targetId) {
 }
 
 /** Конец серии. Идущая партия не засчитывается. Закрыть может хост — или любой из двоих между партиями. */
-export function endGame(room, userId) {
+export function endGame(room, userId, now = Date.now()) {
   const p = findPlayer(room, userId);
   const between = !live(room) && isSeated(p);
   if (!isHost(room, userId) && !between) return { error: 'NOT_HOST' };
   if (room.status === 'finished') return { ok: true, noop: true };
+  expireTurn(room, now);
   if (live(room)) conclude(room, null, 'aborted', 'серию завершил хост');
   room.status = 'finished';
   room.finishedAt = Date.now();

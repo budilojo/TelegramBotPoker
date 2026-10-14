@@ -229,7 +229,7 @@ export class AdminBot {
     if (!room) return void (await this.send(user.tgId, 'Такой игры нет. Коды — в /now.'));
     if (room.status === 'finished') return void (await this.send(user.tgId, 'Эта игра уже завершена.'));
     const g = gameOf(room);
-    const r = g.endGame(room, room.hostId);
+    const r = g.endGame(room, room.hostId, this.app.clock.now());
     if (r.error) return void (await this.send(user.tgId, `Не вышло: ${esc(r.error)}`));
     await this.app.finishUp(room);
     await this.send(user.tgId, `${g.icon} Игра <code>${esc(code)}</code> завершена, итоги ушли в группу.`);

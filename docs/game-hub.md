@@ -509,6 +509,10 @@ miniapp/
 | `summary(room)` | строка для списка лобби в хабе |
 | `markLeft`, `endGame`, `serialize`, `deserialize` | уход из группы, конец, база |
 
+В `markLeft(room, userId, now)` и `endGame(room, userId, now)` ядро передаёт
+время своих часов третьим аргументом. Шахматы проверяют им истёкший срок перед
+отменой партии; игры без такой проверки этот аргумент не используют.
+
 **Общее для всех комнат** (ядро на это полагается): `code`, `chatId`,
 `game`, `title`, `status` (`lobby` / `playing` / `paused` / `finished`),
 `hostId`, `players[]` с `{id, tgId, name, dm}`, `ui` (id карточки, последний

@@ -502,7 +502,7 @@ export class Hub {
       case 'stop': {
         const room = app.roomByCode(String(msg.code || ''));
         if (!room || room.status === 'finished') return this.refuse(session, 'NO_ROOM');
-        const r = gameOf(room).endGame(room, room.hostId);
+        const r = gameOf(room).endGame(room, room.hostId, app.clock.now());
         if (r.error) return this.refuse(session, r.error);
         await app.finishUp(room);
         session.send({ t: 'notice', text: 'Игра завершена, итоги ушли в группу.' });

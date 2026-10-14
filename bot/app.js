@@ -305,7 +305,7 @@ export class App {
     let n = 0;
     for (const room of [...this.rooms.values()]) {
       if (room.status === 'finished') continue;
-      const r = gameOf(room).endGame(room, room.hostId);
+      const r = gameOf(room).endGame(room, room.hostId, this.clock.now());
       if (r.error) continue;
       await this.finishUp(room);
       n += 1;
@@ -1092,7 +1092,7 @@ export class App {
           const any = this.liveRooms(chatId).at(-1) || this.room(chatId);
           return void (await this.reply(chatId, any ? this.hostOnly(any) : 'Стола нет.', msg));
         }
-        const r = gameOf(room).endGame(room, user.id);
+        const r = gameOf(room).endGame(room, user.id, this.clock.now());
         if (r.error) return void (await this.reply(chatId, this.hostOnly(room), msg));
         await this.finishUp(room);
         return;
@@ -1221,7 +1221,7 @@ export class App {
 
   async onLeft(chatId, member) {
     for (const room of this.liveRooms(chatId)) {
-      const r = gameOf(room).markLeft(room, member.id);
+      const r = gameOf(room).markLeft(room, member.id, this.clock.now());
       if (r.error) continue;
       await this.afterAction(room);
     }

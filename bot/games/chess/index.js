@@ -23,7 +23,7 @@ export const ERRORS = {
   ILLEGAL: 'Так ходить нельзя.',
   NEED_PROMO: 'Пешка дошла до края — выберите, в кого она превращается.',
   STALE: 'Позиция уже изменилась — посмотрите ещё раз.',
-  TIME_UP: 'Ваше время вышло — партия закончена.',
+  TIME_UP: 'Время на ход вышло — партия закончена.',
   NOT_PLAYING: 'Партия сейчас не идёт.',
   GAME_IN_PROGRESS: 'Партия ещё идёт.',
   IN_GAME: 'Партия идёт — из-за стола уходят после неё. Можно сдаться.',
@@ -122,8 +122,8 @@ export default {
     };
   },
 
-  markLeft: (room, userId) => C.markLeft(room, userId),
-  endGame: (room, userId) => C.endGame(room, userId),
+  markLeft: (room, userId, now) => C.markLeft(room, userId, now),
+  endGame: (room, userId, now) => C.endGame(room, userId, now),
 
   clocks(app, room, now) {
     const code = room.code;
@@ -142,6 +142,9 @@ export default {
     const fail = (r, { resync = false } = {}) => {
       if (!r?.error) return false;
       refuse(r.error, r.text);
+      // Действие отклонено, но срок уже завершил партию: вызывающий обязан
+      // провести afterAction (рейтинг, состояние, карточка и сохранение).
+      if (r.ended) return false;
       if (resync) push();
       return true;
     };
@@ -174,17 +177,17 @@ export default {
         return app.afterAction(room);
       }
       case 'resign':
-        if (fail(C.resign(room, uid), { resync: true })) return;
+        if (fail(C.resign(room, uid, app.clock.now()), { resync: true })) return;
         return app.afterAction(room);
       case 'abort':
-        if (fail(C.abortMatch(room, uid), { resync: true })) return;
+        if (fail(C.abortMatch(room, uid, app.clock.now()), { resync: true })) return;
         return app.afterAction(room);
 
       case 'draw': {
         const r = C.offerDraw(room, uid, app.clock.now());
         if (fail(r, { resync: true })) return;
         if (r.noop) return;
-        return r.accepted ? app.afterAction(room) : app.afterChange(room);
+        return r.ended || r.accepted ? app.afterAction(room) : app.afterChange(room);
       }
       case 'decline':
         if (fail(C.declineDraw(room, uid), { resync: true })) return;
@@ -196,7 +199,7 @@ export default {
         const r = C.requestTakeback(room, uid, app.clock.now());
         if (fail(r, { resync: true })) return;
         if (r.noop) return;
-        return r.accepted ? app.afterAction(room) : app.afterChange(room);
+        return r.ended || r.accepted ? app.afterAction(room) : app.afterChange(room);
       }
       case 'declinetb':
         if (fail(C.declineTakeback(room, uid), { resync: true })) return;
@@ -212,7 +215,7 @@ export default {
       case 'kick': {
         const p = target();
         if (!p) return refuse('NO_PLAYER');
-        if (fail(C.kickPlayer(room, uid, p.id))) return;
+        if (fail(C.kickPlayer(room, uid, p.id, app.clock.now()))) return;
         return app.afterAction(room);
       }
       case 'host': {
@@ -221,9 +224,11 @@ export default {
         if (fail(C.transferHost(room, uid, p.id))) return;
         return app.afterChange(room);
       }
-      case 'finish':
-        if (fail(C.endGame(room, uid))) return;
+      case 'finish': {
+        const r = C.endGame(room, uid, app.clock.now());
+        if (fail(r) || r.noop) return;
         return app.finishUp(room);
+      }
 
       default:
         return refuse('BAD_REQUEST');

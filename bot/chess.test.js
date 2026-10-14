@@ -62,6 +62,109 @@ async function play(t, room, moves) {
 
 const errors = (t, u) => t.page(u).inbox.filter((m) => m.t === 'error');
 
+/* ------------------------------------------------------- повтор завершения */
+
+for (const ending of ['playing', 'mate', 'time', 'delayed-time']) {
+  test(`finish через хаб: ${ending} — итоги, история и рейтинг один раз`, async ctx => {
+    const store = new Store(':memory:');
+    const t = new Table({ store });
+    ctx.after(() => { t.app.stop(); store.close(); });
+    const room = await duel(t, { base: 60 });
+    if (ending === 'mate') await play(t, room, FOOLS);
+    if (ending === 'time' || ending === 'delayed-time') {
+      await play(t, room, LONG);
+      if (ending === 'time') await t.advance(60_000);
+      else t.clock.t = room.turn.deadline; // callback ещё не доставлен
+    }
+
+    let finishes = 0;
+    const finishUp = t.app.finishUp.bind(t.app);
+    t.app.finishUp = (...args) => { finishes++; return finishUp(...args); };
+    // Между партиями серию вправе завершить и гость, а посреди — хост.
+    const first = ending === 'mate' ? MAX : IVAN;
+    const message = { t: 'finish' };
+    await t.send(first, message);
+    assert.equal(room.status, 'finished');
+    assert.equal(finishes, 1);
+    assert.equal(room.history.length, 1);
+    assert.equal(groupPosts(t).filter(c => /ИТОГИ · ШАХМАТЫ/.test(c.text)).length, 1);
+    const kind = ending === 'playing' ? 'aborted' : ending === 'mate' ? 'mate' : 'time';
+    assert.equal(room.match.over.kind, kind);
+    for (const u of [IVAN, MAX]) assert.equal(t.state(u).room.status, 'finished');
+    if (ending !== 'playing') {
+      assert.equal(store.ratingOf(MAX.id, 'chess').points, PLACE[0]);
+      assert.equal(store.ratingOf(MAX.id, 'chess').played, 1);
+      assert.equal(store.ratingOf(IVAN.id, 'chess').played, 1);
+    } else assert.equal(store.ratingOf(MAX.id, 'chess'), null);
+
+    const snapshot = () => structuredClone({
+      history: room.history, rated: room.rated, seq: room.seq, finishedAt: room.finishedAt,
+      rating: [IVAN, MAX].map(u => [store.ratingOf(u.id, 'chess'), store.ratingLog(u.id, 'chess')]),
+      telegram: t.tg.calls,
+      inbox: [IVAN, MAX].map(u => t.page(u).inbox),
+      timers: [...t.app.handles.keys()],
+    });
+    const before = snapshot();
+    await t.send(first, message); // повторная доставка того же события
+    await t.send(first === IVAN ? MAX : IVAN, { t: 'finish' });
+    assert.equal(finishes, 1, 'повтор не запускает публикацию и очистку заново');
+    assert.deepEqual(snapshot(), before, 'нет повторных сообщений, начислений и изменения исхода');
+    assert.equal(t.errors.length, 0);
+  });
+}
+
+for (const first of [IVAN, MAX]) {
+  test(`два finish через хаб одновременно, первым ${first.first_name}: одна публикация`, async ctx => {
+    const store = new Store(':memory:');
+    const t = new Table({ store });
+    ctx.after(() => { t.app.stop(); store.close(); });
+    const room = await duel(t);
+    await play(t, room, FOOLS);
+    const second = first === IVAN ? MAX : IVAN;
+    let entered, release, finishes = 0;
+    const started = new Promise(resolve => { entered = resolve; });
+    const gate = new Promise(resolve => { release = resolve; });
+    const finishUp = t.app.finishUp.bind(t.app);
+    t.app.finishUp = async (...args) => {
+      finishes++;
+      entered();
+      await gate; // задержка Telegram: первое завершение ещё не закончило публикацию
+      return finishUp(...args);
+    };
+    const one = t.send(first, { t: 'finish' });
+    await started;
+    assert.equal(room.status, 'finished', 'состояние установлено до первого await публикации');
+    const two = t.send(second, { t: 'finish' });
+    release();
+    await Promise.all([one, two]);
+    assert.equal(finishes, 1);
+    assert.equal(groupPosts(t).filter(c => /ИТОГИ · ШАХМАТЫ/.test(c.text)).length, 1);
+    assert.equal(room.history.length, 1);
+    assert.equal(store.ratingOf(MAX.id, 'chess').played, 1);
+    assert.equal(store.ratingLog(MAX.id, 'chess').length, 1);
+    assert.equal(t.errors.length, 0);
+  });
+}
+
+for (const game of ['poker', 'durak', 'colors']) {
+  test(`finish через хаб: первое завершение ${game} осталось прежним`, async ctx => {
+    const t = new Table();
+    ctx.after(() => t.app.stop());
+    await t.cmd(IVAN, '/game');
+    t.openHub(IVAN);
+    await t.send(IVAN, { t: 'create', game, reqId: `finish-${game}` });
+    const room = t.app.roomsOf(t.chatId).find(r => r.game === game);
+    let finishes = 0;
+    const finishUp = t.app.finishUp.bind(t.app);
+    t.app.finishUp = (...args) => { finishes++; return finishUp(...args); };
+    await t.send(IVAN, { t: 'finish' });
+    assert.equal(room.status, 'finished');
+    assert.equal(finishes, 1);
+    assert.equal(t.state(IVAN).room.status, 'finished');
+    assert.equal(t.errors.length, 0);
+  });
+}
+
 /* ------------------------------------------------------------ дуэльные лобби */
 
 test('дуэли: у хоста несколько лобби сразу, у каждого своя карточка, повтор reqId не плодит стол', async () => {

@@ -1694,6 +1694,7 @@
 |---|---|
 | Карточка в группе, итоги серии, «ваш ход» в личку | `bot/games/chess/render.js` — `renderCard`, `renderResults`, `renderTurnPing` |
 | Отказы игроку (все коды) | `bot/games/chess/index.js` — `ERRORS` |
+| Срок истёк до обработки действия: «Время на ход вышло — партия закончена.» | `bot/games/chess/index.js` — `ERRORS.TIME_UP`; исход и победитель уточняются в заметке стола |
 | Названия исходов («мат», «сдался», «время вышло»…) | `bot/games/chess/rules.js` — `KIND_RU`, `SIDE_RU`, `controlRu` |
 | Заметки стола («Макс выиграл: мат», «предлагает ничью»…) | `bot/games/chess/rules.js` — `conclude`, `offerDraw`, `declineDraw` |
 | Почему ничья не в рейтинге | `bot/rating.js` — `WHY.DRAW` |
