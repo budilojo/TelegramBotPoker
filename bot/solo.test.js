@@ -168,3 +168,13 @@ test('обслуживание: бот не ходит, пока всё стои
   t.app.setMaintenance(false);
   await botMoves(t, room, 2);
 });
+
+test('рейтинг: даже законченная «победа» над ботом не пишется в таблицу людей', async () => {
+  const t = new Table({ store: new Store(':memory:') });
+  const room = await chessVsBot(t);
+  // Партия, которую рейтинг принял бы у людей: мат на 30-м полуходе.
+  room.history.push({ no: 1, white: '101', black: 'bot1', winner: '101', kind: 'mate', aborted: false, plies: 30 });
+  assert.deepEqual(t.app.rate(room), [], 'ничего не засчитано');
+  assert.equal(t.app.store.ratingOf(101, 'chess'), null);
+  t.app.store.close();
+});
