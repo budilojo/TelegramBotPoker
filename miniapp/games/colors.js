@@ -619,7 +619,11 @@ function renderResults() {
         : h('div.hint', 'Ни одной партии не сыграно.')),
       h('div.hint', 'Слева — место, справа «вышел первым / остался последним».'),
     ),
-    h('div.panel', h('button.btn.primary.lg', { onclick: () => send({ t: 'hub' }, { lock: false }) }, s.solo ? 'Игры с ботами' : 'Все игры группы')),
+    s.solo
+      ? h('div.panel',
+        h('button.btn', { onclick: () => send({ t: 'hub' }, { lock: false }) }, s.hubLabel || '← Игры с ботами'),
+        h('button.btn.primary.lg', { onclick: () => { haptic.tap(); send({ t: 'again' }); } }, '▶ Сыграть ещё'))
+      : h('div.panel', h('button.btn.primary.lg', { onclick: () => send({ t: 'hub' }, { lock: false }) }, 'Все игры группы')),
   );
   void lines;
 }
@@ -641,10 +645,12 @@ function openMenu() {
       h('button.menu-item', { onclick: openRules }, 'Правила', h('small', 'коротко, по делу')),
       h('button.menu-item', { onclick: openOrder }, 'Порядок карт в руке',
         h('small', handOrder() === 'dealt' ? 'как пришли' : 'по цвету')),
-      me.isHost ? h('button.menu-item', { onclick: openSettings }, 'Настройки', h('small', 'накопление, таймер')) : null,
-      me.isHost && s.deal?.phase === 'play'
+      // С ботами — только играть: ни настроек, ни прерываний; конец — на экране.
+      s.solo ? h('button.menu-item', { onclick: () => { closeSheet(); send({ t: 'hub' }, { lock: false }); } }, s.hubLabel || '← Игры с ботами', h('small', 'партию можно будет продолжить')) : null,
+      me.isHost && !s.solo ? h('button.menu-item', { onclick: openSettings }, 'Настройки', h('small', 'накопление, таймер')) : null,
+      me.isHost && !s.solo && s.deal?.phase === 'play'
         ? h('button.menu-item.danger', { onclick: confirmAbort }, 'Прервать партию', h('small', 'она не засчитается')) : null,
-      me.isHost ? h('button.menu-item.danger', { onclick: confirmFinish }, 'Завершить игру', h('small', 'итоги в группу')) : null,
+      me.isHost ? h('button.menu-item.danger', { onclick: confirmFinish }, 'Завершить игру', h('small', s.solo ? 'итоги — на экране' : 'итоги в группу')) : null,
       h('button.btn', { onclick: () => closeSheet(true) }, 'Закрыть'));
   });
 }
@@ -717,7 +723,7 @@ function confirmAbort() {
 function confirmFinish() {
   showSheet('finish', () => h('div.sheet-body',
     h('h3', 'Завершить игру?'),
-    h('div.hint', 'Итоги уйдут в группу. Открытую партию это снимет — она не засчитается.'),
+    h('div.hint', state.solo ? 'Открытую партию это снимет — она не засчитается.' : 'Итоги уйдут в группу. Открытую партию это снимет — она не засчитается.'),
     h('button.btn.danger.lg', { onclick: () => { closeSheet(); send({ t: 'finish' }); } }, 'Завершить'),
     h('button.btn', { onclick: () => closeSheet(true) }, 'Отмена')));
 }

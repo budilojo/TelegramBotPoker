@@ -1446,11 +1446,15 @@ export class App {
     return [{ id: 'bot', timer: { key, deadline: room.botDue.deadline }, fire: () => this.botAct(code, key) }];
   }
 
-  /** Чего игра ждёт от ботов: ход (как от любого игрока) и ответы на просьбы. */
+  /**
+   * Чего игра ждёт от ботов: ответы и реплики (`wants`: ответ на ничью, крик
+   * «UNOQ!», «Поймал!») — первыми, потом ход, как от любого игрока. Реплика
+   * про то, что только что случилось, и не ждёт, пока сходит следующий.
+   */
   botWaits(room) {
     const g = gameOf(room);
     const isBot = (id) => !!room.players.find((p) => p.id === id)?.bot;
-    return [...g.waiting(room), ...(g.bot?.wants?.(room) || [])].filter((w) => isBot(w.id));
+    return [...(g.bot?.wants?.(room, this.clock.now()) || []), ...g.waiting(room)].filter((w) => isBot(w.id));
   }
 
   /**

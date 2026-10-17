@@ -1724,3 +1724,6 @@
 | Дурак: характеры ботов и уровни с подсказками | `bot/games/durak/bot.js` — `TYPES` (`name`, `short`, `blurb`), `LEVELS`, `catalog.levelHints` |
 | Дурак: отказ «В игре с ботами этого нет…» | `bot/games/durak/index.js` — `ERRORS.SOLO_ONLY` |
 | Дурак: меню за столом с ботами, итоги («Сыграть ещё») | `miniapp/games/durak.js` — `openMenu`, `renderResults`, `confirmFinish` |
+| UNOQ: уровни ботов и подсказки, имена ботов («🤖 Вася») | `bot/games/colors/bot.js` — `LEVELS`, `catalog.levelHints`, `NAMES` |
+| UNOQ: отказ «В игре с ботами этого нет…» | `bot/games/colors/index.js` — `ERRORS.SOLO_ONLY` |
+| UNOQ: меню за столом с ботами, итоги («Сыграть ещё») | `miniapp/games/colors.js` — `openMenu`, `renderResults`, `confirmFinish` |
