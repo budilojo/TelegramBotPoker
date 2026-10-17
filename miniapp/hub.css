@@ -405,3 +405,9 @@
 }
 .again-title { font-weight: var(--k-w-semibold); color: var(--k-text); }
 .again-sub { font-size: var(--k-fs-caption); margin-top: 2px; }
+
+/* ------------------------------------------------------- игры с ботами */
+
+/* Уровни — слова, а не цифры: по три в ряд, а не пять сплющенных. */
+.seg.wide button { min-width: 96px; }
+.solo .solo-resume { margin-bottom: var(--k-s8); }

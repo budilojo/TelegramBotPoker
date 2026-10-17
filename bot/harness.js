@@ -233,7 +233,7 @@ export class Table {
   constructor({
     chatId = -1001234, minIntervalMs = 0, store = new NullStore(), botUsername = 'ChipTableBot', deck = seededDecks(1),
     clock = new FakeClock(), runoutStepMs = 0, miniAppName = 'table', webappUrl = 'https://poker.example',
-    durakDeck = durakDecks(1), colorsDeck = null, colorsRand = null, chessRand = null, tg = null, admins = [],
+    durakDeck = durakDecks(1), colorsDeck = null, colorsRand = null, chessRand = null, botRng = null, tg = null, admins = [],
     // Рейтинг закрыт, как в проде; тесты экрана открывают его явно.
     ratingSoon = true,
   } = {}) {
@@ -243,6 +243,7 @@ export class Table {
     this.clock = clock;
     this.app = new App({
       api: this.tg, store, minIntervalMs, botUsername, deck, durakDeck, clock, runoutStepMs, miniAppName, webappUrl, admins,
+      ...(botRng ? { botRng } : {}),
       ratingSoon,
       onError: (e) => this.errors.push(e),
     });
@@ -418,6 +419,11 @@ export class Table {
   openHub(u, { room = null, group = this.group } = {}) {
     if (!group) throw new Error('сначала /play');
     return this.open(u, { initData: initDataFor(u, { startParam: `g_${group.code}`, clock: this.clock }), room });
+  }
+
+  /** Игры с ботами — кнопка «Играть с ботом» из лички (`?room=solo`). */
+  openSolo(u) {
+    return this.open(u, { initData: initDataFor(u, { startParam: 'solo', clock: this.clock }) });
   }
 
   /** Открыть админку — как кнопка «Открыть пульт» из лички. */

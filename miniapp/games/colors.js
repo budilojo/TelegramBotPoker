@@ -115,7 +115,7 @@ export function render() {
 
 function backToHub(s) {
   if (!s.hub) return null;
-  return h('button.back-link', { onclick: () => send({ t: 'hub' }, { lock: false }) }, '← Все игры группы');
+  return h('button.back-link', { onclick: () => send({ t: 'hub' }, { lock: false }) }, s.hubLabel || '← Все игры группы');
 }
 
 const withMark = (av, host) => {
@@ -619,7 +619,7 @@ function renderResults() {
         : h('div.hint', 'Ни одной партии не сыграно.')),
       h('div.hint', 'Слева — место, справа «вышел первым / остался последним».'),
     ),
-    h('div.panel', h('button.btn.primary.lg', { onclick: () => send({ t: 'hub' }, { lock: false }) }, 'Все игры группы')),
+    h('div.panel', h('button.btn.primary.lg', { onclick: () => send({ t: 'hub' }, { lock: false }) }, s.solo ? 'Игры с ботами' : 'Все игры группы')),
   );
   void lines;
 }

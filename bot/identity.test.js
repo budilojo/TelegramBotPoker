@@ -93,13 +93,18 @@ test('the signed room wins over whatever room the page asks for', async () => {
   assert.equal(t.open(user(203, 'Дима'), { initData: initDataFor(user(203, 'Дима'), { startParam: 'nosuchroom' }) }).error, 'NO_ROOM');
 });
 
-test('opened without a room (from @BotFather or the bot profile), the app says where tables come from', async () => {
+test('opened without a room and without groups (from the bot profile): not a dead end — games with bots', async () => {
+  // Раньше здесь был отказ «игры открываются из группы». С играми против
+  // ботов у человека без группы есть что делать — и за чужой стол его
+  // по-прежнему не сажают.
   const t = new Table();
   await t.seat({ ivan: user(101, 'Иван') });
   const r = t.open(user(202, 'Макс'), { initData: initDataFor(user(202, 'Макс'), { startParam: '' }) });
-  assert.equal(r.error, 'NO_ROOM');
-  assert.match(r.text, /из группы.*\/game/, 'not "the game was deleted" — there never was one');
-  assert.equal(t.room.players.length, 1);
+  assert.ok(r.session, 'страница открылась');
+  const s = t.state(user(202, 'Макс'));
+  assert.equal(s.kind, 'solo', 'экран игр с ботами');
+  assert.equal(s.groups, 0, 'групп у него нет — экран знает это и подскажет, как позвать друзей');
+  assert.equal(t.room.players.length, 1, 'за чужой стол не посадили');
 });
 
 /* ----------------------------------------- nobody acts for anybody else */

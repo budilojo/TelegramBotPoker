@@ -38,7 +38,7 @@ export function render() {
 /** Back to the group's list of games — only for a page that came from it. */
 function backToHub(s) {
   if (!s.hub) return null;
-  return h('button.back-link', { onclick: () => send({ t: 'hub' }, { lock: false }) }, '← Все игры группы');
+  return h('button.back-link', { onclick: () => send({ t: 'hub' }, { lock: false }) }, s.hubLabel || '← Все игры группы');
 }
 
 function act(action, amount) {
@@ -992,7 +992,7 @@ function openMenu() {
       item('Сесть за стол', 'со следующей раздачи', () => { closeSheet(); send({ t: 'sit' }); });
     }
     if (!me.notify && s.bot) item('🔔 Напоминать о ходе', 'нажмите Start у бота', () => tg.openTelegramLink(`https://t.me/${s.bot}?start=notify`));
-    if (s.hub) item('← Все игры группы', 'стол останется, как есть', () => { closeSheet(); send({ t: 'hub' }, { lock: false }); });
+    if (s.hub) item(s.hubLabel || '← Все игры группы', 'стол останется, как есть', () => { closeSheet(); send({ t: 'hub' }, { lock: false }); });
 
     if (me.isHost) {
       items.push(h('div.section-label', 'Хост'));

@@ -10,6 +10,7 @@
 import * as C from './rules.js';
 import { chessView } from './view.js';
 import { renderCard, renderResults, renderTurnPing, shareText } from './render.js';
+import bot from './bot.js';
 
 /** Что страница вправе просить у шахматного стола — и больше ничего. */
 const ACTIONS = new Set([
@@ -63,6 +64,8 @@ export default {
   minPlayers: C.MIN_PLAYERS,
   maxPlayers: C.MAX_SEATS,
   errors: ERRORS,
+  /** Соперник-бот для одиночной партии (bot.js). */
+  bot,
 
   create({ chatId, title, host, settings = null }) {
     const s = settings || {};

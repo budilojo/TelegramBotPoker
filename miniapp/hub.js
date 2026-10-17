@@ -103,6 +103,7 @@ function renderHome(s) {
     },
       h('span', '🏆 Рейтинг'),
       h('small', s.ratingSoon ? 'Совсем скоро' : 'кто чего стоит — за месяц и за всё время')),
+    s.solo ? h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: () => { haptic.tap(); send({ t: 'solo' }, { lock: false }); } }, '🤖 Играть с ботами') : null,
     h('div.hint', 'Здесь группы, где вы писали боту или играли. Новая группа — добавьте бота и напишите там /game.'),
   ));
 }

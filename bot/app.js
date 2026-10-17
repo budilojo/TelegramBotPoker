@@ -37,6 +37,11 @@ import { apply as rateRound } from './rating.js';
  * выбирают в приложении. Какие там игры, он увидит на экране, где они и
  * живут.
  */
+/** Стартовый код «игры с ботами»: `startapp=solo` или `?room=solo` из лички. */
+export const SOLO_CODE = 'solo';
+/** Брошенная партия с ботами закрывается сама, без сообщений, через три часа тишины. */
+export const SOLO_IDLE_MS = 3 * 60 * 60_000;
+
 /** Команда → игра: лобби одной командой в группе. Покер живёт на /poker и /newgame. */
 export const QUICK_GAMES = { chess: 'chess', durak: 'durak', unoq: 'colors', colors: 'colors' };
 
@@ -59,6 +64,8 @@ const HELP_DM = [
   'Сюда приходят напоминания «ваш ход» — только когда приложение у вас закрыто.',
   'Сама игра — в группе: напишите там /game и выберите игру.',
   'Или /game здесь — откроются игры ваших групп.',
+  '',
+  '🤖 Не с кем играть? /bot — партия с ботами прямо здесь, без группы.',
 ].join('\n');
 
 /** callback_data кнопки «не присылать такое» под каждой рассылкой. */
@@ -159,6 +166,7 @@ export class App {
   constructor({
     api, store = new NullStore(), minIntervalMs = 1000, botUsername = '', onError = null, deck = null, durakDeck = null,
     clock = REAL_CLOCK, runoutStepMs = 1500, webappUrl = '', miniAppName = '', admins = [], ratingSoon = RATING_SOON,
+    botRng = Math.random,
   } = {}) {
     this.api = api;
     this.store = store;
@@ -196,6 +204,8 @@ export class App {
     this.handles = new Map();
     /** private-chat work in flight (turn pings) — awaited by settle() */
     this.inflight = new Set();
+    /** Случайность ботов (задержка, выбор): в тестах — повторимая. */
+    this.botRng = botRng;
   }
 
   attachHub(hub) {
@@ -351,7 +361,8 @@ export class App {
     return {
       playing: playing.length,
       lobbies: rooms.length - playing.length,
-      groups: new Set(rooms.map((r) => r.chatId)).size,
+      groups: new Set(rooms.filter((r) => !r.solo).map((r) => r.chatId)).size,
+      solo: rooms.filter((r) => r.solo).length,
       online: this.hub?.people ?? 0,
       byGame,
     };
@@ -466,6 +477,11 @@ export class App {
   draw(room, { immediate = false } = {}) {
     this.syncClocks(); // the view carries the turn deadline: set it first
     this.hub?.broadcast(room);
+    // Партия с ботами живёт только в приложении: ни карточки, ни лички.
+    if (room.solo) {
+      this.save(room);
+      return Promise.resolve();
+    }
     this.track(this.pingTurns(room));
     const produce = async () => {
       const view = gameOf(room).card(room, { link: this.tableLink(room) });
@@ -502,6 +518,7 @@ export class App {
 
   /** Post the card again at the bottom of the chat; the old copy loses its button. */
   async newCard(room) {
+    if (room.solo) return this.draw(room);
     this.outbox.cancel(room.chatId, room.code);
     const old = room.ui.tableMessageId;
     if (old) await this.outbox.dropKeyboard(room.chatId, old);
@@ -648,6 +665,8 @@ export class App {
    * «+20 · 3-е место», а отказ («партия не доиграна») объясняется словами.
    */
   rate(room) {
+    // С ботами — тренировка: в рейтинг людей она не идёт.
+    if (room.solo) return [];
     const rounds = gameOf(room).rounds?.(room) ?? [];
     if (!rounds.length) return [];
     const seen = (room.rated ||= {});
@@ -725,7 +744,7 @@ export class App {
     const now = this.clock.now();
     const live = new Set();
     for (const room of this.rooms.values()) {
-      for (const c of [...this.coreClocks(room, now), ...(gameOf(room).clocks?.(this, room, now) || [])]) {
+      for (const c of [...this.coreClocks(room, now), ...(gameOf(room).clocks?.(this, room, now) || []), ...this.botClocks(room, now)]) {
         const id = `${c.id}:${room.code}`;
         live.add(id);
         if (!c.keep) this.arm(id, c.timer, c.fire);
@@ -768,6 +787,11 @@ export class App {
    * сбивает и ничего не дублирует.
    */
   coreClocks(room, now) {
+    if (room.solo) {
+      // Брошенная партия с ботами: тихо убрать через три часа без единого действия.
+      const at = room.solo.seenAt ?? room.createdAt ?? now;
+      return [{ id: 'idle', timer: { key: `solo:${at}`, deadline: at + SOLO_IDLE_MS }, fire: () => this.soloIdle(room.code, at) }];
+    }
     if (room.status !== 'lobby') return [];
     const since = room.idleAt ?? room.createdAt ?? now;
     const seated = room.players.filter((p) => !p.left && !p.kicked).length;
@@ -962,6 +986,7 @@ export class App {
       return void (await this.outbox.post(user.tgId, `⏸ <b>Идёт обслуживание</b>\n${esc(this.downText)}`));
     }
     if (['game', 'play', 'games', 'newgame'].includes(cmd?.cmd)) return this.sendMyGames(user);
+    if (['bot', 'solo', ...Object.keys(QUICK_GAMES), 'poker'].includes(cmd?.cmd)) return this.sendSolo(user);
     return void (await this.outbox.post(user.tgId, HELP_DM));
   }
 
@@ -982,10 +1007,19 @@ export class App {
    */
   async sendMyGames(user, lead = null) {
     const mine = this.groupsOf(user.id);
-    const btn = this.webappUrl && mine.length ? { text: '🎮 Открыть игры', web_app: { url: `${this.webappUrl}/` } } : null;
+    const rows = [];
+    if (this.webappUrl && mine.length) rows.push([{ text: '🎮 Открыть игры', web_app: { url: `${this.webappUrl}/` } }]);
+    if (this.webappUrl) rows.push([{ text: '🤖 Играть с ботом', web_app: { url: `${this.webappUrl}/?room=${SOLO_CODE}` } }]);
     const text = mine.length
-      ? `${lead ? `${lead}\n\n` : ''}🎮 Игры ваших групп — открывайте:`
-      : `${lead ? `${lead}\n\n` : ''}Игры создаются в группе: добавьте меня в группу и напишите там /game.`;
+      ? `${lead ? `${lead}\n\n` : ''}🎮 Игры ваших групп — открывайте. Или сыграйте с ботами прямо здесь.`
+      : `${lead ? `${lead}\n\n` : ''}Игры с друзьями создаются в группе: добавьте меня в группу и напишите там /game.\nА с ботами можно играть прямо здесь.`;
+    await this.outbox.post(user.tgId, text, rows.length ? rows : null);
+  }
+
+  /** «Играть с ботом» из лички: кнопка в приложение, на экран игр с ботами. */
+  async sendSolo(user) {
+    const btn = this.webappUrl ? { text: '🤖 Играть с ботом', web_app: { url: `${this.webappUrl}/?room=${SOLO_CODE}` } } : null;
+    const text = btn ? '🤖 Партия с ботами — выбирайте игру и уровень:' : 'Адрес мини-приложения не настроен (WEBAPP_URL).';
     await this.outbox.post(user.tgId, text, btn ? [[btn]] : null);
   }
 
@@ -999,7 +1033,7 @@ export class App {
     const out = new Map();
     for (const g of this.groups.values()) if (g.members?.includes(id)) out.set(g.chatId, g);
     for (const room of this.rooms.values()) {
-      if (out.has(room.chatId) || room.status === 'finished') continue;
+      if (out.has(room.chatId) || room.status === 'finished' || room.solo) continue;
       if (room.players.some((p) => p.id === id && !p.kicked && !p.left)) out.set(room.chatId, this.ensureGroup(room.chatId, room.title));
     }
     return [...out.values()];
@@ -1293,6 +1327,15 @@ export class App {
     // The card says the game is over; the results go below it as their own
     // message — the one message of the evening worth a notification.
     const g = gameOf(room);
+    if (room.solo) {
+      // Итоги партии с ботами — на экране игрока, не в чате.
+      this.note('finished', room);
+      g.onFinish?.(room);
+      this.hub?.broadcast(room);
+      this.save(room);
+      this.syncClocks();
+      return;
+    }
     this.rate(room);
     this.note('finished', room);
     this.outbox.cancel(room.chatId, room.code);
@@ -1322,6 +1365,131 @@ export class App {
       this.log(err);
       return null;
     }
+  }
+
+  /* ------------------------------------------------------ игры с ботами */
+
+  /**
+   * Партия с ботами — «одиночная»: без группы, без карточки в чате, без
+   * рейтинга. Стол живёт под своим ключом `solo:<id>`, который никогда не
+   * совпадёт с id телеграм-чата. На человека — одна такая партия: новая
+   * заменяет прежнюю.
+   *
+   * Боты садятся как обычные игроки (`bot.seat` игры), а партия сразу
+   * начинается — хост здесь сам человек, и ждать некого.
+   */
+  async createSolo(gameId, user, raw = {}) {
+    const g = GAMES[gameId];
+    if (!g?.bot) return { error: 'BAD_GAME' };
+    const chatId = `solo:${user.id}`;
+    for (const old of this.roomsOf(chatId)) {
+      if (old.status !== 'finished') await this.dropGame(old);
+      else {
+        this.hub?.forget(old.code);
+        this.rooms.delete(old.code);
+        this.store.remove(old.code);
+      }
+    }
+    const settings = g.bot.settings ? g.bot.settings(raw) : raw;
+    const room = this.createGame(gameId, { chatId, title: '', host: user, settings });
+    if (room.error) return room;
+    room.solo = { owner: String(user.id), seenAt: this.clock.now() };
+    const lineup = g.bot.lineup(raw);
+    lineup.forEach((spec, i) => g.bot.seat(room, spec, i));
+    let refused = null;
+    await g.handle({
+      app: this, hub: this.hub, session: { user, send() {}, visible: true }, room, uid: String(user.id),
+      msg: { t: 'start' }, refuse: (code) => { refused = code; }, push() {},
+    });
+    if (refused) this.log(new Error(`solo start refused: ${refused}`));
+    this.save(room);
+    return room;
+  }
+
+  /** Живая партия с ботами этого человека, если есть. */
+  soloOf(userId) {
+    return this.liveRooms(`solo:${userId}`).at(-1) || null;
+  }
+
+  /** Три часа тишины: партию с ботами убрать без единого сообщения. */
+  async soloIdle(code, at) {
+    const room = this.rooms.get(code);
+    if (!room?.solo || (room.solo.seenAt ?? room.createdAt) !== at) return;
+    this.note('idle', room);
+    await this.dropGame(room);
+  }
+
+  /**
+   * Часы ботов: кого из ботов ждёт игра — тот через «человеческую» паузу и
+   * ходит. Один таймер на стол: следующий бот ждёт, пока сходит этот, — как за
+   * настоящим столом. Срок запоминается в комнате, чтобы лишняя перерисовка
+   * его не отодвигала.
+   */
+  botClocks(room, now) {
+    const g = gameOf(room);
+    if (!g.bot || room.status !== 'playing' || !room.players.some((p) => p.bot)) {
+      room.botDue = null;
+      return [];
+    }
+    const w = this.botWaits(room)[0];
+    if (!w) {
+      room.botDue = null;
+      return [];
+    }
+    const key = `${w.id}:${w.key}`;
+    if (room.botDue?.key !== key) {
+      const p = room.players.find((x) => x.id === w.id);
+      room.botDue = { key, deadline: now + (g.bot.delay?.(room, p, w, this.botRng) ?? 900) };
+    }
+    const code = room.code;
+    return [{ id: 'bot', timer: { key, deadline: room.botDue.deadline }, fire: () => this.botAct(code, key) }];
+  }
+
+  /** Чего игра ждёт от ботов: ход (как от любого игрока) и ответы на просьбы. */
+  botWaits(room) {
+    const g = gameOf(room);
+    const isBot = (id) => !!room.players.find((p) => p.id === id)?.bot;
+    return [...g.waiting(room), ...(g.bot?.wants?.(room) || [])].filter((w) => isBot(w.id));
+  }
+
+  /**
+   * Бот ходит. Как человек: ему строится ЕГО вид стола (`view` — ровно то, что
+   * увидел бы человек на его месте, без чужих карт), он выбирает действие, и
+   * оно идёт через тот же `handle` с теми же проверками. Отказ — запасное
+   * действие игры (сброс, «беру», «пас»): бот никогда не держит стол.
+   */
+  async botAct(code, key) {
+    const room = this.rooms.get(code);
+    if (!room || room.botDue?.key !== key) return;
+    room.botDue = null;
+    const g = gameOf(room);
+    const current = () => this.botWaits(room).find((x) => `${x.id}:${x.key}` === key);
+    const w = current();
+    if (!w) return this.syncClocks();
+    const me = room.players.find((p) => p.id === w.id);
+    const now = this.clock.now();
+    const view = g.view(room, me.id, { now, botUsername: '' });
+    let msg = null;
+    try {
+      msg = await g.bot.decide({ room, view, me, wait: w, rng: this.botRng, now });
+    } catch (err) {
+      this.log(err);
+    }
+    // Пока бот думал, партия могла уйти дальше (человек сдался, обслуживание).
+    if (!this.rooms.has(code) || this.down || !current()) return this.syncClocks();
+    let refused = null;
+    const run = (m) => g.handle({
+      app: this, hub: this.hub, session: { user: { id: me.id, tgId: 0, name: me.name }, send() {}, visible: true },
+      room, uid: me.id, msg: m, refuse: (c) => { refused = c; }, push() {},
+    });
+    if (msg) await run(msg);
+    if (!msg || refused) {
+      refused = null;
+      const fb = g.bot.fallback?.(g.view(room, me.id, { now: this.clock.now(), botUsername: '' }), w);
+      if (fb && current()) await run(fb);
+      if (refused) this.log(new Error(`бот ${me.id} в ${code} не смог сходить: ${refused}`));
+    }
+    this.syncClocks();
   }
 
   /** Ссылка на приложение для рекламы в шеринге — без привязки к группе или столу. */

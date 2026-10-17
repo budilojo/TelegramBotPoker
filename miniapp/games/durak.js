@@ -69,7 +69,7 @@ export function render() {
 
 function backToHub(s) {
   if (!s.hub) return null;
-  return h('button.back-link', { onclick: () => send({ t: 'hub' }, { lock: false }) }, '← Все игры группы');
+  return h('button.back-link', { onclick: () => send({ t: 'hub' }, { lock: false }) }, s.hubLabel || '← Все игры группы');
 }
 
 function renderLobby() {
@@ -661,7 +661,7 @@ function openMenu() {
     const live = d?.phase === 'play';
     const items = [];
     const item = (text, sub, onclick, cls = '') => items.push(h(`button.menu-item${cls ? '.' + cls : ''}`, { onclick }, text, sub ? h('small', sub) : null));
-    if (s.hub) item('← Все игры группы', 'игра останется, как есть', () => { closeSheet(); send({ t: 'hub' }, { lock: false }); });
+    if (s.hub) item(s.hubLabel || '← Все игры группы', 'игра останется, как есть', () => { closeSheet(); send({ t: 'hub' }, { lock: false }); });
     if (me.seated && !live) item('Встать из-за стола', 'со следующей партии вас не сдадут', () => { closeSheet(); send({ t: 'leave' }); });
     else if (!me.seated && !me.kicked) item('Сесть за стол', 'со следующей партии', () => { closeSheet(); send({ t: 'sit' }); });
     if (!me.notify && s.bot) item('🔔 Напоминать о ходе', 'нажмите Start у бота', () => tg.openTelegramLink(`https://t.me/${s.bot}?start=notify`));

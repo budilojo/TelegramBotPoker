@@ -199,7 +199,7 @@ const GROUP_COMMANDS = [
   ['finish', 'завершить свою игру (хост)'],
   ['help', 'как играть'],
 ];
-const PRIVATE_COMMANDS = [['game', 'игры моих групп'], ['help', 'как играть']];
+const PRIVATE_COMMANDS = [['bot', 'играть с ботами'], ['game', 'игры моих групп'], ['help', 'как играть']];
 const asCommands = (list) => list.map(([command, description]) => ({ command, description }));
 try {
   await bot.api.setMyCommands(asCommands(GROUP_COMMANDS), { scope: { type: 'all_group_chats' } });

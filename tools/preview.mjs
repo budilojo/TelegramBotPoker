@@ -90,7 +90,7 @@ const FORCE_W = Number(process.env.PREVIEW_W) || 0;
 const FORCE_H = Number(process.env.PREVIEW_H) || 0;
 
 const scenes = [];
-function scene(name, room, viewer, { width = 390, height = 780, click = null, press = null, start = room.code, tap = [], sq = [], scroll = 0, tab = null, before = null, after = null } = {}) {
+function scene(name, room, viewer, { width = 390, height = 780, click = null, press = null, start = room?.code, tap = [], sq = [], scroll = 0, tab = null, before = null, after = null } = {}) {
   if (FORCE_W) width = FORCE_W;
   if (FORCE_H) height = FORCE_H;
   const user = { id: viewer, first_name: PEOPLE.find(([id]) => id === viewer)?.[1] ?? 'Гость' };
@@ -403,6 +403,18 @@ function playOut(room) {
   go(take, ITALIAN);
   C.requestTakeback(take, '101');
   scene('33б-chess-takeback-popup', take, 102);
+}
+
+// 27. Игры с ботами: экран из лички, форма шахмат, партия против бота.
+{
+  const someone = { id: 106, tgId: 106, name: 'Лена' };
+  scene('34-solo', null, 105, { start: 'solo' });
+  scene('34б-solo-chess-form', null, 105, { start: 'solo', click: 'Шахматы' });
+  scene('34г-solo-resume', null, 106, { start: 'solo', before: () => {} });
+  const vs = await app.createSolo('chess', someone, { level: 1, side: 'white' });
+  C.move(vs, '106', { from: 'e2', to: 'e4' }, Date.now());
+  C.move(vs, 'bot1', { from: 'e7', to: 'e5' }, Date.now());
+  scene('34в-solo-chess-game', vs, 106);
 }
 
 app.syncClocks(); // turn deadlines, as the running bot would have them

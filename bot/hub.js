@@ -22,7 +22,7 @@
  */
 import { checkInitData } from './webapp-auth.js';
 import { GAMES, GAME_LIST, gameOf } from './games/index.js';
-import { HUB_PREFIX, MAX_LIVE_PER_GROUP, RATING_SOON_TEXT, TOO_MANY_GAMES_TEXT } from './app.js';
+import { HUB_PREFIX, MAX_LIVE_PER_GROUP, RATING_SOON_TEXT, TOO_MANY_GAMES_TEXT, SOLO_CODE } from './app.js';
 import { AUDIENCES, ERRORS as CAST_ERRORS } from './broadcast.js';
 import { GAME_RU, PER_DAY, sign } from './rating.js';
 import { ym } from './fmt.js';
@@ -124,10 +124,22 @@ export class Hub {
     // Opened without a group or a room — from the bot's profile or a button in
     // private. Telegram does not say which group; the bot knows which groups
     // this person plays in, and shows those (one — straight to its games).
+    // Игры с ботами: вход из лички бота, без группы. Страница, которая
+    // переподключается из-за стола с ботами, возвращается за свой стол.
+    if (code === SOLO_CODE) {
+      const session = { id: this.nextId++, user: auth.user, kind: 'solo', group: null, code: null, send, visible: true, solo: true };
+      const inside = this.app.roomByCode(asked);
+      if (inside?.solo?.owner === auth.user.id) this.enterRoom(session, inside);
+      else this.pushSolo(session);
+      return { session };
+    }
     if (!code) {
       const mine = this.app.groupsOf(auth.user.id);
       if (!mine.length) {
-        return { error: 'NO_ROOM', text: 'Игры открываются из группы: добавьте меня в группу, напишите там /game и нажмите кнопку.' };
+        // Групп нет — не тупик: с ботами можно играть и одному.
+        const session = { id: this.nextId++, user: auth.user, kind: 'solo', group: null, code: null, send, visible: true, solo: true };
+        this.pushSolo(session);
+        return { session };
       }
       const session = { id: this.nextId++, user: auth.user, kind: 'home', group: null, code: null, send, visible: true, home: true };
       if (mine.length === 1) {
@@ -156,6 +168,13 @@ export class Hub {
 
     const room = this.app.roomByCode(code);
     if (!room) return { error: 'NO_ROOM', text: 'Стол не найден — возможно, игру уже удалили.' };
+    // Партия с ботами — только своя: чужую по коду не открыть даже посмотреть.
+    if (room.solo) {
+      if (room.solo.owner !== auth.user.id) return { error: 'NO_ROOM', text: 'Стол не найден — возможно, игру уже удалили.' };
+      const session = { id: this.nextId++, user: auth.user, kind: 'room', group: null, code: null, send, visible: true, solo: true };
+      this.enterRoom(session, room);
+      return { session };
+    }
     // Путь назад — для страницы, которая ПЕРЕПОДКЛЮЧАЕТСЯ, а не открывается
     // заново. Такую видно по тому, что кода комнаты в подписанной ссылке нет:
     // он пришёл из памяти самой страницы (`room`), то есть она уже была за
@@ -187,7 +206,7 @@ export class Hub {
     }
     // У «моих групп» нет своего списка подписчиков: состояние собирается по
     // запросу, рассылать его некуда.
-    if (session.kind === 'home' || session.kind === 'rating') return;
+    if (session.kind === 'home' || session.kind === 'rating' || session.kind === 'solo') return;
     const map = session.kind === 'hub' ? this.byGroup : this.byRoom;
     const key = session.kind === 'hub' ? session.group : session.code;
     const set = map.get(key);
@@ -221,6 +240,7 @@ export class Hub {
   resend(session) {
     if (session.kind === 'admin') return this.pushAdmin(session);
     if (session.kind === 'home') return this.pushHome(session);
+    if (session.kind === 'solo') return this.pushSolo(session);
     if (session.kind === 'rating') return this.pushRating(session);
     if (session.kind === 'hub') return this.pushHub(session);
     if (this.app.down) return void session.send({ t: 'state', state: this.downState() });
@@ -266,6 +286,12 @@ export class Hub {
     try {
       const state = gameOf(room).view(room, session.user.id, { now: this.app.clock.now(), botUsername: this.app.botUsername });
       if (session.group) state.hub = true; // it came from the group's hub: offer the way back
+      if (room.solo) {
+        // Путь назад из партии с ботами — к играм с ботами, а не к группе.
+        state.hub = true;
+        state.solo = true;
+        state.hubLabel = '← Игры с ботами';
+      }
       session.send({ t: 'state', state });
     } catch (err) {
       this.app.log(err);
@@ -310,10 +336,55 @@ export class Hub {
     }));
     session.send({ t: 'state', state: {
       kind: 'home', now: this.app.clock.now(), bot: this.app.botUsername, me: { name: session.user.name }, groups,
+      solo: true, // кнопка «Играть с ботом»
       // Тот же текст, что на хабе группы: один закрытый рейтинг — одно
       // объяснение, а не отказ на одном экране и спокойная шторка на другом.
       ratingSoon: this.app.ratingSoon ? RATING_SOON_TEXT : null,
     } });
+  }
+
+  /** Игры с ботами: что можно начать и партия, которую можно продолжить. */
+  pushSolo(session) {
+    if (this.app.down) return void session.send({ t: 'state', state: this.downState() });
+    this.detach(session);
+    session.kind = 'solo';
+    session.group = null;
+    session.code = null;
+    session.solo = true;
+    const live = this.app.soloOf(session.user.id);
+    session.send({ t: 'state', state: {
+      kind: 'solo',
+      now: this.app.clock.now(),
+      bot: this.app.botUsername,
+      me: { name: session.user.name },
+      games: GAME_LIST.filter((g) => g.bot).map((g) => ({ id: g.id, title: g.title, icon: g.icon, blurb: g.blurb, catalog: g.bot.catalog?.() ?? {} })),
+      resume: live ? { code: live.code, game: live.game, title: gameOf(live).title, icon: gameOf(live).icon } : null,
+      groups: this.app.groupsOf(session.user.id).length,
+    } });
+  }
+
+  /** Экран игр с ботами: начать партию, продолжить, перейти к своим группам. */
+  async handleSolo(session, msg) {
+    if (COMMON.has(msg.t)) {
+      session.visible = !!msg.visible;
+      return;
+    }
+    if (msg.t === 'home' || msg.t === 'refresh') {
+      if (msg.t === 'home' && this.app.groupsOf(session.user.id).length) return this.pushHome(session);
+      return this.pushSolo(session);
+    }
+    if (msg.t === 'resume') {
+      const room = this.app.soloOf(session.user.id);
+      if (!room) return this.pushSolo(session);
+      return this.enterRoom(session, room);
+    }
+    if (msg.t !== 'play') return this.refuse(session, 'BAD_REQUEST');
+    const g = GAMES[String(msg.game || '')];
+    if (!g?.bot) return this.refuse(session, 'BAD_GAME');
+    const settings = msg.settings && typeof msg.settings === 'object' ? msg.settings : {};
+    const room = await this.app.createSolo(g.id, session.user, settings);
+    if (room.error) return this.refuse(session, room.error);
+    this.enterRoom(session, room);
   }
 
   /** Всё, что видит владелец: цифры, живые сессии, обслуживание, рассылки. */
@@ -428,6 +499,7 @@ export class Hub {
     }
     if (session.kind === 'hub') return this.handleHub(session, msg);
     if (session.kind === 'home') return this.handleHome(session, msg);
+    if (session.kind === 'solo') return this.handleSolo(session, msg);
     if (session.kind === 'rating') return this.handleRating(session, msg);
     if (session.kind === 'admin') {
       if (COMMON.has(msg.t)) {
@@ -445,6 +517,8 @@ export class Hub {
       session.visible = !!msg.visible;
       return;
     }
+    if (room.solo) room.solo.seenAt = app.clock.now(); // партия с ботами жива, пока её трогают
+    if (msg.t === 'hub' && room.solo) return this.pushSolo(session);
     if (msg.t === 'hub') {
       if (!session.group || !app.groupByCode(session.group)) return this.refuse(session, 'NOT_FROM_HUB');
       return this.enterHub(session);
@@ -613,6 +687,7 @@ export class Hub {
       return;
     }
     if (msg.t === 'rating') return this.enterRating(session, msg);
+    if (msg.t === 'solo') return this.pushSolo(session);
     // «Мои группы», когда мы уже на них: страница могла нажать кнопку до
     // того, как пришло новое состояние. Это не ошибка — просто покажем
     // экран ещё раз.

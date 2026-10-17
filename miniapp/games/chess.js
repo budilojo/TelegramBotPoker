@@ -164,7 +164,7 @@ export function render() {
 /* ------------------------------------------------------------------ lobby */
 
 const backToHub = (s) => (s.hub
-  ? h('button.back-link', { onclick: () => send({ t: 'hub' }, { lock: false }) }, '← Все игры группы')
+  ? h('button.back-link', { onclick: () => send({ t: 'hub' }, { lock: false }) }, s.hubLabel || '← Все игры группы')
   : null);
 
 const withMark = (av, host) => {
@@ -202,7 +202,7 @@ function renderLobby() {
     notifyHint(),
     me.isHost ? h('button.menu-item', { onclick: openSettings }, 'Настройки', h('small', 'часы, цвет')) : null,
     me.isHost ? h('button.menu-item', { onclick: () => openPlayers('host') }, 'Хост', h('small', 'удалить, передать')) : null,
-    s.hub ? h('button.menu-item', { onclick: newLobby }, '+ Новое лобби', h('small', 'ещё один стол с теми же настройками')) : null,
+    s.hub && !s.solo ? h('button.menu-item', { onclick: newLobby }, '+ Новое лобби', h('small', 'ещё один стол с теми же настройками')) : null,
   );
   const actions = h('div.panel');
   if (me.kicked) actions.append(h('div.hint', 'Хост удалил вас из этой игры.'));
@@ -229,7 +229,7 @@ function renderTable() {
 
   const root = h('div.ch',
     h('div.ch-head',
-      s.hub ? h('button.k-icon-btn', { 'aria-label': 'Все игры группы', onclick: () => send({ t: 'hub' }, { lock: false }) }, backIcon()) : h('span.ch-head-gap'),
+      s.hub ? h('button.k-icon-btn', { 'aria-label': s.solo ? 'Игры с ботами' : 'Все игры группы', onclick: () => send({ t: 'hub' }, { lock: false }) }, backIcon()) : h('span.ch-head-gap'),
       h('div.ch-title', `Шахматы · ${s.room.control}`, h('small', `Партия ${m.no}${s.room.title ? ' · ' + s.room.title : ''}`)),
       h('button.k-icon-btn', { 'aria-label': 'Меню', onclick: openMenu }, dotsIcon())),
     playerBar(top),
@@ -688,7 +688,7 @@ function renderResults() {
   );
   $app.append(box, h('div.panel',
     state.canShare ? h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: shareResult }, 'Поделиться') : null,
-    state.hub ? h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: newLobby }, '+ Новое лобби') : null,
+    state.hub && !state.solo ? h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: newLobby }, '+ Новое лобби') : null,
     h('button.btn.primary.wide.lg', { onclick: () => tg.close() }, 'Закрыть')));
 }
 
@@ -703,8 +703,8 @@ function openMenu() {
     const live = !!m && !m.over;
     const items = [];
     const item = (text, sub, onclick, cls = '') => items.push(h(`button.menu-item${cls ? '.' + cls : ''}`, { onclick }, text, sub ? h('small', sub) : null));
-    if (s.hub) item('← Все игры группы', 'партия останется, как есть', () => { closeSheet(); send({ t: 'hub' }, { lock: false }); });
-    if (s.hub) item('+ Новое лобби', 'ещё один стол с теми же настройками', () => { closeSheet(); newLobby(); });
+    if (s.hub) item(s.hubLabel || '← Все игры группы', 'партия останется, как есть', () => { closeSheet(); send({ t: 'hub' }, { lock: false }); });
+    if (s.hub && !s.solo) item('+ Новое лобби', 'ещё один стол с теми же настройками', () => { closeSheet(); newLobby(); });
     if (me.seated && !live) item('Встать из-за стола', 'место освободится', () => { closeSheet(); send({ t: 'leave' }); });
     else if (!me.seated && !me.kicked && s.players.filter((p) => p.seated).length < 2) item('Сесть за доску', 'со следующей партии', () => { closeSheet(); send({ t: 'sit' }); });
     if (!me.notify && s.bot) item('🔔 Напоминать о ходе', 'нажмите Start у бота', () => tg.openTelegramLink(`https://t.me/${s.bot}?start=notify`));
