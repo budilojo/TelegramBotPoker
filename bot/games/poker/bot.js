@@ -14,7 +14,6 @@
  * сколько ставит, любит ли олл-ин. УРОВЕНЬ — насколько хорошо он это делает:
  * точность оценки руки, ошибки, умение считать шансы банка.
  */
-import { best5, compare } from '../../eval.js';
 import { cardCode } from '../../view.js';
 import * as R from '../../room.js';
 
@@ -71,6 +70,73 @@ const CODE = new Map(Array.from({ length: 52 }, (_, c) => [cardCode(c), c]));
 const parse = (codes) => (codes || []).map((x) => CODE.get(x)).filter((c) => c != null);
 
 /**
+ * Сила руки из 5–7 карт одним числом: больше — сильнее. Тот же порядок, что
+ * у `best5` из eval.js (это проверяет тест на десятках тысяч раздач), только
+ * без перебора 21 пятёрки: счёт по достоинствам и мастям сразу. Нужна для
+ * шансов — там рук оцениваются тысячи за ход.
+ */
+export function strength(cards) {
+  const cnt = new Array(13).fill(0);
+  const suitCnt = [0, 0, 0, 0];
+  const suitMask = [0, 0, 0, 0];
+  let mask = 0;
+  for (const c of cards) {
+    const r = c >> 2;
+    const st = c & 3;
+    cnt[r] += 1;
+    suitCnt[st] += 1;
+    suitMask[st] |= 1 << r;
+    mask |= 1 << r;
+  }
+  const enc = (cat, ks) => {
+    let v = cat;
+    for (let i = 0; i < 5; i++) v = v * 14 + ((ks[i] ?? -1) + 1);
+    return v;
+  };
+  const top = (except, n) => {
+    const out = [];
+    for (let r = 12; r >= 0 && out.length < n; r--) if (cnt[r] && !except.includes(r)) out.push(r);
+    return out;
+  };
+  let fs = -1;
+  for (let st = 0; st < 4; st++) if (suitCnt[st] >= 5) fs = st;
+  if (fs >= 0) {
+    const sf = straightTop(suitMask[fs]);
+    if (sf >= 0) return enc(8, [sf]);
+  }
+  const quads = [];
+  const trips = [];
+  const pairs = [];
+  for (let r = 12; r >= 0; r--) {
+    if (cnt[r] === 4) quads.push(r);
+    else if (cnt[r] === 3) trips.push(r);
+    else if (cnt[r] === 2) pairs.push(r);
+  }
+  if (quads.length) return enc(7, [quads[0], ...top([quads[0]], 1)]);
+  if (trips.length && (trips.length > 1 || pairs.length)) return enc(6, [trips[0], Math.max(trips[1] ?? -1, pairs[0] ?? -1)]);
+  if (fs >= 0) {
+    const ks = [];
+    for (let r = 12; r >= 0 && ks.length < 5; r--) if ((suitMask[fs] >> r) & 1) ks.push(r);
+    return enc(5, ks);
+  }
+  const st = straightTop(mask);
+  if (st >= 0) return enc(4, [st]);
+  if (trips.length) return enc(3, [trips[0], ...top([trips[0]], 2)]);
+  if (pairs.length >= 2) return enc(2, [pairs[0], pairs[1], ...top([pairs[0], pairs[1]], 1)]);
+  if (pairs.length) return enc(1, [pairs[0], ...top([pairs[0]], 3)]);
+  return enc(0, top([], 5));
+}
+
+/** Старшая карта стрита в наборе достоинств (битовая маска), или -1. Колесо A-2-3-4-5 — до пятёрки. */
+function straightTop(m) {
+  for (let t = 12; t >= 4; t--) {
+    const need = 0x1f << (t - 4);
+    if ((m & need) === need) return t;
+  }
+  return (m & 0x100f) === 0x100f ? 3 : -1;
+}
+
+/**
  * Шанс выиграть (ничья — пополам) против `opponents` случайных рук. Колода —
  * все карты, кроме тех, что бот видит: своих и открытых. Ничьих чужих карт.
  */
@@ -89,14 +155,13 @@ export function equity(hole, board, opponents, sims, rng) {
       deck[j] = t;
     }
     const full = board.concat(deck.slice(opponents * 2, need));
-    const mine = best5([...hole, ...full]).score;
+    const mine = strength([...hole, ...full]);
     let beaten = false;
     let ties = 0;
     for (let o = 0; o < opponents; o++) {
-      const theirs = best5([deck[2 * o], deck[2 * o + 1], ...full]).score;
-      const d = compare(mine, theirs);
-      if (d < 0) { beaten = true; break; }
-      if (d === 0) ties++;
+      const theirs = strength([deck[2 * o], deck[2 * o + 1], ...full]);
+      if (theirs > mine) { beaten = true; break; }
+      if (theirs === mine) ties++;
     }
     if (!beaten) score += 1 / (ties + 1);
   }

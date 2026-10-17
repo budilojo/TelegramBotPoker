@@ -17,7 +17,8 @@ import assert from 'node:assert/strict';
 import { Table, user, botRandom } from './harness.js';
 import { seededRng } from './deck.js';
 import { GAMES } from './games/index.js';
-import pokerBot, { TYPES, LEVELS, equity, decidePoker } from './games/poker/bot.js';
+import pokerBot, { TYPES, LEVELS, equity, decidePoker, strength } from './games/poker/bot.js';
+import { best5, compare } from './eval.js';
 import { cardCode } from './view.js';
 
 const IVAN = user(101, 'Иван');
@@ -106,6 +107,33 @@ test('сила руки: тузы сильнее семёрки-двойки, ф
   assert.ok(trash > 0.28 && trash < 0.4, `72 против одного ≈ 35%, вышло ${trash}`);
   const royal = equity([card('AS'), card('KS')], ['QS', 'JS', '10S'].map(card), 3, 500, rng);
   assert.equal(royal, 1);
+});
+
+test('быстрая оценка руки — тот же порядок, что у best5, на 30.000 парах раздач', () => {
+  const rnd = botRandom(77);
+  const draw = (n) => {
+    const deck = Array.from({ length: 52 }, (_, i) => i);
+    for (let i = 0; i < n; i++) {
+      const j = i + Math.floor(rnd() * (52 - i));
+      [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+    return deck.slice(0, n);
+  };
+  for (let k = 0; k < 30_000; k++) {
+    const n = 5 + (k % 3); // 5, 6 и 7 карт
+    const a = draw(n);
+    const b = draw(n);
+    const slow = Math.sign(compare(best5(a).score, best5(b).score));
+    const fast = Math.sign(strength(a) - strength(b));
+    assert.equal(fast, slow, `${a} против ${b}`);
+  }
+  // Редкие руки — отдельно: колесо, стрит-флеш, два сета, три пары.
+  const c = (s) => s.split(' ').map(card);
+  assert.ok(strength(c('AS 2S 3S 4S 5S 9H 9D')) > strength(c('KH KD KS KC 2D 3C 4H')), 'стрит-флеш до пятёрки сильнее каре');
+  assert.ok(strength(c('AH 2D 3C 4S 5H KD QD')) < strength(c('2H 3D 4C 5S 6H KD QD')), 'колесо — младший стрит');
+  assert.equal(Math.sign(strength(c('9H 9D 9S 5C 5H 5D 2C')) - strength(c('9H 9D 9S 5C 5H 2D 2C'))), 0, 'два сета = фулл-хаус девятки на пятёрках');
+  assert.ok(strength(c('9H 9D 5S 5C 3H 3D AC')) > strength(c('9H 9D 5S 5C 3H 3D KC')), 'три пары: кикер — туз');
+  assert.ok(strength(c('9H 9D 5S 5C 4H 4D 2C')) > strength(c('9H 9D 5S 5C 3H 3D 2C')), 'три пары: кикер — карта третьей пары');
 });
 
 test('решение: со слабой рукой против большой ставки профи сбрасывает, с натсом — не сбрасывает', () => {
