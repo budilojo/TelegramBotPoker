@@ -1,6 +1,7 @@
 'use strict';
 /**
- * Рассылка: одно объявление всем, кто нажал Start у игрового бота.
+ * Рассылка: одно объявление всем, кто нажал Start у игрового бота, — или во
+ * все группы, где есть бот.
  *
  * Три вещи, из-за которых это не просто «цикл по пользователям»:
  *
@@ -16,12 +17,23 @@
  *
  * Получателей «всех пользователей Telegram» ни у кого нет и быть не может:
  * бот пишет только тем, кто открыл с ним личку сам.
+ *
+ * ГРУППЫ — отдельная аудитория, со своими правилами:
+ *   - кнопки «не присылать» нет: группе, которой надоело, достаточно удалить
+ *     бота — и рассылка туда больше не пойдёт;
+ *   - темп — одна группа в три секунды: у Telegram свои, более строгие лимиты
+ *     на сообщения в группы, и ограничение задело бы игру во всех чатах;
+ *   - список групп — те, о которых бот знает: куда его добавили, где играли.
+ *     Список своих чатов Telegram боту не даёт. Бота в группе уже нет —
+ *     группа забывается, письмо считается недошедшим.
  */
 import { ADS_OFF } from './app.js';
 import { esc, num } from './fmt.js';
 
 /** Восемь писем в секунду — впятеро ниже потолка Telegram. */
 export const SEND_GAP_MS = 125;
+/** В группы — одно сообщение в три секунды: двадцать в минуту, с запасом от лимитов. */
+export const GROUP_GAP_MS = 3_000;
 /** Пропущенная из-за простоя рассылка старше суток не уходит: новость скисла. */
 export const STALE_MS = 24 * 60 * 60_000;
 /** Дальше Telegram всё равно обрежет, а читать такое письмо никто не станет. */
@@ -30,7 +42,11 @@ export const AUDIENCES = {
   all: 'все, кто нажимал Start',
   week: 'заходили за 7 дней',
   sleep: 'не заходили больше 7 дней',
+  groups: 'все группы, где есть бот',
 };
+const isGroups = (audience) => audience === 'groups';
+/** Бота в группе нет (удалили, группы больше нет) — это не сбой, а ответ. */
+const NOT_THERE = /kicked|not a member|chat not found|group chat was deactivated|bot is not a member|Forbidden|have no rights to send/i;
 
 /**
  * Чего в рассылке не будет. Обещание из docs/prod.md: запрет стоит в самой
@@ -94,6 +110,13 @@ export class Broadcaster {
     this.onDone = onDone;
     /** id рассылки, которая идёт прямо сейчас, — одна за раз. */
     this.busy = null;
+    /**
+     * Группы, переехавшие в супергруппу посреди рассылки: письмо по новому id
+     * уже ушло, а новый id может стоять в списке дальше курсора — второй раз
+     * туда не писать. (Живёт в памяти: перезапуск ровно в эту минуту — самое
+     * большее одно повторное письмо в одну группу.)
+     */
+    this.moved = new Map();
   }
 
   get store() {
@@ -110,7 +133,7 @@ export class Broadcaster {
     const now = this.app.clock.now();
     const ok = checkCast({ ...input, now });
     if (ok.error) return ok;
-    const people = this.store.audience(ok.audience, { now });
+    const people = this.recipients(ok.audience, { now });
     if (!people.length) return { error: 'NO_ONE' };
     const row = this.store.addBroadcast({
       at: ok.at, text: ok.text, btnText: ok.btnText, btnUrl: ok.btnUrl,
@@ -159,28 +182,72 @@ export class Broadcaster {
 
   /* ------------------------------------------------------------ отправка */
 
+  /**
+   * Кому: людям из аудитории — или группам. Группы — все, о которых бот знает
+   * (куда его добавили, где играли), по порядку id: курсор рассылки — id
+   * последней группы, как у людей.
+   */
+  recipients(audience, { now = this.app.clock.now(), after = null, limit = 0 } = {}) {
+    if (!isGroups(audience)) return this.store.audience(audience, { now, after, limit });
+    const ids = new Set([...this.app.groups.keys(), ...this.store.roomChats(), ...[...this.app.rooms.values()].map((r) => r.chatId)]);
+    const all = [...ids].filter((id) => /^-\d+$/.test(id) && (after == null || id > String(after))).sort();
+    return limit ? all.slice(0, limit) : all;
+  }
+
   keyboard(row) {
     const rows = [];
     if (row.btn_url) rows.push([{ text: row.btn_text || 'Открыть', url: row.btn_url }]);
-    // Отписка — в каждом письме, всегда последней строкой.
-    rows.push([{ text: '🔕 Не присылать такое', callback_data: ADS_OFF }]);
+    // Отписка — в каждом письме в личку, всегда последней строкой. В группах
+    // её нет: надоело — группа удаляет бота.
+    if (!isGroups(row.audience)) rows.push([{ text: '🔕 Не присылать такое', callback_data: ADS_OFF }]);
     return rows;
   }
 
   /** Одно письмо. Заблокировал бота — отмечаем и больше не пробуем. */
   async one(userId, row) {
+    if (isGroups(row.audience)) return this.toGroup(userId, row);
     const r = await this.app.outbox.dm(userId, row.text, this.keyboard(row));
     if (r.ok) return true;
     if (r.forbidden) this.app.setDm(userId, 'fail', { redraw: false });
     return false;
   }
 
+  /**
+   * Одно сообщение в группу. Группа стала супергруппой — у неё новый id:
+   * переезжаем вслед за ней и пробуем ещё раз. Бота там уже нет — забываем
+   * группу, чтобы следующая рассылка туда не стучалась.
+   */
+  async toGroup(chatId, row, retried = false) {
+    try {
+      const m = await this.app.outbox.post(chatId, row.text, this.keyboard(row));
+      // Сообщение легло поверх карточки стола: пусть ядро знает, что она «закопана».
+      this.app.seenInChat(chatId, m?.message_id);
+      return true;
+    } catch (err) {
+      const to = err?.parameters?.migrate_to_chat_id;
+      if (to && !retried) {
+        await this.app.migrate(String(chatId), String(to));
+        if (row.id != null) {
+          if (!this.moved.has(row.id)) this.moved.set(row.id, new Set());
+          this.moved.get(row.id).add(String(to));
+        }
+        return this.toGroup(String(to), row, true);
+      }
+      if (NOT_THERE.test(String(err?.description ?? err?.message ?? '')) || err?.error_code === 403) {
+        this.app.leftChat(String(chatId));
+        return false;
+      }
+      throw err;
+    }
+  }
+
   /** Письмо только себе — посмотреть, как оно выглядит, прежде чем его увидят все. */
   async test(userId, input = {}) {
     const ok = checkCast({ ...input, now: this.app.clock.now() });
     if (ok.error) return ok;
-    const r = await this.one(userId, { text: ok.text, btn_text: ok.btnText, btn_url: ok.btnUrl });
-    return r ? { ok: true } : { error: 'NO_DM', text: 'Не дошло: нажмите Start у игрового бота.' };
+    // Себе — в личку, но с теми же кнопками, что увидят получатели.
+    const r = await this.app.outbox.dm(userId, ok.text, this.keyboard({ btn_text: ok.btnText, btn_url: ok.btnUrl, audience: ok.audience }));
+    return r.ok ? { ok: true } : { error: 'NO_DM', text: 'Не дошло: нажмите Start у игрового бота.' };
   }
 
   /**
@@ -221,8 +288,13 @@ export class Broadcaster {
     if (row.status !== 'sending') return;
     this.busy = Number(id);
 
-    const [uid] = this.store.audience(row.audience, { now: this.app.clock.now(), after: row.cursor, limit: 1 });
+    const [uid] = this.recipients(row.audience, { now: this.app.clock.now(), after: row.cursor, limit: 1 });
     if (!uid) return this.finish(id, false);
+    if (this.moved.get(row.id)?.has(uid)) {
+      // Уже получила — под старым id, до переезда.
+      this.store.patchBroadcast(id, { cursor: uid });
+      return this.step(id);
+    }
 
     let { sent = 0, failed = 0 } = row;
     try {
@@ -234,7 +306,7 @@ export class Broadcaster {
     }
     this.store.patchBroadcast(id, { sent, failed, cursor: uid });
     this.app.hub?.pushAdmins();
-    this.later(id, SEND_GAP_MS, `next:${uid}`);
+    this.later(id, isGroups(row.audience) ? GROUP_GAP_MS : SEND_GAP_MS, `next:${uid}`);
   }
 
   async finish(id, canceled) {
@@ -243,6 +315,7 @@ export class Broadcaster {
       done_at: this.app.clock.now(),
     });
     if (this.busy === Number(id)) this.busy = null;
+    this.moved.delete(out?.id ?? Number(id));
     this.app.hub?.pushAdmins();
     if (this.onDone) await this.onDone(out);
     return out;
@@ -258,7 +331,7 @@ export class Broadcaster {
   sizes() {
     const now = this.app.clock.now();
     const out = {};
-    for (const kind of Object.keys(AUDIENCES)) out[kind] = this.store.audience(kind, { now }).length;
+    for (const kind of Object.keys(AUDIENCES)) out[kind] = this.recipients(kind, { now }).length;
     return out;
   }
 }
@@ -286,7 +359,9 @@ export function castReport(r) {
   const head = v.status === 'canceled' ? '⏹ <b>Рассылка остановлена</b>' : '📣 <b>Рассылка ушла</b>';
   return [
     head,
-    `Дошло: ${num(v.sent)} из ${num(v.total)}` + (v.failed ? ` · не дошло: ${num(v.failed)} (заблокировали бота)` : ''),
+    `Дошло: ${num(v.sent)} из ${num(v.total)}` + (v.failed
+      ? ` · не дошло: ${num(v.failed)} (${v.audience === 'groups' ? 'бота уже нет в группе' : 'заблокировали бота'})`
+      : ''),
     '',
     `<i>${esc(v.text.slice(0, 200))}${v.text.length > 200 ? '…' : ''}</i>`,
   ].join('\n');

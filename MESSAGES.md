@@ -1732,3 +1732,11 @@
 | Школа покера: список уроков, азбука, комбинации, тест «Что сильнее?» | `miniapp/school.js` — `openSchool`, `STEPS`, `COMBOS`, `QUIZ` |
 | Школа покера: карточка на экране «Игры с ботами», «Продолжить: Школа покера» | `miniapp/solo.js` — `schoolCard`; `bot/games/poker/index.js` — `bot.label` |
 | Школа покера: плашка наставника за столом, «Подробнее», «Ещё раз» / «Дальше →» / «Пропустить» | `miniapp/games/poker.js` — `coachEl`, `openCoach`, `learnButtons` |
+
+## 11. Рассылка в группы (дополнительно)
+
+| Что | Где |
+|---|---|
+| Название аудитории «все группы, где есть бот» | `bot/broadcast.js` — `AUDIENCES.groups` |
+| Отчёт «не дошло: N (бота уже нет в группе)» | `bot/broadcast.js` — `castReport` |
+| Подсказка в пульте про группы, «Письмо уйдёт в N групп от имени бота», «N групп» в списке | `miniapp/admin.js` — `castTab`, `confirmCast`, `castList` |

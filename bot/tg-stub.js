@@ -37,6 +37,10 @@ export class TelegramStub {
     this.failNext = null; // queue an error to test recovery paths
     /** Users who pressed Start: the only private chats the bot may write to. */
     this.dmOpen = new Set();
+    /** Группы, откуда бота удалили, пока он не слышал: писать туда — 403. */
+    this.gone = new Set();
+    /** Группа стала супергруппой: старый id → новый (Telegram отвечает 400 с migrate_to_chat_id). */
+    this.upgraded = new Map();
   }
 
   #record(method, payload) {
@@ -69,6 +73,10 @@ export class TelegramStub {
     // Positive ids are people. Groups and supergroups are negative.
     if (Number(chatId) > 0 && !this.dmOpen.has(String(chatId))) {
       throw new TelegramError("Forbidden: bot can't initiate conversation with a user", 403);
+    }
+    if (this.gone.has(String(chatId))) throw new TelegramError('Forbidden: bot was kicked from the supergroup chat', 403);
+    if (this.upgraded.has(String(chatId))) {
+      throw new TelegramError('Bad Request: group chat was upgraded to a supergroup chat', 400, { migrate_to_chat_id: Number(this.upgraded.get(String(chatId))) });
     }
     const id = this.nextId++;
     this.messages.set(id, {

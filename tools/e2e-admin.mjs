@@ -166,7 +166,12 @@ step('снял — Макс снова за столом, без перезаг�
 
 await pa.locator('.tab', { hasText: 'Рассылка' }).click();
 await pa.waitForSelector('.chips .chip');
-assert.equal(await pa.locator('.chip').count(), 3, 'три аудитории');
+assert.equal(await pa.locator('.chip').count(), 4, 'четыре аудитории: все, активные, спящие, группы');
+// Группы: подсказка честно говорит, что кнопки «не присылать» там нет и что темп — раз в 3 секунды.
+await pa.locator('.chip', { hasText: 'все группы' }).click();
+assert.match(await pa.locator('.hint').last().innerText(), /без кнопки «не присылать».*раз в 3 секунды/s);
+await pa.locator('.chip', { hasText: 'все, кто нажимал Start' }).click();
+step('аудитория «все группы, где есть бот» — с подсказкой про темп и без отписки');
 assert.match(await pa.locator('.chip.on').innerText(), /3/, 'в «все» — трое, кто нажимал Start');
 
 await pa.locator('.inp.area').fill('В субботу играем в дурака!');

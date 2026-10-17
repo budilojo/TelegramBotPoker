@@ -212,9 +212,13 @@ function castTab(s) {
       h('button.btn.wide', { onclick: () => sendCast({ test: true }) }, 'Сначала себе'),
       h('button.btn.primary.wide', { onclick: () => confirmCast(chosen) }, draft.later ? 'Запланировать' : 'Отправить')),
 
-    h('div.hint', 'В каждом письме — кнопка «🔕 Не присылать такое»: без неё рассылка превращается в спам, ' +
-      'из которого один выход — заблокировать бота. Письма уходят 8 в секунду, чтобы Telegram не ограничил бота вместе с игрой. ' +
-      'Казино и ставки админка отправить откажется.'),
+    draft.audience === 'groups'
+      ? h('div.hint', 'В группы — от имени бота, без кнопки «не присылать»: надоест — группа удалит бота. ' +
+        `Сообщения уходят по одному раз в 3 секунды, чтобы Telegram не ограничил бота: ${fmt(chosen)} ${plural(chosen, 'группа', 'группы', 'групп')} — около ${fmt(Math.max(1, Math.ceil((chosen * 3) / 60)))} мин. ` +
+        'Группы — те, куда бота добавили или где играли. Где бота уже нет, письмо не дойдёт, и группа забудется. Казино и ставки админка отправить откажется.')
+      : h('div.hint', 'В каждом письме — кнопка «🔕 Не присылать такое»: без неё рассылка превращается в спам, ' +
+        'из которого один выход — заблокировать бота. Письма уходят 8 в секунду, чтобы Telegram не ограничил бота вместе с игрой. ' +
+        'Казино и ставки админка отправить откажется.'),
 
     castList(s.casts.list),
   );
@@ -238,7 +242,9 @@ function confirmCast(n) {
   if (!draft.text.trim()) return toast('Письмо пустое');
   showSheet('cast', () => h('div',
     h('h3', draft.later ? 'Запланировать рассылку?' : 'Отправить рассылку?'),
-    h('div.sub', `${fmt(n)} ${plural(n, 'человек получит', 'человека получат', 'человек получат')} это письмо`),
+    h('div.sub', draft.audience === 'groups'
+      ? `Письмо уйдёт в ${fmt(n)} ${plural(n, 'группу', 'группы', 'групп')} от имени бота`
+      : `${fmt(n)} ${plural(n, 'человек получит', 'человека получат', 'человек получат')} это письмо`),
     h('div.box.cast-preview', draft.text),
     h('div.hint', 'Отозвать отправленное письмо нельзя. Если ещё не смотрели, как оно выглядит на телефоне, — сначала «Сначала себе».'),
     h('div.sheet-row',
@@ -261,7 +267,9 @@ function castList(list) {
         ? h('div',
           h('div.gr-bar', h('i', { style: { width: `${c.total ? Math.round((c.sent / c.total) * 100) : 0}%` } })),
           h('div.cast-n.num', `${fmt(c.sent)} из ${fmt(c.total)}${c.failed ? ` · не дошло ${fmt(c.failed)}` : ''}`))
-        : h('div.cast-n.num', `${fmt(c.total)} ${plural(c.total, 'получатель', 'получателя', 'получателей')}`),
+        : h('div.cast-n.num', c.audience === 'groups'
+          ? `${fmt(c.total)} ${plural(c.total, 'группа', 'группы', 'групп')}`
+          : `${fmt(c.total)} ${plural(c.total, 'получатель', 'получателя', 'получателей')}`),
       c.note ? h('div.cast-note', c.note) : null,
       c.status === 'scheduled' || c.status === 'sending'
         ? h('button.btn.small.danger', { onclick: () => { haptic.tap(); send({ t: 'castCancel', id: c.id }); } },

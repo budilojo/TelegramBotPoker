@@ -17,7 +17,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Table, user } from './harness.js';
 import { Store } from './store.js';
-import { SEND_GAP_MS, STALE_MS, checkCast, bannedWord } from './broadcast.js';
+import { SEND_GAP_MS, GROUP_GAP_MS, STALE_MS, checkCast, bannedWord } from './broadcast.js';
 import { ADS_OFF } from './app.js';
 import { pressUpdate } from './tg-stub.js';
 
@@ -145,7 +145,7 @@ test('аудитории: активные и спящие — разные лю
   t.app.store.noteSeen('101', now); // Иван заходил сегодня
   t.app.store.noteSeen('202', now - 30 * 86_400_000); // Макс — месяц назад
 
-  assert.deepEqual(t.app.casts.sizes(), { all: 2, week: 1, sleep: 1 });
+  assert.deepEqual(t.app.casts.sizes(), { all: 2, week: 1, sleep: 1, groups: 0 });
 
   t.openAdmin(ivan);
   await t.send(ivan, { t: 'cast', text: 'Возвращайтесь', audience: 'sleep' });
@@ -371,5 +371,85 @@ test('в рассылке нет ни одной карты: письмо — э
 
   const letter = letters(t, max).at(-1);
   assert.equal(letter, 'Играем в субботу');
+  t.app.store.close();
+});
+
+/* ----------------------------------------------------------- в группы */
+
+/** Бота добавили в группу — как это присылает Telegram. */
+const added = (t, chatId, title, from) => t.raw({
+  my_chat_member: {
+    chat: { id: chatId, type: 'supergroup', title },
+    from,
+    new_chat_member: { status: 'member', user: { id: 1, is_bot: true } },
+  },
+});
+
+test('в группы: во все группы, где есть бот, — без кнопки «не присылать» и по одной в три секунды', async () => {
+  const t = withStats();
+  const ivan = IVAN();
+  await started(t, ivan);
+  // Одна группа — с игрой, другая — бота только добавили, там ещё не играли.
+  t.chatId = -100111;
+  await t.cmd(ivan, '/game');
+  await added(t, -100222, 'Пятничный покер', ivan);
+  assert.equal(t.app.casts.sizes().groups, 2, 'обе группы в счёте');
+
+  t.openAdmin(ivan);
+  await t.send(ivan, { t: 'cast', text: 'Новое: игры с ботами — /bot в личке', btnText: 'Открыть', btnUrl: 'https://t.me/x', audience: 'groups' });
+  await t.advance(1); // «сейчас» — это таймер на ноль
+  const inGroups = () => [...t.tg.messages.values()].filter((m) => m.text.includes('игры с ботами') && m.chatId.startsWith('-'));
+  assert.equal(inGroups().length, 1, 'первая группа — сразу');
+  await t.advance(GROUP_GAP_MS - 100);
+  assert.equal(inGroups().length, 1, 'вторая — не раньше чем через три секунды');
+  await t.advance(200);
+  assert.equal(inGroups().length, 2, 'а потом и вторая');
+  for (const m of inGroups()) {
+    const buttons = (m.markup?.inline_keyboard || []).flat();
+    assert.ok(buttons.every((b) => b.callback_data !== ADS_OFF), 'кнопки «не присылать» в группе нет');
+    assert.ok(buttons.some((b) => b.url === 'https://t.me/x'), 'своя кнопка-ссылка — есть');
+  }
+  assert.equal(letters(t, ivan).filter((x) => x.includes('игры с ботами')).length, 0, 'в личку — ничего: аудитория «группы»');
+  await t.advance(10 * GROUP_GAP_MS);
+  const [row] = t.app.store.broadcasts(1);
+  assert.equal(row.status, 'done');
+  assert.equal(row.sent, 2);
+  t.app.store.close();
+});
+
+test('в группы: бота там уже нет — группа забывается; стала супергруппой — письмо уходит по новому id', async () => {
+  const t = withStats();
+  const ivan = IVAN();
+  await started(t, ivan);
+  await added(t, -100301, 'Старая', ivan);
+  await added(t, -100302, 'Переехала', ivan);
+  await added(t, -100303, 'Живая', ivan);
+  t.tg.gone.add('-100301');
+  t.tg.upgraded.set('-100302', '-100999');
+
+  t.openAdmin(ivan);
+  await t.send(ivan, { t: 'cast', text: 'Обновление бота', audience: 'groups' });
+  await t.advance(10 * GROUP_GAP_MS);
+  const [row] = t.app.store.broadcasts(1);
+  assert.equal(row.sent, 2, 'переехавшей и живой — дошло');
+  assert.equal(row.failed, 1, 'где бота нет — не дошло, это отдельное число');
+  const got = [...t.tg.messages.values()].filter((m) => m.text === 'Обновление бота').map((m) => m.chatId).sort();
+  assert.deepEqual(got, ['-100303', '-100999'], 'переехавшей — ровно одно письмо, хотя её новый id стоит в списке дальше');
+  assert.ok(!t.app.groups.has('-100301'), 'группа без бота забыта');
+  assert.ok(t.app.groups.has('-100999') && !t.app.groups.has('-100302'), 'переехавшая — под новым id');
+  assert.equal(t.app.casts.sizes().groups, 2, 'в следующий раз — только живые');
+  t.app.store.close();
+});
+
+test('«сначала себе» для групп — письмо в личку без кнопки «не присылать», как увидит группа', async () => {
+  const t = withStats();
+  const ivan = IVAN();
+  await started(t, ivan);
+  t.openAdmin(ivan);
+  await t.send(ivan, { t: 'castTest', text: 'Проба для групп', audience: 'groups' });
+  const m = [...t.tg.messages.values()].find((x) => x.text === 'Проба для групп');
+  assert.ok(m, 'дошло себе');
+  assert.equal(m.chatId, '101');
+  assert.ok(!(m.markup?.inline_keyboard || []).flat().some((b) => b.callback_data === ADS_OFF));
   t.app.store.close();
 });

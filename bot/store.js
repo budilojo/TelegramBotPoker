@@ -221,6 +221,7 @@ export class Store {
           'ON CONFLICT(chat_id) DO UPDATE SET code = excluded.code, data = excluded.data, updated_at = excluded.updated_at'
       ),
       allGroups: this.db.prepare('SELECT chat_id, code, data FROM groups'),
+      roomChats: this.db.prepare('SELECT DISTINCT chat_id FROM rooms'),
       delGroup: this.db.prepare('DELETE FROM groups WHERE chat_id = ?'),
       rekeyGroup: this.db.prepare('UPDATE groups SET chat_id = ? WHERE chat_id = ?'),
     };
@@ -319,6 +320,11 @@ export class Store {
   removeChat(chatId) {
     this.q.delChat.run(String(chatId));
     this.q.delGroup.run(String(chatId));
+  }
+
+  /** Чаты, где когда-либо были столы, — для рассылки по группам. */
+  roomChats() {
+    return this.q.roomChats.all().map((r) => String(r.chat_id));
   }
 
   /**
@@ -777,6 +783,9 @@ export class NullStore {
   }
   remove() {}
   removeChat() {}
+  roomChats() {
+    return [];
+  }
   migrate() {}
   saveGroup() {}
   loadGroups() {

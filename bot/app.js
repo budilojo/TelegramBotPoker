@@ -1279,24 +1279,33 @@ export class App {
       else if (status === 'member') this.setDm(id, 'ok');
       return;
     }
-    if (status === 'left' || status === 'kicked') {
-      const chatId = String(u.chat.id);
-      // СНАЧАЛА УБРАТЬ, ПОТОМ РАССКАЗАТЬ.
-      //
-      // Тем, кому мы расскажем, страница тут же задаёт следующий вопрос —
-      // «а что у меня осталось?» — и ответ она должна получить про уже
-      // убранное. Пока разборка шла вперемешку с рассказом, человека уводили
-      // к своим группам и показывали в списке ту самую группу, из которой
-      // его только что выгнали: нажми — и получишь отказ.
-      const codes = this.roomsOf(chatId).map((r) => r.code);
-      for (const code of codes) this.rooms.delete(code);
-      const group = this.groups.get(chatId);
-      this.groups.delete(chatId);
-      this.store.removeChat(chatId);
-      this.syncClocks();
-      for (const code of codes) this.hub?.forget(code);
-      if (group) this.hub?.forgetGroup(group.code);
+    // Бота добавили в группу — запомнить её сразу, даже если там ещё никто не
+    // играл: иначе рассылка в группы о ней не узнает (списка своих чатов
+    // Telegram боту не даёт).
+    if ((status === 'member' || status === 'administrator') && u.chat?.id != null) {
+      this.ensureGroup(String(u.chat.id), u.chat.title || '');
+      return;
     }
+    if (status === 'left' || status === 'kicked') return this.leftChat(String(u.chat.id));
+  }
+
+  /** Бота в группе больше нет: столы, хаб и запись группы — убрать. */
+  leftChat(chatId) {
+    // СНАЧАЛА УБРАТЬ, ПОТОМ РАССКАЗАТЬ.
+    //
+    // Тем, кому мы расскажем, страница тут же задаёт следующий вопрос —
+    // «а что у меня осталось?» — и ответ она должна получить про уже
+    // убранное. Пока разборка шла вперемешку с рассказом, человека уводили
+    // к своим группам и показывали в списке ту самую группу, из которой
+    // его только что выгнали: нажми — и получишь отказ.
+    const codes = this.roomsOf(chatId).map((r) => r.code);
+    for (const code of codes) this.rooms.delete(code);
+    const group = this.groups.get(chatId);
+    this.groups.delete(chatId);
+    this.store.removeChat(chatId);
+    this.syncClocks();
+    for (const code of codes) this.hub?.forget(code);
+    if (group) this.hub?.forgetGroup(group.code);
   }
 
   async migrate(oldId, newId) {
