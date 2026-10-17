@@ -415,6 +415,13 @@ function playOut(room) {
   C.move(vs, '106', { from: 'e2', to: 'e4' }, Date.now());
   C.move(vs, 'bot1', { from: 'e7', to: 'e5' }, Date.now());
   scene('34в-solo-chess-game', vs, 106);
+  // Покер с ботами: форма (уровень, число соперников, характеры) и стол.
+  scene('34д-solo-poker-form', null, 105, { start: 'solo', click: 'Покер' });
+  scene('34е-solo-poker-types', null, 105, { start: 'solo', click: 'Покер', press: ['Выбрать самому'] });
+  scene('34ж-solo-poker-type-pick', null, 105, { start: 'solo', click: 'Покер', press: ['Выбрать самому', 'Соперник 1'] });
+  const pk = await app.createSolo('poker', { id: 104, tgId: 104, name: 'Дима' }, { opponents: 5, level: 2 });
+  scene('34з-solo-poker-table', pk, 104);
+  scene('34и-solo-poker-menu', pk, 104, { click: 'Меню' });
 }
 
 app.syncClocks(); // turn deadlines, as the running bot would have them

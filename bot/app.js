@@ -1393,8 +1393,8 @@ export class App {
     const settings = g.bot.settings ? g.bot.settings(raw) : raw;
     const room = this.createGame(gameId, { chatId, title: '', host: user, settings });
     if (room.error) return room;
-    room.solo = { owner: String(user.id), seenAt: this.clock.now() };
-    const lineup = g.bot.lineup(raw);
+    room.solo = { owner: String(user.id), seenAt: this.clock.now(), raw: soloRaw(raw) };
+    const lineup = g.bot.lineup(raw, this.botRng);
     lineup.forEach((spec, i) => g.bot.seat(room, spec, i));
     let refused = null;
     await g.handle({
@@ -1439,7 +1439,8 @@ export class App {
     const key = `${w.id}:${w.key}`;
     if (room.botDue?.key !== key) {
       const p = room.players.find((x) => x.id === w.id);
-      room.botDue = { key, deadline: now + (g.bot.delay?.(room, p, w, this.botRng) ?? 900) };
+      const wait = Number(g.bot.delay?.(room, p, w, this.botRng));
+      room.botDue = { key, deadline: now + (Number.isFinite(wait) && wait >= 0 ? wait : 900) };
     }
     const code = room.code;
     return [{ id: 'bot', timer: { key, deadline: room.botDue.deadline }, fire: () => this.botAct(code, key) }];
@@ -1547,6 +1548,19 @@ export class App {
 }
 
 /* -------------------------------------------------------------- helpers */
+
+/**
+ * Настройки партии с ботами — для «Сыграть ещё». Хранится только то, что
+ * понимают формы игр, и только простые значения: тело сообщения от страницы
+ * не попадает в базу как есть.
+ */
+function soloRaw(raw = {}) {
+  const out = {};
+  for (const k of ['level', 'opponents', 'base', 'inc']) if (Number.isFinite(Number(raw[k]))) out[k] = Number(raw[k]);
+  for (const k of ['side', 'variant']) if (typeof raw[k] === 'string') out[k] = raw[k].slice(0, 16);
+  if (Array.isArray(raw.types)) out.types = raw.types.slice(0, 8).map((x) => (typeof x === 'string' ? x.slice(0, 16) : null));
+  return out;
+}
 
 const nameOf = (room, id) => room.players.find((p) => p.id === String(id))?.name ?? '—';
 

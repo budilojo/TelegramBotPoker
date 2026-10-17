@@ -224,6 +224,15 @@ export function initDataFor(u, { startParam = null, token = TEST_TOKEN, authDate
   return signInitData(fields, token);
 }
 
+/**
+ * Случайность для ботов в тестах: повторяемая дробь 0…1, как `Math.random`.
+ * (`seededRng` из deck.js отдаёт целые «от 0 до n» — это другой контракт.)
+ */
+export function botRandom(seed = 1) {
+  const r = seededRng(seed);
+  return () => r(2 ** 30) / 2 ** 30;
+}
+
 export class Table {
   /**
    * `runoutStepMs` is 0 by default: most tests want the showdown on screen

@@ -15,6 +15,7 @@ import { tableView } from '../../view.js';
 import { renderCard, renderResults, renderTurnPing } from '../../render.js';
 import { num } from '../../fmt.js';
 import { results as tally } from '../../../server/game.js';
+import bot from './bot.js';
 
 /** What the page may ask for at a poker table, and nothing else. */
 const ACTIONS = new Set([
@@ -55,7 +56,22 @@ export const ERRORS = {
   BAD_STEP: 'Сейчас этот шаг недоступен.',
   BAD_POT: 'Этот банк не требует решения.',
   BAD_REQUEST: 'Не понял запрос.',
+  SOLO_ONLY: 'В игре с ботами этого нет: здесь только ходы, пауза и завершение.',
 };
+
+/** За столом с ботами человек играет, а не правит стол: ни настроек, ни докупок, ни удалений. */
+const SOLO_ACTIONS = new Set(['start', 'act', 'next', 'pause', 'resume', 'finish']);
+
+/**
+ * Игра с ботами кончается, когда у человека кончились фишки: смотреть, как
+ * боты доигрывают между собой, незачем. Только между раздачами — карты
+ * текущей раздачи досматриваются до конца.
+ */
+function soloBust(room) {
+  if (!room.solo || room.status !== 'playing' || room.hand?.phase !== 'complete') return;
+  const me = room.players.find((p) => p.id === room.solo.owner);
+  if (me && me.stack <= 0 && !me.topUp) R.endGame(room, me.id);
+}
 
 /** Numbers the hub may pass when it creates a table. The room layer clamps them. */
 function settingsPatch(msg = {}) {
@@ -146,6 +162,7 @@ export default {
   minPlayers: 2,
   maxPlayers: R.MAX_SEATS,
   errors: ERRORS,
+  bot,
 
   create({ chatId, title, host, settings = null }) {
     const room = R.createRoom({ chatId, title, host });
@@ -249,6 +266,7 @@ export default {
    */
   async handle({ app, session, room, uid, msg, refuse, push }) {
     if (!ACTIONS.has(msg.t)) return refuse('BAD_REQUEST');
+    if (room.solo && !SOLO_ACTIONS.has(msg.t)) return refuse('SOLO_ONLY');
     const target = () => {
       const p = room.players[Number(msg.seat)];
       return Number.isInteger(Number(msg.seat)) && p ? p : null;
@@ -279,6 +297,7 @@ export default {
         const amount = msg.amount == null ? null : Number(msg.amount);
         const seq = Number.isInteger(msg.seq) ? msg.seq : undefined;
         if (fail(R.act(room, uid, action, amount, seq))) return push();
+        soloBust(room);
         return app.afterAction(room);
       }
 

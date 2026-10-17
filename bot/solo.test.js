@@ -15,7 +15,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Table, user, initDataFor } from './harness.js';
+import { Table, user, initDataFor, botRandom } from './harness.js';
 import { Store } from './store.js';
 import { seededRng } from './deck.js';
 import { SOLO_IDLE_MS } from './app.js';
@@ -53,7 +53,7 @@ test('экран игр с ботами: список игр, без групп 
 });
 
 test('шахматы против бота: партия сразу идёт, человек белыми, бот отвечает сам', async () => {
-  const t = new Table({ botRng: seededRng(3) });
+  const t = new Table({ botRng: botRandom(3) });
   const room = await chessVsBot(t);
   assert.ok(room.solo, 'одиночный стол');
   assert.equal(room.players.length, 2);
@@ -70,7 +70,7 @@ test('шахматы против бота: партия сразу идёт, ч
 });
 
 test('партия с ботами не трогает групп: ни карточки, ни лички, ни рейтинга', async () => {
-  const t = new Table({ store: new Store(':memory:'), botRng: seededRng(5) });
+  const t = new Table({ store: new Store(':memory:'), botRng: botRandom(5) });
   const room = await chessVsBot(t, { level: 0, side: 'white' });
   await t.send(IVAN, { t: 'move', from: 'f2', to: 'f3', ply: 0 });
   await botMoves(t, room, 2);
@@ -97,7 +97,7 @@ test('чужую партию с ботами по коду не открыть,
 });
 
 test('за бота не сходить: человек получает отказ, бот ходит сам', async () => {
-  const t = new Table({ botRng: seededRng(2) });
+  const t = new Table({ botRng: botRandom(2) });
   const room = await chessVsBot(t);
   await t.send(IVAN, { t: 'move', from: 'e2', to: 'e4', ply: 0 });
   // Сейчас ход бота (чёрные). Иван пытается сходить за него.
@@ -108,7 +108,7 @@ test('за бота не сходить: человек получает отк�
 });
 
 test('бот отвечает на просьбы: слабый разрешает откат', async () => {
-  const t = new Table({ botRng: seededRng(4) });
+  const t = new Table({ botRng: botRandom(4) });
   const room = await chessVsBot(t, { level: 0, side: 'white' });
   await t.send(IVAN, { t: 'move', from: 'e2', to: 'e4', ply: 0 });
   await botMoves(t, room, 2);
@@ -158,7 +158,7 @@ test('из лички: /bot присылает кнопку «Играть с б
 });
 
 test('обслуживание: бот не ходит, пока всё стоит, и доигрывает после', async () => {
-  const t = new Table({ admins: ['101'], botRng: seededRng(8) });
+  const t = new Table({ admins: ['101'], botRng: botRandom(8) });
   const room = await chessVsBot(t);
   await t.send(IVAN, { t: 'move', from: 'e2', to: 'e4', ply: 0 });
   t.app.setMaintenance(true, 'Пять минут');

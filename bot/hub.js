@@ -527,6 +527,12 @@ export class Hub {
     // «+ Новое лобби» прямо из лобби или с экрана партии: та же игра и настройки,
     // тот же хост — тот, кто нажал. Только со страницы, открытой из хаба группы,
     // и только для игры этой же группы.
+    // «Сыграть ещё» за столом с ботами: та же игра, те же соперники и уровень.
+    if (msg.t === 'again' && room.solo) {
+      const next = await app.createSolo(room.game, session.user, room.solo.raw || {});
+      if (next.error) return this.refuse(session, next.error);
+      return this.enterRoom(session, next);
+    }
     if (msg.t === 'again') {
       const group = session.group ? app.groupByCode(session.group) : null;
       if (!group || group.chatId !== room.chatId) return this.refuse(session, 'NOT_FROM_HUB');

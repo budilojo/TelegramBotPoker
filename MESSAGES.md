@@ -1705,3 +1705,19 @@
 | Текст сообщения «Поделиться» и кнопка «Сыграть со мной» | `bot/games/chess/render.js` — `shareText` |
 | Ошибки отката и шеринга | `bot/games/chess/index.js` — `ERRORS`; `bot/hub.js` — `CORE_ERRORS` (`NOT_SHAREABLE`, `TOO_FAST`…) |
 | Быстрые команды `/chess` `/durak` `/unoq` | `bot/app.js` — `QUICK_GAMES`, `quickLobby`; меню команд — `bot/index.js` — `GROUP_COMMANDS` |
+
+## 10. Игры с ботами
+
+Вход из лички бота: `/bot` (и `/chess`, `/durak`, `/unoq`, `/poker` в личке), кнопка «🤖 Играть с ботом» в `/start`. Партии с ботами не пишут в группы и не идут в рейтинг. Устройство — `docs/bots.md`.
+
+| Что | Где |
+|---|---|
+| Кнопка и ответ в личке («🤖 Не с кем играть? /bot…», «🤖 Играть с ботом») | `bot/app.js` — `HELP_DM`, `sendMyGames`, `sendSolo` |
+| Меню команд в личке (`/bot` — «играть с ботами») | `bot/index.js` — `PRIVATE_COMMANDS` |
+| Экран «Игры с ботами», подписи игр, форма (уровень, соперники, цвет, часы, вариант, характеры) | `miniapp/solo.js` — `render`, `BLURB`, `openForm`, `pickType` |
+| Кнопка «🤖 Играть с ботами» на экране «Мои группы» | `miniapp/hub.js` |
+| Подпись «← Игры с ботами» на кнопке назад | `bot/hub.js` — `push` (`state.hubLabel`) |
+| Уровни шахматного бота и подсказки к ним | `bot/games/chess/engine.js` — `LEVELS`; `bot/games/chess/bot.js` — `catalog` |
+| Покер: характеры ботов (имя в списке, имя за столом, описание) и уровни | `bot/games/poker/bot.js` — `TYPES` (`name`, `short`, `blurb`), `LEVELS`, `catalog.levelHints` |
+| Покер: отказ «В игре с ботами этого нет…» | `bot/games/poker/index.js` — `ERRORS.SOLO_ONLY` |
+| Покер: меню за столом с ботами, итоги («Сыграть ещё», «в рейтинг не идёт») | `miniapp/games/poker.js` — `openMenu`, `renderResults`, `confirmFinish` |

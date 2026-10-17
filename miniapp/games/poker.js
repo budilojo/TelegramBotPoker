@@ -790,8 +790,15 @@ function renderResults() {
       h('span.s.num', fmt(r.stack)),
       h(`span.pl.num.${r.net > 0 ? 'up' : r.net < 0 ? 'down' : ''}`, r.net > 0 ? `+${fmt(r.net)}` : r.net < 0 ? `−${fmt(-r.net)}` : '0'),
     ))),
-    h('div.hint', 'Итоги вечера бот отправил и в группу.'),
+    h('div.hint', state.solo ? 'Игра с ботами — тренировка: в рейтинг не идёт.' : 'Итоги вечера бот отправил и в группу.'),
   );
+  if (state.solo) {
+    // С ботами — сразу новая партия с теми же соперниками или назад к выбору.
+    $app.append(box, h('div.panel',
+      h('button.btn', { onclick: () => send({ t: 'hub' }, { lock: false }) }, state.hubLabel || '← Игры с ботами'),
+      h('button.btn.primary.lg', { onclick: () => { haptic.tap(); send({ t: 'again' }); } }, '▶ Сыграть ещё')));
+    return;
+  }
   $app.append(box, h('div.panel', h('button.btn.primary.wide.lg', { onclick: () => tg.close() }, 'Закрыть')));
 }
 
@@ -986,6 +993,14 @@ function openMenu() {
     const items = [];
     const item = (label, sub, onclick, cls = '') => items.push(h(`button.menu-item${cls ? '.' + cls : ''}`, { onclick }, label, sub ? h('small', sub) : null));
 
+    if (s.solo) {
+      // За столом с ботами человек играет, а не правит стол: только пауза и конец.
+      item(s.hubLabel || '← Игры с ботами', 'партию можно будет продолжить', () => { closeSheet(); send({ t: 'hub' }, { lock: false }); });
+      if (s.room.status === 'playing') item('Пауза', 'боты подождут', () => { closeSheet(); send({ t: 'pause' }); });
+      if (s.room.status === 'paused') item('Продолжить игру', null, () => { closeSheet(); send({ t: 'resume' }); });
+      if (s.room.status !== 'lobby' && s.room.status !== 'finished') item('Завершить игру', 'итоги — на экране', () => confirmFinish(), 'danger');
+      return h('div', h('h3', 'Меню'), h('div.sub', 'Игра с ботами'), h('div.menu-list', items));
+    }
     if (me.seated && !me.sittingOut && me.role === 'player' && s.room.status !== 'lobby') {
       item('Встать из-за стола', me.inHand && !me.folded ? 'ваши карты будут сброшены' : 'пропускать раздачи', () => { closeSheet(); send({ t: 'leave' }); });
     } else if (!me.kicked && me.role !== 'dealer' && (me.sittingOut || !me.seated)) {
@@ -1013,7 +1028,7 @@ function openMenu() {
 function confirmFinish() {
   showSheet('finish', () => h('div',
     h('h3', 'Завершить игру?'),
-    h('div.sub', 'Незаконченная раздача отменится, фишки вернутся владельцам. Итоги увидят все.'),
+    h('div.sub', state.solo ? 'Незаконченная раздача отменится, фишки вернутся владельцам.' : 'Незаконченная раздача отменится, фишки вернутся владельцам. Итоги увидят все.'),
     h('div.grid2',
       h('button.btn', { onclick: () => closeSheet() }, 'Отмена'),
       h('button.btn.danger', { onclick: () => { closeSheet(); send({ t: 'finish' }); } }, 'Завершить')),
