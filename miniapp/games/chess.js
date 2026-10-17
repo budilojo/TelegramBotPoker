@@ -36,7 +36,7 @@ let ownMove = null;
 /** На каком состоянии ход уже показан анимацией — перерисовка того же состояния не повторяет её. */
 let animatedSeq = null;
 /** Когда закончилось перетаскивание: клик, который за ним следует, — не тап. */
-let droppedAt = 0;
+let droppedAt = null;
 /**
  * Просмотр: сколько полуходов от начала показано на доске, или null — идёт
  * сама партия. Только показ: ходить по прошлой позиции нельзя, и страница ей
@@ -466,7 +466,7 @@ function dragCancel(e) {
 
 function tapSquare(name) {
   const s = state;
-  if (performance.now() - droppedAt < 350) return; // это хвост перетаскивания, а не тап
+  if (droppedAt !== null && performance.now() - droppedAt < 350) return; // это хвост перетаскивания, а не тап
   if (net.busy || viewPly !== null) return; // ответ на прошлый ход ещё не пришёл
   const L = s.legal;
   if (!L.myTurn) {

@@ -64,6 +64,15 @@ const sdkStub = (initData, { share = true } = {}) => `
   } };
   // Сколько раз страница двигала элемент анимацией (скольжение фигуры) — для проверок.
   window.__slides = [];
+  // Считаем отправленные ходы, включая те, которые сервер мог бы отклонить:
+  // проверка только записи партии не обнаружит лишний запрос после drag.
+  window.__moves = [];
+  const socketSend = WebSocket.prototype.send;
+  WebSocket.prototype.send = function (data) {
+    const msg = JSON.parse(data);
+    if (msg.t === 'move') window.__moves.push(msg);
+    return socketSend.call(this, data);
+  };
   const orig = Element.prototype.animate;
   Element.prototype.animate = function (frames, opts) {
     if (this.classList?.contains('ch-pc')) window.__slides.push(this.parentElement?.dataset.sq);
@@ -102,9 +111,28 @@ const center = async (page, name) => {
 const slides = (page) => page.evaluate(() => window.__slides.length);
 const settle = () => new Promise((r) => setTimeout(r, 120));
 
+/** Только монотонные часы ввода; часы партии и доставка состояния идут как обычно. */
+async function atInputTime(page, now, action) {
+  await page.evaluate((now) => {
+    window.__originalPerformanceNow = performance.now;
+    performance.now = () => now;
+  }, now);
+  try {
+    await action();
+  } finally {
+    await page.evaluate(() => {
+      performance.now = window.__originalPerformanceNow;
+      delete window.__originalPerformanceNow;
+    });
+  }
+}
+
 /* ------------------------------------------------ точки ходов при нажатии */
 
-await sq(pi, 'e2').click();
+await pi.waitForSelector('.ch-status.mine');
+// Даже если браузер поднимался дольше 350 мс, первый настоящий клик мышью
+// обязан работать при раннем времени. Никакого drag до него не было.
+await atInputTime(pi, 100, () => sq(pi, 'e2').click());
 assert.equal(await pi.locator('.ch-sq.dot').count(), 2, 'у пешки e2 две точки: e3 и e4');
 for (const name of ['e3', 'e4']) {
   const info = await sq(pi, name).evaluate((cell) => {
@@ -129,6 +157,7 @@ step('нажали на пешку e2: точки в центре e3 и e4, фи
 await sq(pi, 'e3').click(); // повторный тап по выбранной снимает, а по другой своей — переносит выбор
 await until(() => room.match.moves.length === 1, 'тап-тап: e2-e3');
 assert.equal(room.match.moves[0].san, 'e3');
+assert.equal(await pi.evaluate(() => window.__moves.length), 1, 'тап-тап отправил ровно один ход');
 await pm.waitForFunction(() => window.__slides.length >= 1);
 step('тап по точке — ход сделан; у Макса фигура проскользила на e3');
 
@@ -148,6 +177,7 @@ assert.equal(await pm.locator('.ch-sq.hover').count(), 1, 'над e5 клетк�
 await pm.mouse.up();
 await until(() => room.match.moves.length === 2, 'перетащили e7-e5');
 assert.equal(room.match.moves[1].san, 'e5');
+assert.equal(await pm.evaluate(() => window.__moves.length), 1, 'перетаскивание мышью отправило ровно один ход');
 await settle();
 assert.equal(await slides(pm), before, 'свой ход, положенный рукой, второй раз анимацией не едет');
 await pi.waitForFunction(() => window.__slides.length >= 1);
@@ -160,12 +190,25 @@ const far = await center(pi, 'd6');
 await pi.mouse.move(c1.x, c1.y);
 await pi.mouse.down();
 await pi.mouse.move(far.x, far.y, { steps: 5 });
-await pi.mouse.up();
+await atInputTime(pi, 1000, () => pi.mouse.up());
 await new Promise((r) => setTimeout(r, 300)); // возврат фигуры идёт 150 мс
 assert.equal(room.match.moves.length, 2, 'd2→d6 — не ход: позиция не изменилась');
 assert.equal(await pi.locator('.ch-sq.sel').count(), 1, 'выбор остался — можно тапнуть клетку');
 assert.equal(await pi.locator('.ch-pc.drag').count(), 0, 'фигура вернулась на место');
-await sq(pi, 'd2').click(); // тап по выбранной снимает выбор
+await atInputTime(pi, 1349, () => sq(pi, 'd2').click());
+assert.equal(await sq(pi, 'd2').evaluate(cell => cell.classList.contains('sel')), true,
+  '349 мс после настоящего drag: хвост клика не снимает выбор');
+await atInputTime(pi, 1350, () => sq(pi, 'd2').click());
+assert.equal(await pi.locator('.ch-sq.sel').count(), 0, 'через 350 мс обычный тап снимает выбор');
+await atInputTime(pi, 1351, () => sq(pi, 'd2').click());
+assert.equal(await sq(pi, 'd2').evaluate(cell => cell.classList.contains('sel')), true,
+  'тап без перетаскивания не начинает новое подавление');
+assert.ok(await pi.locator('.ch-sq.dot').count() > 0, 'после drag фигуру снова можно выбрать');
+await pi.screenshot({ path: path.join(ROOT, 'preview', 'e2e-chess-after-drag.png') });
+await atInputTime(pi, 1352, () => sq(pi, 'd2').click());
+assert.equal(await pi.locator('.ch-sq.sel').count(), 0);
+assert.equal(await pi.evaluate(() => window.__moves.length), 1, 'неверный drag и его клики не отправили ход');
+assert.equal(room.match.moves.length, 2, 'случайного двойного хода нет');
 step('перетащили d2 на d6: не ход — фигура вернулась, выбор остался');
 
 // Взятие перетаскиванием: d4, d5, dxe... — подготовим d4/e5.
@@ -190,10 +233,19 @@ step('Макс взял перетаскиванием: e5×d4');
 
 const pt = await openPage(ivan, room.code, { touch: true, share: false });
 await pt.waitForSelector('.ch-board');
+await pt.waitForSelector('.ch-status.mine');
 const cdp = await pt.context().newCDPSession(pt);
 const touch = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y, id: 1 }] });
 const g1 = await center(pt, 'g1');
 const f3 = await center(pt, 'f3');
+await atInputTime(pt, 100, () => pt.touchscreen.tap(g1.x, g1.y));
+assert.equal(await sq(pt, 'g1').evaluate(cell => cell.classList.contains('sel')), true,
+  'первый ранний touch-тап выбирает коня');
+assert.ok(await pt.locator('.ch-sq.dot').count() > 0);
+await pt.screenshot({ path: path.join(ROOT, 'preview', 'e2e-chess-touch-tap.png') });
+await atInputTime(pt, 101, () => pt.touchscreen.tap(g1.x, g1.y));
+assert.equal(await pt.locator('.ch-sq.sel').count(), 0, 'touch-тап без движения не включает подавление');
+assert.equal(await pt.evaluate(() => window.__moves.length), 0, 'выбор коня не отправляет ход');
 await touch('touchStart', g1.x, g1.y);
 // Палец ведёт фигуру; она чуть выше пальца, поэтому целимся ниже клетки-цели.
 await touch('touchMove', (g1.x + f3.x) / 2, (g1.y + f3.y) / 2 + f3.h * 0.55);
@@ -203,6 +255,7 @@ assert.equal(await pt.evaluate(() => scrollY), 0, 'страница не про�
 await touch('touchEnd');
 await until(() => room.match.moves.length === 5, 'Nf3 пальцем');
 assert.equal(room.match.moves[4].san, 'Nf3');
+assert.equal(await pt.evaluate(() => window.__moves.length), 1, 'touch-drag отправил ровно один ход');
 step('пальцем: конь g1→f3 — фигура идёт чуть выше пальца, страница не едет');
 
 /* ---------------------- просмотр истории: что сыграл соперник, и откат */
@@ -249,6 +302,10 @@ assert.equal(await pi.locator('.sheet').count(), 0, 'у самого прося�
 assert.equal(await pi.locator('.sheet button:has-text("Разрешить")').count(), 0, 'своей просьбе Иван ничего не разрешает');
 // КД: у просящего кнопка выключена и показывает секунды.
 const cd = pi.locator('button[data-cd="takeback"]');
+await pi.waitForFunction(() => {
+  const b = document.querySelector('button[data-cd="takeback"]');
+  return b?.disabled && /^Откат · \d+$/.test(b.textContent);
+}, null, { timeout: 4000 });
 assert.equal(await cd.isDisabled(), true, 'кнопка «Откат» на КД');
 assert.match(await cd.innerText(), /^Откат · \d+$/, 'на ней — сколько ждать');
 step('откат: у Макса всплыло окно «Вернуть ход?» с ходом Nf3; у Ивана кнопка «Откат · N» на КД');
