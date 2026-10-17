@@ -6,10 +6,11 @@
  *   столе; ни одной карты из чужих рук.
  *
  *   «UNOQ!» И «ПОЙМАЛ!» — ПО ПРАВИЛАМ. Бот кричит за себя, ловит другого и
- *   только в срок. Профи кричит сразу — человек его не поймает; новичок
+ *   только в срок. Сильный кричит сразу — человек его не поймает; новичок
  *   медлит — поймать можно. Человек, промолчавший с одной картой, будет пойман.
  *
- *   УРОВНИ ЗНАЧАТ. Профи против новичка проигрывает заметно реже.
+ *   УРОВНИ ЗНАЧАТ. Их два — «Новичок» и «Сильный», — и сильный проигрывает
+ *   заметно реже. Промежуточных нет: в UNOQ они не отличались.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -67,21 +68,23 @@ function spyOnBots() {
 
 const CARD = /"([RYGB][0-9SVP]|WC|WF)"/g;
 
-test('выбор: 4 уровня с подсказками, до семи соперников', () => {
+test('выбор: два уровня с подсказками, до семи соперников', () => {
   const cat = colorsBot.catalog();
   assert.deepEqual(cat.levels, LEVELS.map((l) => l.name));
-  assert.equal(cat.levelHints.length, 4);
+  assert.deepEqual(cat.levels, ['Новичок', 'Сильный']);
+  assert.equal(cat.levelHints.length, 2);
+  assert.equal(cat.defaultLevel, 0);
   assert.equal(cat.maxOpponents, 7);
   assert.equal(colorsBot.lineup({ opponents: 20 }).length, 7);
   assert.equal(colorsBot.lineup({ opponents: 0 }).length, 1);
-  assert.ok(colorsBot.lineup({ opponents: 2, level: 7 }).every((x) => x.level === 3));
+  assert.ok(colorsBot.lineup({ opponents: 2, level: 7 }).every((x) => x.level === 1), 'старый номер уровня (до 3) — это «Сильный»');
 });
 
 test('UNOQ с ботами: серия идёт, боты решают по своей руке и открытому столу', async () => {
   const t = new Table({ botRng: botRandom(4), colorsDeck: colorsDecks(4), colorsRand: colorsRandom(4) });
   const spy = spyOnBots();
   try {
-    const room = await colorsVsBots(t, { opponents: 3, level: 2 });
+    const room = await colorsVsBots(t, { opponents: 3, level: 1 });
     assert.ok(room.solo);
     assert.equal(room.players.filter((p) => p.bot).length, 3);
     assert.equal(room.status, 'playing');
@@ -103,9 +106,9 @@ test('UNOQ с ботами: серия идёт, боты решают по св
   }
 });
 
-test('человек промолчал с одной картой — бот его ловит; профи кричит сразу, и его не поймать', async () => {
+test('человек промолчал с одной картой — бот его ловит; сильный кричит сразу, и его не поймать', async () => {
   const t = new Table({ botRng: botRandom(9), colorsDeck: colorsDecks(9), colorsRand: colorsRandom(9) });
-  const room = await colorsVsBots(t, { opponents: 2, level: 3 });
+  const room = await colorsVsBots(t, { opponents: 2, level: 1 });
   // Играем, не нажимая «UNOQ!», пока бот не поймает.
   let caught = false;
   for (let i = 0; i < 3000 && !caught; i++) {
@@ -119,7 +122,7 @@ test('человек промолчал с одной картой — бот е
   }
   assert.ok(caught, 'промолчавшего человека поймали');
 
-  // Профи с одной картой кричит раньше, чем человек успевает поймать.
+  // Сильный с одной картой кричит раньше, чем человек успевает поймать.
   const calls = [];
   for (let i = 0; i < 3000 && calls.length < 3; i++) {
     const d = room.deal;
@@ -128,7 +131,7 @@ test('человек промолчал с одной картой — бот е
       calls.push(c.at);
       await t.advance(1_000); // человек тянется к кнопке через секунду
       await t.send(IVAN, { t: 'catch' });
-      assert.equal(t.lastError(IVAN).code, 'NOTHING_TO_CATCH', 'профи уже крикнул');
+      assert.equal(t.lastError(IVAN).code, 'NOTHING_TO_CATCH', 'сильный уже крикнул');
     }
     const s = t.state(IVAN);
     const m = simple(s);
@@ -136,7 +139,7 @@ test('человек промолчал с одной картой — бот е
     else if (s.canNext) await t.send(IVAN, { t: 'next' });
     else await t.advance(300);
   }
-  assert.equal(calls.length, 3, 'профи трижды оставался с одной картой');
+  assert.equal(calls.length, 3, 'сильный трижды оставался с одной картой');
 });
 
 test('новичок медлит с «UNOQ!» — человек успевает поймать', async () => {
@@ -190,7 +193,7 @@ function duel(levels, seed) {
   let now = 1_000_000;
   for (let i = 0; i < 3000 && room.deal.phase === 'play'; i++) {
     now += 1000;
-    // Крик: профи кричит всегда, новичок забывает; поймать — по тем же правилам.
+    // Крик: сильный кричит всегда, новичок забывает; поймать — по тем же правилам.
     const c = room.deal.call;
     if (c && !c.called) {
       const L = LEVELS[spec[c.id].level];
@@ -209,14 +212,14 @@ function duel(levels, seed) {
   return room.deal.loser;
 }
 
-test('уровни значат: профи против новичка остаётся последним заметно реже', () => {
+test('уровни значат: сильный против новичка остаётся последним заметно реже', () => {
   let pro = 0;
   let novice = 0;
   for (let seed = 1; seed <= 200; seed++) {
     const proIs = seed % 2 ? 'a' : 'b';
-    const loser = duel(proIs === 'a' ? { a: 3, b: 0 } : { a: 0, b: 3 }, seed);
+    const loser = duel(proIs === 'a' ? { a: 1, b: 0 } : { a: 0, b: 1 }, seed);
     if (loser === proIs) pro++;
     else if (loser) novice++;
   }
-  assert.ok(novice > pro * 1.2, `последним: новичок ${novice}, профи ${pro}`);
+  assert.ok(novice > pro * 2, `последним: новичок ${novice}, сильный ${pro}`);
 });

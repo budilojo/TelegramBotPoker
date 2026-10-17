@@ -431,7 +431,7 @@ function playOut(room) {
   scene('35в-solo-durak-menu', dk, 103, { click: 'Меню' });
   // UNOQ с ботами: форма и стол.
   scene('36-solo-unoq-form', null, 105, { start: 'solo', click: 'UNOQ' });
-  const uq = await app.createSolo('colors', { id: 102, tgId: 102, name: 'Артём' }, { opponents: 4, level: 3 });
+  const uq = await app.createSolo('colors', { id: 102, tgId: 102, name: 'Артём' }, { opponents: 4, level: 1 });
   scene('36б-solo-unoq-table', uq, 102);
   scene('36в-solo-unoq-menu', uq, 102, { click: 'Меню' });
 }
