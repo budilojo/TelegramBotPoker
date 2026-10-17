@@ -263,3 +263,25 @@ body[data-screen='poker'] .gain {
 
 /* «не показал» — сноска, а не результат: вторичным текстом и без нажима. */
 body[data-screen='poker'] .plate.muck { color: var(--k-text-2); background: transparent; border-color: transparent; }
+
+/* -------------------------------------------------- наставник (школа) */
+
+/* Подсказка — плоская плашка между столом и рукой, не поверх сукна. */
+.coach {
+  flex: none;
+  margin: 0 var(--k-s12) var(--k-s8);
+  padding: var(--k-s8) var(--k-s12);
+  border: 1px solid var(--k-divider);
+  border-radius: var(--k-r-lg);
+  background: var(--k-surface);
+  font-size: var(--k-fs-secondary);
+  line-height: var(--k-lh-secondary);
+  color: var(--k-text);
+}
+.coach .coach-head { display: flex; justify-content: space-between; gap: var(--k-s8); color: var(--k-text-2); font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); margin-bottom: var(--k-s4); }
+.coach .coach-more { padding: 0; border: 0; background: none; color: var(--k-text); font: inherit; text-decoration: underline; cursor: pointer; min-height: 0; }
+.coach .coach-advice { margin-top: var(--k-s4); font-weight: var(--k-w-semibold); }
+.coach.ok { border-color: var(--k-green); }
+.coach.no { border-color: var(--color-danger); }
+/* Кнопка, которую советует наставник, — с зелёным контуром: это смысл, а не украшение. */
+body[data-screen='poker'] .panel .btn.advised { outline: 2px solid var(--k-green); outline-offset: 2px; }

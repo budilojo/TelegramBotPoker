@@ -17,6 +17,7 @@ import {
   flyChips, muck, celebrate, edgeGlow, toast, ringSvg, showSheet, closeSheet, refreshSheet, currentSheet,
 } from '../ui.js';
 import { net, bus, send, serverNow } from '../net.js';
+import { markDone } from '../school.js';
 
 let state = null;
 let prev = null;
@@ -416,8 +417,58 @@ function renderTable() {
     others.map((p) => seatEl(p, s)),
   );
 
-  $app.append(top, table, heroEl(s), panelEl(s));
+  $app.append(top, table, coachEl(s), heroEl(s), panelEl(s));
   layoutTable();
+}
+
+/* ------------------------------------------------------ школа: наставник */
+
+/** Первое предложение — на плашке, остальное — по «Подробнее». */
+const firstSentence = (t) => {
+  const m = /^(.+?[.!?])(\s|$)/.exec(t);
+  return m ? m[1] : t;
+};
+
+function coachEl(s) {
+  const L = s.learn;
+  if (!L) return null;
+  const head = h('div.coach-head',
+    h('span', L.lesson < L.total ? `🎓 Урок ${L.lesson + 1} из ${L.total} · ${L.title}` : `🎓 ${L.title}`));
+  const hd = s.hand;
+  if (L.result && hd?.phase === 'complete' && !hd.revealing) {
+    if (L.result.ok) markDone(L.result.lesson);
+    return h(`div.coach.${L.result.ok ? 'ok' : 'no'}`, head,
+      h('div', `${L.result.ok ? '✓ Урок пройден.' : '✗ Пока не вышло.'} ${L.result.text}`));
+  }
+  if (L.tip) {
+    const short = firstSentence(L.tip.text);
+    return h('div.coach', head,
+      h('div', short, short.length < L.tip.text.length
+        ? [' ', h('button.coach-more', { type: 'button', onclick: () => openCoach(L) }, 'Подробнее')] : null),
+      L.tip.label ? h('div.coach-advice', `Совет: ${L.tip.label}`) : null);
+  }
+  return h('div.coach', head, h('div', L.goal));
+}
+
+function openCoach(L) {
+  haptic.soft();
+  showSheet('coach', () => h('div',
+    h('h3', `🎓 ${L.title}`),
+    h('p', { style: { lineHeight: 'var(--k-lh-body)' } }, state.learn?.tip?.text || L.tip.text),
+    state.learn?.tip?.label ? h('p', h('b', `Совет: ${state.learn.tip.label}`)) : null,
+    h('button.btn.primary.wide.lg', { type: 'button', style: { width: '100%' }, onclick: () => closeSheet() }, 'Понятно')));
+}
+
+/** После урока: «Дальше» и «Ещё раз» вместо обычной следующей раздачи. */
+function learnButtons(s, panel) {
+  const L = s.learn;
+  const next = () => { haptic.tap(); send({ t: 'learn', step: 'next' }); };
+  const retry = () => { haptic.tap(); send({ t: 'learn', step: 'retry' }); };
+  const nextLabel = L.lesson + 1 < L.total ? 'Дальше →' : 'К свободной игре →';
+  if (L.result.ok) panel.append(h('button.btn', { onclick: retry }, 'Ещё раз'), h('button.btn.primary.lg', { onclick: next }, nextLabel));
+  else panel.append(h('button.btn', { onclick: next }, 'Пропустить'), h('button.btn.primary.lg', { onclick: retry }, 'Ещё раз'));
+  if (net.busy) panel.classList.add('busy');
+  return panel;
 }
 
 /* ---------------------------------------------------------- table layout */
@@ -734,13 +785,16 @@ function panelEl(s) {
 
   if (hd?.phase === 'betting') {
     if (L) {
-      if (L.toCall > 0) panel.append(h('button.btn.danger', { onclick: () => act('fold') }, 'Сбросить'));
-      if (L.canCheck) panel.append(h('button.btn.primary', { onclick: () => act('check') }, 'Чек'));
+      // Школа: кнопку, которую советует наставник, видно сразу.
+      const advice = s.learn?.tip?.advice;
+      const adv = (kinds) => (advice && kinds.includes(advice) ? '.advised' : '');
+      if (L.toCall > 0) panel.append(h(`button.btn.danger${adv(['fold'])}`, { onclick: () => act('fold') }, 'Сбросить'));
+      if (L.canCheck) panel.append(h(`button.btn.primary${adv(['check'])}`, { onclick: () => act('check') }, 'Чек'));
       else if (L.canCall) {
-        panel.append(h('button.btn.primary', { onclick: () => act('call') },
+        panel.append(h(`button.btn.primary${adv(['call'])}`, { onclick: () => act('call') },
           `Уравнять ${fmt(L.callAmount)}`, L.isCallAllIn ? h('small', 'это весь стек') : null));
       }
-      if (L.canBet || L.canRaise) panel.append(h('button.btn.gold', { onclick: openRaise }, L.canBet ? 'Ставка' : 'Повысить'));
+      if (L.canBet || L.canRaise) panel.append(h(`button.btn.gold${adv(['bet', 'raise'])}`, { onclick: openRaise }, L.canBet ? 'Ставка' : 'Повысить'));
       [...panel.children].forEach((b, i) => animateOnce(b, `btn:${turnId}:${i}`,
         [{ transform: 'translateY(18px) scale(0.92)', opacity: 0, offset: 0 }], { duration: 380, delay: 60 + i * 60 }));
       if (net.busy) panel.classList.add('busy');
@@ -766,6 +820,7 @@ function panelEl(s) {
         `finale:${hd.no}`, [{ transform: 'translateY(18px)', opacity: 0, offset: 0 }], { duration: 420, delay: (planFor(s)?.pay ?? 0) + 900 }));
       return panel;
     }
+    if (s.learn?.result) return learnButtons(s, panel);
     if (s.canNext) {
       panel.append(animateOnce(h('button.btn.primary.wide.lg', { onclick: () => { haptic.tap(); send({ t: 'next' }); } },
         'Следующая раздача', s.autoNextAt ? h('small', { 'data-count': s.autoNextAt, 'data-prefix': 'сама через ' }) : null),

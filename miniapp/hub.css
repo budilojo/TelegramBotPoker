@@ -411,3 +411,46 @@
 /* Уровни — слова, а не цифры: по три в ряд, а не пять сплющенных. */
 .seg.wide button { min-width: 96px; }
 .solo .solo-resume { margin-bottom: var(--k-s8); }
+
+/* ------------------------------------------------------- школа покера */
+
+.hub .gc-icon.g-school-icon {
+  display: grid;
+  place-items: center;
+  font-size: var(--k-fs-section);
+  background: var(--table-felt);
+}
+.abc h3 { margin-bottom: var(--k-s8); }
+.abc-p { margin: var(--k-s8) 0; color: var(--k-text-2); font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); }
+.abc-list { margin: 0 0 var(--k-s8); padding-left: var(--k-s24); color: var(--k-text-2); font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); }
+.abc-list li { margin-bottom: var(--k-s4); }
+.abc-list b { color: var(--k-text); font-weight: var(--k-w-semibold); }
+/* Карты азбуки — игровой арт, мелко и в ряд: видно комбинацию целиком. */
+.abc-cards { display: flex; gap: var(--k-s4); flex-wrap: nowrap; }
+.abc-cards img.card { width: 44px; height: auto; border-radius: var(--k-r-sm); }
+.abc-combos { display: flex; flex-direction: column; gap: var(--k-s8); }
+.abc-combo { display: flex; align-items: center; justify-content: space-between; gap: var(--k-s8); }
+.abc-combo .abc-name { min-width: 0; font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); }
+.abc-combo .abc-name b { display: block; font-weight: var(--k-w-semibold); }
+.abc-combo .abc-name small { display: block; color: var(--k-text-2); font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); }
+.abc-combo .abc-cards img.card { width: 30px; }
+.abc-nav { margin-top: var(--k-s16); }
+.abc-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--k-s8);
+  width: 100%;
+  min-height: var(--k-tap);
+  margin-bottom: var(--k-s8);
+  padding: var(--k-s8) var(--k-s12);
+  border: 1px solid var(--k-divider);
+  border-radius: var(--k-r-lg);
+  background: var(--k-surface);
+  color: var(--k-text);
+  font: var(--k-w-semibold) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font);
+}
+.abc-option .abc-cards img.card { width: 36px; }
+.abc-option.right { border-color: var(--k-green); }
+.abc-option.wrong { border-color: var(--color-danger); }
+.abc-option:disabled { opacity: 1; }

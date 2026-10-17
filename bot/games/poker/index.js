@@ -15,12 +15,13 @@ import { tableView } from '../../view.js';
 import { renderCard, renderResults, renderTurnPing } from '../../render.js';
 import { num } from '../../fmt.js';
 import { results as tally } from '../../../server/game.js';
-import bot from './bot.js';
+import pokerBot, { decidePoker } from './bot.js';
+import * as S from './school.js';
 
 /** What the page may ask for at a poker table, and nothing else. */
 const ACTIONS = new Set([
   'sit', 'leave', 'start', 'act', 'next', 'settings', 'role', 'kick', 'rebuy', 'host',
-  'pause', 'resume', 'undo', 'finish', 'pick', 'potNext', 'potBack', 'confirm',
+  'pause', 'resume', 'undo', 'finish', 'pick', 'potNext', 'potBack', 'confirm', 'learn',
 ]);
 
 /** Error codes in words a person can act on. Kept short: they show as a toast. */
@@ -60,7 +61,51 @@ export const ERRORS = {
 };
 
 /** За столом с ботами человек играет, а не правит стол: ни настроек, ни докупок, ни удалений. */
-const SOLO_ACTIONS = new Set(['start', 'act', 'next', 'pause', 'resume', 'finish']);
+const SOLO_ACTIONS = new Set(['start', 'act', 'next', 'pause', 'resume', 'finish', 'learn']);
+
+/**
+ * Боты покера и «Школа покера». В школе за столом один соперник —
+ * наставник: в уроках он ходит по сценарию урока (сценарий не смотрит в
+ * карты человека), в свободной игре — как спокойный крепкий игрок.
+ */
+const bot = {
+  ...pokerBot,
+  catalog: () => ({ ...pokerBot.catalog(), school: S.LESSONS.map((l) => ({ title: l.title, goal: l.goal })) }),
+  /** Как назвать партию на экране «Игры с ботами» (кнопка «Продолжить»). */
+  label: (room) => (room.learn ? 'Школа покера' : null),
+  lineup: (raw = {}, rng) => (raw.learn ? [{ type: 'coach', level: 1 }] : pokerBot.lineup(raw, rng)),
+  seat(room, spec, i) {
+    if (spec.type !== 'coach') return pokerBot.seat(room, spec, i);
+    const p = R.addPlayer(room, { id: S.COACH_ID, tgId: 0, name: S.COACH_NAME, dm: null });
+    if (!p.error) p.bot = { ...spec };
+    return p;
+  },
+  /** Школа: запомнить урок до первой раздачи — её карты подстроены под урок. */
+  prepare(room, raw = {}) {
+    if (!raw.learn) return;
+    const n = Math.round(Number(raw.lesson));
+    room.learn = { lesson: Number.isFinite(n) ? Math.max(0, Math.min(S.FREE, n)) : 0, acts: [], result: null, judged: null, stackAt: room.settings.startingStack };
+  },
+  decide(args) {
+    if (args.room.learn) return S.coachMove(args.room, args.view) || decidePoker(args.view, { type: 'tag', level: 1 }, args.rng);
+    return pokerBot.decide(args);
+  },
+};
+
+/**
+ * Следующий урок (или тот же ещё раз): у обоих снова полный стек, карты —
+ * под урок. Только между раздачами.
+ */
+function dealLesson(app, room, uid, lesson) {
+  if (room.hand && room.hand.phase !== 'complete') return { error: 'HAND_IN_PROGRESS' };
+  room.learn.lesson = Math.max(0, Math.min(S.FREE, lesson));
+  room.learn.acts = [];
+  room.learn.result = null;
+  if (room.status === 'paused') room.status = 'playing';
+  for (const p of room.players) p.stack = room.settings.startingStack;
+  room.learn.stackAt = room.settings.startingStack;
+  return R.nextHand(room, uid, app.dealOpts(room));
+}
 
 /**
  * Игра с ботами кончается, когда у человека кончились фишки: смотреть, как
@@ -185,7 +230,18 @@ export default {
   },
 
   view(room, viewerId, ctx) {
-    return { game: 'poker', ...tableView(room, viewerId, ctx) };
+    const v = { game: 'poker', ...tableView(room, viewerId, ctx) };
+    if (room.learn && String(viewerId) === room.solo?.owner) {
+      v.learn = S.learnView(room, v);
+      if (S.lessonOf(room)) v.canNext = false; // после урока — «Дальше» или «Ещё раз», а не просто раздача
+    }
+    return v;
+  },
+
+  /** Карты урока подстроены; в свободной игре и за обычным столом — как всегда. */
+  dealOpts(room) {
+    if (!room.learn || !S.lessonOf(room)) return null;
+    return { deck: () => S.lessonDeck(room, room.solo.owner) };
   },
 
   card: (room, opts) => renderCard(room, opts),
@@ -297,11 +353,31 @@ export default {
         const amount = msg.amount == null ? null : Number(msg.amount);
         const seq = Number.isInteger(msg.seq) ? msg.seq : undefined;
         if (fail(R.act(room, uid, action, amount, seq))) return push();
+        if (room.learn) {
+          S.noteAct(room, uid, action);
+          S.judge(room);
+        }
         soloBust(room);
         return app.afterAction(room);
       }
 
+      // Школа: «Ещё раз», «Дальше» или урок по номеру.
+      case 'learn': {
+        if (!room.learn) return refuse('BAD_REQUEST');
+        const cur = room.learn.lesson;
+        const lesson = msg.step === 'next' ? cur + 1 : msg.step === 'retry' ? cur : Math.round(Number(msg.lesson));
+        if (!Number.isFinite(lesson)) return refuse('BAD_REQUEST');
+        const r = dealLesson(app, room, uid, lesson);
+        if (fail(r)) return;
+        return app.afterDeal(room, r);
+      }
+
       case 'next': {
+        if (room.learn) {
+          // После урока — «Дальше» или «Ещё раз» (learn); просто раздача — в свободной игре.
+          if (S.lessonOf(room)) return refuse('BAD_REQUEST');
+          room.learn.acts = [];
+        }
         const r = R.nextHand(room, uid, app.dealOpts(room));
         if (fail(r)) return;
         return app.afterDeal(room, r);

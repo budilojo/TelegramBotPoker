@@ -1727,3 +1727,8 @@
 | UNOQ: уровни ботов и подсказки, имена ботов («🤖 Вася») | `bot/games/colors/bot.js` — `LEVELS`, `catalog.levelHints`, `NAMES` |
 | UNOQ: отказ «В игре с ботами этого нет…» | `bot/games/colors/index.js` — `ERRORS.SOLO_ONLY` |
 | UNOQ: меню за столом с ботами, итоги («Сыграть ещё») | `miniapp/games/colors.js` — `openMenu`, `renderResults`, `confirmFinish` |
+| Школа покера: уроки (название, цель, подсказки по улицам, итог «получилось / нет»), имя «Наставник» | `bot/games/poker/school.js` — `LESSONS` (`title`, `goal`, `tips`, `tipsFree`, `check`), `COACH_NAME` |
+| Школа покера: живая подсказка свободной игры («Шанс выиграть…», «колл в плюс/минус»), подписи советов | `bot/games/poker/school.js` — `liveTip`, `ACTION_RU` |
+| Школа покера: список уроков, азбука, комбинации, тест «Что сильнее?» | `miniapp/school.js` — `openSchool`, `STEPS`, `COMBOS`, `QUIZ` |
+| Школа покера: карточка на экране «Игры с ботами», «Продолжить: Школа покера» | `miniapp/solo.js` — `schoolCard`; `bot/games/poker/index.js` — `bot.label` |
+| Школа покера: плашка наставника за столом, «Подробнее», «Ещё раз» / «Дальше →» / «Пропустить» | `miniapp/games/poker.js` — `coachEl`, `openCoach`, `learnButtons` |

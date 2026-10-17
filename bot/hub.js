@@ -358,7 +358,7 @@ export class Hub {
       bot: this.app.botUsername,
       me: { name: session.user.name },
       games: GAME_LIST.filter((g) => g.bot).map((g) => ({ id: g.id, title: g.title, icon: g.icon, blurb: g.blurb, catalog: g.bot.catalog?.() ?? {} })),
-      resume: live ? { code: live.code, game: live.game, title: gameOf(live).title, icon: gameOf(live).icon } : null,
+      resume: live ? { code: live.code, game: live.game, title: gameOf(live).bot?.label?.(live) || gameOf(live).title, icon: gameOf(live).icon } : null,
       groups: this.app.groupsOf(session.user.id).length,
     } });
   }

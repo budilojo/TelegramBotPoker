@@ -581,6 +581,9 @@ export class App {
 
   /** `{ deck }` for the room layer: stacked in tests, shuffled otherwise. */
   dealOpts(room) {
+    // Своя колода у игры (уроки школы покера) — важнее общей.
+    const own = gameOf(room).dealOpts?.(room);
+    if (own) return own;
     // Жребий цвета в шахматах: в тестах подставляется, в игре — настоящий.
     if (room.game === 'chess') return this.chessRand ? { rand: this.chessRand } : {};
     if (room.game === 'durak') return this.durakDeck ? { deck: () => this.durakDeck(room) } : {};
@@ -1394,6 +1397,7 @@ export class App {
     const room = this.createGame(gameId, { chatId, title: '', host: user, settings });
     if (room.error) return room;
     room.solo = { owner: String(user.id), seenAt: this.clock.now(), raw: soloRaw(raw) };
+    g.bot.prepare?.(room, raw);
     const lineup = g.bot.lineup(raw, this.botRng);
     lineup.forEach((spec, i) => g.bot.seat(room, spec, i));
     let refused = null;
@@ -1562,6 +1566,8 @@ function soloRaw(raw = {}) {
   const out = {};
   for (const k of ['level', 'opponents', 'base', 'inc']) if (Number.isFinite(Number(raw[k]))) out[k] = Number(raw[k]);
   for (const k of ['side', 'variant']) if (typeof raw[k] === 'string') out[k] = raw[k].slice(0, 16);
+  if (raw.learn === true) out.learn = true;
+  if (Number.isFinite(Number(raw.lesson))) out.lesson = Number(raw.lesson);
   if (Array.isArray(raw.types)) out.types = raw.types.slice(0, 8).map((x) => (typeof x === 'string' ? x.slice(0, 16) : null));
   return out;
 }

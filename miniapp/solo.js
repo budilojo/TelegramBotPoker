@@ -13,6 +13,7 @@ import { iconCards as pokerIcon } from './games/poker.js';
 import { iconCards as durakIcon } from './games/durak.js';
 import { iconCards as colorsIcon } from './games/colors.js';
 import { iconCards as chessIcon } from './games/chess.js';
+import { openSchool } from './school.js';
 
 let state = null;
 
@@ -51,10 +52,23 @@ export function render() {
         h('div.gc-title', g.title),
         h('div.gc-blurb', BLURB[g.id] || g.blurb)),
       h('span.gc-go', '›')))),
+    schoolCard(s),
     s.groups
       ? null
       : h('div.hint', 'Играть с друзьями — в группе: добавьте бота в группу и напишите там /game.'),
   ));
+}
+
+/** «Школа покера» — отдельной карточкой: это не партия, а обучение. */
+function schoolCard(s) {
+  const lessons = s.games.find((g) => g.id === 'poker')?.catalog?.school;
+  if (!lessons?.length) return null;
+  return h('button.game-card.g-school', { onclick: () => openSchool(lessons) },
+    h('div.gc-icon.g-school-icon', '🎓'),
+    h('div.gc-body',
+      h('div.gc-title', 'Школа покера'),
+      h('div.gc-blurb', 'Азбука и уроки с наставником — с нуля до первой игры')),
+    h('span.gc-go', '›'));
 }
 
 /* ----------------------------------------------------------- форма игры */

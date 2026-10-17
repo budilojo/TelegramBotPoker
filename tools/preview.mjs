@@ -29,6 +29,8 @@ import * as C from '../bot/games/chess/rules.js';
 import { fromFen } from '../bot/games/chess/board.js';
 import { durakStack } from '../bot/harness.js';
 import { legalActions } from '../server/game.js';
+import { GAMES } from '../bot/games/index.js';
+import * as SCHOOL from '../bot/games/poker/school.js';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SIZE_TAG = process.env.PREVIEW_W || process.env.PREVIEW_H
@@ -432,6 +434,35 @@ function playOut(room) {
   const uq = await app.createSolo('colors', { id: 102, tgId: 102, name: 'Артём' }, { opponents: 4, level: 3 });
   scene('36б-solo-unoq-table', uq, 102);
   scene('36в-solo-unoq-menu', uq, 102, { click: 'Меню' });
+}
+
+// 28. Школа покера: список уроков, азбука, тест, урок с подсказкой и итог урока.
+{
+  scene('37-school-list', null, 105, { start: 'solo', click: 'Школа покера' });
+  scene('37б-school-abc-flow', null, 105, { start: 'solo', click: 'Школа покера', press: ['Азбука покера', 'Дальше →'] });
+  scene('37в-school-abc-combos', null, 105, { start: 'solo', click: 'Школа покера', press: ['Азбука покера', 'Дальше →', 'Дальше →', 'Дальше →'] });
+  scene('37г-school-quiz', null, 105, { start: 'solo', click: 'Школа покера', press: ['Азбука покера', 'Дальше →', 'Дальше →', 'Дальше →', 'Проверить себя →', 'Флеш'] });
+
+  /** Довести раздачу урока: человек — по `human`, наставник — по сценарию. */
+  const drive = async (room, human, until) => {
+    const g = GAMES.poker;
+    for (let i = 0; i < 30 && !until(room); i++) {
+      const uid = room.hand.actorId;
+      if (!uid) break;
+      const view = g.view(room, uid, { now: Date.now() });
+      const msg = uid === room.solo.owner ? { t: 'act', ...human(view), seq: view.seq } : SCHOOL.coachMove(room, view);
+      await g.handle({ app, hub, session: { user: { id: uid, name: '' }, send() {}, visible: true }, room, uid, msg, refuse: (c) => console.log('[школа]', c), push() {} });
+    }
+  };
+  const pupil = { id: 107, tgId: 107, name: 'Ученик' };
+  const draw = await app.createSolo('poker', pupil, { learn: true, lesson: 3 });
+  // До флопа: человек уравнивает — на флопе наставник ставит, и подсказка про ауты.
+  await drive(draw, (v) => ({ action: v.legal.canCheck ? 'check' : 'call' }), (r) => r.hand.street === 'flop' && r.hand.actorId === '107');
+  scene('37д-school-lesson-draw', draw, 107);
+  scene('37е-school-lesson-more', draw, 107, { press: ['Подробнее'] });
+  const done = await app.createSolo('poker', { id: 108, tgId: 108, name: 'Ученица' }, { learn: true, lesson: 1 });
+  await drive(done, (v) => ({ action: v.legal.canCheck ? 'check' : 'fold' }), (r) => r.hand.phase === 'complete');
+  scene('37ж-school-lesson-passed', done, 108);
 }
 
 app.syncClocks(); // turn deadlines, as the running bot would have them
