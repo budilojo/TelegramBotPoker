@@ -10,6 +10,12 @@ Description=WorldCard — Telegram-бот с играми
 Documentation=https://github.com/budilojo/TelegramBotPoker
 After=network-online.target
 Wants=network-online.target
+# Пять падений за минуту — значит дело не в случайности; systemd перестаёт
+# долбить и оставляет сервис лежать, чтобы это было видно в status.
+# Эти две строки — из секции [Unit]: в [Service] systemd их не читает
+# (пишет в журнал «Unknown key name … ignoring»).
+StartLimitBurst=5
+StartLimitIntervalSec=60
 
 [Service]
 Type=simple
@@ -21,10 +27,6 @@ ExecStart=/usr/bin/node bot/index.js
 # Падать бот не должен, но если упал — подняться через 5 секунд и не сдаваться.
 Restart=always
 RestartSec=5
-# Пять падений за минуту — значит дело не в случайности; systemd перестаёт
-# долбить и оставляет сервис лежать, чтобы это было видно в status.
-StartLimitBurst=5
-StartLimitIntervalSec=60
 
 # Логи — в системный журнал, с понятной меткой.
 StandardOutput=journal
