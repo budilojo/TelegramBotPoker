@@ -78,7 +78,7 @@ function openForm(g, keep = null) {
         h('div.section-label', 'Ваш цвет'), seg([['white', 'Белые'], ['black', 'Чёрные'], ['random', 'Случайно']], 'side'),
         h('div.section-label', 'Часы'), seg([[0, 'Без часов'], [300, '5 мин'], [600, '10 мин']], 'base'));
     } else {
-      const max = MAX_OPPONENTS[g.id] || 1;
+      const max = cat.maxOpponents || MAX_OPPONENTS[g.id] || 1;
       const counts = Array.from({ length: max }, (_, i) => [i + 1, String(i + 1)]);
       fields.push(h('div.section-label', 'Соперников'), seg(counts, 'opponents'));
     }

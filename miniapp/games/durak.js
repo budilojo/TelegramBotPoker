@@ -645,8 +645,14 @@ function renderResults() {
           h('span.s.num', `${r.games} ${r.games === 1 ? 'партия' : r.games < 5 ? 'партии' : 'партий'}`),
           h(`span.pl.num.${r.fool ? 'down' : 'up'}`, `дурак ${r.fool}`)))
       : h('div.hint', 'Ни одной партии не сыграно.')),
-    h('div.hint', 'Итоги бот отправил и в группу.'),
+    h('div.hint', s.solo ? 'Игра с ботами — тренировка: в рейтинг не идёт.' : 'Итоги бот отправил и в группу.'),
   );
+  if (s.solo) {
+    $app.append(box, h('div.panel',
+      h('button.btn', { onclick: () => send({ t: 'hub' }, { lock: false }) }, s.hubLabel || '← Игры с ботами'),
+      h('button.btn.primary.lg', { onclick: () => { haptic.tap(); send({ t: 'again' }); } }, '▶ Сыграть ещё')));
+    return;
+  }
   $app.append(box, h('div.panel', h('button.btn.primary.wide.lg', { onclick: () => tg.close() }, 'Закрыть')));
 }
 
@@ -661,6 +667,13 @@ function openMenu() {
     const live = d?.phase === 'play';
     const items = [];
     const item = (text, sub, onclick, cls = '') => items.push(h(`button.menu-item${cls ? '.' + cls : ''}`, { onclick }, text, sub ? h('small', sub) : null));
+    if (s.solo) {
+      // С ботами — только играть: правила, назад и конец серии.
+      item(s.hubLabel || '← Игры с ботами', 'партию можно будет продолжить', () => { closeSheet(); send({ t: 'hub' }, { lock: false }); });
+      item('Правила', s.room.variantName, openRules);
+      if (s.room.status !== 'lobby') item('Завершить игру', 'итоги — на экране', () => confirmFinish(), 'danger');
+      return h('div', h('h3', 'Меню'), h('div.sub', `🃏 Дурак с ботами · ${s.room.variantName}`), h('div.menu-list', items));
+    }
     if (s.hub) item(s.hubLabel || '← Все игры группы', 'игра останется, как есть', () => { closeSheet(); send({ t: 'hub' }, { lock: false }); });
     if (me.seated && !live) item('Встать из-за стола', 'со следующей партии вас не сдадут', () => { closeSheet(); send({ t: 'leave' }); });
     else if (!me.seated && !me.kicked) item('Сесть за стол', 'со следующей партии', () => { closeSheet(); send({ t: 'sit' }); });
@@ -727,7 +740,7 @@ function confirmAbort() {
 function confirmFinish() {
   showSheet('finish', () => h('div',
     h('h3', 'Завершить игру?'),
-    h('div.sub', 'Незаконченная партия не засчитается. Итоги увидят все и группа.'),
+    h('div.sub', state.solo ? 'Незаконченная партия не засчитается.' : 'Незаконченная партия не засчитается. Итоги увидят все и группа.'),
     h('div.grid2',
       h('button.btn', { onclick: () => closeSheet() }, 'Отмена'),
       h('button.btn.danger', { onclick: () => { closeSheet(); send({ t: 'finish' }); } }, 'Завершить')),

@@ -1721,3 +1721,6 @@
 | Покер: характеры ботов (имя в списке, имя за столом, описание) и уровни | `bot/games/poker/bot.js` — `TYPES` (`name`, `short`, `blurb`), `LEVELS`, `catalog.levelHints` |
 | Покер: отказ «В игре с ботами этого нет…» | `bot/games/poker/index.js` — `ERRORS.SOLO_ONLY` |
 | Покер: меню за столом с ботами, итоги («Сыграть ещё», «в рейтинг не идёт») | `miniapp/games/poker.js` — `openMenu`, `renderResults`, `confirmFinish` |
+| Дурак: характеры ботов и уровни с подсказками | `bot/games/durak/bot.js` — `TYPES` (`name`, `short`, `blurb`), `LEVELS`, `catalog.levelHints` |
+| Дурак: отказ «В игре с ботами этого нет…» | `bot/games/durak/index.js` — `ERRORS.SOLO_ONLY` |
+| Дурак: меню за столом с ботами, итоги («Сыграть ещё») | `miniapp/games/durak.js` — `openMenu`, `renderResults`, `confirmFinish` |

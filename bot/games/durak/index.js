@@ -7,6 +7,7 @@ import * as D from './rules.js';
 import { durakView } from './view.js';
 import { renderCard, renderResults, renderTurnPing } from './render.js';
 import { isCard } from './cards.js';
+import bot from './bot.js';
 
 /** What the page may ask for at a durak game, and nothing else. */
 const ACTIONS = new Set([
@@ -51,7 +52,11 @@ export const ERRORS = {
   NO_PLAYER: 'Игрок не найден.',
   STALE: 'Стол уже изменился — посмотрите ещё раз.',
   BAD_DECK: 'Колода не собралась — попробуйте ещё раз.',
+  SOLO_ONLY: 'В игре с ботами этого нет: здесь только ходы, следующая партия и завершение.',
 };
+
+/** За столом с ботами человек играет, а не правит стол. */
+const SOLO_ACTIONS = new Set(['start', 'next', 'attack', 'defend', 'transfer', 'take', 'pass', 'finish']);
 
 async function onTurnTimeout(app, code, key) {
   const room = app.roomByCode(code);
@@ -69,6 +74,7 @@ export default {
   minPlayers: D.MIN_PLAYERS,
   maxPlayers: D.MAX_SEATS,
   errors: ERRORS,
+  bot,
 
   create({ chatId, title, host, settings = null }) {
     const s = settings || {};
@@ -136,6 +142,7 @@ export default {
 
   async handle({ app, session, room, uid, msg, refuse, push }) {
     if (!ACTIONS.has(msg.t)) return refuse('BAD_REQUEST');
+    if (room.solo && !SOLO_ACTIONS.has(msg.t)) return refuse('SOLO_ONLY');
     const seq = Number.isInteger(msg.seq) ? msg.seq : undefined;
     const card = isCard(msg.card) ? msg.card : null;
     const target = () => {

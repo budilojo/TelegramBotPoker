@@ -422,6 +422,11 @@ function playOut(room) {
   const pk = await app.createSolo('poker', { id: 104, tgId: 104, name: 'Дима' }, { opponents: 5, level: 2 });
   scene('34з-solo-poker-table', pk, 104);
   scene('34и-solo-poker-menu', pk, 104, { click: 'Меню' });
+  // Дурак с ботами: форма и стол.
+  scene('35-solo-durak-form', null, 105, { start: 'solo', click: 'Дурак' });
+  const dk = await app.createSolo('durak', { id: 103, tgId: 103, name: 'Макс' }, { opponents: 3, level: 2, variant: 'perevodnoy' });
+  scene('35б-solo-durak-table', dk, 103);
+  scene('35в-solo-durak-menu', dk, 103, { click: 'Меню' });
 }
 
 app.syncClocks(); // turn deadlines, as the running bot would have them
