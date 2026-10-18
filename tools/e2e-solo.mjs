@@ -165,6 +165,34 @@ try {
   await page.waitForSelector('.ch-status.mine');
   step(`шашки с ботом: форма дуэли, ход c3-d4 — бот ответил ${ck.match.moves[1].n}`);
 
+  // Нарды с ботом: форма дуэли; жребий решает, кто первый; бот бросает и ходит сам.
+  await page.locator('.k-icon-btn[aria-label="Игры с ботами"]').click();
+  await page.waitForSelector('h1:has-text("Игры с ботами")');
+  await page.getByRole('button', { name: /Нарды/ }).first().click();
+  await page.waitForSelector('.section-label:has-text("Ваш цвет")');
+  await page.getByRole('button', { name: 'Белые', exact: true }).click();
+  await page.getByRole('button', { name: '▶ Играть' }).click();
+  await page.waitForSelector('.nd .nd-board');
+  const nd = app.soloOf('101');
+  assert.equal(nd.game, 'nardy');
+  // Если первым ходит бот — дождаться, пока он сходит.
+  for (let i = 0; i < 80 && nd.match.turn.c !== 'w'; i++) await page.waitForTimeout(150);
+  if (!nd.match.turn.dice) await page.getByRole('button', { name: '🎲 Бросить' }).click();
+  for (let i = 0; i < 40 && !nd.match.turn.dice; i++) await page.waitForTimeout(50);
+  const myTurns = nd.match.log.length;
+  // Сыграть шаги, которые предлагает сервер: шашка с пунктиром → точка с числом.
+  for (let k = 0; k < 4; k++) {
+    await page.waitForTimeout(200);
+    if (await page.locator('.nd-pt.can').count() === 0) break;
+    await page.locator('.nd-pt.can').first().click();
+    await page.locator('.nd-pt.dot, .nd-off.dot').first().click();
+  }
+  await page.getByRole('button', { name: 'Готово' }).click();
+  for (let i = 0; i < 80 && nd.match.log.length < myTurns + 2; i++) await page.waitForTimeout(150);
+  assert.ok(nd.match.log.length >= myTurns + 2, 'после хода человека бот бросил и сыграл свой');
+  assert.equal(nd.match.log.at(-1).c, 'b');
+  step(`нарды с ботом: ход человека, бот ответил броском ${nd.match.log.filter((x) => x.c === 'b').at(-1).dice.join('-')}`);
+
   assert.deepEqual(problems, [], `ошибки на странице: ${problems.join('; ')}`);
   console.log('e2e игр с ботами: всё сошлось');
 } catch (err) {

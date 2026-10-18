@@ -10,6 +10,7 @@
 import * as N from './rules.js';
 import { nardyView } from './view.js';
 import { renderCard, renderResults, renderTurnPing, shareText, ICON } from './render.js';
+import bot from './bot.js';
 
 /** Что страница вправе просить у стола нардов — и больше ничего. */
 const ACTIONS = new Set([
@@ -67,6 +68,8 @@ export default {
   maxPlayers: N.MAX_SEATS,
   errors: ERRORS,
   commands: [['nardy', 'нарды — новое лобби одной командой']],
+  /** Соперник-бот для одиночной партии (bot.js). */
+  bot,
 
   /** Жребий цвета и кубики жребия первого хода — подменяются в тестах. */
   dealOpts: (room, app) => ({ ...(app.nardyRand ? { rand: app.nardyRand } : {}), ...diceOpts(app) }),

@@ -315,11 +315,21 @@ function expireTurn(room, now) {
 
 /* ------------------------------------------------------------------ ход */
 
-/** Последовательности текущего хода — считаются заново из позиции начала хода и броска. */
+/**
+ * Последовательности текущего хода — из позиции начала хода и броска. На
+ * весь ход они одни и те же, поэтому запоминаются на сам объект хода (новый
+ * ход — новый объект; после загрузки из базы — посчитаются заново).
+ */
+const seqCache = new WeakMap();
 export function turnSequences(m) {
   const t = m.turn;
   if (!t?.dice) return null;
-  return sequences({ ...clone(t.start), t: t.c }, t.dice, { headLimit: t.headLimit });
+  let r = seqCache.get(t);
+  if (!r || r.dice !== t.dice) {
+    r = { dice: t.dice, res: sequences({ ...clone(t.start), t: t.c }, t.dice, { headLimit: t.headLimit }) };
+    seqCache.set(t, r);
+  }
+  return r.res;
 }
 
 /** Что можно сыграть сейчас: шаги, «Готово» и отмена. */

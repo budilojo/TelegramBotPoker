@@ -1769,4 +1769,6 @@
 | Заметки стола: «Жребий: белые 5, чёрные 3 — первым ходит…», «…ходов нет, ход переходит», «Иван выиграл: …» | `bot/games/nardy/rules.js` — `startNotice`, `roll`, `conclude` |
 | Текст «Поделиться» и кнопка «Сыграть со мной» | `bot/games/nardy/render.js` — `shareText` |
 | Быстрая команда `/nardy` и её описание в меню «/» | `bot/games/nardy/index.js` — `commands` |
-| Экран Mini App | `miniapp/games/nardy.js` |
+| Экран Mini App: «🎲 Бросить», «Вернуть», «Готово», «⤓ Снять», строка под доской, история бросков, правила | `miniapp/games/nardy.js` — `actionsEl`, `statusEl`, `diceEl`, `openRolls`, `openRules` |
+| Бот: уровни («Новичок» … «Мастер»), подсказки к ним, имя «🤖 Новичок» | `bot/games/nardy/engine.js` — `LEVELS`; `bot/games/nardy/bot.js` — `catalog.levelHints`, `seat` |
+| Подпись на экране «Игры с ботами» | `miniapp/games/nardy.js` — `solo.blurb` |
