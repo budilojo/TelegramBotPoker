@@ -20,8 +20,8 @@ import {
 const nameOf = (room, id) => esc(findPlayer(room, id)?.name ?? '—');
 const COLOR_RU = { w: 'белые', b: 'чёрные' };
 const DOT = { w: '⚪', b: '⚫' };
-/** Знак игры: шашка (Unicode «чёрная шашка»). */
-export const ICON = '⛂';
+/** Знак игры. Символ шашки ⛂ в браузере рисуется белым пятном, а эмодзи 🔘 — одинаково везде. */
+export const ICON = '🔘';
 
 /** «12. c3-d4» — номер хода и запись; для хода чёрных «12… f6:d4». */
 const moveText = (m) => {

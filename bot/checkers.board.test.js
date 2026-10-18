@@ -145,6 +145,12 @@ function slowPerft(g, t, d) {
   return n;
 }
 
+test('perft 8 = 929899: у pydraughts 929905 — те же позиции, но шесть серий-двойников он считает двумя ходами', () => {
+  // Сверено при разработке: без склейки двойников (одни побитые, один конец)
+  // наш генератор даёт ровно 929905, как pydraughts. См. docs/checkers.md.
+  assert.equal(perft(startPosition(), 8), 929899);
+});
+
 test('медленный генератор, написанный заново, даёт те же perft от начала (глубины 1–5)', () => {
   const { g, t } = grid(toFen(startPosition()));
   PERFT.slice(0, 5).forEach((want, i) => assert.equal(slowPerft(g, t, i + 1), want, `глубина ${i + 1}`));

@@ -1746,7 +1746,7 @@
 
 | Что | Где |
 |---|---|
-| Карточка в группе, итоги серии, «ваш ход» в личку, знак игры ⛂ | `bot/games/checkers/render.js` — `renderCard`, `renderResults`, `renderTurnPing`, `ICON` |
+| Карточка в группе, итоги серии, «ваш ход» в личку, знак игры 🔘 | `bot/games/checkers/render.js` — `renderCard`, `renderResults`, `renderTurnPing`, `ICON` |
 | Отказы игроку: «Бить обязательно…», «выберите путь по шагам», «Такой серии нет…» и остальные | `bot/games/checkers/index.js` — `ERRORS` (`MUST_CAPTURE`, `NEED_PATH`, `BAD_PATH`…) |
 | Названия исходов («шашек не осталось», «15 ходов только дамками», «одинокую дамку не поймали»…) | `bot/games/checkers/rules.js` — `KIND_RU`, `SIDE_RU`, `controlRu` |
 | Заметки стола («Иван выиграл: …», «предлагает ничью»…) | `bot/games/checkers/rules.js` — `conclude`, `offerDraw`, `declineDraw` |

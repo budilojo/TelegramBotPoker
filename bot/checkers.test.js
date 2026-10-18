@@ -284,7 +284,7 @@ test('/checkers в группе: лобби одной командой, пов�
   assert.equal(lobbies().length, 1);
   const card = t.tg.message(lobbies()[0].ui.tableMessageId);
   assert.match(card.text, /Шашки/);
-  assert.equal(card.markup.inline_keyboard[0][0].text, '⛂ Присоединиться');
+  assert.equal(card.markup.inline_keyboard[0][0].text, '🔘 Присоединиться');
   await t.cmd(IVAN, '/checkers');
   assert.equal(lobbies().length, 2);
 });

@@ -27,6 +27,8 @@ import * as R from '../bot/room.js';
 import * as D from '../bot/games/durak/rules.js';
 import * as C from '../bot/games/chess/rules.js';
 import { fromFen } from '../bot/games/chess/board.js';
+import * as K from '../bot/games/checkers/rules.js';
+import { fromFen as kFen, key as kKey } from '../bot/games/checkers/board.js';
 import { durakStack } from '../bot/harness.js';
 import { legalActions } from '../server/game.js';
 import { GAMES } from '../bot/games/index.js';
@@ -405,6 +407,63 @@ function playOut(room) {
   go(take, ITALIAN);
   C.requestTakeback(take, '101');
   scene('33б-chess-takeback-popup', take, 102);
+}
+
+// 26б. Шашки — дуэль: лобби, обязательное взятие, серия по шагам, дамки, конец.
+{
+  const chatId = String(chat--);
+  const g = app.ensureGroup(chatId, 'Шашечный клуб');
+  const host = { id: 101, tgId: 101, name: 'Иван' };
+  const guest = { id: 102, tgId: 102, name: 'Артём', dm: 'ok' };
+  const duel = (opts = {}) => {
+    const r = app.createGame('checkers', { chatId, title: 'Шашечный клуб', host, settings: { base: 300, inc: 2, side: 'white', ...opts } });
+    K.addPlayer(r, guest);
+    K.startGame(r, '101', { rand: () => 0.1 });
+    return r;
+  };
+  const go = (r, moves) => {
+    for (const mv of moves) {
+      const sq = mv.split(/[-:]/);
+      const m = r.match;
+      const id = m.pos.t === 'w' ? m.white : m.black;
+      const x = K.move(r, id, { from: sq[0], to: sq.at(-1), path: mv.includes(':') ? sq : null }, Date.now());
+      if (x.error) throw new Error(`${mv}: ${x.error}`);
+    }
+  };
+  /** Позиция посреди партии: как будто до неё доиграли. */
+  const at = (r, fen) => {
+    r.match.pos = kFen(fen);
+    r.match.seen = { [kKey(r.match.pos)]: 1 };
+  };
+
+  const lone = app.createGame('checkers', { chatId, title: 'Шашечный клуб', host, settings: { base: 600, inc: 0, side: 'random' } });
+  scene('35-checkers-lobby', lone, 101);
+  scene('35б-hub-new-checkers', lone, 101, { start: `g_${g.code}`, click: 'Шашки' });
+
+  const opening = duel();
+  go(opening, ['c3-d4', 'f6-e5']);
+  scene('36-checkers-must-capture', opening, 101);
+  scene('36б-checkers-black-waits', opening, 102);
+  scene('36в-checkers-spectator', opening, 103);
+
+  const series = duel();
+  go(series, ['c3-d4', 'b6-a5', 'g3-h4']);
+  at(series, 'W:Wa1,c1,e1,g1,b2,d2,f2,h2,a3,c3,e3,g3:Bb4,d6,f6,h6,a7,c7,e7,g7,b8,d8,f8,h8');
+  scene('37-checkers-series-pick', series, 101, { sq: ['a3'] });
+  at(series, 'W:Wc1,e1,g1,b2,d2,f2,h2,c3,e3:Bb4,d4,b6,f6,h6,a7,g7,b8,d8,f8,h8');
+  scene('37б-checkers-series-step', series, 101, { sq: ['c3', 'a5'] });
+
+  const kings = duel();
+  go(kings, ['c3-d4', 'f6-e5']);
+  at(kings, 'W:WKa1,Kh4,c3,e1:BKd8,c7,e7,a5,g5');
+  scene('38-checkers-kings', kings, 101);
+  scene('38б-checkers-small-phone', kings, 101, { width: 320, height: 568 });
+
+  const won = duel();
+  go(won, ['c3-d4', 'f6-e5']);
+  at(won, 'W:Wc3,e1:Bd4');
+  go(won, ['c3:e5']);
+  scene('39-checkers-won', won, 101);
 }
 
 // 27. Игры с ботами: экран из лички, форма шахмат, партия против бота.
