@@ -1756,3 +1756,17 @@
 | Экран Mini App | `miniapp/games/checkers.js` |
 | Бот: уровни («Новичок» … «Мастер»), подсказки к ним, имя «🤖 Новичок» | `bot/games/checkers/engine.js` — `LEVELS`; `bot/games/checkers/bot.js` — `catalog.levelHints`, `seat` |
 | Подпись на экране «Игры с ботами» | `miniapp/games/checkers.js` — `solo.blurb` |
+
+## 13. Нарды (дуэль)
+
+Тексты в тех же местах, что у шахмат и шашек; правила и выбор — `docs/nardy.md`.
+
+| Что | Где |
+|---|---|
+| Карточка в группе, итоги серии (победы · поражения, марс), «ваш ход» в личку («Соперник: 5-3 · 24/19 19/16»), знак игры 🎲 | `bot/games/nardy/render.js` — `renderCard`, `renderResults`, `renderTurnPing`, `ICON` |
+| Отказы игроку: «Сначала бросьте кубики», «Кубики уже брошены…», «С головы за ход — только одна шашка», «Ещё не всё сыграно…» и остальные | `bot/games/nardy/index.js` — `ERRORS` |
+| Названия исходов («все шашки сняты», «марс…», «сдался», «время вышло») | `bot/games/nardy/rules.js` — `KIND_RU`, `SIDE_RU`, `controlRu` |
+| Заметки стола: «Жребий: белые 5, чёрные 3 — первым ходит…», «…ходов нет, ход переходит», «Иван выиграл: …» | `bot/games/nardy/rules.js` — `startNotice`, `roll`, `conclude` |
+| Текст «Поделиться» и кнопка «Сыграть со мной» | `bot/games/nardy/render.js` — `shareText` |
+| Быстрая команда `/nardy` и её описание в меню «/» | `bot/games/nardy/index.js` — `commands` |
+| Экран Mini App | `miniapp/games/nardy.js` |
