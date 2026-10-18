@@ -1,0 +1,199 @@
+/* ==========================================================================
+   НАРДЫ — шапка, плашки и часы общие с шахматами (chess.css: .ch-*); здесь
+   доска из 24 пунктов, кубики и полоса «снять с доски».
+
+   Свои цвета у игры — только игровой арт: сукно доски, пункты двух тонов,
+   кубики. Пункты различаются не только цветом, но и яркостью (светлый и
+   тёмный), шашки — кольцом и точкой (рисунок шашек из checkers/).
+
+   Метки хода — как у шахмат: светлое с тёмным, различаются формой:
+     · пунктир вокруг пункта — отсюда можно ходить;
+     · рамка — выбранный пункт;
+     · кружок с числом — сюда, этим кубиком.
+   ========================================================================== */
+
+:root {
+  --nd-felt: #2a221c;
+  --nd-pt-light: #c9b28f;
+  --nd-pt-dark: #7a5f45;
+  --nd-die: #f7f5ef;
+  --nd-pip: #0a1216;
+  /* Ширина доски и колонки пункта: 12 колонок и перегородка. */
+  --nd-w: min(calc(100vw - 2 * var(--k-s8)), 520px);
+  --nd-col: calc((var(--nd-w) - var(--k-s8) - 2 * var(--k-s4)) / 12);
+  /* Шашка: по ширине колонки, но и по высоте экрана — под доской ещё плашка, кубики, строка и кнопки. */
+  --nd-pc: min(calc(var(--nd-col) - 2px), 30px, calc((100dvh - 380px - env(safe-area-inset-top, 0px)) / 9.2));
+}
+
+.nd-wrap {
+  flex: none;
+  align-self: center;
+  width: var(--nd-w);
+  display: flex;
+  flex-direction: column;
+  gap: var(--k-s4);
+}
+
+.nd-board {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto var(--k-s8) auto;
+  padding: var(--k-s4);
+  border-radius: var(--k-r-md);
+  background: var(--nd-felt);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.nd-row { display: flex; }
+.nd-half { flex: 1; display: grid; grid-template-columns: repeat(6, 1fr); }
+.nd-bar { width: var(--k-s8); }
+
+/* Пункт: треугольник от края к середине, шашки стопкой от края. */
+.nd-pt {
+  position: relative;
+  height: calc(var(--nd-pc) * 4.6 + 14px);
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.nd-pt::before {
+  content: '';
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  top: 14px;
+  bottom: 0;
+  background: var(--nd-pt-light);
+  clip-path: polygon(0 0, 100% 0, 50% 88%);
+}
+.nd-pt.b::before { background: var(--nd-pt-dark); }
+.nd-pt.down { flex-direction: column-reverse; }
+.nd-pt.down::before { top: 0; bottom: 14px; clip-path: polygon(50% 12%, 100% 100%, 0 100%); }
+
+/* Номер пункта — свой у каждого: голова 24, последний пункт дома 1. */
+.nd-no {
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  right: 0;
+  top: 0;
+  text-align: center;
+  height: 14px;
+  color: var(--text-primary);
+  font: var(--k-w-regular) var(--k-fs-caption)/14px var(--k-font);
+  opacity: 0.85;
+}
+
+.nd-pt.down .nd-no { top: auto; bottom: 0; }
+/* Стопка — от края доски к середине: номер пункта всегда у края, шашки сразу за ним. */
+.nd-stack { position: absolute; z-index: 1; left: 0; right: 0; top: 14px; display: flex; flex-direction: column; align-items: center; }
+.nd-pt.down .nd-stack { top: auto; bottom: 14px; flex-direction: column-reverse; }
+.nd-pc { width: var(--nd-pc); height: var(--nd-pc); margin: -1px 0; pointer-events: none; }
+.nd-pc.mini { width: var(--k-s16); height: var(--k-s16); margin: 0 var(--k-s4) 0 0; }
+.nd-pc.drag { position: relative; z-index: 20; will-change: transform; }
+.nd-stack-top { position: relative; display: flex; align-items: center; justify-content: center; }
+.nd-count {
+  position: absolute;
+  color: var(--nd-pip);
+  font: var(--k-w-semibold) var(--k-fs-caption)/1 var(--k-font);
+}
+.nd-pt .nd-stack-top img[src*="/b."] + .nd-count { color: var(--text-primary); }
+
+/* Последний ход: откуда и куда — мягкой тенью поверх пункта. */
+.nd-pt.last-from::after,
+.nd-pt.last-to::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--text-primary) 12%, transparent);
+  pointer-events: none;
+}
+
+/* Метки хода. */
+.nd-pt.can { outline: 2px dashed var(--text-primary); outline-offset: -3px; border-radius: var(--k-r-sm); }
+.nd-pt.sel,
+.nd-pt.hover {
+  border-radius: var(--k-r-sm);
+  box-shadow: inset 0 0 0 3px var(--text-primary), inset 0 0 0 5px var(--bg-main);
+}
+.nd-die {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 22px;
+  height: 22px;
+  padding: 0 var(--k-s4);
+  border-radius: var(--k-r-pill);
+  background: var(--text-primary);
+  color: var(--bg-main);
+  box-shadow: 0 0 0 2px var(--bg-main);
+  font: var(--k-w-semibold) var(--k-fs-caption)/22px var(--k-font);
+  pointer-events: none;
+}
+
+/* «Снять» — в ряду кубиков; видна, только когда выбранной шашкой можно снять. */
+.nd-off {
+  position: relative;
+  min-height: var(--k-tap);
+  display: none;
+  align-items: center;
+  gap: var(--k-s8);
+  padding: 0 var(--k-s12);
+  border: 1px solid var(--border-color);
+  border-radius: var(--k-r-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font);
+}
+.nd-off.show { display: flex; }
+.nd-off.dot { box-shadow: inset 0 0 0 3px var(--text-primary), inset 0 0 0 5px var(--bg-main); }
+.nd-off .nd-die { position: static; transform: none; }
+
+/* Кубики хода. */
+.nd-dice {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--k-s12);
+  min-height: 52px;
+  padding: var(--k-s4) 0;
+}
+.nd-faces { display: flex; gap: var(--k-s8); }
+.nd-dicef {
+  width: 36px;
+  height: 36px;
+  padding: 5px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  border-radius: var(--k-r-sm);
+  background: var(--nd-die);
+  box-shadow: inset 0 0 0 1px var(--nd-pip);
+}
+.nd-dicef i { display: block; margin: 2px; border-radius: 50%; }
+.nd-dicef i.on { background: var(--nd-pip); }
+/* Сыгранный кубик — бледный и перечёркнутый: видно и без цвета. */
+.nd-dicef.used { position: relative; opacity: 0.35; }
+.nd-dicef.used::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 50%;
+  height: 3px;
+  background: var(--nd-pip);
+  transform: rotate(-35deg);
+}
+
+.nd-meta .num { color: var(--k-text-2); }
+.nd-rolls .pl { color: var(--k-text-2); }

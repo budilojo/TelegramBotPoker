@@ -29,6 +29,8 @@ import * as C from '../bot/games/chess/rules.js';
 import { fromFen } from '../bot/games/chess/board.js';
 import * as K from '../bot/games/checkers/rules.js';
 import { fromFen as kFen, key as kKey } from '../bot/games/checkers/board.js';
+import * as ND from '../bot/games/nardy/rules.js';
+import { abs as ndAbs } from '../bot/games/nardy/board.js';
 import { durakStack } from '../bot/harness.js';
 import { legalActions } from '../server/game.js';
 import { GAMES } from '../bot/games/index.js';
@@ -94,14 +96,14 @@ const FORCE_W = Number(process.env.PREVIEW_W) || 0;
 const FORCE_H = Number(process.env.PREVIEW_H) || 0;
 
 const scenes = [];
-function scene(name, room, viewer, { width = 390, height = 780, click = null, press = null, start = room?.code, tap = [], sq = [], scroll = 0, tab = null, before = null, after = null } = {}) {
+function scene(name, room, viewer, { width = 390, height = 780, click = null, press = null, start = room?.code, tap = [], sq = [], sel = [], scroll = 0, tab = null, before = null, after = null } = {}) {
   if (FORCE_W) width = FORCE_W;
   if (FORCE_H) height = FORCE_H;
   const user = { id: viewer, first_name: PEOPLE.find(([id]) => id === viewer)?.[1] ?? 'Гость' };
   const initData = signInitData({ auth_date: Math.floor(Date.now() / 1000), user, ...(start ? { start_param: start } : {}) }, TOKEN);
   // `before` — то, что надо сделать с ботом ровно перед этой страницей
   // (включить обслуживание): иначе оно попало бы на все остальные снимки.
-  scenes.push({ name, code: start, initData, width, height, click, press, tap, sq, scroll, tab, before, after });
+  scenes.push({ name, code: start, initData, width, height, click, press, tap, sq, sel, scroll, tab, before, after });
 }
 
 const deck6 = stack({ 101: 'As Kh', 102: 'Qs Qd', 103: '9c 9d', 104: '7h 2c', 105: 'Jd 10d', 106: '5s 4s' }, '10s Jh Qc 3d 8s');
@@ -466,6 +468,57 @@ function playOut(room) {
   scene('39-checkers-won', won, 101);
 }
 
+// 26в. Нарды — дуэль: лобби, бросок, выбор шашки, ход соперника, снятие, конец.
+{
+  const chatId = String(chat--);
+  const g = app.ensureGroup(chatId, 'Нардный клуб');
+  const host = { id: 101, tgId: 101, name: 'Иван' };
+  const guest = { id: 102, tgId: 102, name: 'Артём', dm: 'ok' };
+  const q = (pairs) => () => pairs.shift() || [2, 1];
+  const duel = (start = [[5, 3]]) => {
+    const r = app.createGame('nardy', { chatId, title: 'Нардный клуб', host, settings: { base: 300, inc: 5, side: 'white' } });
+    ND.addPlayer(r, guest);
+    ND.startGame(r, '101', { rand: () => 0.1, dice: q(start) });
+    return r;
+  };
+  /** Ход целиком: [индекс пути, число]… — бросок из `dice`, если нужен. */
+  const go = (r, steps, dice = null) => {
+    const m = r.match;
+    const id = m.turn.c === 'w' ? m.white : m.black;
+    if (!m.turn.dice) ND.roll(r, id, Date.now(), { dice: () => dice });
+    for (const [i, die] of steps) {
+      const x = ND.move(r, id, { from: ndAbs(m.turn.c, i), die }, Date.now());
+      if (x.error) throw new Error(`${i}+${die}: ${x.error}`);
+    }
+    ND.endTurn(r, id, Date.now());
+  };
+
+  const lone = app.createGame('nardy', { chatId, title: 'Нардный клуб', host, settings: { base: 600, inc: 0, side: 'random' } });
+  scene('40-nardy-lobby', lone, 101);
+  scene('40б-hub-new-nardy', lone, 101, { start: `g_${g.code}`, click: 'Нарды' });
+
+  const first = duel();
+  scene('41-nardy-first-move', first, 101);
+  scene('41б-nardy-selected', first, 101, { sel: ['.nd-pt[data-p="0"]'] });
+  scene('41в-nardy-opponent-waits', first, 102);
+
+  const mid = duel();
+  go(mid, [[0, 5], [5, 3]]);
+  go(mid, [[0, 4], [4, 2]], [4, 2]);
+  scene('42-nardy-roll', mid, 101);
+  scene('42б-nardy-spectator', mid, 103);
+  scene('42в-nardy-small-phone', mid, 101, { width: 320, height: 568 });
+
+  const bear = duel();
+  const b = Array(24).fill(0);
+  for (const [i, n] of [[18, 3], [19, 3], [20, 3], [21, 2], [22, 2], [23, 1]]) b[ndAbs('w', i)] = n;
+  for (const [i, n] of [[10, 5], [14, 4], [20, 6]]) b[ndAbs('b', i)] = -n;
+  bear.match.pos = { b, off: { w: 1, b: 0 }, t: 'w' };
+  bear.match.turn = { c: 'w', dice: [6, 4], played: [], start: { b: b.slice(), off: { w: 1, b: 0 }, t: 'w' }, headLimit: 1 };
+  bear.match.log.push({ c: 'b', dice: [3, 1], steps: [], notation: [] }, { c: 'w', dice: [2, 2], steps: [], notation: [] });
+  scene('43-nardy-bear-off', bear, 101, { sel: [`.nd-pt[data-p="${ndAbs('w', 18)}"]`] });
+}
+
 // 27. Игры с ботами: экран из лички, форма шахмат, партия против бота.
 {
   const someone = { id: 106, tgId: 106, name: 'Лена' };
@@ -578,6 +631,7 @@ if (serve) {
       await page.waitForTimeout(220);
     }
     for (const card of s.tap) await page.locator(`.dk-card[data-card="${card}"]`).click();
+    for (const css of s.sel) await page.locator(css).first().click();
     for (const name of s.sq) {
       await page.locator(`.ch-sq[data-sq="${name}"]`).click();
       await page.waitForTimeout(120);
