@@ -7,14 +7,11 @@
  */
 import { $app, h, haptic, showSheet, closeSheet, refreshSheet } from './ui.js';
 import { bus, send } from './net.js';
-import { lobby as pokerLobby, iconCards as pokerIcon } from './games/poker.js';
-import { lobby as durakLobby, iconCards as durakIcon } from './games/durak.js';
-import { lobby as colorsLobby, iconCards as colorsIcon } from './games/colors.js';
-import { lobby as chessLobby, iconCards as chessIcon } from './games/chess.js';
+import { GAMES } from './games/index.js';
 
 /** Форма «новое лобби» у каждой игры своя — хаб берёт её у игры. */
-const LOBBY = { poker: pokerLobby, durak: durakLobby, colors: colorsLobby, chess: chessLobby };
-const ICON = { poker: pokerIcon, durak: durakIcon, colors: colorsIcon, chess: chessIcon };
+const LOBBY = Object.fromEntries(Object.entries(GAMES).map(([id, g]) => [id, g.lobby]));
+const ICON = Object.fromEntries(Object.entries(GAMES).map(([id, g]) => [id, g.iconCards]));
 
 let state = null;
 

@@ -1642,8 +1642,6 @@
 
 | Текст | Строка | Функция / переменная |
 |---|---|---|
-| Дурак | 29 | `GAME_RU` |
-| Покер | 29 | `GAME_RU` |
 | партия не доиграна — она не засчитывается | 32 | `WHY` |
 | играл один — партии не было | 33 | `WHY` |
 | партия без очков: с этим составом сегодня уже ${PER_DAY} | 34 | `WHY` |
@@ -1704,7 +1702,7 @@
 | Откат, просмотр, «Поделиться», «+ Новое лобби» | `miniapp/games/chess.js` — `statusEl`, `navEl`, `actionsEl`, `shareResult`, `newLobby` |
 | Текст сообщения «Поделиться» и кнопка «Сыграть со мной» | `bot/games/chess/render.js` — `shareText` |
 | Ошибки отката и шеринга | `bot/games/chess/index.js` — `ERRORS`; `bot/hub.js` — `CORE_ERRORS` (`NOT_SHAREABLE`, `TOO_FAST`…) |
-| Быстрые команды `/chess` `/durak` `/unoq` | `bot/app.js` — `QUICK_GAMES`, `quickLobby`; меню команд — `bot/index.js` — `GROUP_COMMANDS` |
+| Быстрые команды `/chess` `/durak` `/unoq` и их описания в меню «/» | `bot/games/<игра>/index.js` — `commands`; собирает `bot/app.js` — `QUICK_GAMES`, `QUICK_MENU`, `quickLobby`; меню — `bot/index.js` — `GROUP_COMMANDS` |
 
 ## 10. Игры с ботами
 
@@ -1714,7 +1712,8 @@
 |---|---|
 | Кнопка и ответ в личке («🤖 Не с кем играть? /bot…», «🤖 Играть с ботом») | `bot/app.js` — `HELP_DM`, `sendMyGames`, `sendSolo` |
 | Меню команд в личке (`/bot` — «играть с ботами») | `bot/index.js` — `PRIVATE_COMMANDS` |
-| Экран «Игры с ботами», подписи игр, форма (уровень, соперники, цвет, часы, вариант, характеры) | `miniapp/solo.js` — `render`, `BLURB`, `openForm`, `pickType` |
+| Экран «Игры с ботами», форма (уровень, соперники, цвет, часы, вариант, характеры) | `miniapp/solo.js` — `render`, `openForm`, `pickType` |
+| Подписи игр на экране «Игры с ботами», названия вариантов в форме | `miniapp/games/<игра>.js` — `solo` (`blurb`, `variants`) |
 | Кнопка «🤖 Играть с ботами» на экране «Мои группы» | `miniapp/hub.js` |
 | Подпись «← Игры с ботами» на кнопке назад | `bot/hub.js` — `push` (`state.hubLabel`) |
 | Уровни шахматного бота и подсказки к ним | `bot/games/chess/engine.js` — `LEVELS`; `bot/games/chess/bot.js` — `catalog` |

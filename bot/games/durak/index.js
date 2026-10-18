@@ -74,6 +74,9 @@ export default {
   minPlayers: D.MIN_PLAYERS,
   maxPlayers: D.MAX_SEATS,
   errors: ERRORS,
+  commands: [['durak', 'дурак — новое лобби одной командой']],
+  /** Колода: в тестах подставляется (`app.durakDeck`), в игре — перетасованная. */
+  dealOpts: (room, app) => (app.durakDeck ? { deck: () => app.durakDeck(room) } : {}),
   bot,
 
   create({ chatId, title, host, settings = null }) {

@@ -96,6 +96,8 @@ export default {
   minPlayers: C.MIN_PLAYERS,
   maxPlayers: C.MAX_SEATS,
   errors: ERRORS,
+  /** /unoq — в меню; /colors — старое имя, работает, но в меню не показывается. */
+  commands: [['unoq', 'UNOQ — новое лобби одной командой'], ['colors', null]],
   bot,
 
   create({ chatId, title, host, settings = null }) {

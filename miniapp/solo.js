@@ -9,22 +9,13 @@
  */
 import { $app, h, haptic, showSheet, closeSheet, refreshSheet } from './ui.js';
 import { bus, send } from './net.js';
-import { iconCards as pokerIcon } from './games/poker.js';
-import { iconCards as durakIcon } from './games/durak.js';
-import { iconCards as colorsIcon } from './games/colors.js';
-import { iconCards as chessIcon } from './games/chess.js';
+import { GAMES } from './games/index.js';
 import { openSchool } from './school.js';
 
 let state = null;
 
-const ICON = { poker: pokerIcon, durak: durakIcon, colors: colorsIcon, chess: chessIcon };
-const MAX_OPPONENTS = { poker: 7, durak: 5, colors: 7, chess: 1 };
-const BLURB = {
-  chess: 'Соперник — шахматный движок, от новичка до мастера',
-  poker: 'От 1 до 7 соперников, у каждого свой характер',
-  durak: 'Подкидной или переводной, до пяти соперников',
-  colors: 'Цветные карты, до семи соперников',
-};
+/** Что спрашивать в партии с ботами — говорит сама игра (`solo` её модуля). */
+const soloOf = (id) => GAMES[id]?.solo || {};
 
 export function onState(s) {
   state = s;
@@ -33,7 +24,7 @@ export function onState(s) {
 }
 
 const gameIcon = (id) => h(`div.gc-icon.g-${id}`,
-  ...(ICON[id] || []).map((src, i) => h(`img.gi-card.c${i}`, { src, alt: '' })));
+  ...(GAMES[id]?.iconCards || []).map((src, i) => h(`img.gi-card.c${i}`, { src, alt: '' })));
 
 export function render() {
   const s = state;
@@ -50,7 +41,7 @@ export function render() {
       gameIcon(g.id),
       h('div.gc-body',
         h('div.gc-title', g.title),
-        h('div.gc-blurb', BLURB[g.id] || g.blurb)),
+        h('div.gc-blurb', soloOf(g.id).blurb || g.blurb)),
       h('span.gc-go', '›')))),
     schoolCard(s),
     s.groups
@@ -76,7 +67,8 @@ function schoolCard(s) {
 function openForm(g, keep = null) {
   if (!keep) haptic.soft();
   const cat = g.catalog || {};
-  const st = keep || { level: cat.defaultLevel ?? 1, opponents: Math.min(3, MAX_OPPONENTS[g.id] || 1), side: 'white', base: 0, variant: 'podkidnoy', pick: false, types: [] };
+  const S = soloOf(g.id);
+  const st = keep || { level: cat.defaultLevel ?? 1, opponents: Math.min(3, S.max || 1), side: 'white', base: 0, variant: S.variants?.[0][0], pick: false, types: [] };
   const levels = (cat.levels || []).map((name, i) => [i, name]);
 
   showSheet('solo-form', () => {
@@ -87,16 +79,16 @@ function openForm(g, keep = null) {
     const fields = [];
     if (levels.length) fields.push(h('div.section-label', 'Уровень'), seg(levels, 'level', '.wide'));
     if (cat.levelHints?.[st.level]) fields.push(h('div.hint', cat.levelHints[st.level]));
-    if (g.id === 'chess') {
+    if (S.duel) {
       fields.push(
         h('div.section-label', 'Ваш цвет'), seg([['white', 'Белые'], ['black', 'Чёрные'], ['random', 'Случайно']], 'side'),
         h('div.section-label', 'Часы'), seg([[0, 'Без часов'], [300, '5 мин'], [600, '10 мин']], 'base'));
     } else {
-      const max = cat.maxOpponents || MAX_OPPONENTS[g.id] || 1;
+      const max = cat.maxOpponents || S.max || 1;
       const counts = Array.from({ length: max }, (_, i) => [i + 1, String(i + 1)]);
       fields.push(h('div.section-label', 'Соперников'), seg(counts, 'opponents'));
     }
-    if (g.id === 'durak') fields.push(h('div.section-label', 'Вариант'), seg([['podkidnoy', 'Подкидной'], ['perevodnoy', 'Переводной']], 'variant'));
+    if (S.variants) fields.push(h('div.section-label', 'Вариант'), seg(S.variants, 'variant'));
     if (cat.types?.length) {
       fields.push(h('div.section-label', 'Характеры соперников'), seg([[false, 'Случайные'], [true, 'Выбрать самому']], 'pick'));
       if (st.pick) {
@@ -113,9 +105,9 @@ function openForm(g, keep = null) {
       h('button.btn.primary.wide.lg', { style: { marginTop: '16px', width: '100%' }, onclick: () => {
         haptic.tap();
         const settings = { level: st.level };
-        if (g.id === 'chess') Object.assign(settings, { side: st.side, base: st.base });
+        if (S.duel) Object.assign(settings, { side: st.side, base: st.base });
         else settings.opponents = st.opponents;
-        if (g.id === 'durak') settings.variant = st.variant;
+        if (S.variants) settings.variant = st.variant;
         if (st.pick) settings.types = st.types.slice(0, st.opponents);
         send({ t: 'play', game: g.id, settings });
         closeSheet();

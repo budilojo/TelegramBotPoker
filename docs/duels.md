@@ -65,9 +65,10 @@
 `board.js` вынесен отдельно от `rules.js`, потому что его правильность проверяется
 иначе — счётом всех достижимых позиций, а не примерами.
 
-Регистрации: `bot/games/index.js`, `bot/rating.js` (`GAME_RU.chess`),
-`miniapp/app.js` (`SCREENS`, `screenOf`), `miniapp/hub.js` (`LOBBY`, `ICON`),
-`miniapp/index.html` (`chess.css`).
+Регистрации: `bot/games/index.js`, `miniapp/games/index.js`,
+`miniapp/index.html` (`chess.css`). Остальное шахматы объявляют в своих
+модулях: `/chess` — `commands`, жребий цвета — `dealOpts`, форма партии с
+ботом — `solo` в `miniapp/games/chess.js`.
 
 ### Часы
 
@@ -161,7 +162,11 @@
    с `maxPlayers: 2` — ядро само разрешит несколько лобби.
 2. Часы — через `room.turn` и `clocks()`; ключ меняется с каждым ходом.
 3. Итог партии → `rounds()`: победа/поражение — места 1 и 2; ничья — `draw: true`.
-4. Реестры: `bot/games/index.js`, `GAME_RU`, `miniapp/app.js`, `miniapp/hub.js`.
+4. Реестры: строка в `bot/games/index.js` и в `miniapp/games/index.js`. Модуль сервера
+   объявляет `commands` (быстрая команда и описание в меню «/») и, если раздача случайна,
+   `dealOpts(room, app)` — с подменой из `app.<игра>…` для тестов; модуль клиента —
+   `lobby`, `iconCards` и `solo` (`{ duel: true, blurb }` — цвет и часы в партии с ботом).
+   `bot/games.registry.test.js` проверяет, что ничего не забыто.
 5. Тесты: правила (по образцу `chess.rules.test.js`), хаб (`chess.test.js`): личность,
    ходы только тому, чей ход, часы, перезапуск, рейтинг. Каждую защиту — проверить возвратом к
    сломанному виду.

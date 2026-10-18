@@ -815,5 +815,8 @@ export const lobby = {
   ].filter(Boolean),
 };
 
+/** Партия с ботом: цвет и часы вместо числа соперников. */
+export const solo = { duel: true, blurb: 'Соперник — шахматный движок, от новичка до мастера' };
+
 /** Чем игра подписана в хабе: белый конь и чёрный ферзь. */
 export const iconCards = ['/chess/wN.svg', '/chess/bQ.svg'];

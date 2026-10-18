@@ -42,8 +42,13 @@ export const SOLO_CODE = 'solo';
 /** Брошенная партия с ботами закрывается сама, без сообщений, через три часа тишины. */
 export const SOLO_IDLE_MS = 3 * 60 * 60_000;
 
-/** Команда → игра: лобби одной командой в группе. Покер живёт на /poker и /newgame. */
-export const QUICK_GAMES = { chess: 'chess', durak: 'durak', unoq: 'colors', colors: 'colors' };
+/**
+ * Команда → игра: лобби одной командой в группе. Команды объявляет сама игра
+ * (`commands` модуля); покер живёт на /poker и /newgame.
+ */
+export const QUICK_GAMES = Object.fromEntries(GAME_LIST.flatMap((g) => (g.commands || []).map(([cmd]) => [cmd, g.id])));
+/** Те же команды для меню «/» в группе — без скрытых псевдонимов (у них нет описания). */
+export const QUICK_MENU = GAME_LIST.flatMap((g) => (g.commands || []).filter(([, about]) => about));
 
 const HELP = [
   '🎮 <b>Игры в Telegram</b> — играем прямо в чате, в мини-приложении.',
@@ -581,12 +586,10 @@ export class App {
 
   /** `{ deck }` for the room layer: stacked in tests, shuffled otherwise. */
   dealOpts(room) {
-    // Своя колода у игры (уроки школы покера) — важнее общей.
-    const own = gameOf(room).dealOpts?.(room);
+    // Своя раздача у игры (колода дурака, жребий цвета в шахматах, уроки
+    // школы покера): игра сама знает, что ей подменяют в тестах.
+    const own = gameOf(room).dealOpts?.(room, this);
     if (own) return own;
-    // Жребий цвета в шахматах: в тестах подставляется, в игре — настоящий.
-    if (room.game === 'chess') return this.chessRand ? { rand: this.chessRand } : {};
-    if (room.game === 'durak') return this.durakDeck ? { deck: () => this.durakDeck(room) } : {};
     return this.deck ? { deck: () => this.deck(room) } : {};
   }
 

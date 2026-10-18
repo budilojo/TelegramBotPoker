@@ -68,6 +68,7 @@ bot/                   телеграм-бот и сервер Mini App (Node 22
   games/<игра>/        модуль игры: rules.js, view.js, render.js, index.js (+ board.js у шахмат)
   games/index.js       реестр игр — единственное место, где ядро узнаёт об игре
 miniapp/               клиент: index.html, app.js (экраны), hub.js, games/<игра>.js, *.css
+  games/index.js       реестр игр клиента — экраны, хаб и «Игры с ботами» знают игры только из него
   tokens.css kit.css   дизайн-система (см. ниже)
 server/ public/        старое веб-приложение «Chip Table» (отдельный продукт)
 tools/                 проверки и e2e (Playwright), preview, генераторы картинок
@@ -76,8 +77,10 @@ docs/                  решения, инструкции, промты
 ```
 
 **Ядро не знает правил игр.** Игра — папка `bot/games/<имя>/` + файл
-`miniapp/games/<имя>.js` + строки в реестрах (`bot/games/index.js`,
-`bot/rating.js` → `GAME_RU`, `miniapp/app.js`, `miniapp/hub.js`). Контракт
+`miniapp/games/<имя>.js` + по строке в двух реестрах: `bot/games/index.js`
+и `miniapp/games/index.js`. Быструю команду (`commands`), раздачу и её
+подмену в тестах (`dealOpts`), форму партии с ботами (`solo`) игра объявляет
+сама — ядро, хаб и меню «/» берут их из модуля. Контракт
 модуля — `docs/game-hub.md`, раздел «Модуль игры». Игры на двоих («дуэли»)
 выставляют `maxPlayers: 2`: ядро само разрешает хосту несколько лобби —
 `docs/duels.md`, там же план добавления следующей дуэли.

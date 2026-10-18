@@ -5,7 +5,8 @@
  *
  * Человек открывает «Игры с ботами» без группы, проходит азбуку покера и
  * первый урок, нажимая то, что советует наставник; потом садится за дурака
- * с ботами — боты ходят сами, на экране их карт нет. Telegram — заглушка.
+ * с ботами — боты ходят сами, на экране их карт нет; и открывает шахматы с
+ * ботом — у дуэли в форме цвет и часы. Telegram — заглушка.
  */
 import crypto from 'node:crypto';
 import path from 'node:path';
@@ -128,6 +129,23 @@ try {
     for (const c of dk.deal.hands[id]) assert.ok(!shown.some((s) => s?.endsWith(`/${c}.svg`)), `карта бота ${c} на экране человека`);
   }
   step('дурак с ботами: переводной, боты ходят сами, их карт на экране нет');
+
+  // Шахматы с ботом: вместо числа соперников — цвет и часы (форма дуэли).
+  await page.locator('.icon-btn[aria-label="Меню"]').click();
+  await page.getByRole('button', { name: '← Игры с ботами' }).click();
+  await page.waitForSelector('h1:has-text("Игры с ботами")');
+  await page.getByRole('button', { name: /Шахматы/ }).first().click();
+  await page.waitForSelector('.section-label:has-text("Ваш цвет")');
+  assert.equal(await page.locator('.section-label:has-text("Соперников")').count(), 0, 'у дуэли нет выбора числа соперников');
+  await page.getByRole('button', { name: 'Чёрные', exact: true }).click();
+  await page.getByRole('button', { name: '5 мин', exact: true }).click();
+  await page.getByRole('button', { name: '▶ Играть' }).click();
+  await page.waitForSelector('.ch-board, .board');
+  const ch = app.soloOf('101');
+  assert.equal(ch.game, 'chess');
+  assert.equal(ch.settings.side, 'black');
+  assert.equal(ch.settings.base, 300);
+  step('шахматы с ботом: форма — цвет и часы, без числа соперников; выбор дошёл до сервера');
 
   assert.deepEqual(problems, [], `ошибки на странице: ${problems.join('; ')}`);
   console.log('e2e игр с ботами: всё сошлось');

@@ -776,5 +776,12 @@ export const lobby = {
   ],
 };
 
+/** Партия с ботами: до пяти соперников и вариант правил. */
+export const solo = {
+  max: 5,
+  blurb: 'Подкидной или переводной, до пяти соперников',
+  variants: [['podkidnoy', 'Подкидной'], ['perevodnoy', 'Переводной']],
+};
+
 /** Чем игра подписана в хабе: шестёрка и туз — колода на 36 карт. */
 export const iconCards = ['/cards/6D.svg', '/cards/AS.svg'];

@@ -64,8 +64,13 @@ export default {
   minPlayers: C.MIN_PLAYERS,
   maxPlayers: C.MAX_SEATS,
   errors: ERRORS,
+  /** Лобби одной командой в группе: `[команда, описание в меню]`. */
+  commands: [['chess', 'шахматы — новое лобби одной командой']],
   /** Соперник-бот для одиночной партии (bot.js). */
   bot,
+
+  /** Жребий цвета: в тестах подставляется (`app.chessRand`), в игре — настоящий. */
+  dealOpts: (room, app) => (app.chessRand ? { rand: app.chessRand } : {}),
 
   create({ chatId, title, host, settings = null }) {
     const s = settings || {};

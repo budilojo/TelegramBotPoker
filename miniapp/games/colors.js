@@ -745,5 +745,8 @@ export const lobby = {
   ],
 };
 
+/** Партия с ботами: до семи соперников. */
+export const solo = { max: 7, blurb: 'Цветные карты, до семи соперников' };
+
 /** Чем игра подписана в хабе: две цветные карты, видно издалека. */
 export const iconCards = ['/colors/R5.svg', '/colors/B3.svg'];

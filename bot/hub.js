@@ -24,7 +24,7 @@ import { checkInitData } from './webapp-auth.js';
 import { GAMES, GAME_LIST, gameOf } from './games/index.js';
 import { HUB_PREFIX, MAX_LIVE_PER_GROUP, RATING_SOON_TEXT, TOO_MANY_GAMES_TEXT, SOLO_CODE } from './app.js';
 import { AUDIENCES, ERRORS as CAST_ERRORS } from './broadcast.js';
-import { GAME_RU, PER_DAY, sign } from './rating.js';
+import { PER_DAY, sign } from './rating.js';
 import { ym } from './fmt.js';
 
 const CORE_ERRORS = {
@@ -912,7 +912,7 @@ export function ratingView(app, user, {
     groupTitle,
     month,
     perDay: PER_DAY,
-    games: GAME_LIST.map((g) => ({ id: g.id, title: GAME_RU[g.id] || g.title, icon: g.icon })),
+    games: GAME_LIST.map((g) => ({ id: g.id, title: g.title, icon: g.icon })),
     top,
     mine: card(uid),
     who: who && who !== uid ? card(who) : null,
