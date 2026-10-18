@@ -1754,3 +1754,5 @@
 | Строка рекламы в «Поделиться» («Играем в шахматы, шашки…») — одна на все игры | `bot/games/promo.js` — `PROMO_GAMES`, `promoLine` |
 | Быстрая команда `/checkers` и её описание в меню «/» | `bot/games/checkers/index.js` — `commands` |
 | Экран Mini App | `miniapp/games/checkers.js` |
+| Бот: уровни («Новичок» … «Мастер»), подсказки к ним, имя «🤖 Новичок» | `bot/games/checkers/engine.js` — `LEVELS`; `bot/games/checkers/bot.js` — `catalog.levelHints`, `seat` |
+| Подпись на экране «Игры с ботами» | `miniapp/games/checkers.js` — `solo.blurb` |

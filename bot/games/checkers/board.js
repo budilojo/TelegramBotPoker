@@ -236,6 +236,8 @@ export function findMove(pos, from, to, path = null) {
   if (squares.some((s) => s < 0)) return null;
   if (squares[0] !== f) squares.unshift(f);
   if (squares.at(-1) !== t) return null;
+  // Тихий ход: путь — просто «откуда, куда».
+  if (!cands[0].caps.length) return squares.length === 2 ? cands[0] : null;
   const caps = capsOnPath(pos.b, squares);
   if (!caps) return null;
   const want = caps.sort((x, y) => x - y).join(',');

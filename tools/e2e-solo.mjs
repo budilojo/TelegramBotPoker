@@ -147,6 +147,24 @@ try {
   assert.equal(ch.settings.base, 300);
   step('шахматы с ботом: форма — цвет и часы, без числа соперников; выбор дошёл до сервера');
 
+  // Шашки с ботом: та же форма дуэли; ход человека — и бот отвечает сам.
+  await page.locator('.k-icon-btn[aria-label="Игры с ботами"]').click();
+  await page.waitForSelector('h1:has-text("Игры с ботами")');
+  await page.getByRole('button', { name: /Шашки/ }).first().click();
+  await page.waitForSelector('.section-label:has-text("Ваш цвет")');
+  await page.getByRole('button', { name: 'Белые', exact: true }).click();
+  await page.getByRole('button', { name: '▶ Играть' }).click();
+  await page.waitForSelector('.ck .ch-board');
+  const ck = app.soloOf('101');
+  assert.equal(ck.game, 'checkers');
+  assert.equal(ck.settings.side, 'white');
+  await page.locator('.ch-sq[data-sq="c3"]').click();
+  await page.locator('.ch-sq[data-sq="d4"]').click();
+  for (let i = 0; i < 40 && ck.match.moves.length < 2; i++) await page.waitForTimeout(150);
+  assert.equal(ck.match.moves.length, 2, 'бот ответил на ход');
+  await page.waitForSelector('.ch-status.mine');
+  step(`шашки с ботом: форма дуэли, ход c3-d4 — бот ответил ${ck.match.moves[1].n}`);
+
   assert.deepEqual(problems, [], `ошибки на странице: ${problems.join('; ')}`);
   console.log('e2e игр с ботами: всё сошлось');
 } catch (err) {

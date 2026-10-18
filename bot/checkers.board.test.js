@@ -313,6 +313,10 @@ test('ход по пути: разные серии с одним концом �
   assert.equal(findMove(p, 'd8', 'f2', ['d8', 'a5', 'f2']), null, 'бьёт свою дорогу не так');
   assert.equal(findMove(p, 'd8', 'f2', ['d8', 'b6', 'g1']), null, 'кончается не там');
   assert.equal(findMove(p, 'd8', 'f2', ['zz']), null);
+  // Тихий ход с путём «откуда, куда» — тот же ход (так шлёт бот); путь подлиннее — нет.
+  const quiet = fromFen('W:Wd4:Bh8');
+  assert.equal(notation(findMove(quiet, 'd4', 'c5', ['d4', 'c5'])), 'd4-c5');
+  assert.equal(findMove(quiet, 'd4', 'c5', ['d4', 'e5', 'c5']), null);
 });
 
 test('один ход или два: серии с теми же побитыми и тем же концом — один ход', () => {

@@ -7,6 +7,7 @@
 import * as C from './rules.js';
 import { checkersView } from './view.js';
 import { renderCard, renderResults, renderTurnPing, shareText, ICON } from './render.js';
+import bot from './bot.js';
 
 /** Что страница вправе просить у стола шашек — и больше ничего. */
 const ACTIONS = new Set([
@@ -64,6 +65,8 @@ export default {
   errors: ERRORS,
   /** Лобби одной командой в группе: `[команда, описание в меню]`. */
   commands: [['checkers', 'шашки — новое лобби одной командой']],
+  /** Соперник-бот для одиночной партии (bot.js). */
+  bot,
 
   /** Жребий цвета: в тестах подставляется (`app.checkersRand`), в игре — настоящий. */
   dealOpts: (room, app) => (app.checkersRand ? { rand: app.checkersRand } : {}),
