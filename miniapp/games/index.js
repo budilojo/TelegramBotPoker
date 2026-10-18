@@ -12,5 +12,6 @@ import * as poker from './poker.js';
 import * as durak from './durak.js';
 import * as colors from './colors.js';
 import * as chess from './chess.js';
+import * as checkers from './checkers.js';
 
-export const GAMES = { poker, durak, colors, chess };
+export const GAMES = { poker, durak, colors, chess, checkers };

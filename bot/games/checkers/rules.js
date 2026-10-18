@@ -332,7 +332,7 @@ export function move(room, userId, { from, to, path = null }, now = Date.now(), 
   if (ply != null && ply !== m.moves.length) return { error: 'STALE' };
   const mv = findMove(m.pos, from, to, path);
   if (mv?.ambiguous) return { error: 'NEED_PATH' };
-  if (!mv) return { error: mustCapture(m.pos).length ? 'MUST_CAPTURE' : 'ILLEGAL' };
+  if (!mv) return { error: refusal(m.pos, from, to) };
 
   const expired = expireTurn(room, now);
   if (expired) return expired;
@@ -361,6 +361,12 @@ export function move(room, userId, { from, to, path = null }, now = Date.now(), 
   if (end) conclude(room, end.winner, end.kind);
   else touch(room);
   return { ok: true, n: m.moves.at(-1).n, over: !!end };
+}
+
+/** Почему хода нет: серия есть, но путь не тот; надо бить; или просто нельзя. */
+function refusal(pos, from, to) {
+  if (findMove(pos, from, to)) return 'BAD_PATH';
+  return mustCapture(pos).length ? 'MUST_CAPTURE' : 'ILLEGAL';
 }
 
 export function resign(room, userId, now = Date.now()) {

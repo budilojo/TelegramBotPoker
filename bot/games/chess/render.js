@@ -12,6 +12,7 @@
  * шлём — её смотрят в приложении, а в карточке только последний ход записью.
  */
 import { esc, padEnd } from '../../fmt.js';
+import { promoLine } from '../promo.js';
 import {
   MAX_SEATS, findPlayer, seatedPlayers, startBlocker, score, live, mover, controlRu, KIND_RU, SIDE_RU,
 } from './rules.js';
@@ -134,7 +135,7 @@ export function shareText(room, userId, { botUsername = '' } = {}) {
   const n = `${moves} ${moves === 1 ? 'ход' : moves < 5 ? 'хода' : 'ходов'}`;
   const verdict = winnerName ? `🏆 Победил ${winnerName} — ${how}, ${n}` : `🤝 Ничья — ${how}, ${n}`;
   const head = `♟ Шахматы: ${white} ⚪ — ⚫ ${black}`;
-  const promo = `Играем в шахматы, дурака, покер и UNOQ прямо в Telegram${botUsername ? ` — @${botUsername}` : ''}`;
+  const promo = promoLine(botUsername);
   return {
     title: winnerName ? `Шахматы: победил ${winnerName}` : 'Шахматы: ничья',
     html: `${esc(head)}\n${esc(verdict)}\n\n${esc(promo)}`,
