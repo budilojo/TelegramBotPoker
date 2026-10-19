@@ -1772,3 +1772,19 @@
 | Экран Mini App: «🎲 Бросить», «Вернуть», «Готово», «⤓ Снять», строка под доской, история бросков, правила | `miniapp/games/nardy.js` — `actionsEl`, `statusEl`, `diceEl`, `openRolls`, `openRules` |
 | Бот: уровни («Новичок» … «Мастер»), подсказки к ним, имя «🤖 Новичок» | `bot/games/nardy/engine.js` — `LEVELS`; `bot/games/nardy/bot.js` — `catalog.levelHints`, `seat` |
 | Подпись на экране «Игры с ботами» | `miniapp/games/nardy.js` — `solo.blurb` |
+
+## 12. Покер: слова ходов — по-английски, блайнды растут
+
+По просьбе владельца слова ходов за столом — английские, как в покерных
+клиентах. Строки в разделе 3 выше, где они ещё русские («Сбросить»,
+«Уравнять», «Повысить», «Весь стек», «Сбросил», «Уравнял»…), **устарели**; верны эти.
+
+| Что | Где |
+|---|---|
+| Кнопки: Fold, Check, Call N, Bet / Raise; «Fold anyway?» + «Check is free» (второй тап, когда Check бесплатный); «all-in» под Call, если колл — весь стек | `miniapp/games/poker.js` — `panelEl` |
+| Плашки у мест: Bet, Raise, Call, Check, Fold, All-in, SB, BB | `miniapp/games/poker.js` — `plateText` |
+| Шторка ставки: Bet / Raise, «Raise to N», ½ Pot, ¾ Pot, Pot, All-in, «All-in — sure?» | `miniapp/games/poker.js` — `openRaise`, `SIZE_RU` |
+| Линия «Bet N» под бордом, «All-in» при открытии борда | `miniapp/games/poker.js` — `renderTable`, `stageLabel` |
+| Совет наставника: Raise, Bet, Call, Check, Fold; список действий в азбуке | `bot/games/poker/school.js` — `ACTION_RU`; `miniapp/school.js` — `STEPS` |
+| Настройки стола: «Рост блайндов» — «Растут» / «Не растут», «Каждые 10 мин / 15 / 20 / 30», подсказка про лесенку | `miniapp/games/poker.js` — `openSettings` |
+| Уведомление «Уровень N: блайнды A/B со следующей раздачи» | `bot/room.js` — `advanceLevel` |

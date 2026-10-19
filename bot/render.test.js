@@ -393,8 +393,9 @@ test('snapshot: presets facing the big blind — +BB, ½ POT, ¾ POT, POT, ALL-I
   const l = legalActions(room, room.hand.actorId); // Саша: 500 to call, pot 750
   assert.deepEqual(presets(room, l), [
     { label: '+500', total: 1000, kind: 'size' },
-    { label: '½ POT', total: 1125, kind: 'size' },
-    { label: '¾ POT', total: 1438, kind: 'size' },
+    // Суммы по сетке малого блайнда (250): 1125 → 1250, 1438 → 1500. Раньше были «кривые».
+    { label: '½ POT', total: 1250, kind: 'size' },
+    { label: '¾ POT', total: 1500, kind: 'size' },
     { label: 'POT', total: 1750, kind: 'size' },
     { label: 'ALL-IN', total: 10000, kind: 'allin' },
   ]);

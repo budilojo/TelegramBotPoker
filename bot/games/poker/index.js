@@ -118,6 +118,9 @@ function soloBust(room) {
   if (me && me.stack <= 0 && !me.topUp) R.endGame(room, me.id);
 }
 
+/** Как часто растут блайнды у нового стола, минут. */
+const DEFAULT_LEVEL_MINUTES = 15;
+
 /** Numbers the hub may pass when it creates a table. The room layer clamps them. */
 function settingsPatch(msg = {}) {
   const patch = {};
@@ -125,6 +128,9 @@ function settingsPatch(msg = {}) {
     if (msg[k] != null && Number.isFinite(Number(msg[k]))) patch[k] = Number(msg[k]);
   }
   if (msg.cards === 'live' || msg.cards === 'virtual') patch.cards = msg.cards;
+  // Рост блайндов: «fixed» — стоят, «levels» — растут по лестнице каждые N минут.
+  if (msg.blindMode === 'levels' || msg.blindMode === 'fixed') patch.blindMode = msg.blindMode;
+  if (msg.levelMinutes != null && Number.isFinite(Number(msg.levelMinutes))) patch.levelMinutes = Number(msg.levelMinutes);
   return patch;
 }
 
@@ -212,7 +218,9 @@ export default {
   create({ chatId, title, host, settings = null }) {
     const room = R.createRoom({ chatId, title, host });
     room.game = 'poker';
-    const patch = settingsPatch(settings || {});
+    // Новые столы — с растущими блайндами (раз в 15 минут), если хозяин не
+    // сказал иначе: иначе партия «зависает» на одних и тех же ставках.
+    const patch = { blindMode: 'levels', levelMinutes: DEFAULT_LEVEL_MINUTES, ...settingsPatch(settings || {}) };
     if (Object.keys(patch).length) {
       R.updateSettings(room, room.hostId, patch);
       room.undo = []; // a table's first settings are not the host's to "undo"

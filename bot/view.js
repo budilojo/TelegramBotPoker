@@ -51,11 +51,15 @@ const potRaise = (l, f) => Math.round(l.myBet + l.toCall + (l.potTotal + l.toCal
 export function presets(room, l) {
   if (!l || !(l.canBet || l.canRaise)) return [];
   const bb = room.settings.bigBlind;
+  // Суммы — по сетке малого блайнда (25, 50, 75, 100…), а не 137: ровные числа
+  // легче читать и называть за столом. Края (минимум, весь стек) остаются как есть.
+  const grid = Math.max(1, room.settings.smallBlind || 1);
+  const onGrid = (v) => Math.round(v / grid) * grid;
   const raw = [
     [`+${bb}`, l.currentBet + bb],
-    ['½ POT', potRaise(l, 0.5)],
-    ['¾ POT', potRaise(l, 0.75)],
-    ['POT', potRaise(l, 1)],
+    ['½ POT', onGrid(potRaise(l, 0.5))],
+    ['¾ POT', onGrid(potRaise(l, 0.75))],
+    ['POT', onGrid(potRaise(l, 1))],
   ];
   const out = [];
   const seen = new Set();

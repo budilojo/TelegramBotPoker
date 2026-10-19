@@ -87,7 +87,7 @@ try {
     if (await page.locator('.coach.ok, .coach.no').count()) break;
     const advised = page.locator('.panel .btn.advised');
     if (await advised.count()) {
-      const isRaise = (await advised.textContent()).match(/Ставка|Повысить/);
+      const isRaise = (await advised.textContent()).match(/Bet|Raise/);
       await advised.click();
       if (isRaise) {
         // Размер — первый из предложенных: нажатие сразу ставит.

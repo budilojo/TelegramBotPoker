@@ -53,6 +53,7 @@ function act(action, amount) {
 
 function handleState(wasConnected) {
   const s = state;
+  if (!s.legal) foldArmed = false; // чужой ход или конец раздачи — предупреждение про Fold снимается
   const p = prev;
   const mySeat = s.me.seat;
 
@@ -224,14 +225,15 @@ function plateText(p, s) {
   const a = p.amount ? ` ${fmt(p.amount)}` : '';
   switch (p.status) {
     case 'turn': return 'ХОД';
-    case 'bet': return `Ставка${a}`;
-    case 'raise': return `Повысил${a}`;
-    case 'call': return `Уравнял${a}`;
-    case 'check': return 'Чек';
-    case 'fold': return 'Сбросил';
-    case 'allin': return `Весь стек${a}`;
-    case 'sb': return `МБ${a}`;
-    case 'bb': return `ББ${a}`;
+    // Слова ходов — по-английски, как в любом покерном клиенте (просьба владельца).
+    case 'bet': return `Bet${a}`;
+    case 'raise': return `Raise${a}`;
+    case 'call': return `Call${a}`;
+    case 'check': return 'Check';
+    case 'fold': return 'Fold';
+    case 'allin': return `All-in${a}`;
+    case 'sb': return `SB${a}`;
+    case 'bb': return `BB${a}`;
     case 'wait': return 'ЖДЁТ';
     case 'out': return 'ПРОПУСК';
     case 'broke': return 'БЕЗ ФИШЕК';
@@ -377,7 +379,7 @@ function stageLabel(s) {
   const hd = s.hand;
   if (s.room.status === 'paused') return ['ПАУЗА', 'paused'];
   if (!hd) return ['—', ''];
-  if (hd.revealing) return ['Весь стек', 'show'];
+  if (hd.revealing) return ['All-in', 'show'];
   if (hd.phase === 'showdown') return ['Вскрытие', 'show'];
   if (hd.phase === 'complete') return [hd.result?.kind === 'fold' ? 'Итог' : 'Вскрытие', 'show'];
   return [STAGE[hd.street] || hd.street, ''];
@@ -417,7 +419,8 @@ function renderTable() {
     others.map((p) => seatEl(p, s)),
   );
 
-  $app.append(top, table, coachEl(s), heroEl(s), panelEl(s));
+  // Пустое место — не «null»: append() печатает null словом, поэтому пустое отсеиваем.
+  $app.append(...[top, table, coachEl(s), heroEl(s), panelEl(s)].filter(Boolean));
   layoutTable();
 }
 
@@ -642,7 +645,7 @@ function centerEl(s) {
     line = animateOnce(resultLine(s), `result:${hd.no}`, [{ transform: 'translateY(8px) scale(0.9)', opacity: 0, offset: 0 }],
       { duration: 450, delay: Math.max(250, planFor(s)?.best ?? 0) });
   }
-  else if (hd?.currentBet) line = h('div.bet-line', `Ставка ${fmt(hd.currentBet)}`);
+  else if (hd?.currentBet) line = h('div.bet-line', `Bet ${fmt(hd.currentBet)}`);
   else line = h('div.bet-line', '');
 
   // Once the result is known the pot is pushed to the winners: it drains while their stacks fill.
@@ -788,13 +791,30 @@ function panelEl(s) {
       // Школа: кнопку, которую советует наставник, видно сразу.
       const advice = s.learn?.tip?.advice;
       const adv = (kinds) => (advice && kinds.includes(advice) ? '.advised' : '');
-      if (L.toCall > 0) panel.append(h(`button.btn.danger${adv(['fold'])}`, { onclick: () => act('fold') }, 'Сбросить'));
-      if (L.canCheck) panel.append(h(`button.btn.primary${adv(['check'])}`, { onclick: () => act('check') }, 'Чек'));
+      // Fold есть всегда — и когда можно бесплатно сказать Check: иногда карты
+      // хочется выбросить, не дожидаясь своей очереди платить. Если Check
+      // бесплатный, Fold просит второго нажатия — случайный тап не должен
+      // выбрасывать руку, которую можно было сыграть даром.
+      const free = L.canCheck;
+      panel.append(h(`button.btn.danger${adv(['fold'])}${foldArmed && free ? '.armed' : ''}`, {
+        onclick: () => {
+          if (free && !foldArmed) {
+            foldArmed = true;
+            haptic.soft();
+            clearTimeout(foldTimer);
+            foldTimer = setTimeout(() => { foldArmed = false; bus.render(); }, 2500);
+            return bus.render();
+          }
+          foldArmed = false;
+          act('fold');
+        },
+      }, free && foldArmed ? 'Fold anyway?' : 'Fold', free && foldArmed ? h('small', 'Check is free') : null));
+      if (L.canCheck) panel.append(h(`button.btn.primary${adv(['check'])}`, { onclick: () => act('check') }, 'Check'));
       else if (L.canCall) {
         panel.append(h(`button.btn.primary${adv(['call'])}`, { onclick: () => act('call') },
-          `Уравнять ${fmt(L.callAmount)}`, L.isCallAllIn ? h('small', 'это весь стек') : null));
+          `Call ${fmt(L.callAmount)}`, L.isCallAllIn ? h('small', 'all-in') : null));
       }
-      if (L.canBet || L.canRaise) panel.append(h(`button.btn.gold${adv(['bet', 'raise'])}`, { onclick: openRaise }, L.canBet ? 'Ставка' : 'Повысить'));
+      if (L.canBet || L.canRaise) panel.append(h(`button.btn.gold${adv(['bet', 'raise'])}`, { onclick: openRaise }, L.canBet ? 'Bet' : 'Raise'));
       [...panel.children].forEach((b, i) => animateOnce(b, `btn:${turnId}:${i}`,
         [{ transform: 'translateY(18px) scale(0.92)', opacity: 0, offset: 0 }], { duration: 380, delay: 60 + i * 60 }));
       if (net.busy) panel.classList.add('busy');
@@ -862,11 +882,15 @@ function renderResults() {
 /* --- raise: two taps for a size, a third only for the whole stack */
 
 let allinArmed = false;
+/** Fold при бесплатном Check: первое нажатие — предупреждение, второе — сброс. */
+let foldArmed = false;
+let foldTimer = null;
 /**
- * Подписи долей банка приходят с сервера по-английски — там они и остаются:
- * сервер фазой не трогается. Переводим на странице, в одном месте.
+ * Подписи долей банка приходят с сервера заглавными (`½ POT`); на экране — в
+ * обычном написании, как в покерных клиентах. Слова ходов по-английски —
+ * просьба владельца.
  */
-const SIZE_RU = { '½ POT': '½ банка', '¾ POT': '¾ банка', 'POT': 'Банк', 'ALL-IN': 'Весь стек' };
+const SIZE_RU = { '½ POT': '½ Pot', '¾ POT': '¾ Pot', 'POT': 'Pot', 'ALL-IN': 'All-in' };
 /** То же для банков при нескольких олл-инах. */
 const POT_RU = (label) => label.replace(/^MAIN POT$/, 'Основной банк').replace(/^SIDE POT (\d+)$/, 'Побочный банк $1');
 
@@ -881,7 +905,7 @@ function openRaise() {
     if (!L || !(L.canBet || L.canRaise)) return null;
     value = clamp(value, L.minTotal, L.maxTotal);
     const verb = L.canBet ? 'bet' : 'raise';
-    const word = L.canBet ? 'Ставка' : 'Повысить до';
+    const word = L.canBet ? 'Bet' : 'Raise to';
 
     const sizes = h('div.grid2', L.presets.map((p) => {
       if (p.kind === 'allin') {
@@ -894,7 +918,7 @@ function openRaise() {
             }
             act('allin');
           },
-        }, allinArmed ? 'Точно весь стек?' : 'Весь стек', h('b.num', fmt(p.total)));
+        }, allinArmed ? 'All-in — sure?' : 'All-in', h('b.num', fmt(p.total)));
       }
       return h('button.btn.size-btn', { onclick: () => act(verb, p.total) }, SIZE_RU[p.label] || p.label, h('b.num', fmt(p.total)));
     }));
@@ -904,14 +928,25 @@ function openRaise() {
      * подвинуть на шаг кнопками. Ползунок хорош, чтобы прикинуть, и плох,
      * чтобы попасть в ровное число: 240 он даёт через раз.
      */
-    const step = Math.max(1, Math.round(state.room.settings.bigBlind / 2));
+    // Сетка — кратные малому блайнду (25, 50, 75, 100…): суммы «магнитятся» к
+    // ровным числам стола, а не к 137. Края (минимум и весь стек) — как есть.
+    const step = Math.max(1, state.room.settings.smallBlind);
+    const snap = (v) => (v >= L.maxTotal ? L.maxTotal
+      : v <= L.minTotal ? L.minTotal
+        : clamp(Math.round(v / step) * step, L.minTotal, L.maxTotal));
+    /** Следующая точка сетки вверх (d > 0) или вниз (d < 0) от текущей суммы. */
+    const stepFrom = (v, d) => {
+      const onGrid = v % step === 0;
+      const k = d > 0 ? Math.floor(v / step) + 1 : (onGrid ? v / step - 1 : Math.floor(v / step));
+      return clamp(k * step, L.minTotal, L.maxTotal);
+    };
     const input = h('input.amount-input.num', {
       type: 'text', inputmode: 'numeric', autocomplete: 'off', value: fmt(value), 'aria-label': 'Сумма',
     });
     const err = h('div.amount-err');
     const amountEl = h(`div.amount.num${value >= L.maxTotal ? '.max' : ''}`);
     const bump = (d) => {
-      value = clamp(value + d * step, L.minTotal, L.maxTotal);
+      value = stepFrom(value, d);
       typed = null;
       input.value = fmt(value);
       sync();
@@ -958,15 +993,14 @@ function openRaise() {
       amountEl.textContent = '';
       amountEl.classList.toggle('max', value >= L.maxTotal);
       slider.style.setProperty('--pct', `${L.maxTotal === L.minTotal ? 100 : ((value - L.minTotal) / (L.maxTotal - L.minTotal)) * 100}%`);
-      sub.textContent = value >= L.maxTotal ? 'Весь стек' : `Добавите ${fmt(value - L.myBet)} · останется ${fmt(L.stack - (value - L.myBet))}`;
-      confirm.textContent = value >= L.maxTotal ? `Весь стек ${fmt(value)}` : `${word} ${fmt(value)}`;
+      sub.textContent = value >= L.maxTotal ? 'All-in' : `Добавите ${fmt(value - L.myBet)} · останется ${fmt(L.stack - (value - L.myBet))}`;
+      confirm.textContent = value >= L.maxTotal ? `All-in ${fmt(value)}` : `${word} ${fmt(value)}`;
     };
     const slider = h('input.slider', {
       type: 'range', min: L.minTotal, max: L.maxTotal, step: 1, value,
       oninput: (e) => {
         const v = Number(e.target.value);
-        value = v >= L.maxTotal - step / 2 ? L.maxTotal : v <= L.minTotal ? L.minTotal : Math.round(v / step) * step;
-        value = clamp(value, L.minTotal, L.maxTotal);
+        value = v >= L.maxTotal - step / 2 ? L.maxTotal : snap(v);
         typed = null;
         input.value = fmt(value);
         sync();
@@ -976,7 +1010,7 @@ function openRaise() {
       if (value >= L.maxTotal) {
         if (!allinArmed) {
           allinArmed = true;
-          confirm.textContent = `Точно весь стек ${fmt(value)}?`;
+          confirm.textContent = `All-in ${fmt(value)} — sure?`;
           confirm.className = 'btn danger wide lg';
           return;
         }
@@ -986,7 +1020,7 @@ function openRaise() {
     };
     sync();
     return h('div',
-      h('h3', L.canBet ? 'Ставка' : 'Повысить ставку'),
+      h('h3', L.canBet ? 'Bet' : 'Raise'),
       h('div.sub', `от ${fmt(L.minTotal)} до ${fmt(L.maxTotal)} · сумма — сколько всего будет перед вами`),
       row, err, slider, sizes, sub,
       // Подтверждение липкое: содержимое шторки может быть выше её самой, и
@@ -1139,13 +1173,21 @@ function openSettings() {
       numField('Стартовый стек', 'startingStack', !inLobby),
       numField('Малый блайнд', 'smallBlind'),
       numField('Большой блайнд', 'bigBlind'),
+      h('div.section-label', 'Рост блайндов'),
+      seg([['levels', 'Растут'], ['fixed', 'Не растут']], 'blindMode'),
+      st.blindMode === 'levels'
+        ? [seg([[10, 'Каждые 10 мин'], [15, '15 мин'], [20, '20 мин'], [30, '30 мин']], 'levelMinutes'),
+          h('div.hint', { style: { marginTop: '6px' } }, inLobby
+            ? 'Лесенка от стартовых блайндов: 25/50 → 50/100 → 75/150 → 100/200 → 150/300… Новый уровень — со следующей раздачи.'
+            : 'Блайнды растут по лесенке; новый уровень — со следующей раздачи. Вручную их можно менять, только выключив рост.')]
+        : null,
       h('div.section-label', 'Таймер хода'),
       seg([[0, 'Выкл'], [30, '30 с'], [60, '60 с'], [90, '90 с'], [120, '2 мин']], 'turnSeconds'),
       h('div.hint', { style: { marginTop: '6px' } }, 'Не успел — чек, если можно, иначе фолд. С таймером раздачи идут сами.'),
       h('div.section-label', 'Карты'),
       midHand ? h('div.hint', 'Режим карт меняется между раздачами.') : seg([['virtual', '🤖 Раздаёт бот'], ['live', '🃏 Настоящие']], 'cards'),
       h('button.btn.primary.wide.lg', { style: { marginTop: '16px', width: '100%' }, onclick: () => {
-        const patch = { t: 'settings', smallBlind: st.smallBlind, bigBlind: st.bigBlind, turnSeconds: st.turnSeconds };
+        const patch = { t: 'settings', smallBlind: st.smallBlind, bigBlind: st.bigBlind, turnSeconds: st.turnSeconds, blindMode: st.blindMode, levelMinutes: st.levelMinutes };
         if (inLobby) patch.startingStack = st.startingStack;
         if (!midHand) patch.cards = st.cards;
         send(patch);

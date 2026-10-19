@@ -287,7 +287,11 @@ export default {
   }),
 
   /** Стол для игры с ботами: обычные фишки и блайнды, без таймера хода — человек играет в своём темпе. */
-  settings: () => ({ startingStack: 10000, smallBlind: 50, bigBlind: 100, turnSeconds: 0 }),
+  settings: (raw = {}) => ({
+    startingStack: 10000, smallBlind: 50, bigBlind: 100, turnSeconds: 0,
+    // С ботами блайнды растут раз в 10 минут; в школе стоят — урок это одна раздача.
+    ...(raw.learn ? { blindMode: 'fixed' } : { blindMode: 'levels', levelMinutes: 10 }),
+  }),
 
   /**
    * Состав: сколько соперников, какой уровень и какие характеры. Невыбранные

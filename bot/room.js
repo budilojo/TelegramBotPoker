@@ -967,9 +967,10 @@ export function updateSettings(room, userId, patch = {}) {
   const turnSeconds =
     patch.turnSeconds === 0 ? 0 : patch.turnSeconds != null ? intIn(patch.turnSeconds, 15, 600, 60) : cur.turnSeconds || 0;
 
-  const editableBlinds = inLobby || mode === 'fixed';
-  const sb = editableBlinds ? intIn(patch.smallBlind, 1, 1_000_000, cur.smallBlind) : cur.smallBlind;
-  const bb = editableBlinds ? intIn(patch.bigBlind, sb, 2_000_000, cur.bigBlind) : cur.bigBlind;
+  // Блайнды хозяин может задать всегда. В режиме роста это новая точка отсчёта:
+  // лесенка строится от них заново (ниже), а на стол они ложатся со следующей раздачи.
+  const sb = intIn(patch.smallBlind, 1, 1_000_000, cur.smallBlind);
+  const bb = intIn(patch.bigBlind, sb, 2_000_000, cur.bigBlind);
   if (bb < sb) return { error: 'BAD_AMOUNT' };
 
   const stack = inLobby
@@ -1010,11 +1011,10 @@ export function updateSettings(room, userId, patch = {}) {
   }
 
   if (mode === 'levels') {
-    const base = inLobby
-      ? { sb, bb }
-      : room.settings.schedule?.[room.level.index] ?? { sb: cur.smallBlind, bb: cur.bigBlind };
-    if (inLobby || cur.blindMode !== 'levels') {
-      room.settings.schedule = makeSchedule(base.sb, base.bb);
+    // Лесенка строится заново, если рост только что включили или блайнды
+    // поменяли руками: отсчёт — от тех блайндов, что выбрал хозяин.
+    if (inLobby || cur.blindMode !== 'levels' || blindsMoved) {
+      room.settings.schedule = makeSchedule(sb, bb);
       room.level = {
         index: 0,
         elapsedMs: 0,

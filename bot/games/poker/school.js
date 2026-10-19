@@ -252,7 +252,7 @@ const RANK_CODES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K',
 const cardCodeOf = (c) => RANK_CODES[c >> 2] + 'SHDC'[c & 3];
 
 const pct = (x) => `${Math.round(x * 100)}%`;
-const ACTION_RU = { raise: 'Повысить', bet: 'Поставить', call: 'Уравнять', check: 'Чек', fold: 'Сбросить' };
+const ACTION_RU = { raise: 'Raise', bet: 'Bet', call: 'Call', check: 'Check', fold: 'Fold' };
 
 /**
  * Подсказка «по-честному» — из того, что человек видит сам: его карты, борд,
