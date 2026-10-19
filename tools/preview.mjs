@@ -605,9 +605,13 @@ if (serve) {
   }
   fs.mkdirSync(OUT, { recursive: true });
   const browser = await chromium.launch();
+  // Аудит F-3: служебные слова на экране и ошибки JS — в каждом кадре.
+  const JUNK_WORDS = /(^|[^\p{L}\p{N}_])(null|undefined|NaN)(?![\p{L}\p{N}_])|\[object Object\]/u;
+  const junk = [];
   for (const s of scenes) {
     s.before?.();
     const page = await browser.newPage({ viewport: { width: s.width, height: s.height }, deviceScaleFactor: 2 });
+    page.on('pageerror', (err) => junk.push(`[${s.name}] ошибка JS: ${err.message}`));
     await page.route('https://telegram.org/**', (route) =>
       route.fulfill({ contentType: 'text/javascript', body: sdkStub(s.initData) }));
     await page.goto(`http://localhost:${PORT}/`);
@@ -639,11 +643,22 @@ if (serve) {
     if (s.scroll) await page.evaluate((y) => document.querySelector('.lobby')?.scrollTo(0, y), s.scroll);
     await page.waitForTimeout(700); // let the deal animations settle
     await page.screenshot({ path: path.join(OUT, `${s.name}.png`) });
+    const words = await page.evaluate(() => [
+      document.body.innerText,
+      ...[...document.querySelectorAll('[alt],[title],[aria-label],[placeholder]')].map((e) => [e.alt, e.title, e.getAttribute('aria-label'), e.placeholder].filter(Boolean).join(' ')),
+    ].join('\n'));
+    const hit = JUNK_WORDS.exec(words);
+    if (hit) junk.push(`[${s.name}] на экране «${hit[0].trim()}»: …${words.slice(Math.max(0, hit.index - 60), hit.index + 60).replace(/\n/g, ' ')}…`);
     await page.close();
     s.after?.(); // снять то, что сцена включила для себя одной
   }
   await browser.close();
   await web.close();
   console.log(`preview: ${scenes.length} screenshots → ${path.relative(process.cwd(), OUT)}/`);
+  if (junk.length) {
+    console.log(`служебные слова и ошибки на экранах (${junk.length}):\n${junk.join('\n')}`);
+    process.exit(1);
+  }
+  console.log('служебных слов (null, undefined, NaN, [object Object]) и ошибок JS на экранах нет');
   process.exit(0);
 }

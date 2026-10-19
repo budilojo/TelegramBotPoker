@@ -313,7 +313,7 @@ const SETTINGS = {
 };
 const MAXN = { poker: 6, durak: 6, colors: 6, chess: 2, checkers: 2, nardy: 2, battleship: 2 };
 
-export async function runTable(game, seed, steps, { onStep = null } = {}) {
+export async function runTable(game, seed, steps, { onStep = null, names = null, title = null, onDone = null } = {}) {
   const rnd = seededRng(seed);
   const t = new Table({
     deck: seededDecks(seed), durakDeck: durakDecks(seed), colorsDeck: colorsDecks(seed), botRng: botRandom(seed),
@@ -323,9 +323,9 @@ export async function runTable(game, seed, steps, { onStep = null } = {}) {
     battleshipRand: () => rnd(1000) / 1000, battleshipFleetRand: () => rnd(1e6) / 1e6,
   });
   const n = 2 + rnd(MAXN[game] - 1);
-  const cast = Array.from({ length: n + 1 }, (_, i) => user(101 + i, `Игрок${i + 1}`));
-  const spy = cast[n]; // последний не садится — зритель
-  await t.cmd(cast[0], '/game');
+  const cast = Array.from({ length: n + 1 }, (_, i) => user(101 + i, names ? names[i % names.length] : `Игрок${i + 1}`));
+  for (const u of cast) await t.start(u); // личка открыта — «ваш ход» тоже проверяется
+  await t.cmd(cast[0], '/game', title ? { chat: { id: t.chatId, type: 'supergroup', title } } : {});
   t.openHub(cast[0]);
   await t.send(cast[0], { t: 'create', game, settings: SETTINGS[game](rnd) });
   let code = [...t.app.rooms.values()].find((r) => r.game === game).code;
@@ -437,6 +437,7 @@ export async function runTable(game, seed, steps, { onStep = null } = {}) {
       throw e;
     }
   }
+  await onDone?.(t);
   t.app.stop();
   return stats;
 }
