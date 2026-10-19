@@ -70,3 +70,13 @@ test('АУДИТ G-1 (замечание): запрет слов обходит�
   assert.equal(bannedWord('кaзинo'), null, 'латинские а и о не ловятся');
 });
 
+test('АУДИТ G-02: кривая разметка в рассылке — отказ до отправки, словами; правильная проходит', () => {
+  for (const text of ['<b>Скидки', 'Tom & Jerry', '<script>x</script>', '<b><i>x</b></i>', 'a < b', '&nbsp;']) {
+    const r = checkCast({ text, now: 1 });
+    assert.equal(r.error, 'BAD_HTML', `${text}: ${r.error || 'принят'}`);
+    assert.match(r.text, /Telegram не примет разметку/);
+  }
+  for (const text of ['<b>Новое</b> в боте &amp; играх', 'Просто текст', '<a href="https://t.me/x">ссылка</a>', '5 > 3', '<tg-spoiler>секрет</tg-spoiler>']) {
+    assert.equal(checkCast({ text, now: 1 }).error, undefined, text);
+  }
+});

@@ -170,3 +170,42 @@ export const ACTION_RU = {
   SB: 'SB',
   BB: 'BB',
 };
+
+/** Теги, которые Telegram принимает в parse_mode HTML. */
+const TG_TAGS = new Set(['b', 'strong', 'i', 'em', 'u', 'ins', 's', 'strike', 'del', 'span', 'tg-spoiler', 'a', 'tg-emoji', 'code', 'pre', 'blockquote']);
+
+/**
+ * Что в тексте не примет Telegram в разметке HTML: неизвестный тег, тег не
+ * закрыт или закрыт не тот, «голые» `<` и `&`, неизвестная сущность.
+ * Пустой список — текст пройдёт. Нужен там, где текст пишет человек
+ * (рассылка): иначе одна опечатка — и письмо не дойдёт ни до кого.
+ */
+export function htmlProblems(text) {
+  const out = [];
+  const stack = [];
+  const re = /<(\/?)([a-zA-Z][a-zA-Z0-9-]*)([^<>]*)>|&(#\d+|#x[0-9a-fA-F]+|[a-zA-Z]+);|[<&]/g;
+  let m;
+  while ((m = re.exec(String(text)))) {
+    const [all, close, tag] = m;
+    if (all === '<' || all === '&') {
+      out.push(`знак «${all}» без пары — напишите ${all === '<' ? '&lt;' : '&amp;'}`);
+      continue;
+    }
+    if (all.startsWith('&')) {
+      if (!/^&(lt|gt|amp|quot|#\d+|#x[0-9a-fA-F]+);$/.test(all)) out.push(`неизвестное ${all}`);
+      continue;
+    }
+    const t = tag.toLowerCase();
+    if (!TG_TAGS.has(t)) {
+      out.push(`тег <${t}> Telegram не знает`);
+      continue;
+    }
+    if (close) {
+      const open = stack.pop();
+      if (open !== t) out.push(open ? `</${t}> закрывает <${open}>` : `</${t}> без открывающего`);
+    } else stack.push(t);
+  }
+  for (const t of stack) out.push(`<${t}> не закрыт`);
+  return out;
+}
+

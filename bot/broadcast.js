@@ -28,7 +28,7 @@
  *     группа забывается, письмо считается недошедшим.
  */
 import { ADS_OFF } from './app.js';
-import { esc, num } from './fmt.js';
+import { esc, num, htmlProblems } from './fmt.js';
 
 /** Восемь писем в секунду — впятеро ниже потолка Telegram. */
 export const SEND_GAP_MS = 125;
@@ -69,6 +69,7 @@ export const ERRORS = {
   EMPTY: 'Пустое письмо отправить нельзя.',
   LONG: `Слишком длинно: не больше ${MAX_TEXT} знаков.`,
   BAD_URL: 'Ссылка должна начинаться с https://',
+  BAD_HTML: 'Telegram не примет разметку:',
   BAD_BUTTON: 'У кнопки есть текст, но нет ссылки (или наоборот).',
   BAD_TIME: 'Время отправки уже прошло.',
   BAD_AUDIENCE: 'Такой аудитории нет.',
@@ -97,6 +98,10 @@ export function checkCast({ text, btnText = '', btnUrl = '', audience = 'all', a
         'запрет вшит в админку, снять его можно только правкой кода.',
     };
   }
+  // Разметка — HTML Telegram. Опечатка в ней — отказ КАЖДОМУ получателю, и
+  // рассылка уходит «никому» (аудит, G-02): ловим до отправки, словами.
+  const html = htmlProblems(body);
+  if (html.length) return { error: 'BAD_HTML', text: `${ERRORS.BAD_HTML} ${html[0]}.` };
   if (!AUDIENCES[audience]) return { error: 'BAD_AUDIENCE' };
   const t = String(btnText || '').trim();
   const u = String(btnUrl || '').trim();
