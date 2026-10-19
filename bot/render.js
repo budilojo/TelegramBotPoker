@@ -54,7 +54,10 @@ export function renderCard(room, { link = null } = {}) {
 
 function statusLines(room, host) {
   const h = room.hand;
-  if (room.status === 'finished') return ['🏁 <b>Игра завершена</b> — итоги ниже.'];
+  // Олл-ин, который кончает игру, ещё открывается по улице: «завершена» до
+  // ривера назвала бы исход. Итоги придут вместе с ривером (finishUp).
+  const revealing = !!h && room.ui?.reveal?.handNo === h.no;
+  if (room.status === 'finished' && !revealing) return ['🏁 <b>Игра завершена</b> — итоги ниже.'];
   if (room.status === 'lobby') {
     const blocker = startBlocker(room);
     return [

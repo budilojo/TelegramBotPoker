@@ -209,6 +209,10 @@ export function tableView(room, viewerId, { now = Date.now(), botUsername = '' }
   // is still being turned over, a stack that already grew would give the
   // river away. Until the last card is out, stacks read as before the payout.
   const revealing = !!h && room.ui?.reveal?.handNo === h.no;
+  // Олл-ин, который кончает игру: сервер уже знает, что у кого-то не осталось
+  // фишек, — но «игра завершена» и итоги вечера до ривера назвали бы
+  // победителя. Пока борд открывается, стол выглядит как при любом вскрытии.
+  const status = revealing && room.status === 'finished' ? 'playing' : room.status;
   const unpaid = new Map(revealing ? (h.payouts || []).map((x) => [x.playerId, x.amount]) : []);
 
   const players = room.players.map((p, seat) => {
@@ -263,7 +267,7 @@ export function tableView(room, viewerId, { now = Date.now(), botUsername = '' }
     room: {
       code: room.code,
       title: room.title || '',
-      status: room.status,
+      status,
       cards: live ? 'live' : 'virtual',
       maxSeats: MAX_SEATS,
       seated: room.players.filter((p) => !p.kicked && !p.left && roleOf(p) === 'player').length,
@@ -320,7 +324,7 @@ export function tableView(room, viewerId, { now = Date.now(), botUsername = '' }
     autoNextAt: room.autoNext?.deadline ?? null,
     canNext,
     canStart: room.status === 'lobby' && isHost(room, uid) && !startBlocker(room),
-    results: room.status === 'finished' ? resultsOf(room) : null,
+    results: status === 'finished' ? resultsOf(room) : null,
   };
 }
 
