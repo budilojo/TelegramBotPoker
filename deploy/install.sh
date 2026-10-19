@@ -109,6 +109,8 @@ cd "$APP"
 # --omit=dev: на сервере не нужен браузер для e2e и картинок
 sudo -u "$USER" npm ci --omit=dev
 sudo -u "$USER" mkdir -p "$APP/data" "$APP/backups"
+# База и бэкапы — имена и id игроков: читать их может только сам бот (аудит, H-01).
+chmod 700 "$APP/data" "$APP/backups"
 
 say "Файл .env"
 if [ ! -f "$APP/.env" ]; then

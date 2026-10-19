@@ -8,6 +8,8 @@
 # Ставится в крон скриптом install.sh. Проверить вручную:
 #   sudo -u worldcard /opt/worldcard/deploy/backup.sh
 set -euo pipefail
+# Копии базы — только владельцу: в них имена и id игроков (аудит, H-01).
+umask 077
 
 APP=/opt/worldcard
 # Скрипт запускают откуда угодно, в том числе из /root — а пользователь
