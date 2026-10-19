@@ -435,6 +435,7 @@ export class App {
   }
 
   save(room) {
+    if (room.gone) return; // удалённый стол не воскрешать в базе
     try {
       this.store.save(room, gameOf(room).serialize(room, this.clock.now()));
     } catch (err) {
@@ -1424,9 +1425,14 @@ export class App {
     const g = GAMES[gameId];
     if (!g?.bot) return { error: 'BAD_GAME' };
     const chatId = `solo:${user.id}`;
+    // Старые убираются синхронно, без единого await до создания новой: иначе
+    // две страницы одного человека, начавшие партию разом, оставляли две
+    // живые партии (аудит, E-05). dropGame стола с ботами синхронен до конца
+    // — у него нет карточки в чате.
     for (const old of this.roomsOf(chatId)) {
-      if (old.status !== 'finished') await this.dropGame(old);
+      if (old.status !== 'finished') this.track(this.dropGame(old));
       else {
+        old.gone = true;
         this.hub?.forget(old.code);
         this.rooms.delete(old.code);
         this.store.remove(old.code);
@@ -1445,6 +1451,8 @@ export class App {
       msg: { t: 'start' }, refuse: (code) => { refused = code; }, push() {},
     });
     if (refused) this.log(new Error(`solo start refused: ${refused}`));
+    // Пока партия начиналась, её уже заменила другая страница того же человека.
+    if (room.gone) return this.soloOf(user.id) || { error: 'BAD_GAME' };
     this.save(room);
     return room;
   }
