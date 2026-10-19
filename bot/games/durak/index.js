@@ -230,9 +230,12 @@ export default {
         if (fail(D.abortGame(room, uid))) return;
         return app.afterAction(room);
 
-      case 'finish':
-        if (fail(D.endGame(room, uid))) return;
+      case 'finish': {
+        const r = D.endGame(room, uid);
+        // Уже завершена: итоги в группе есть, второй раз их не публикуем.
+        if (fail(r) || r.noop) return;
         return app.finishUp(room);
+      }
 
       default:
         return refuse('BAD_REQUEST');

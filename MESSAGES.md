@@ -77,6 +77,7 @@
 | Новый — после /finish или /cancel. Ещё одна игра — /game. | 1047 | `onCommand` |
 | Игр нет. /game — выбрать игру. | 1073 | `onCommand` |
 | Стола нет. | 1085 | `onCommand` |
+| Игра уже завершена — итоги выше. | 83 | `ALREADY_FINISHED_TEXT` (ответ на повторный `/finish`) |
 | Стол удалён. /newgame — создать новый. | 1101 | `onCommand` |
 | ${gameOf(room).icon} ${gameOf(room).title}: игра удалена. /game — новая игра. | 1101 | `onCommand` |
 | Это может только хост — ${esc(nameOf(room, room.hostId))}. | 1263 | `hostOnly` |

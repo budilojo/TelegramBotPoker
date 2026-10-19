@@ -433,9 +433,12 @@ export default {
         if (fail(R.undo(room, uid))) return;
         return app.afterChange(room);
 
-      case 'finish':
-        if (fail(R.endGame(room, uid))) return;
+      case 'finish': {
+        const r = R.endGame(room, uid);
+        // Уже завершена: итоги в группе есть, второй раз их не публикуем.
+        if (fail(r) || r.noop) return;
         return app.finishUp(room);
+      }
 
       case 'pick': {
         const r = R.toggleWinner(room, uid, Number(msg.pot), Number(msg.seat));

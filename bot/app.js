@@ -79,6 +79,9 @@ export const ADS_OFF = 'ads:off';
 /** Что видит игрок, пока идёт обслуживание, если владелец не написал своего. */
 export const MAINTENANCE_TEXT = 'Обновляемся. Столы никуда не делись — вернёмся через несколько минут.';
 
+/** `/finish` на игре, которая уже завершена: итоги не публикуются второй раз. */
+export const ALREADY_FINISHED_TEXT = 'Игра уже завершена — итоги выше.';
+
 const WELCOME_DM = '✅ Готово: если приложение будет закрыто, когда до вас дойдёт ход, — напомню здесь.';
 
 /** Games a group may have going at once. Past this the hub asks to finish one. */
@@ -1134,6 +1137,8 @@ export class App {
         }
         const r = gameOf(room).endGame(room, user.id, this.clock.now());
         if (r.error) return void (await this.reply(chatId, this.hostOnly(room), msg));
+        // Игра уже завершена: итоги в группе есть — повтор их не дублирует.
+        if (r.noop) return void (await this.reply(chatId, ALREADY_FINISHED_TEXT, msg));
         await this.finishUp(room);
         return;
       }
