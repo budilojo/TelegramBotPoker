@@ -101,6 +101,11 @@ export function startServer({ hub, port, root, host = '0.0.0.0', log = console.e
 
   wss.on('connection', (ws) => {
     let session = null;
+    // Страница закрылась. Её сообщения, что ещё ждут в очереди, больше не
+    // выполняются: иначе ход, начатый до закрытия и ждавший Telegram,
+    // доработав, снова «сажал» бы закрытую страницу за стол (enterRoom), и
+    // бот считал бы человека смотрящим — и не писал бы ему «ваш ход».
+    let gone = false;
     let window = { at: Date.now(), n: 0 };
     ws.isAlive = true;
     ws.on('pong', () => (ws.isAlive = true));
@@ -123,6 +128,7 @@ export function startServer({ hub, port, root, host = '0.0.0.0', log = console.e
       if (++window.n > MAX_RATE) return void ws.close(4008, 'too many messages');
 
       chain = chain.then(async () => {
+        if (gone) return;
         let msg;
         try {
           msg = JSON.parse(String(buf));
@@ -141,10 +147,13 @@ export function startServer({ hub, port, root, host = '0.0.0.0', log = console.e
           return;
         }
         await hub.handle(session, msg);
+        // Закрылась, пока сообщение выполнялось: что бы оно ни открыло — убрать.
+        if (gone) hub.close(session);
       }).catch((err) => log('[ws]', err?.message || err));
     });
 
     ws.on('close', () => {
+      gone = true;
       if (session) hub.close(session);
     });
   });

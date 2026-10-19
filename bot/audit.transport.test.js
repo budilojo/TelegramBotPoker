@@ -66,6 +66,60 @@ function rawGet(port, rawPath, method = 'GET') {
   });
 }
 
+/* ---------------------------------------------- B-01: сессия после закрытия */
+
+test('АУДИТ B-01: страница, закрытая посреди обработки, не остаётся «за столом» и не глушит «ваш ход»', async () => {
+  const t = new Table();
+  const ann = user(101, 'Аня');
+  const bob = user(102, 'Боб');
+  await t.start(ann);
+  await t.start(bob);
+  await t.cmd(ann, '/game');
+  await t.cmd(ann, '/durak');
+  const room = t.durak;
+  t.openRoom(bob, room);
+  await t.send(bob, { t: 'sit' });
+  t.close(bob); // дальше в хабе открыта только страница Ани через сокет
+
+  // Telegram отвечает медленно: «ещё один стол» ждёт сети, а страница за это
+  // время успевает прислать ещё сообщение — и закрыться.
+  const post = t.tg.sendMessage.bind(t.tg);
+  t.tg.sendMessage = async (...a) => {
+    await wait(300);
+    return post(...a);
+  };
+  const srv = await serve(t);
+  try {
+    const page = await connect(srv.port);
+    page.ws.send(JSON.stringify({ t: 'hello', initData: initDataFor(ann, { startParam: `g_${t.group.code}`, clock: t.clock }) }));
+    page.ws.send(JSON.stringify({ t: 'again', from: room.code, reqId: 'r1' }));
+    page.ws.send(JSON.stringify({ t: 'hub' })); // назад в хаб группы…
+    page.ws.send(JSON.stringify({ t: 'join', code: room.code })); // …и за первый стол
+    await until(() => page.inbox.length > 0);
+    page.ws.close();
+    await page.closed;
+    await wait(700); // медленный Telegram ответил, очередь страницы доработала
+    t.tg.sendMessage = post;
+
+    assert.equal(t.hub.sessions, 0, 'закрытой странице не место в списке открытых');
+    assert.equal(t.hub.isPresent(room.code, ann.id), false, 'закрытая страница — не «человек смотрит на стол»');
+
+    // Последствие: партия пошла, приложение у Ани закрыто — «ваш ход» приходит в личку.
+    t.open(ann, { initData: initDataFor(ann, { startParam: room.code, clock: t.clock }) });
+    await t.send(ann, { t: 'start' });
+    t.close(ann);
+    const before = t.tg.dms(ann.id).length;
+    room.ui.pings = {}; // как будто напоминания ещё не было
+    await t.app.draw(room);
+    await t.app.settle();
+    if (GAMES.durak.waiting(room).some((w) => w.id === String(ann.id))) {
+      assert.ok(t.tg.dms(ann.id).length > before, 'Аня получила «ваш ход»');
+    }
+  } finally {
+    await srv.close();
+  }
+});
+
 /* -------------------------------------------------- B: статика и заголовки */
 
 test('АУДИТ B: обход каталога и чужие файлы — 404 на каждый путь, файлы проекта не отдаются', async () => {
