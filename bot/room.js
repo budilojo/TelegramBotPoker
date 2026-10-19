@@ -1080,6 +1080,12 @@ function closeAsFoldWin(room) {
   const h = room.hand;
   const last = room.players.find((x) => x.inHand && !x.folded);
   h.pots = computePots(room);
+  // Все остальные сбросили — весь банк его, даже фишки, к которым он «не
+  // допущен»: движок не считает претендентом того, кто не вложил ничего
+  // (баттон, который ещё не ходил, когда оба блайнда ушли), и банк без
+  // претендентов закрыть не может. Без этого раздача застревала во
+  // «вскрытии», и стол вставал (аудит, D-05).
+  for (const pot of h.pots) if (!pot.eligible.includes(last.id)) pot.eligible = [last.id];
   h.phase = 'showdown';
   h.actorId = null;
   const r = awardPots(room, h.pots.map(() => [last.id]), { auto: true });

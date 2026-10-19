@@ -337,9 +337,11 @@ export async function runTable(game, seed, steps, { onStep = null } = {}) {
   const viewers = cast.map((u) => String(u.id));
   const stats = { legal: 0, hostile: 0, env: 0, finished: 0 };
   let last = '';
+  let prevSnap = '';
   for (let step = 0; step < steps; step++) {
     let room = t.app.roomByCode(code);
     if (!room) break;
+    if (process.env.FUZZ_DUMP) prevSnap = JSON.stringify({ status: room.status, settings: room.settings, hand: room.hand && { ...room.hand, deck: undefined }, players: room.players.map((p) => ({ id: p.id, stack: p.stack, inHand: p.inHand, folded: p.folded, allIn: p.allIn, bet: p.bet, committed: p.committed, left: p.left, kicked: p.kicked, sittingOut: p.sittingOut, role: p.role })) }, null, 1);
     const r = rnd(100);
     try {
       if (r < 60) {
@@ -430,6 +432,7 @@ export async function runTable(game, seed, steps, { onStep = null } = {}) {
       }
     } catch (e) {
       t.app.stop();
+      if (process.env.FUZZ_DUMP) console.log('СТОЛ ДО ШАГА:', prevSnap);
       e.message = `${game}, зерно ${seed}, шаг ${step} (${last}): ${e.message}`;
       throw e;
     }
@@ -453,9 +456,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         sum.steps += s.legal + s.hostile + s.env;
       } catch (e) {
         failures += 1;
-        console.log(`✖ ${e.stack?.split('\n').slice(0, 6).join('\n')}`);
+        const where = (e.stack || '').split('\n').filter((l) => /^\s+at /.test(l)).slice(0, 4).join('\n');
+        console.log(`✖ ${String(e.message).split('\n').slice(0, 3).join(' | ')}\n${where}`);
         sum.steps += Number(per);
-        if (failures > 10) process.exit(1);
+        if (failures > Number(process.env.FUZZ_MAX_FAIL || 10)) process.exit(1);
       }
     }
     console.log(`${game}: столов ${sum.tables}, шагов ${sum.steps} (законных ${sum.legal}, враждебных ${sum.hostile}, среды ${sum.env}), партий доиграно ${sum.finished}`);
