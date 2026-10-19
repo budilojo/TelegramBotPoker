@@ -414,9 +414,17 @@ export class App {
           room.idleAt = Math.max(room.createdAt || 0, floor);
           room.idleWarned = false;
         }
+        // Стол поднимается, только если строит вид, строку хаба и часы. Иначе
+        // одна испорченная (или слишком старая) строка базы роняла часы и
+        // перерисовку ВСЕХ столов, а на запуске — сам бот (аудит, E-02).
+        // Строка остаётся в базе: её можно посмотреть и починить руками.
+        const g = gameOf(room);
+        g.summary(room);
+        g.view(room, '0', { now, botUsername: this.botUsername });
+        g.clocks?.(this, room, now);
         this.rooms.set(room.code, room);
       } catch (err) {
-        this.log(err);
+        this.log(new Error(`стол ${code} (${game}) не поднят из базы: ${err?.message || err}`));
       }
     }
     return this.rooms.size;
@@ -754,7 +762,15 @@ export class App {
     const now = this.clock.now();
     const live = new Set();
     for (const room of this.rooms.values()) {
-      for (const c of [...this.coreClocks(room, now), ...(gameOf(room).clocks?.(this, room, now) || []), ...this.botClocks(room, now)]) {
+      // Ошибка в часах одного стола не должна снимать таймеры всем остальным.
+      let clocks;
+      try {
+        clocks = [...this.coreClocks(room, now), ...(gameOf(room).clocks?.(this, room, now) || []), ...this.botClocks(room, now)];
+      } catch (err) {
+        this.log(err);
+        continue;
+      }
+      for (const c of clocks) {
         const id = `${c.id}:${room.code}`;
         live.add(id);
         if (!c.keep) this.arm(id, c.timer, c.fire);
