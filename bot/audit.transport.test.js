@@ -309,3 +309,73 @@ test('АУДИТ B: апгрейд не на /ws и полузавершённо
     await srv.close();
   }
 });
+
+/* ---------------------------------------- I-01: соединения без меры и срока */
+
+async function serveWith(t, opts) {
+  return new Promise((resolve) => {
+    const web = startServer({
+      hub: t.hub, port: 0, host: '127.0.0.1', root: ROOT, log: () => {}, ...opts,
+      onListen: (addr) => resolve({ web, port: addr.port, close: () => web.close() }),
+    });
+  });
+}
+
+test('АУДИТ I-01: сокет без hello закрывается по сроку, а не висит вечно', async () => {
+  const t = new Table();
+  const srv = await serveWith(t, { helloMs: 200 });
+  try {
+    const p = await connect(srv.port);
+    p.ws.send('{"t":"ping"}'); // пинги не продлевают ожидание hello
+    const c = await Promise.race([p.closed, wait(2000).then(() => null)]);
+    assert.ok(c, 'сокет закрыт сервером');
+    assert.equal(c.code, 4001);
+  } finally {
+    await srv.close();
+  }
+});
+
+test('АУДИТ I-01: у одного человека — не больше 20 открытых страниц; закрыл лишние — снова пускает', async () => {
+  const t = new Table();
+  const ann = user(101, 'Аня');
+  await t.cmd(ann, '/game');
+  await t.cmd(ann, '/durak');
+  const code = t.durak.code;
+  const srv = await serveWith(t, {});
+  const all = [];
+  try {
+    const hello = (p) => p.ws.send(JSON.stringify({ t: 'hello', initData: initDataFor(ann, { startParam: code, clock: t.clock }) }));
+    const pages = [];
+    for (let i = 0; i < 20; i++) {
+      const p = await connect(srv.port);
+      all.push(p);
+      hello(p);
+      assert.ok(await until(() => p.inbox.some((m) => m.t === 'state')), `страница ${i + 1} открылась`);
+      pages.push(p);
+    }
+    const extra = await connect(srv.port);
+    all.push(extra);
+    hello(extra);
+    const c = await Promise.race([extra.closed, wait(3000).then(() => ({ code: 'не закрыта' }))]);
+    assert.equal(c.code, 4003);
+    assert.equal(extra.inbox.find((m) => m.t === 'fatal')?.code, 'TOO_MANY_PAGES');
+    assert.match(extra.inbox.find((m) => m.t === 'fatal').text, /слишком много окон/);
+    assert.equal(t.hub.sessions, 20, 'лишняя страница не осталась в хабе');
+    // Другой человек не затронут.
+    const bob = await connect(srv.port);
+    all.push(bob);
+    bob.ws.send(JSON.stringify({ t: 'hello', initData: initDataFor(user(102, 'Боб'), { startParam: code, clock: t.clock }) }));
+    assert.ok(await until(() => bob.inbox.some((m) => m.t === 'state')), 'другого пускает');
+    // Закрыл одну — снова можно.
+    pages[0].ws.close();
+    await pages[0].closed;
+    await wait(50);
+    const again = await connect(srv.port);
+    all.push(again);
+    hello(again);
+    assert.ok(await until(() => again.inbox.some((m) => m.t === 'state')), 'после закрытия лишней — пускает');
+  } finally {
+    for (const p of all) p.ws.terminate();
+    await srv.close();
+  }
+});

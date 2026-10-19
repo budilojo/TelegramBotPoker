@@ -28,6 +28,18 @@ const TYPES = {
 
 /** Messages a page may send per second before it is cut off. */
 const MAX_RATE = 30;
+/**
+ * Сколько времени у страницы на `hello`. Без срока сокет без всякой подписи
+ * висел вечно (пинг держал его живым) — тысячами таких соединений можно было
+ * съесть память бота (аудит, I-01). Настоящая страница шлёт hello сразу.
+ */
+export const HELLO_MS = 15_000;
+/**
+ * Сколько страниц одного человека открыто разом. Телефон, планшет,
+ * компьютер, пара вкладок — это единицы; сотни — это скрипт с одной подписью.
+ */
+export const MAX_PAGES = 20;
+export const TOO_MANY_PAGES_TEXT = 'Открыто слишком много окон игры — закройте лишние и откройте снова.';
 
 function indexFiles(root) {
   const files = new Map();
@@ -48,8 +60,10 @@ function indexFiles(root) {
  * @param hub   the Hub
  * @param root  directory with the Mini App (index.html and friends)
  */
-export function startServer({ hub, port, root, host = '0.0.0.0', log = console.error, onListen } = {}) {
+export function startServer({ hub, port, root, host = '0.0.0.0', log = console.error, onListen, helloMs = HELLO_MS, maxPages = MAX_PAGES } = {}) {
   const files = indexFiles(root);
+  /** user id -> сколько его страниц открыто сейчас */
+  const pagesOf = new Map();
 
   const server = http.createServer((req, res) => {
     let pathname = '/';
@@ -114,6 +128,11 @@ export function startServer({ hub, port, root, host = '0.0.0.0', log = console.e
     // слушателя это событие — исключение на весь процесс: одним кадром, без
     // всякой подписи, кто угодно ронял бы бота. Слушаем и забываем.
     ws.on('error', () => {});
+    const helloTimer = setTimeout(() => {
+      if (!session) ws.close(4001, 'hello first');
+    }, helloMs);
+    helloTimer.unref?.();
+    let counted = null;
 
     const send = (obj) => {
       if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(obj));
@@ -143,6 +162,15 @@ export function startServer({ hub, port, root, host = '0.0.0.0', log = console.e
             send({ t: 'fatal', code: r.error, text: r.text });
             return void ws.close(4003, r.error);
           }
+          const id = String(r.session.user.id);
+          if ((pagesOf.get(id) || 0) >= maxPages) {
+            hub.close(r.session);
+            send({ t: 'fatal', code: 'TOO_MANY_PAGES', text: TOO_MANY_PAGES_TEXT });
+            return void ws.close(4003, 'TOO_MANY_PAGES');
+          }
+          pagesOf.set(id, (pagesOf.get(id) || 0) + 1);
+          counted = id;
+          clearTimeout(helloTimer);
           session = r.session;
           return;
         }
@@ -154,6 +182,12 @@ export function startServer({ hub, port, root, host = '0.0.0.0', log = console.e
 
     ws.on('close', () => {
       gone = true;
+      clearTimeout(helloTimer);
+      if (counted) {
+        const n = (pagesOf.get(counted) || 1) - 1;
+        if (n > 0) pagesOf.set(counted, n);
+        else pagesOf.delete(counted);
+      }
       if (session) hub.close(session);
     });
   });
