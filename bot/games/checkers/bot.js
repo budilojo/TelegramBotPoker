@@ -11,49 +11,15 @@
  * Думает в отдельном потоке (engine-worker.js); если поток не поднялся, —
  * прямо здесь, это медленнее, но партия не встанет.
  */
-import { Worker } from 'node:worker_threads';
+import { engineQueue } from '../engine-queue.js';
 import * as C from './rules.js';
 import { toFen, sqName, fromFen } from './board.js';
 import { bestMove, evaluate, LEVELS } from './engine.js';
 
 export { LEVELS };
 
-let worker = null;
-let nextId = 1;
-const pending = new Map();
-
-function engine(fen, level, seed) {
-  if (!worker) {
-    try {
-      worker = new Worker(new URL('./engine-worker.js', import.meta.url));
-      worker.on('message', ({ id, result, error }) => {
-        const p = pending.get(id);
-        if (!p) return;
-        pending.delete(id);
-        if (!pending.size) worker?.unref(); // ответов не ждём — поток не держит процесс
-        if (error) p.reject(new Error(error));
-        else p.resolve(result);
-      });
-      worker.on('error', (err) => {
-        for (const p of pending.values()) p.reject(err);
-        pending.clear();
-        worker = null;
-      });
-      // Поток держит процесс, только пока бот думает (ref на время запроса):
-      // иначе остановка бота ждала бы его вечно.
-      worker.unref();
-    } catch {
-      worker = null;
-    }
-  }
-  if (!worker) return Promise.resolve(bestMove(fen, level, { seed }));
-  const id = nextId++;
-  return new Promise((resolve, reject) => {
-    pending.set(id, { resolve, reject });
-    worker.ref();
-    worker.postMessage({ id, fen, level, seed });
-  }).catch(() => bestMove(fen, level, { seed }));
-}
+/** Поток движка с очередью: брошенные партии не занимают его (engine-queue.js). */
+const engine = engineQueue(new URL('./engine-worker.js', import.meta.url), (fen, level, seed) => bestMove(fen, level, { seed }));
 
 const clampLevel = (v) => Math.max(0, Math.min(LEVELS.length - 1, Math.round(Number(v)) || 0));
 
@@ -117,7 +83,11 @@ export default {
       const forMe = pos.t === myColor ? evaluate(pos) : -evaluate(pos);
       return { t: forMe < -150 || (level === 0 && rng() < 0.3) ? 'draw' : 'decline' };
     }
-    const best = await engine(toFen(m.pos), level, Math.floor(rng() * 2 ** 31));
+    // Нужен ли ещё этот поиск: партию могли заменить («Сыграть ещё»), удалить
+    // или в ней уже сходили — тогда поток его не получит.
+    const plies = m.moves.length;
+    const alive = () => !room.gone && C.live(room) === m && m.moves.length === plies;
+    const best = await engine(toFen(m.pos), level, Math.floor(rng() * 2 ** 31), alive);
     if (!best) return null;
     return { t: 'move', from: sqName(best.from), to: sqName(best.to), path: best.path.map(sqName), ply: m.moves.length };
   },

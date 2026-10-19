@@ -638,6 +638,7 @@ export class App {
 
   /** Drop a game for good: its card loses the button, open apps are told. */
   async dropGame(room) {
+    room.gone = true; // для тех, кто держит ссылку на стол (бот думает в потоке)
     if (room.ui.tableMessageId) await this.outbox.dropKeyboard(room.chatId, room.ui.tableMessageId);
     this.outbox.cancel(room.chatId, room.code);
     this.hub?.forget(room.code);
