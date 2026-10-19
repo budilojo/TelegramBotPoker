@@ -45,8 +45,15 @@ export const AUDIENCES = {
   groups: 'все группы, где есть бот',
 };
 const isGroups = (audience) => audience === 'groups';
-/** Бота в группе нет (удалили, группы больше нет) — это не сбой, а ответ. */
-const NOT_THERE = /kicked|not a member|chat not found|group chat was deactivated|bot is not a member|Forbidden|have no rights to send/i;
+/**
+ * Бота в группе нет (удалили, группы больше нет) — это не сбой, а ответ.
+ *
+ * «Нет прав писать» сюда НЕ входит: бот в группе остаётся, ему лишь
+ * временно запретили сообщения («писать могут только админы»). Раньше такой
+ * отказ на рассылку сносил все игры группы вместе с идущими партиями
+ * (аудит, G-01). Настоящее удаление бота приходит отдельным my_chat_member.
+ */
+const NOT_THERE = /kicked|not a member|chat not found|group chat was deactivated|bot is not a member|Forbidden/i;
 
 /**
  * Чего в рассылке не будет. Обещание из docs/prod.md: запрет стоит в самой
