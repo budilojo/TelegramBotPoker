@@ -13,11 +13,12 @@ import colors from './colors/index.js';
 import chess from './chess/index.js';
 import checkers from './checkers/index.js';
 import nardy from './nardy/index.js';
+import battleship from './battleship/index.js';
 
-export const GAMES = { poker, durak, colors, chess, checkers, nardy };
+export const GAMES = { poker, durak, colors, chess, checkers, nardy, battleship };
 
 /** The order of the big cards on the hub's first screen. */
-export const GAME_LIST = [poker, durak, colors, chess, checkers, nardy];
+export const GAME_LIST = [poker, durak, colors, chess, checkers, nardy, battleship];
 
 /** Rooms saved before the hub existed have no `game`: they are poker tables. */
 export const gameOf = (room) => GAMES[room?.game] || poker;

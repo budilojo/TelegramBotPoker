@@ -19,8 +19,8 @@ import { Table, user } from './harness.js';
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
 
-test('быстрые команды собираются из модулей: прежние плюс /checkers и /nardy, и только к существующим играм', () => {
-  assert.deepEqual(QUICK_GAMES, { durak: 'durak', unoq: 'colors', colors: 'colors', chess: 'chess', checkers: 'checkers', nardy: 'nardy' });
+test('быстрые команды собираются из модулей: прежние плюс /checkers, /nardy и /battleship, и только к существующим играм', () => {
+  assert.deepEqual(QUICK_GAMES, { durak: 'durak', unoq: 'colors', colors: 'colors', chess: 'chess', checkers: 'checkers', nardy: 'nardy', battleship: 'battleship' });
   for (const [cmd, id] of Object.entries(QUICK_GAMES)) {
     assert.ok(GAMES[id], `/${cmd} ведёт в игру ${id}, а её нет`);
     assert.match(cmd, /^[a-z0-9_]{1,32}$/, `/${cmd}: команды Telegram — латиницей`);
@@ -31,7 +31,7 @@ test('быстрые команды собираются из модулей: п
 });
 
 test('меню «/» в группе: у каждой команды описание, скрытый псевдоним /colors в меню не попадает', () => {
-  assert.deepEqual(QUICK_MENU.map(([c]) => c), ['durak', 'unoq', 'chess', 'checkers', 'nardy']);
+  assert.deepEqual(QUICK_MENU.map(([c]) => c), ['durak', 'unoq', 'chess', 'checkers', 'nardy', 'battleship']);
   for (const [cmd, about] of QUICK_MENU) assert.ok(about && about.length <= 256, `/${cmd}: описание`);
   // Меню бота берёт команды отсюда, а не держит свой список.
   assert.match(read('bot/index.js'), /\.\.\.QUICK_MENU/);
