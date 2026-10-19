@@ -493,11 +493,12 @@ export class App {
   draw(room, { immediate = false } = {}) {
     this.syncClocks(); // the view carries the turn deadline: set it first
     this.hub?.broadcast(room);
+    // В базу — сразу, а не после ответа Telegram: не принял он карточку
+    // (нет прав, сбой сети) — сыгранное всё равно переживёт перезапуск
+    // (аудит, E-03). После карточки стол пишется ещё раз — с её номером.
+    this.save(room);
     // Партия с ботами живёт только в приложении: ни карточки, ни лички.
-    if (room.solo) {
-      this.save(room);
-      return Promise.resolve();
-    }
+    if (room.solo) return Promise.resolve();
     this.track(this.pingTurns(room));
     const produce = async () => {
       const view = gameOf(room).card(room, { link: this.tableLink(room) });
