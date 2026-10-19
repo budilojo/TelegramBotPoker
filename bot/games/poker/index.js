@@ -296,6 +296,8 @@ export default {
     };
   },
 
+  /** Обслуживание: часы уровня блайндов стоят вместе с часами хода. */
+  freeze: (room, on) => R.parkLevelClock(room, on),
   markLeft: (room, userId) => R.markLeft(room, userId),
   endGame: (room, userId) => R.endGame(room, userId),
 

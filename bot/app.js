@@ -295,7 +295,10 @@ export class App {
    */
   setMaintenance(on, text = '') {
     if (!on && !this.maintenance.on) return this.maintenance;
+    const was = this.down;
     this.maintenance = { on: !!on, text: String(text || '').slice(0, 300), since: this.clock.now() };
+    // Свои часы игры (уровни блайндов покера) стоят вместе с часами хода.
+    if (was !== this.down) for (const room of this.rooms.values()) gameOf(room).freeze?.(room, this.down);
     try {
       this.store.setSetting?.('maintenance', this.maintenance);
     } catch (err) {
@@ -419,6 +422,7 @@ export class App {
         // перерисовку ВСЕХ столов, а на запуске — сам бот (аудит, E-02).
         // Строка остаётся в базе: её можно посмотреть и починить руками.
         const g = gameOf(room);
+        if (this.down) g.freeze?.(room, true); // подняли во время обслуживания — часы игры стоят
         g.summary(room);
         g.view(room, '0', { now, botUsername: this.botUsername });
         g.clocks?.(this, room, now);

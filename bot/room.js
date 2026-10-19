@@ -313,6 +313,15 @@ function setLevelClock(room, running) {
 }
 
 /**
+ * Обслуживание: часы уровня стоят вместе с часами хода — игра не идёт, и
+ * время уровня не тратится (аудит, E-04). Пауза хоста паркует их сама.
+ */
+export function parkLevelClock(room, parked) {
+  if (room.status !== 'playing') return;
+  setLevelClock(room, !parked);
+}
+
+/**
  * Blinds never change inside a hand: the engine re-reads settings.bigBlind
  * when it resets minRaise on every street, so an edit mid-hand would move the
  * goalposts under the players. Changes park here and land at the next deal.
