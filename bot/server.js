@@ -86,6 +86,7 @@ export function startServer({ hub, port, root, host = '0.0.0.0', log = console.e
   });
 
   const wss = new WebSocketServer({ noServer: true, maxPayload: 16 * 1024 });
+  wss.on('error', (err) => log('[ws]', err?.message || err));
 
   server.on('upgrade', (req, socket, head) => {
     let pathname = '';
@@ -103,6 +104,11 @@ export function startServer({ hub, port, root, host = '0.0.0.0', log = console.e
     let window = { at: Date.now(), n: 0 };
     ws.isAlive = true;
     ws.on('pong', () => (ws.isAlive = true));
+    // Кривой кадр (больше maxPayload, битый UTF-8, не тот опкод) библиотека
+    // отдаёт событием 'error' — и сама закрывает сокет с нужным кодом. Без
+    // слушателя это событие — исключение на весь процесс: одним кадром, без
+    // всякой подписи, кто угодно ронял бы бота. Слушаем и забываем.
+    ws.on('error', () => {});
 
     const send = (obj) => {
       if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(obj));
