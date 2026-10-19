@@ -653,8 +653,23 @@ function reopenBetting(room) {
   }
 }
 
+/**
+ * Сбросили все, кроме одного, — но банк остался без хозяина. Движок сам
+ * раздаёт банки, у которых один претендент, а того, кто не вложил ни фишки
+ * (оба блайнда ушли, а он ещё не ходил), претендентом не считает: такой банк
+ * повисал, раздача стояла во «вскрытии», и стол вставал (аудит, D-05).
+ */
+function settleFoldOut(room) {
+  const h = room.hand;
+  if (!h || h.phase !== 'showdown') return;
+  if (room.players.filter((x) => x.inHand && !x.folded).length !== 1) return;
+  if ((h.pots || []).every((pot) => pot.winners?.length)) return;
+  closeAsFoldWin(room);
+}
+
 /** Everything that follows a move, whoever or whatever made it. */
 function afterMove(room) {
+  settleFoldOut(room);
   reopenBetting(room);
   room.ui.armedAllIn = null;
   room.ui.pendingBet = null;
@@ -1055,6 +1070,7 @@ function foldOut(room, p) {
   if (h.actorId === p.id) {
     // Their own clock: a real fold, and the engine moves the hand on.
     applyAction(room, p.id, 'fold');
+    settleFoldOut(room);
   } else {
     p.folded = true;
     p.acted = true;
