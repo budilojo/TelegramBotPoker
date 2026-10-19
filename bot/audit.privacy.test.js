@@ -71,3 +71,17 @@ test('АУДИТ C-01: покер — пока борд олл-ина откры
   assert.ok(lose.t.state(lose.cast.max).results, 'итоги после ривера есть');
   assert.match(lose.t.lastPost(), /ИТОГИ/);
 });
+
+/* -------------------------- фаззер невмешательства: короткий прогон для CI */
+
+import { runGame } from '../tools/fuzz-privacy.mjs';
+
+const SEEDS = Number(process.env.AUDIT_SEEDS || 4);
+for (const game of ['poker', 'durak', 'colors', 'battleship']) {
+  test(`АУДИТ C: ${game} — вид каждого телефона, карточка и хаб не зависят от скрытого (${SEEDS} партий)`, async () => {
+    for (let seed = 1; seed <= SEEDS; seed++) {
+      const r = await runGame(game, seed);
+      assert.ok(r.steps > 5, `${game} зерно ${seed}: партия не пошла (${r.steps} перерисовок)`);
+    }
+  });
+}
