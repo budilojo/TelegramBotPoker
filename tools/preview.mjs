@@ -30,6 +30,8 @@ import { fromFen } from '../bot/games/chess/board.js';
 import * as K from '../bot/games/checkers/rules.js';
 import { fromFen as kFen, key as kKey } from '../bot/games/checkers/board.js';
 import * as ND from '../bot/games/nardy/rules.js';
+import * as BS from '../bot/games/battleship/rules.js';
+import { shipCells as bsCells, randomFleet as bsFleet } from '../bot/games/battleship/board.js';
 import { abs as ndAbs } from '../bot/games/nardy/board.js';
 import { durakStack } from '../bot/harness.js';
 import { legalActions } from '../server/game.js';
@@ -517,6 +519,76 @@ function playOut(room) {
   bear.match.turn = { c: 'w', dice: [6, 4], played: [], start: { b: b.slice(), off: { w: 1, b: 0 }, t: 'w' }, headLimit: 1 };
   bear.match.log.push({ c: 'b', dice: [3, 1], steps: [], notation: [] }, { c: 'w', dice: [2, 2], steps: [], notation: [] });
   scene('43-nardy-bear-off', bear, 101, { sel: [`.nd-pt[data-p="${ndAbs('w', 18)}"]`] });
+}
+
+// 26г. Морской бой — дуэль: лобби, расстановка, бой (свой ход, чужой, зритель, 320 px), конец.
+//      Игра пока черновик — снимки только с DRAFT_GAMES=1 (npm run preview так и запускает).
+if (GAMES.battleship) {
+  const chatId = String(chat--);
+  const g = app.ensureGroup(chatId, 'Флотилия');
+  const host = { id: 101, tgId: 101, name: 'Иван' };
+  const guest = { id: 102, tgId: 102, name: 'Артём', dm: 'ok' };
+  let seed = 11;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const duel = ({ base = 300, inc = 2 } = {}) => {
+    const r = app.createGame('battleship', { chatId, title: 'Флотилия', host, settings: { base, inc } });
+    BS.addPlayer(r, guest);
+    BS.startGame(r, '101', { rand: () => 0.1 });
+    return r;
+  };
+  const ready = (r) => {
+    BS.placeRandom(r, '101', Date.now(), { fleetRand: rnd });
+    BS.placeRandom(r, '102', Date.now(), { fleetRand: rnd });
+    BS.ready(r, '101');
+    BS.ready(r, '102');
+  };
+  const water = (r, side) => {
+    const busy = new Set(r.match.fleets[side].flatMap(bsCells));
+    return Array.from({ length: 100 }, (_, c) => c).filter((c) => !busy.has(c));
+  };
+  /** Партия посередине: Иван потопил корабль, ранил другой и промахнулся; Артём попал и промахнулся. */
+  const mid = () => {
+    const r = duel();
+    ready(r);
+    const foe = r.match.fleets[1];
+    const sunk = foe.find((x) => x.len === 2);
+    for (const c of bsCells(sunk)) BS.fire(r, '101', c);
+    BS.fire(r, '101', bsCells(foe.find((x) => x.len === 3))[0]);
+    const known = BS.knownEmpty(r.match, 0);
+    BS.fire(r, '101', water(r, 1).find((c) => !known.has(c) && c > 50));
+    BS.fire(r, '102', bsCells(r.match.fleets[0][0])[1]);
+    BS.fire(r, '102', water(r, 0)[3]);
+    return r;
+  };
+
+  const lone = app.createGame('battleship', { chatId, title: 'Флотилия', host, settings: { base: 600, inc: 0 } });
+  scene('50-battleship-lobby', lone, 101);
+  scene('50б-hub-new-battleship', lone, 101, { start: `g_${g.code}`, click: 'Морской бой' });
+
+  const place = duel();
+  scene('51-battleship-place-empty', place, 101);
+  scene('51б-battleship-place-picked', place, 101, { sel: ['.bs-tray-ship[data-len="3"]'] });
+  const placed = duel();
+  BS.placeRandom(placed, '101', Date.now(), { fleetRand: rnd });
+  scene('51в-battleship-place-random', placed, 101);
+  BS.ready(placed, '101');
+  scene('51г-battleship-locked', placed, 101);
+  scene('51д-battleship-place-spectator', placed, 103);
+  scene('51е-battleship-place-small', duel(), 101, { width: 320, height: 568 });
+
+  const m = mid();
+  const target = water(m, 1).find((c) => !BS.knownEmpty(m.match, 0).has(c) && !m.match.shots[0].some((x) => x.c === c) && c < 40);
+  scene('52-battleship-my-turn', m, 101);
+  scene('52б-battleship-aim', m, 101, { sel: [`.bs-grid:not(.mini) .bs-cell[data-c="${target}"]`] });
+  scene('52в-battleship-opponent', m, 102);
+  scene('52г-battleship-spectator', m, 103);
+  scene('52д-battleship-small-aim', m, 101, { width: 320, height: 568, sel: [`.bs-grid:not(.mini) .bs-cell[data-c="${target}"]`] });
+
+  const over = mid();
+  BS.resign(over, '102');
+  scene('53-battleship-over-win', over, 101);
+  scene('53б-battleship-over-spectator', over, 103);
+  void bsFleet;
 }
 
 // 27. Игры с ботами: экран из лички, форма шахмат, партия против бота.

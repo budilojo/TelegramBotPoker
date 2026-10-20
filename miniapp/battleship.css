@@ -1,0 +1,252 @@
+/* ==========================================================================
+   МОРСКОЙ БОЙ — шапка, плашки и часы общие с шахматами (chess.css: .ch-*);
+   здесь поле 10×10, лоток с кораблями и прицел.
+
+   Свои цвета у игры — только игровой арт: море, сетка, корабль, потопленный
+   корабль. Состояния клеток различаются ФОРМОЙ, а не только цветом:
+     · мимо — точка; рядом с потопленным — точка поменьше;
+     · ранил — светлая клетка (палуба) с красным крестом;
+     · убит — тёмная клетка со светлым крестом и рамка вокруг всего корабля;
+     · прицел — двойное кольцо с перекрестием;
+     · «встанет» — сплошная рамка; «не встанет» — пунктир с крестиком.
+   Контраст каждой пары считает npm run contrast (раздел «морской бой»).
+   ========================================================================== */
+
+:root {
+  --bs-sea: #173048;
+  --bs-line: #5a7f9e;
+  --bs-ship: #c9d3d6;
+  --bs-dead: #7d8b91;
+  --bs-around: #7891a3;
+  /* Своё поле на расстановке и чужое в бою — во всю ширину, но так, чтобы
+     под ним поместились строка, своё маленькое поле и «Огонь» (от 568 px высоты). */
+  --bs-mini: clamp(116px, 38vw, 196px);
+  --bs-lab: var(--k-s16);
+  --bs-w: max(200px, min(calc(100vw - 2 * var(--k-s8)), 504px,
+    calc(100dvh - 172px - var(--bs-mini) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))));
+  --bs-wp: max(200px, min(calc(100vw - 2 * var(--k-s8)), 504px,
+    calc(100dvh - 300px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))));
+  /* Зритель: оба поля одно под другим, у каждого своя плашка. */
+  --bs-ws: max(160px, min(calc(100vw - 2 * var(--k-s8)), 504px,
+    calc((100dvh - 340px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) / 2)));
+}
+
+.bs .ch-status { flex: none; }
+
+/* Поле с буквами сверху и числами слева. */
+.bs-frame {
+  flex: none;
+  align-self: center;
+  width: var(--bs-w);
+  display: grid;
+  grid-template-columns: var(--bs-lab) 1fr;
+  grid-template-rows: var(--bs-lab) auto;
+}
+.bs.placing .bs-frame:not(.mini) { width: var(--bs-wp); }
+.bs-frame.mini { width: var(--bs-mini); grid-template-columns: 1fr; grid-template-rows: auto; }
+.bs-frame.mini .bs-corner,
+.bs-frame.mini .bs-files,
+.bs-frame.mini .bs-ranks { display: none; }
+.bs-files { display: grid; grid-template-columns: repeat(10, 1fr); }
+.bs-ranks { display: grid; grid-template-rows: repeat(10, 1fr); }
+.bs-files span,
+.bs-ranks span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  font: var(--k-w-regular) var(--k-fs-caption)/1 var(--k-font);
+}
+
+.bs-grid {
+  position: relative;
+  aspect-ratio: 1;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  grid-template-rows: repeat(10, 1fr);
+  background: var(--bs-sea);
+  border: 1px solid var(--bs-line);
+  border-radius: var(--k-r-sm);
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Клетка: прозрачная, над кораблями; сетка — тонкой внутренней линией. */
+.bs-cell {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: inset -1px -1px 0 0 color-mix(in srgb, var(--bs-line) 55%, transparent);
+  -webkit-tap-highlight-color: transparent;
+}
+button.bs-cell { cursor: pointer; }
+.bs-cell:focus-visible { outline: 2px solid var(--text-primary); outline-offset: -2px; z-index: 4; }
+
+/* Мимо — точка; рядом с потопленным — точка поменьше. */
+.bs-cell.miss::after,
+.bs-cell.around::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 26%;
+  height: 26%;
+  border-radius: var(--k-r-pill);
+  background: var(--text-secondary);
+  transform: translate(-50%, -50%);
+}
+.bs-cell.around::after { width: 14%; height: 14%; background: var(--bs-around); }
+
+/* Ранил — палуба (светлая) с красным крестом; убит — тёмная с крестом светлым. */
+.bs-cell.hit { background: var(--bs-ship); }
+.bs-cell.sunk { background: var(--bs-dead); }
+.bs-cell.hit::before,
+.bs-cell.hit::after,
+.bs-cell.sunk::before,
+.bs-cell.sunk::after {
+  content: '';
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  background: var(--color-danger);
+  transform: rotate(45deg);
+}
+.bs-cell.hit::after,
+.bs-cell.sunk::after { transform: rotate(-45deg); }
+.bs-cell.sunk::before,
+.bs-cell.sunk::after { background: var(--text-primary); }
+
+/* Последний выстрел по этому полю — тонкая рамка. */
+.bs-cell.last { box-shadow: inset 0 0 0 2px var(--text-primary); }
+
+/* Прицел: двойное кольцо (светлое и тёмное — видно и на море, и на палубе) и перекрестие. */
+.bs-cell.aim { z-index: 3; box-shadow: inset 0 0 0 2px var(--text-primary), inset 0 0 0 4px var(--bg-main); }
+.bs-cell.aim::before,
+.bs-cell.aim::after {
+  content: '';
+  position: absolute;
+  background: var(--text-primary);
+}
+.bs-cell.aim::before { left: 50%; top: 22%; bottom: 22%; width: 2px; margin-left: -1px; }
+.bs-cell.aim::after { top: 50%; left: 22%; right: 22%; height: 2px; margin-top: -1px; }
+
+/* Куда встанет корабль: сплошная рамка — можно; пунктир с крестиком — нельзя. */
+.bs-cell.pv { box-shadow: inset 0 0 0 2px var(--text-primary); }
+.bs-cell.pv-bad { outline: 2px dashed var(--color-danger); outline-offset: -3px; }
+.bs-cell.pv-bad::after {
+  content: '×';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+  font: var(--k-w-semibold) var(--k-fs-component)/1 var(--k-font);
+}
+
+/* Корабль — одна рамка на весь корабль, под отметками выстрелов. */
+.bs-ship {
+  position: absolute;
+  z-index: 1;
+  left: calc(var(--x) * 10%);
+  top: calc(var(--y) * 10%);
+  width: 10%;
+  height: 10%;
+  border-radius: var(--k-r-sm);
+  background: var(--bs-ship);
+  box-shadow: inset 0 0 0 1px var(--bg-main);
+  pointer-events: none;
+}
+.bs-ship.h { width: calc(var(--len) * 10%); }
+.bs-ship.v { height: calc(var(--len) * 10%); }
+/* Потопленный — рамка вокруг всего корабля. */
+.bs-ship.sunk { z-index: 3; background: transparent; box-shadow: 0 0 0 2px var(--text-primary); }
+/* В конце партии: живой корабль соперника — пунктирная рамка, без заливки. */
+.bs-ship.shown { background: transparent; box-shadow: none; border: 2px dashed var(--bs-ship); }
+.bs-ship.lifted { opacity: 0.35; }
+
+/* Лоток с кораблями. */
+.bs-tray {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--k-s4);
+  padding: 0 var(--k-s8);
+}
+.bs-tray-ship {
+  min-width: var(--k-tap);
+  min-height: var(--k-tap);
+  display: flex;
+  align-items: center;
+  gap: var(--k-s4);
+  padding: 0 var(--k-s8);
+  border: 1px solid var(--border-color);
+  border-radius: var(--k-r-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font);
+  touch-action: none;
+}
+.bs-tray-ship.on { box-shadow: inset 0 0 0 2px var(--text-primary); border-color: var(--text-primary); }
+.bs-tray-ship.done { opacity: 0.4; }
+.bs-shape { display: flex; gap: 2px; }
+.bs-shape i { display: block; width: 10px; height: 10px; border-radius: 0; background: var(--bs-ship); }
+@media (min-width: 360px) { .bs-shape i { width: var(--k-s12); height: var(--k-s12); } .bs-tray-ship { padding: 0 var(--k-s12); gap: var(--k-s8); } }
+
+.bs-hint { flex: none; text-align: center; padding: 0 var(--k-s16); }
+
+/* Бой: под полем соперника — своё маленькое поле и прицел. */
+.bs-row {
+  flex: none;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--k-s12);
+  padding: var(--k-s4) var(--k-s8) calc(var(--k-s8) + env(safe-area-inset-bottom, 0px));
+}
+.bs-mine { flex: none; display: flex; flex-direction: column; gap: var(--k-s4); }
+.bs-caption { color: var(--text-secondary); font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font); text-align: center; }
+.bs-aim {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--k-s8);
+}
+.bs-aim-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--k-s8);
+  color: var(--text-secondary);
+  font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font);
+}
+.bs-addr {
+  text-align: center;
+  color: var(--text-primary);
+  font: var(--k-w-semibold) var(--k-fs-title)/var(--k-lh-title) var(--k-font);
+}
+.bs-fire { min-height: var(--k-tap); }
+.bs-result .bs-addr { font-size: var(--k-fs-section); line-height: var(--k-lh-section); }
+
+/* Зритель: оба поля одно под другим. */
+.bs-pair { flex: none; display: flex; flex-direction: column; gap: var(--k-s4); }
+.bs-col { display: flex; flex-direction: column; gap: var(--k-s4); min-width: 0; }
+.bs-frame.spec { width: var(--bs-ws); }
+/* На совсем низком экране зрителю можно прокрутить: два поля целиком важнее, чем без прокрутки. */
+.ch.bs.watch { overflow-y: auto; }
+.bs-ready-list { display: flex; flex-direction: column; gap: var(--k-s8); padding: var(--k-s16); color: var(--text-primary); }
+.bs-ready b { font-weight: var(--k-w-regular); color: var(--text-secondary); }
+
+.bs-meta .num { color: var(--text-secondary); }
