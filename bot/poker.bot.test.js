@@ -293,7 +293,12 @@ test('фишки у человека кончились — партия око�
   assert.ok(chats.every((c) => c === '101'), `сообщения только в личку человека, а были: ${chats}`);
   assert.deepEqual(t.app.rate(room), [], 'в рейтинг не идёт');
 
+  const seen = t.page(IVAN).inbox.length;
   await t.send(IVAN, { t: 'again' });
+  const got = t.page(IVAN).inbox.slice(seen);
+  assert.equal(got.some((m) => m.t === 'gone'), false, 'страница не получает «Игру удалили» на кнопке «Сыграть ещё»');
+  assert.equal(got.some((m) => m.t === 'error' || m.t === 'fatal'), false, 'и ошибок тоже');
+  assert.equal(got.at(-1)?.t, 'state', 'последнее — состояние нового стола');
   const next = t.app.soloOf('101');
   assert.notEqual(next.code, room.code, 'новый стол');
   assert.equal(next.players.filter((p) => p.bot).length, 4);

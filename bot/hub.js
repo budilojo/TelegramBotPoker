@@ -565,8 +565,14 @@ export class Hub {
     // и только для игры этой же группы.
     // «Сыграть ещё» за столом с ботами: та же игра, те же соперники и уровень.
     if (msg.t === 'again' && room.solo) {
+      // Эту страницу сперва отцепляем от старой партии: иначе её удаление скажет
+      // странице «Игру удалили» — и вместо новой партии человек увидит тупик.
+      this.detach(session);
       const next = await app.createSolo(room.game, session.user, room.solo.raw || {});
-      if (next.error) return this.refuse(session, next.error);
+      if (next.error) {
+        this.refuse(session, next.error);
+        return this.pushSolo(session);
+      }
       return this.enterRoom(session, next);
     }
     if (msg.t === 'again') {
