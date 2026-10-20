@@ -35,3 +35,44 @@ test('worldcard.service: ограничение перезапусков — в 
   for (const k of SERVICE_ONLY) assert.ok(s.Service.includes(k), `${k} в [Service]`);
   for (const k of UNIT_ONLY) assert.ok(!s.Service.includes(k), `${k} не в [Service]: там systemd его не читает`);
 });
+
+const read = (f) => fs.readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
+
+test('аудит H-02: на сервере бот слушает только 127.0.0.1 — снаружи он виден лишь через Caddy', () => {
+  const unit = read('deploy/worldcard.service');
+  assert.match(unit, /^Environment=BIND_HOST=127\.0\.0\.1$/m);
+  const s = sections(unit);
+  assert.ok(s.Service.includes('Environment'), 'Environment — в [Service]');
+  // Бот берёт адрес из BIND_HOST и отдаёт серверу стола.
+  const index = read('bot/index.js');
+  assert.match(index, /process\.env\.BIND_HOST/);
+  assert.match(index, /startServer\(\{[\s\S]*?host: BIND_HOST/);
+  // Caddy ходит именно туда.
+  assert.match(read('deploy/Caddyfile'), /reverse_proxy 127\.0\.0\.1:8080/);
+});
+
+test('аудит H-02: юнит ограничивает память и закрывает лишнее — в секции [Service]', () => {
+  const s = sections(read('deploy/worldcard.service'));
+  for (const k of ['MemoryMax', 'MemoryHigh', 'PrivateDevices', 'ProtectKernelTunables', 'ProtectKernelModules', 'RestrictAddressFamilies', 'NoNewPrivileges', 'ProtectSystem']) {
+    assert.ok(s.Service.includes(k), `${k} в [Service]`);
+  }
+  // V8 пишет и исполняет свой код — этот запрет уронил бы Node.
+  assert.ok(!s.Service.includes('MemoryDenyWriteExecute'));
+});
+
+test('аудит H-02/H-01: обновление — тесты на отдельной копии до того, как тронута рабочая папка; права на базу — каждый раз', () => {
+  const sh = read('deploy/update.sh');
+  const at = (re) => {
+    const m = re.exec(sh);
+    assert.ok(m, `нет ${re}`);
+    return m.index;
+  };
+  const worktree = at(/git worktree add --detach "\$NEXT"/);
+  const tests = at(/cd "\$NEXT" && sudo -u "\$USER" npm ci --omit=dev && sudo -u "\$USER" npm test/);
+  const reset = at(/git reset --hard "origin\/\$BRANCH"/);
+  const restart = at(/systemctl restart worldcard/);
+  assert.ok(worktree < tests && tests < reset && reset < restart, 'копия → тесты → переключение → перезапуск');
+  assert.match(sh, /exit 1\n\s*fi\n\s*cleanup_next/, 'тесты упали — выход до переключения');
+  assert.match(sh, /chmod 700 "\$APP\/data" "\$APP\/backups"/);
+  assert.match(read('.gitignore'), /^\.update-check\/$/m);
+});

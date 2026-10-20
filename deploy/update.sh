@@ -4,8 +4,8 @@
 #   sudo /opt/worldcard/deploy/update.sh
 #
 # Перед обновлением снимается бэкап базы: если новая версия чем-то не угодит,
-# откатиться будет куда. Тесты гоняются до перезапуска — сломанное на людей
-# не выкатываем.
+# откатиться будет куда. Тесты гоняются на отдельной копии ДО того, как
+# тронута рабочая папка, — сломанное на людей не выкатываем.
 set -euo pipefail
 
 # Этот скрипт лежит в том же репозитории, который сам же и обновляет. Bash
@@ -37,15 +37,39 @@ fi
 
 echo "· забираю ветку $BRANCH"
 sudo -u "$USER" git fetch origin "$BRANCH"
+
+# Сначала тесты — на ОТДЕЛЬНОЙ копии новой версии (аудит H-02). Пока они не
+# зелёные, рабочая папка не тронута: страницы получают прежний miniapp/, а
+# движки — прежний engine-worker.js. Упали — обновление отменено, бот как был.
+NEXT="$APP/.update-check"
+sudo -u "$USER" git worktree remove --force "$NEXT" 2>/dev/null || rm -rf "$NEXT"
+sudo -u "$USER" git worktree prune
+sudo -u "$USER" git worktree add --detach "$NEXT" "origin/$BRANCH"
+cleanup_next() { sudo -u "$USER" git -C "$APP" worktree remove --force "$NEXT" 2>/dev/null || rm -rf "$NEXT"; }
+echo "· проверяю новую версию на отдельной копии: зависимости и тесты"
+# --omit=dev: на сервере не нужен браузер для e2e и картинок
+if ! (cd "$NEXT" && sudo -u "$USER" npm ci --omit=dev && sudo -u "$USER" npm test); then
+  cleanup_next
+  echo "тесты новой версии упали — обновление отменено, бот работает на прежней."
+  exit 1
+fi
+cleanup_next
+
+echo "· переключаю рабочую папку на новую версию"
 sudo -u "$USER" git checkout "$BRANCH"
 sudo -u "$USER" git reset --hard "origin/$BRANCH"
-
-echo "· ставлю зависимости"
-# --omit=dev: на сервере не нужен браузер для e2e и картинок
 sudo -u "$USER" npm ci --omit=dev
 
-echo "· прогоняю тесты"
-sudo -u "$USER" npm test
+# База и бэкапы — только самому боту (аудит H-01). Ставится каждый раз, так
+# что сервер, поставленный до аудита, исправится сам при первом обновлении.
+chmod 700 "$APP/data" "$APP/backups" 2>/dev/null || true
+
+# Юнит systemd мог поменяться вместе с кодом — поставить новый.
+if ! cmp -s "$APP/deploy/worldcard.service" /etc/systemd/system/worldcard.service; then
+  echo "· обновляю юнит systemd"
+  cp "$APP/deploy/worldcard.service" /etc/systemd/system/worldcard.service
+  systemctl daemon-reload
+fi
 
 echo "· перезапускаю"
 systemctl restart worldcard

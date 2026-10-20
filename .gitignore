@@ -20,3 +20,6 @@ preview/
 
 # бэкапы базы: их снимает deploy/backup.sh на сервере, в git им делать нечего
 backups/
+
+# Проверочная копия новой версии при обновлении сервера (deploy/update.sh)
+.update-check/

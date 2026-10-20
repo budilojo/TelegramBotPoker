@@ -58,6 +58,13 @@ if (!TOKEN) {
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'bot.db');
 const DRAW_INTERVAL_MS = Number(process.env.DRAW_INTERVAL_MS || 1000);
 const PORT = Number(process.env.PORT || 8080);
+/**
+ * На каком адресе слушать. На сервере — 127.0.0.1 (так ставит systemd-юнит):
+ * снаружи бот виден только через Caddy, порт 8080 из интернета не открыть,
+ * даже если ufw выключат (аудит H-02). На ноутбуке с туннелем — как раньше,
+ * все адреса.
+ */
+const BIND_HOST = process.env.BIND_HOST || '0.0.0.0';
 /** Public HTTPS address of this process — Telegram opens Mini Apps over HTTPS only. */
 const WEBAPP_URL = (process.env.WEBAPP_URL || '').replace(/\/+$/, '');
 /** Short name of the Mini App registered with @BotFather (/newapp). */
@@ -168,6 +175,7 @@ if (!MINIAPP) {
 const web = startServer({
   hub,
   port: PORT,
+  host: BIND_HOST,
   root: path.join(__dirname, '..', 'miniapp'),
   log: (...a) => console.error('[web]', ...a),
   onListen: () => console.log(`[bot] стол: http://localhost:${PORT}${WEBAPP_URL ? ` → ${WEBAPP_URL}` : ''}`),

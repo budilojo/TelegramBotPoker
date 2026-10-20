@@ -22,6 +22,8 @@ Type=simple
 User=worldcard
 WorkingDirectory=/opt/worldcard
 EnvironmentFile=/opt/worldcard/.env
+# Слушать только внутренний адрес: снаружи — через Caddy (аудит H-02).
+Environment=BIND_HOST=127.0.0.1
 ExecStart=/usr/bin/node bot/index.js
 
 # Падать бот не должен, но если упал — подняться через 5 секунд и не сдаваться.
@@ -40,6 +42,21 @@ PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
 ReadWritePaths=/opt/worldcard/data
+
+# Ещё строже (аудит H-02): ни устройств, ни настроек ядра, ни модулей; сеть —
+# только обычная (IPv4, IPv6, локальные сокеты; netlink — им поиск адресов
+# узнаёт, есть ли у сервера IPv6: без него запросы к Telegram могут не пойти).
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+RestrictSUIDSGID=true
+LockPersonality=true
+# Утечка памяти не должна уронить сервер целиком: на 1 ГБ — бот не больше
+# 600 МБ; на 500 МБ systemd начинает его поджимать, на 600 — перезапускает.
+MemoryHigh=500M
+MemoryMax=600M
 
 [Install]
 WantedBy=multi-user.target
