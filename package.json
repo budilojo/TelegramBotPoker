@@ -11,7 +11,7 @@
     "dev": "node --watch server/index.js",
     "bot": "node --disable-warning=ExperimentalWarning bot/index.js",
     "bot:dev": "node --watch --disable-warning=ExperimentalWarning bot/index.js",
-    "test": "node --test --test-timeout=240000 --disable-warning=ExperimentalWarning server/*.test.js bot/*.test.js tools/*.test.js",
+    "test": "DRAFT_GAMES=1 node --test --test-timeout=240000 --disable-warning=ExperimentalWarning server/*.test.js bot/*.test.js tools/*.test.js",
     "test:bot": "node --test --test-timeout=240000 --disable-warning=ExperimentalWarning bot/*.test.js",
     "icons": "node tools/make-icons.mjs",
     "preview": "node --disable-warning=ExperimentalWarning tools/preview.mjs",
@@ -25,8 +25,8 @@
     "load": "node --expose-gc tools/load-check.mjs",
     "kit": "node tools/kit-check.mjs",
     "contrast": "node tools/contrast-check.mjs",
-    "audit": "node --test --test-timeout=240000 --disable-warning=ExperimentalWarning bot/audit.*.test.js && node --disable-warning=ExperimentalWarning tools/fuzz-games.mjs all 7000 1 400 && node --disable-warning=ExperimentalWarning tools/fuzz-privacy.mjs all 10",
-    "audit:long": "AUDIT_STEPS=20000 AUDIT_EVAL=500000 AUDIT_ROLLS=3000000 AUDIT_SEEDS=40 node --test --test-timeout=3600000 --disable-warning=ExperimentalWarning bot/audit.*.test.js && node --disable-warning=ExperimentalWarning tools/fuzz-games.mjs all 1000000 1000 400 && node --disable-warning=ExperimentalWarning tools/fuzz-privacy.mjs all 1000 && node --expose-gc --disable-warning=ExperimentalWarning tools/load-ws.mjs 400 10"
+    "audit": "DRAFT_GAMES=1 node --test --test-timeout=240000 --disable-warning=ExperimentalWarning bot/audit.*.test.js && node --disable-warning=ExperimentalWarning tools/fuzz-games.mjs all 7000 1 400 && node --disable-warning=ExperimentalWarning tools/fuzz-privacy.mjs all 10",
+    "audit:long": "DRAFT_GAMES=1 AUDIT_STEPS=20000 AUDIT_EVAL=500000 AUDIT_ROLLS=3000000 AUDIT_SEEDS=40 node --test --test-timeout=3600000 --disable-warning=ExperimentalWarning bot/audit.*.test.js && node --disable-warning=ExperimentalWarning tools/fuzz-games.mjs all 1000000 1000 400 && node --disable-warning=ExperimentalWarning tools/fuzz-privacy.mjs all 1000 && node --expose-gc --disable-warning=ExperimentalWarning tools/load-ws.mjs 400 10"
   },
   "engines": {
     "node": ">=22.5"

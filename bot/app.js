@@ -26,7 +26,7 @@ import { identify } from './identity.js';
 import { Outbox } from './outbox.js';
 import { NullStore } from './store.js';
 import { esc } from './fmt.js';
-import { GAMES, GAME_LIST, gameOf } from './games/index.js';
+import { GAMES, GAME_LIST, HIDDEN_DRAFTS, gameOf } from './games/index.js';
 import { apply as rateRound } from './rating.js';
 
 /**
@@ -388,6 +388,8 @@ export class App {
       this.groups.set(String(g.chatId), { ...g, ui: g.ui || { hubMessageId: null } });
     }
     for (const { chatId, code, game, data } of this.store.loadAll()) {
+      // Стол игры-черновика, а черновики скрыты: не читать его как покер — оставить в базе как есть.
+      if (HIDDEN_DRAFTS.has(game)) continue;
       try {
         const room = (GAMES[game] || gameOf(data)).deserialize(data);
         room.chatId = String(chatId); // the column wins: it is what a migration re-keys

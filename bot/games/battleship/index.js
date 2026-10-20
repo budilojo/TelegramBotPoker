@@ -80,6 +80,8 @@ export default {
   minPlayers: B.MIN_PLAYERS,
   maxPlayers: B.MAX_SEATS,
   errors: ERRORS,
+  /** Черновик: экрана и бота ещё нет — людям игра не видна (bot/games/index.js). Снять на этапе 3. */
+  draft: true,
   commands: [['battleship', 'морской бой — новое лобби одной командой']],
 
   /** Жребий первого выстрела и случайная расстановка — подменяются в тестах. */

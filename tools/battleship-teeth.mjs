@@ -43,7 +43,7 @@ for (const [name, file, from, to, testFile] of M) {
   const orig = fs.readFileSync(p, 'utf8');
   if (orig.split(from).length !== 2) { console.log(`?? ${name}: образец не найден один раз`); bad++; continue; }
   fs.writeFileSync(p, orig.replace(from, to));
-  const r = spawnSync('node', ['--test', '--disable-warning=ExperimentalWarning', testFile], { cwd: root, encoding: 'utf8' });
+  const r = spawnSync('node', ['--test', '--disable-warning=ExperimentalWarning', testFile], { cwd: root, encoding: 'utf8', env: { ...process.env, DRAFT_GAMES: '1' } });
   fs.writeFileSync(p, orig);
   const failed = (r.stdout.match(/^not ok \d+ - (.*)$/gm) || []).map((l) => l.replace(/^not ok \d+ - /, ''));
   if (r.status === 0) { console.log(`ПРОПУЩЕНО: ${name}`); bad++; }

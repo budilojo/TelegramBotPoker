@@ -90,3 +90,35 @@ test('у каждой игры сервера есть экран клиента
     assert.doesNotMatch(src, /\.id === '(chess|durak|colors)'|game === '(chess|durak|colors)'/, `${f}: ветка под игру`);
   }
 });
+
+test('игра-черновик (морской бой до этапа 3) людям не видна: ни в хабе, ни в командах, ни в «Играх с ботами»; её столы из базы не читаются', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const env = { ...process.env };
+  delete env.DRAFT_GAMES; // как бот на сервере: `node bot/index.js` без этой переменной
+  const probe = `
+    const { GAMES, GAME_LIST, HIDDEN_DRAFTS } = await import('./bot/games/index.js');
+    const { App, QUICK_GAMES, QUICK_MENU } = await import('./bot/app.js');
+    const { Store } = await import('./bot/store.js');
+    const store = new Store(':memory:');
+    store.save({ code: 'SEA1', chatId: '-5', game: 'battleship', status: 'lobby' }, { game: 'battleship', code: 'SEA1', chatId: '-5', status: 'lobby', players: [] });
+    const errors = [];
+    const app = new App({ store, api: { call: async () => ({}) }, onError: (e) => errors.push(String(e?.message || e)) });
+    app.load();
+    console.log(JSON.stringify({
+      list: GAME_LIST.map((g) => g.id), games: Object.keys(GAMES), hidden: [...HIDDEN_DRAFTS],
+      quick: Object.keys(QUICK_GAMES), menu: QUICK_MENU.map(([c]) => c),
+      loaded: [...app.rooms.keys()], errors, kept: store.loadAll().map((r) => r.code),
+    }));`;
+  const r = spawnSync(process.execPath, ['--disable-warning=ExperimentalWarning', '--input-type=module', '-e', probe], { cwd: root, env, encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr);
+  const out = JSON.parse(r.stdout.trim().split('\n').at(-1));
+  assert.ok(!out.list.includes('battleship') && !out.games.includes('battleship'), 'в списке игр её нет');
+  assert.deepEqual(out.hidden, ['battleship']);
+  assert.ok(!out.quick.includes('battleship') && !out.menu.includes('battleship'), '/battleship нет');
+  assert.deepEqual(out.loaded, [], 'стол черновика не прочитан (как покер — тем более)');
+  assert.deepEqual(out.kept, ['SEA1'], 'и не стёрт из базы');
+  assert.deepEqual(out.errors, [], 'и не пробовал читать его чужой игрой');
+  assert.ok(out.list.includes('nardy'), 'готовые игры на месте');
+  // А в тестах (npm test ставит DRAFT_GAMES=1) — есть.
+  assert.ok(GAMES.battleship);
+});
