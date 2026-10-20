@@ -101,6 +101,24 @@ assert.equal(await pi.locator('.nd-pt .nd-pc').count(), 10, 'на двух го�
 assert.equal(await pt(pi, abs('w', 0)).locator('.nd-count').textContent(), '15');
 step('жребий: у белых 5 против 3 — первым ходит Иван; кубики «5 и 3» у обоих, на головах по 15');
 
+// Доска как у настоящих нард: у каждого своя голова — вверху справа, путь против часовой,
+// номера общие (у белых голова 1, у чёрных 13).
+async function headSeat(page, p) {
+  const b = await pt(page, p).boundingBox();
+  const board = await page.locator('.nd-board').boundingBox();
+  const no = await pt(page, p).locator('.nd-no').textContent();
+  return { top: b.y + b.height / 2 < board.y + board.height / 2, right: b.x + b.width / 2 > board.x + board.width * 0.75, no };
+}
+const hw = await headSeat(pi, abs('w', 0));
+assert.deepEqual(hw, { top: true, right: true, no: '1' }, 'белые: голова вверху справа, номер 1');
+const hb = await headSeat(pm, abs('b', 0));
+assert.deepEqual(hb, { top: true, right: true, no: '13' }, 'чёрные: своя голова тоже вверху справа, номер 13');
+const homeW = await pt(pi, abs('w', 23)).boundingBox();
+const homeBoard = await pi.locator('.nd-board').boundingBox();
+assert.ok(homeW.y > homeBoard.y + homeBoard.height / 2 && homeW.x > homeBoard.x + homeBoard.width * 0.75, 'дом белых (последний пункт) — внизу справа');
+assert.equal(await pt(pi, abs('w', 23)).locator('.nd-no').textContent(), '24');
+step('доска: голова белых вверху справа (1), у чёрных на своём экране тоже вверху справа (13); последний пункт белых — внизу справа (24)');
+
 /* ------------------------------------------------- шаг тапом: число на точке */
 
 await pi.waitForSelector('.ch-status.mine');
@@ -129,8 +147,8 @@ await pt(pi, abs('w', 8)).click();
 await until(() => room.match.turn.played.length === 2, 'шаг на 5');
 await pi.getByRole('button', { name: 'Готово' }).click();
 await until(() => room.match.turn.c === 'b', 'ход перешёл');
-assert.deepEqual(room.match.log[0].notation, ['24/21', '21/16']);
-step('«Вернуть» — шаг назад; потом 24/21 21/16 и «Готово» — ход у Макса');
+assert.deepEqual(room.match.log[0].notation, ['1/4', '4/9']);
+step('«Вернуть» — шаг назад; потом 1/4 4/9 и «Готово» — ход у Макса');
 
 /* ------------------------------------------- бросок: без чисел, одинаковый */
 

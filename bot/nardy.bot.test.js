@@ -157,7 +157,7 @@ test('нарды против бота из лички: бот бросает, �
   assert.equal(room.game, 'nardy');
   assert.ok(room.players.find((p) => p.bot));
   assert.equal(t.state(IVAN).me.color, 'w');
-  // Ход белых (человек, 5 против 3). Сыграть 24/19 19/16.
+  // Ход белых (человек, 5 против 3). Сыграть 1/6 6/9.
   await t.send(IVAN, { t: 'move', from: abs('w', 0), die: 5, turn: 0 });
   await t.send(IVAN, { t: 'move', from: abs('w', 5), die: 3, turn: 0 });
   await t.send(IVAN, { t: 'end' });

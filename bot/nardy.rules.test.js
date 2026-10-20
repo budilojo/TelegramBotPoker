@@ -75,7 +75,7 @@ test('шаг: число, которого нет, — отказ; с голов
   assert.ok(N.endTurn(room, '1', T0).ok);
   assert.equal(room.match.turn.c, 'b');
   assert.equal(room.match.turn.dice, null, 'чёрным — бросать');
-  assert.deepEqual(room.match.log[0].notation, ['24/19', '19/16']);
+  assert.deepEqual(room.match.log[0].notation, ['1/6', '6/9']);
 });
 
 test('отмена шага до «Готово»: позиция как в начале хода; после «Готово» — нельзя', () => {

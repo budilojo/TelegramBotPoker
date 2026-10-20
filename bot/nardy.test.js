@@ -78,7 +78,7 @@ test('жребий, бросок, шаги, «Готово»: партия с д
   assert.deepEqual(t.state(IVAN).match.dice, [4, 2], 'Иван видит бросок Макса');
   assert.deepEqual(t.state(IVAN).match.rolls, sm.match.rolls, 'история бросков одна на всех');
   assert.deepEqual(sm.match.rolls.map((r) => r.dice || r.start), [{ w: 5, b: 3 }, [4, 2]]);
-  assert.deepEqual(t.state(IVAN).match.log[0].notation, ['24/19', '19/16']);
+  assert.deepEqual(t.state(IVAN).match.log[0].notation, ['1/6', '6/9']);
 });
 
 test('кубики не подделать: числа в сообщении «бросить» сервер не читает; бросить второй раз нельзя', async () => {
@@ -252,7 +252,7 @@ test('«ваш ход» в личку: что выбросил и сыграл �
   const ping = [...t.tg.messages.values()].filter((m) => m.chatId === '202' && /Ваш ход/.test(m.text)).at(-1);
   assert.ok(ping, 'Максу напомнили');
   assert.match(ping.text, /Нарды/);
-  assert.match(ping.text, /Соперник: 5-3 · 24\/19 19\/16/);
+  assert.match(ping.text, /Соперник: 5-3 · 1\/6 6\/9/);
 });
 
 test('/nardy в группе: лобби одной командой, повторно — ещё одно (дуэль)', async () => {

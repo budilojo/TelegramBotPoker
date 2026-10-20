@@ -166,14 +166,16 @@ test('медленный генератор и board.js: одни и те же �
 
 /* ------------------------------------------------------------- правила */
 
-test('начало: по 15 шашек на голове, головы друг напротив друга; пункты по-человечески — 24…1', () => {
+test('начало: по 15 шашек на голове, головы друг напротив друга; номера общие — голова белых 1, голова чёрных 13', () => {
   const p = startPosition();
   assert.equal(p.b[abs('w', 0)], 15);
   assert.equal(p.b[abs('b', 0)], -15);
   assert.equal(abs('b', 0), 12, 'голова чёрных — напротив головы белых');
-  assert.equal(pointNo('w', abs('w', 0)), 24);
-  assert.equal(pointNo('w', abs('w', 23)), 1);
-  assert.equal(pointNo('b', abs('b', 0)), 24);
+  assert.equal(pointNo('w', abs('w', 0)), 1, 'голова белых — 1');
+  assert.equal(pointNo('b', abs('b', 0)), 13, 'голова чёрных — 13');
+  assert.equal(pointNo('w', abs('w', 23)), 24, 'последний пункт дома белых — 24');
+  assert.equal(pointNo('b', abs('b', 23)), 12, 'последний пункт дома чёрных — 12');
+  assert.equal(pointNo('w', 5), pointNo('b', 5), 'номер не зависит от того, кто смотрит');
   assert.equal(pips(p, 'w'), 15 * 24);
 });
 
@@ -182,7 +184,7 @@ test('с головы за ход — одна шашка: 6-5 играется 
   const { seqs, max } = sequences(p, [6, 5]);
   assert.equal(max, 2);
   for (const s of seqs) assert.equal(s.filter((x) => idx('w', x.from) === 0).length, 1, 'с головы одна');
-  assert.deepEqual([...finals(p, [6, 5])].length, 1, 'единственный ход: 24/13 одной шашкой');
+  assert.deepEqual([...finals(p, [6, 5])].length, 1, 'единственный ход: с головы 1/12 одной шашкой');
 });
 
 test('дубль — четыре хода; с головы всё равно одна: 2-2 с начала — одна шашка идёт 2+2+2+2', () => {
@@ -286,13 +288,13 @@ test('в середине хода последняя шашка пришла д
   assert.ok(r.seqs.some((s) => s[1]?.to < 0), 'после прихода домой — снятие');
 });
 
-test('конец: снял все 15 — победа; запись шагов человеку — номерами его пунктов', () => {
+test('конец: снял все 15 — победа; запись шагов — общими номерами пунктов', () => {
   const p = pos({ w: { 23: 1 }, off: { w: 14, b: 0 } });
   const s = steps(p, 1)[0];
   assert.equal(winner(apply(p, s)), 'w');
-  assert.equal(stepText('w', s), '1/⤓');
-  assert.equal(stepText('w', { from: abs('w', 0), to: abs('w', 6), die: 6 }), '24/18');
-  assert.equal(stepText('b', { from: abs('b', 0), to: abs('b', 6), die: 6 }), '24/18', 'у чёрных свои номера');
+  assert.equal(stepText('w', s), '24/⤓');
+  assert.equal(stepText('w', { from: abs('w', 0), to: abs('w', 6), die: 6 }), '1/7');
+  assert.equal(stepText('b', { from: abs('b', 0), to: abs('b', 6), die: 6 }), '13/19', 'у чёрных голова — 13');
 });
 
 test('шаги продолжения: после сыгранного — только то, что ведёт к полному ходу', () => {

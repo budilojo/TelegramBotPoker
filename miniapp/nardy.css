@@ -77,7 +77,7 @@
 .nd-pt.down { flex-direction: column-reverse; }
 .nd-pt.down::before { top: 0; bottom: 14px; clip-path: polygon(50% 12%, 100% 100%, 0 100%); }
 
-/* Номер пункта — свой у каждого: голова 24, последний пункт дома 1. */
+/* Номер пункта — общий для обоих: голова белых 1, голова чёрных 13. */
 .nd-no {
   position: absolute;
   z-index: 1;
