@@ -4,7 +4,7 @@
  * шага (клетка → «Огонь»), ранил, убил, мимо; что видно сопернику и
  * зрителю; 320 px; сдача и оба флота открыты в конце.
  *
- *   DRAFT_GAMES=1 node tools/e2e-battleship.mjs     (так его запускает npm run e2e)
+ *   node tools/e2e-battleship.mjs
  *
  * Тот же сервер, сокет и страница, что в бою; Telegram — заглушка.
  */
@@ -19,11 +19,6 @@ import { startServer } from '../bot/server.js';
 import { TelegramStub, cmdUpdate, user } from '../bot/tg-stub.js';
 import { signInitData } from '../bot/webapp-auth.js';
 import { shipCells } from '../bot/games/battleship/board.js';
-
-if (process.env.DRAFT_GAMES !== '1') {
-  console.error('морской бой пока черновик: запускайте с DRAFT_GAMES=1 (npm run e2e так и делает)');
-  process.exit(1);
-}
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.E2E_PORT || 8099);
