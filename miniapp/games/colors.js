@@ -27,6 +27,15 @@ import {
 } from '../ui.js';
 import { net, bus, send } from '../net.js';
 
+/** Идентификатор запроса: повтор того же тапа сервер узнаёт и не плодит лобби. */
+const newReqId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+/** «+ Новое лобби»: та же игра и настройки, ты — хост. Доступно со страницы, открытой из хаба группы. */
+function newLobby() {
+  haptic.tap();
+  send({ t: 'again', reqId: newReqId() });
+}
+
 let state = null;
 let prev = null;
 /** Карта под пальцем: { card, i, el, rect, big } — пока палец не отпустили. */
@@ -623,7 +632,9 @@ function renderResults() {
       ? h('div.panel',
         h('button.btn', { onclick: () => send({ t: 'hub' }, { lock: false }) }, s.hubLabel || '← Игры с ботами'),
         h('button.btn.primary.lg', { onclick: () => { haptic.tap(); send({ t: 'again' }); } }, '▶ Сыграть ещё'))
-      : h('div.panel', h('button.btn.primary.lg', { onclick: () => send({ t: 'hub' }, { lock: false }) }, 'Все игры группы')),
+      : h('div.panel',
+        s.hub || s.canRematch ? h('button.btn.primary.lg', { onclick: newLobby }, '+ Новое лобби') : null,
+        h('button.btn', { onclick: () => send({ t: 'hub' }, { lock: false }) }, 'Все игры группы')),
   );
   void lines;
 }

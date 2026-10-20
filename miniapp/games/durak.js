@@ -19,6 +19,15 @@ import {
 } from '../ui.js';
 import { net, bus, send } from '../net.js';
 
+/** Идентификатор запроса: повтор того же тапа сервер узнаёт и не плодит лобби. */
+const newReqId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+/** «+ Новое лобби»: та же игра и настройки, ты — хост. Доступно со страницы, открытой из хаба группы. */
+function newLobby() {
+  haptic.tap();
+  send({ t: 'again', reqId: newReqId() });
+}
+
 let state = null;
 let prev = null;
 /** The card picked in your hand (first tap), or null. */
@@ -653,7 +662,9 @@ function renderResults() {
       h('button.btn.primary.lg', { onclick: () => { haptic.tap(); send({ t: 'again' }); } }, '▶ Сыграть ещё')));
     return;
   }
-  $app.append(box, h('div.panel', h('button.btn.primary.wide.lg', { onclick: () => tg.close() }, 'Закрыть')));
+  $app.append(box, h('div.panel',
+    s.hub || s.canRematch ? h('button.btn.wide', { onclick: newLobby }, '+ Новое лобби') : null,
+    h('button.btn.primary.wide.lg', { onclick: () => tg.close() }, 'Закрыть')));
 }
 
 /* --------------------------------------------------------------- sheets */

@@ -688,7 +688,7 @@ function renderResults() {
   );
   $app.append(box, h('div.panel',
     state.canShare ? h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: shareResult }, 'Поделиться') : null,
-    state.hub && !state.solo ? h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: newLobby }, '+ Новое лобби') : null,
+    (state.hub && !state.solo) || state.canRematch ? h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: newLobby }, '+ Новое лобби') : null,
     h('button.btn.primary.wide.lg', { onclick: () => tg.close() }, 'Закрыть')));
 }
 

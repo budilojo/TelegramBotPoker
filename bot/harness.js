@@ -431,10 +431,10 @@ export class Table {
   /* ------------------------------------------------------------- Mini App */
 
   /** Open the table in `u`'s Mini App. Returns what the hub said. */
-  open(u, { initData = null, room = null } = {}) {
+  open(u, { initData = null, room = null, back, visible } = {}) {
     const inbox = [];
     const r = this.hub.open(
-      { initData: initData ?? initDataFor(u, { startParam: this.room?.code, clock: this.clock }), room },
+      { initData: initData ?? initDataFor(u, { startParam: this.room?.code, clock: this.clock }), room, back, visible },
       (msg) => inbox.push(JSON.parse(JSON.stringify(msg)))
     );
     if (r.session) this.pages.set(String(u.id), { session: r.session, inbox });

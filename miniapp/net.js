@@ -35,6 +35,8 @@ let ws = null;
 let retry = 0;
 let clockOffset = 0; // server time − our time
 let busyTimer = null;
+/** Уже было соединение с сервером: следующее — переподключение. */
+let connectedOnce = false;
 
 export const serverNow = () => Date.now() + clockOffset;
 
@@ -45,7 +47,9 @@ export function connect() {
     retry = 0;
     // A hub page that had stepped into a lobby asks for it again: the server
     // allows it only for a room of the group this page was opened for.
-    ws.send(JSON.stringify({ t: 'hello', initData, room: net.inside || startCode }));
+    // `back` — страница переподключается, а не открывается; `visible` — видна ли она:
+    // свёрнутая страница стол «живым» не делает (иначе брошенный стол не закрыть).
+    ws.send(JSON.stringify({ t: 'hello', initData, room: net.inside || startCode, back: connectedOnce, visible: !document.hidden }));
   };
   ws.onmessage = (e) => {
     let msg;
@@ -57,6 +61,7 @@ export function connect() {
     if (msg.t === 'state') {
       const wasConnected = net.connected;
       net.connected = true;
+      connectedOnce = true;
       net.prev = net.state;
       net.state = msg.state;
       clockOffset = net.state.now - Date.now();

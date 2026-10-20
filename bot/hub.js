@@ -86,7 +86,7 @@ export class Hub {
    * A page says hello with its initData and what it wants to look at.
    * @returns {{session}|{error, text}}
    */
-  open({ initData, room: wanted } = {}, send) {
+  open({ initData, room: wanted, back, visible } = {}, send) {
     const opts = { now: this.app.clock.now(), maxAgeSec: this.maxAgeSec };
     let auth = checkInitData(initData, this.botToken, opts);
     // Подпись админ-бота — вторая дверь, и ведёт она только в админку.
@@ -105,6 +105,14 @@ export class Hub {
     // открывало приложение» он не попадает, иначе цифры врут про себя.
     if (!viaAdmin) this.app.noteSeen(auth.user.id);
     const asked = String(wanted || '').trim();
+    // Страница, которая сама переподключилась в фоне, — не «кто-то за столом»:
+    // иначе забытый телефон с открытым приложением держит брошенный стол вечно.
+    // Открытие (не переподключение) и переподключение на виду стол продлевают.
+    const quiet = back === true && visible === false;
+    const enter = (session, room) => {
+      if (visible === false) session.visible = false;
+      this.enterRoom(session, room, { quiet });
+    };
     // The signed start_param wins over anything in the page's own URL.
     const code = String(auth.startParam || asked || '').trim();
 
@@ -129,7 +137,7 @@ export class Hub {
     if (code === SOLO_CODE) {
       const session = { id: this.nextId++, user: auth.user, kind: 'solo', group: null, code: null, send, visible: true, solo: true };
       const inside = this.app.roomByCode(asked);
-      if (inside?.solo?.owner === auth.user.id) this.enterRoom(session, inside);
+      if (inside?.solo?.owner === auth.user.id) enter(session, inside);
       else this.pushSolo(session);
       return { session };
     }
@@ -161,7 +169,7 @@ export class Hub {
       const session = { id: this.nextId++, user: auth.user, kind: 'hub', group: group.code, code: null, send, visible: true, home };
       // Back to the room it was in before a reconnect — if it is of this group.
       const inside = this.app.roomByCode(asked);
-      if (inside && inside.chatId === group.chatId) this.enterRoom(session, inside);
+      if (inside && inside.chatId === group.chatId) enter(session, inside);
       else this.enterHub(session);
       return { session };
     }
@@ -172,7 +180,7 @@ export class Hub {
     if (room.solo) {
       if (room.solo.owner !== auth.user.id) return { error: 'NO_ROOM', text: 'Стол не найден — возможно, игру уже удалили.' };
       const session = { id: this.nextId++, user: auth.user, kind: 'room', group: null, code: null, send, visible: true, solo: true };
-      this.enterRoom(session, room);
+      enter(session, room);
       return { session };
     }
     // Путь назад — для страницы, которая ПЕРЕПОДКЛЮЧАЕТСЯ, а не открывается
@@ -191,7 +199,7 @@ export class Hub {
     const session = {
       id: this.nextId++, user: auth.user, kind: 'room', group: mine ? mine.code : null, code: null, send, visible: true,
     };
-    this.enterRoom(session, room);
+    enter(session, room);
     return { session };
   }
 
@@ -215,10 +223,11 @@ export class Hub {
     if (!set.size) map.delete(key);
   }
 
-  enterRoom(session, room) {
+  enterRoom(session, room, { quiet = false } = {}) {
     this.detach(session);
     // Стол открыли — он живой, отсчёт «за столом никого» начинается заново.
-    this.app.noteLive(room);
+    // Кроме тихого переподключения свёрнутой страницы (см. `open`).
+    if (!quiet) this.app.noteLive(room);
     session.kind = 'room';
     session.code = room.code;
     if (!this.byRoom.has(room.code)) this.byRoom.set(room.code, new Set());
@@ -281,11 +290,32 @@ export class Hub {
     };
   }
 
+  /**
+   * Из какой группы можно открыть «+ Новое лобби» со страницы этого стола:
+   * из группы хаба, откуда пришла страница, либо — когда партия закончилась —
+   * для тех, кто за этим столом сидел (страница, открытая по карточке в чате).
+   * Группа всегда берётся из самого стола, не из слов страницы. «Закончилась»
+   * — как сказал вид стола (`status`), а не как в памяти сервера: пока в покере
+   * открывается борд олл-ина, исход никому не выдаётся (аудит C-01).
+   */
+  rematchGroup(session, room, shownStatus = room.status) {
+    const app = this.app;
+    if (session.group) {
+      const g = app.groupByCode(session.group);
+      return g && g.chatId === room.chatId ? g : null;
+    }
+    if (shownStatus !== 'finished') return null;
+    const uid = String(session.user.id);
+    if (!room.players.some((p) => p.id === uid && !p.left && !p.kicked)) return null;
+    return app.groups.get(String(room.chatId)) || null;
+  }
+
   push(session, room) {
     if (this.app.down) return void session.send({ t: 'state', state: this.downState() });
     try {
       const state = gameOf(room).view(room, session.user.id, { now: this.app.clock.now(), botUsername: this.app.botUsername });
       if (session.group) state.hub = true; // it came from the group's hub: offer the way back
+      if (!room.solo && this.rematchGroup(session, room, state.room?.status)) state.canRematch = true; // «+ Новое лобби» на итогах
       if (room.solo) {
         // Путь назад из партии с ботами — к играм с ботами, а не к группе.
         state.hub = true;
@@ -488,7 +518,13 @@ export class Hub {
       // «Я на экране» / «свернули» — не ход, а хозяйственное сообщение: его
       // принимаем всегда, иначе страница получит отказ просто за то, что её
       // открыли во время обслуживания.
+      const wasHidden = session.visible === false;
       session.visible = !!msg.visible;
+      // Человек вернулся к экрану стола — это признак жизни (свёрнутая страница им не была).
+      if (wasHidden && session.visible && session.kind === 'room') {
+        const room = this.app.roomByCode(session.code);
+        if (room) this.app.noteLive(room);
+      }
       return;
     }
     if (this.app.down && session.kind !== 'admin') {
@@ -534,8 +570,10 @@ export class Hub {
       return this.enterRoom(session, next);
     }
     if (msg.t === 'again') {
-      const group = session.group ? app.groupByCode(session.group) : null;
-      if (!group || group.chatId !== room.chatId) return this.refuse(session, 'NOT_FROM_HUB');
+      // «Закончилась» — по тому, что показал бы вид стола, иначе отказ выдал бы исход до ривера.
+      const shown = gameOf(room).view(room, session.user.id, { now: app.clock.now(), botUsername: app.botUsername })?.room?.status;
+      const group = this.rematchGroup(session, room, shown);
+      if (!group) return this.refuse(session, 'NOT_FROM_HUB');
       return this.againHere(session, group, { from: room.code, reqId: msg.reqId });
     }
     // «Поделиться итогом»: заготовка сообщения, которое человек сам отправит от своего имени.

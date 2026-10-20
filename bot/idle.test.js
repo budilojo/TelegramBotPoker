@@ -5,8 +5,9 @@
  * Проверяется не «сработал ли таймер», а четыре вещи, без которых механика
  * вредна:
  *
- *   1. НАЧАТУЮ ИГРУ НЕ ТРОГАЕТ. Закрыть стол, за которым люди думают над
- *      картами, хуже, чем оставить сто пустых.
+ *   1. НАЧАТУЮ ИГРУ НЕ ТРОГАЕТ, пока в ней есть жизнь: закрыть стол, за которым
+ *      люди думают над картами, хуже, чем оставить сто пустых. Только после
+ *      двенадцати часов полной тишины бот завершает её сам, с итогами.
  *   2. ПРИЗНАК ЖИЗНИ ОТМЕНЯЕТ ЗАКРЫТИЕ — в том числе после предупреждения.
  *      Иначе предупреждение было бы враньём: вернулись, а стол всё равно
  *      закрылся.
@@ -17,10 +18,10 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Table, user, durakDecks, FakeClock } from './harness.js';
+import { Table, user, durakDecks, FakeClock, initDataFor } from './harness.js';
 import { TelegramStub } from './tg-stub.js';
 import { Store } from './store.js';
-import { IDLE_CLOSE_MS, IDLE_WARN_MS, IDLE_GRACE_MS, IDLE_SPREAD_MS, IDLE_READY_MS } from './app.js';
+import { IDLE_CLOSE_MS, IDLE_WARN_MS, IDLE_GRACE_MS, IDLE_SPREAD_MS, IDLE_READY_MS, IDLE_PLAY_MS } from './app.js';
 
 const IVAN = user(101, 'Иван');
 const MAX = user(202, 'Макс');
@@ -130,7 +131,7 @@ test('в лобби остался один игрок — это всё рав�
 
 /* --------------------------------------------------- начатую не трогаем */
 
-test('начатую игру таймер не закрывает никогда', async () => {
+test('начатую игру за обычное время простоя таймер не трогает', async () => {
   const t = new Table({ durakDeck: durakDecks(5) });
   const room = await lobby(t);
   t.openRoom(MAX, room);
@@ -141,6 +142,84 @@ test('начатую игру таймер не закрывает никогд�
   await t.clock.advance(IDLE_CLOSE_MS * 5);
   assert.ok(t.app.roomByCode(room.code), 'игра идёт — стол на месте');
   assert.equal(said(t).some((x) => /закроется|не собрался/.test(x)), false, 'и ничего грустного в группе');
+  t.app.stop();
+});
+
+/* ------------------------------- начатая игра, которую все бросили */
+
+/** Дурак вдвоём: игра идёт. */
+async function started(t) {
+  const room = await lobby(t);
+  t.openRoom(MAX, room);
+  await t.send(MAX, { t: 'sit' });
+  await t.send(IVAN, { t: 'start' });
+  assert.equal(room.status, 'playing');
+  return room;
+}
+
+test('начатую игру, которую все бросили на 12 часов, бот завершает сам — с предупреждением и итогами', async () => {
+  const t = new Table({ durakDeck: durakDecks(5) });
+  const room = await started(t);
+
+  await t.clock.advance(IDLE_PLAY_MS - IDLE_WARN_MS - 1000);
+  assert.equal(room.status, 'playing', 'рано');
+  assert.equal(said(t).some((x) => /давно никого нет/.test(x)), false, 'рано предупреждать');
+
+  await t.clock.advance(2000);
+  assert.ok(said(t).some((x) => /давно никого нет/.test(x)), 'предупредили в группе');
+  assert.equal(room.status, 'playing', 'но игра ещё идёт — минута у людей есть');
+
+  await t.clock.advance(IDLE_WARN_MS);
+  assert.equal(room.status, 'finished', 'игра завершена');
+  assert.equal(t.app.liveRooms(t.chatId).length, 0, 'из живых столов пропала');
+  assert.ok(said(t).some((x) => /ИТОГИ|Итоги/.test(x)), 'итоги ушли в группу');
+  assert.ok(said(t).some((x) => /так никто и не вернулся/.test(x)), 'и объяснено, почему');
+  t.app.stop();
+});
+
+test('ход в начатой игре отодвигает завершение, а свои часы игры — нет', async () => {
+  const t = new Table({ durakDeck: durakDecks(5) });
+  const room = await started(t);
+  await t.clock.advance(IDLE_PLAY_MS - 5 * 60_000);
+  // Любое обращение живого человека к столу — признак жизни.
+  t.openRoom(IVAN, room);
+  await t.clock.advance(IDLE_PLAY_MS - 5 * 60_000);
+  assert.equal(room.status, 'playing', 'после захода завершение отсчитывается заново');
+  assert.equal(said(t).some((x) => /давно никого нет/.test(x)), false);
+  await t.clock.advance(10 * 60_000);
+  assert.equal(room.status, 'finished', 'а потом всё равно завершилась');
+  t.app.stop();
+});
+
+test('забытая страница, которая переподключается в фоне, стол не держит — а страница на виду держит', async () => {
+  const t = new Table();
+  const room = await lobby(t);
+  // Телефон лежит в кармане: приложение открыто, но свёрнуто, и сеть то пропадает, то возвращается.
+  for (let i = 0; i < 8; i++) {
+    await t.clock.advance(IDLE_CLOSE_MS / 3); // за всё время — почти час, втрое больше срока
+    t.open(IVAN, { initData: initDataFor(IVAN, { startParam: room.code, clock: t.clock }), room: room.code, back: true, visible: false });
+  }
+  assert.equal(t.app.roomByCode(room.code), null, 'лобби закрылось, хотя страница «переподключалась»');
+  t.app.stop();
+
+  const t2 = new Table();
+  const room2 = await lobby(t2);
+  for (let i = 0; i < 5; i++) {
+    await t2.clock.advance(IDLE_CLOSE_MS / 2);
+    t2.open(IVAN, { initData: initDataFor(IVAN, { startParam: room2.code, clock: t2.clock }), room: room2.code, back: true, visible: true });
+  }
+  assert.ok(t2.app.roomByCode(room2.code), 'человек смотрит на экран — стол живой');
+  t2.app.stop();
+});
+
+test('свёрнутая страница вернулась на экран — это признак жизни', async () => {
+  const t = new Table();
+  const room = await lobby(t);
+  await t.send(IVAN, { t: 'visible', visible: false });
+  await t.clock.advance(IDLE_CLOSE_MS - 2 * IDLE_WARN_MS);
+  await t.send(IVAN, { t: 'visible', visible: true }); // достал телефон, открыл приложение
+  await t.clock.advance(IDLE_CLOSE_MS - 2 * IDLE_WARN_MS);
+  assert.ok(t.app.roomByCode(room.code), 'вернулся к экрану — отсчёт заново');
   t.app.stop();
 });
 

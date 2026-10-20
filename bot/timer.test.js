@@ -49,7 +49,7 @@ test('there is no turn timer unless the host switches it on', async () => {
   const actor = t.actor();
   await t.advance(3600 * SEC);
   assert.equal(t.actor(), actor, 'an hour later the same player is still thinking');
-  assert.equal(t.clock.pending(), 0, 'and no timer is even armed');
+  assert.equal(t.clock.pending(), 1, 'and no turn timer is armed — only the 12-hour «nobody is here» one');
   assert.equal(t.state(cast.ivan).hand.deadline, null);
 });
 

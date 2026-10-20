@@ -140,8 +140,24 @@ export const IDLE_GRACE_MS = 2 * 60_000;
 /** На столько сдвигается каждый следующий брошенный стол после перезапуска. */
 export const IDLE_SPREAD_MS = 3_000;
 
+/**
+ * Начатая партия, которую никто не трогает: никто не открывал стол, не ходил,
+ * не просил ничего. Свои часы на ход у игры есть, но когда все ушли, они
+ * доигрывают стол за пустой комнатой, а сам стол остаётся в списке, занимает
+ * место из десяти и висит в хабе. Через столько тишины партию завершает бот:
+ * итоги уходят в группу, как после «/finish».
+ *
+ * Двенадцать часов — потому что у шахмат, шашек и нард бывает партия без часов,
+ * «подумаю до вечера»; ночь без единого хода — уже не партия, а забытый стол.
+ */
+export const IDLE_PLAY_MS = 12 * 60 * 60_000;
+
 export const IDLE_WARN_TEXT =
   '⏳ За этим столом давно тихо. Если никто не вернётся, через минуту он закроется.';
+export const IDLE_PLAY_WARN_TEXT =
+  '⏳ За этим столом давно никого нет. Если никто не вернётся, через минуту бот завершит игру и пришлёт итоги.';
+export const IDLE_PLAY_CLOSED_TEXT =
+  '🏁 За столом так никто и не вернулся — игра завершена. Итоги выше.';
 export const IDLE_CLOSED_TEXT =
   '😔 Похоже, за этим столом так никто и не собрался. Стол закрыт — создавайте новый, когда соберётесь.';
 
@@ -406,7 +422,7 @@ export class App {
           this.store.remove(room.code);
           continue;
         }
-        if (room.status === 'lobby') {
+        if (room.status !== 'finished' && !room.solo) {
           // Деплой не должен укорачивать жизнь стола: сколько он простоял,
           // видно по createdAt — он в базе есть. Стол, созданный за минуту
           // до перезапуска, получает свои оставшиеся девятнадцать, а не две.
@@ -415,7 +431,9 @@ export class App {
           // иначе первое, что делает бот после каждого деплоя, — пишет во
           // все группы разом и упирается в лимит Telegram, тормозя заодно
           // сообщения живых игр.
-          const floor = now - IDLE_CLOSE_MS + IDLE_GRACE_MS + IDLE_SPREAD_MS * lobbies++;
+          // Начатой партии срок свой — дольше (IDLE_PLAY_MS), правило то же.
+          const span = room.status === 'lobby' ? IDLE_CLOSE_MS : IDLE_PLAY_MS;
+          const floor = now - span + IDLE_GRACE_MS + IDLE_SPREAD_MS * lobbies++;
           room.idleAt = Math.max(room.createdAt || 0, floor);
           room.idleWarned = false;
         }
@@ -826,10 +844,10 @@ export class App {
       const at = room.solo.seenAt ?? room.createdAt ?? now;
       return [{ id: 'idle', timer: { key: `solo:${at}`, deadline: at + SOLO_IDLE_MS }, fire: () => this.soloIdle(room.code, at) }];
     }
-    if (room.status !== 'lobby') return [];
+    if (room.status === 'finished') return [];
     const since = room.idleAt ?? room.createdAt ?? now;
     const seated = room.players.filter((p) => !p.left && !p.kicked).length;
-    const span = seated >= 2 ? IDLE_READY_MS : IDLE_CLOSE_MS;
+    const span = room.status !== 'lobby' ? IDLE_PLAY_MS : seated >= 2 ? IDLE_READY_MS : IDLE_CLOSE_MS;
     const deadline = since + (room.idleWarned ? span : span - IDLE_WARN_MS);
     return [{
       id: 'idle',
@@ -846,7 +864,7 @@ export class App {
    * всё равно живой: кто-то же его открывал.
    */
   noteLive(room) {
-    if (!room || room.status !== 'lobby' || !this.rooms.has(room.code)) return;
+    if (!room || room.status === 'finished' || room.solo || !this.rooms.has(room.code)) return;
     const now = this.clock.now();
     room.idleAt = now;
     room.idleWarned = false;
@@ -857,7 +875,8 @@ export class App {
 
   /** Сначала предупреждение, через минуту — закрытие. */
   async idleStep(room) {
-    if (!this.rooms.has(room.code) || room.status !== 'lobby') return;
+    if (!this.rooms.has(room.code) || room.status === 'finished') return;
+    const started = room.status !== 'lobby';
     const to = { message_id: room.ui?.tableMessageId };
     if (!room.idleWarned) {
       room.idleWarned = true;
@@ -865,11 +884,18 @@ export class App {
       // С кнопкой, а не голым текстом: до стола минута, и листать чат вверх
       // за карточкой — это ровно то время, которого нет.
       try {
-        await this.outbox.post(room.chatId, IDLE_WARN_TEXT, [[{ text: '🙋 Я тут, играем', url: this.tableLink(room) }]],
+        await this.outbox.post(room.chatId, started ? IDLE_PLAY_WARN_TEXT : IDLE_WARN_TEXT, [[{ text: '🙋 Я тут, играем', url: this.tableLink(room) }]],
           to.message_id ? { reply_parameters: { message_id: to.message_id, allow_sending_without_reply: true } } : {});
       } catch (err) {
         this.log(err);
       }
+      return;
+    }
+    if (started) {
+      // Начатая партия: не стираем, а завершаем — итоги и рейтинг уходят как после /finish.
+      if (!this.claimIdleGame(room)) return;
+      await this.finishUp(room);
+      await this.reply(room.chatId, IDLE_PLAY_CLOSED_TEXT, to);
       return;
     }
     if (!this.claimIdle(room)) return;
@@ -903,6 +929,20 @@ export class App {
     this.store.remove(room.code);
     this.note('idle', room);
     this.syncClocks(); // таймера у этого стола больше нет
+    return true;
+  }
+
+  /**
+   * То же, что `claimIdle`, но для начатой партии: завершить её ОДНИМ
+   * синхронным шагом. Пока `endGame` не вернулся, признак жизни ещё успевает
+   * отменить закрытие (`idleWarned` сбрасывается); после — партия уже
+   * `finished`, и второй таймер уходит ни с чем.
+   */
+  claimIdleGame(room) {
+    if (!this.rooms.has(room.code) || room.status === 'finished' || room.status === 'lobby' || !room.idleWarned) return false;
+    const r = gameOf(room).endGame(room, room.hostId, this.clock.now());
+    if (r.error || r.noop) return false;
+    this.note('idle', room);
     return true;
   }
 

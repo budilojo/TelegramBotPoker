@@ -19,6 +19,15 @@ import {
 import { net, bus, send, serverNow } from '../net.js';
 import { markDone } from '../school.js';
 
+/** Идентификатор запроса: повтор того же тапа сервер узнаёт и не плодит лобби. */
+const newReqId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+/** «+ Новое лобби»: та же игра и настройки, ты — хост. Доступно со страницы, открытой из хаба группы. */
+function newLobby() {
+  haptic.tap();
+  send({ t: 'again', reqId: newReqId() });
+}
+
 let state = null;
 let prev = null;
 
@@ -518,10 +527,18 @@ function seatSpots(W, H, n, withHero, u) {
   return { spots, rx, ry, sw, sh };
 }
 
-/** The widest board cards that still pass between the seats level with the board. */
-function boardCardWidth(W, H, u, geo, lines) {
-  let cw = 48 * u;
-  for (let i = 0; i < 3; i++) {
+/** Общие карты — главное, на что смотрят за столом: крупнее прежних 48/56 (владелец: «видно плохо»). */
+const BOARD_CARD = 66;
+const BOARD_CARD_MAX = 76;
+
+/**
+ * The widest board cards that still pass between the seats level with the board.
+ * Each candidate width is tried with its own band (taller cards, taller band),
+ * from the biggest down: the first that fits is the answer, so the result never
+ * depends on where the search started.
+ */
+function boardCardWidth(W, H, u, geo, lines, k = 1) {
+  const fits = (cw) => {
     const ch = (30 + 12 + 17 * lines) * u + cw * 1.4;
     const boardTop = H / 2 - ch / 2 + 36 * u;
     const boardBottom = boardTop + cw * 1.4;
@@ -531,9 +548,10 @@ function boardCardWidth(W, H, u, geo, lines) {
       if (dx < geo.sw / 2 + 24) continue; // right above or below the middle: a matter for --u, not for the cards
       if (p.y - geo.sh / 2 < boardBottom + 6 && p.y + geo.sh / 2 > boardTop - 6) half = Math.min(half, dx - geo.sw / 2 - 6);
     }
-    cw = clamp(Math.min(48 * u, (2 * half - 16) / 5), 18, 56);
-  }
-  return cw;
+    return cw * 5 + 16 <= 2 * half;
+  };
+  for (let cw = Math.min(BOARD_CARD * u, BOARD_CARD_MAX) * k; cw > 18; cw -= 1) if (fits(cw)) return cw;
+  return 18;
 }
 
 function layoutTable() {
@@ -545,14 +563,14 @@ function layoutTable() {
   const felt = t.querySelector('.felt');
   const withHero = t.dataset.hero === '1';
   const lines = Number(t.dataset.lines) || 1;
-  const apply = (u) => {
+  const apply = (u, k = 1) => {
     const geo = seatSpots(W, H, seats.length, withHero, u);
-    const cw = boardCardWidth(W, H, u, geo, lines);
+    const cw = boardCardWidth(W, H, u, geo, lines, k);
     t.style.setProperty('--u', u.toFixed(3));
     t.style.setProperty('--card-w', `${cw.toFixed(1)}px`);
-    seats.forEach((el, k) => {
-      el.style.left = `${geo.spots[k].x.toFixed(1)}px`;
-      el.style.top = `${geo.spots[k].y.toFixed(1)}px`;
+    seats.forEach((el, k2) => {
+      el.style.left = `${geo.spots[k2].x.toFixed(1)}px`;
+      el.style.top = `${geo.spots[k2].y.toFixed(1)}px`;
     });
     // The felt is the oval the seats sit on: each seat half on the rail.
     Object.assign(felt.style, {
@@ -568,19 +586,32 @@ function layoutTable() {
   // 0.6: past that names stop being readable, and a table that small is
   // better slightly crowded than illegible.
   const MIN = 0.6;
-  let hi = clamp(W / 390, MIN, 1.12);
-  if (apply(hi)) return;
-  let lo = MIN;
-  if (!apply(lo)) return; // cannot fit at all: keep the smallest
-  for (let i = 0; i < 6; i++) {
-    const mid = (lo + hi) / 2;
-    if (apply(mid)) lo = mid;
-    else hi = mid;
+  /** The biggest scale that fits with board cards at `k` of their full size; 0 if none does. */
+  const search = (k) => {
+    const hi = clamp(W / 390, MIN, 1.12);
+    if (apply(hi, k)) return hi;
+    if (!apply(MIN, k)) return 0;
+    let lo = MIN;
+    let top = hi;
+    for (let i = 0; i < 6; i++) {
+      const mid = (lo + top) / 2;
+      if (apply(mid, k)) lo = mid;
+      else top = mid;
+    }
+    // In steps of 0.05, so the table does not breathe every time a plate
+    // changes from CALL to RAISE 16.000.000.
+    const step = Math.max(MIN, Math.floor(lo * 20) / 20);
+    return apply(step, k) ? step : lo;
+  };
+  // Cards first: the biggest board cards that still leave the names readable
+  // (scale 0.85 and up). Only when the table cannot fit like that do the
+  // cards give way, step by step, down to about their old size.
+  const CARD_STEPS = [1, 0.9, 0.8, 0.72];
+  for (const k of CARD_STEPS) {
+    const u = search(k);
+    if (u >= 0.85 || (k === CARD_STEPS.at(-1) && u > 0)) return void apply(u, k);
   }
-  // In steps of 0.05, so the table does not breathe every time a plate
-  // changes from CALL to RAISE 16.000.000.
-  const step = Math.max(MIN, Math.floor(lo * 20) / 20);
-  if (!apply(step)) apply(lo);
+  apply(MIN, CARD_STEPS.at(-1)); // cannot fit at all: keep the smallest
 }
 
 /** Does any seat touch the middle, another seat, or the edge? Measured, not guessed — with room to breathe. */
@@ -598,7 +629,12 @@ function crowded(t) {
     middle.push(range.getBoundingClientRect());
   }
   // Boxes, not the cards inside them: a card in flight must not shrink the table.
-  const seats = [...t.querySelectorAll('.seat')].map((el) => [...el.querySelectorAll('.pod, .minis, .info, .plate')].map(box));
+  // Вскрытые карты места приподняты (.minis.shown .card.best): считаем их приподнятыми.
+  const seatBox = (el) => {
+    const r = box(el);
+    return el.classList.contains('minis') && el.classList.contains('shown') ? { left: r.left, right: r.right, top: r.top - 5, bottom: r.bottom } : r;
+  };
+  const seats = [...t.querySelectorAll('.seat')].map((el) => [...el.querySelectorAll('.pod, .minis, .info, .plate')].map(seatBox));
   for (let i = 0; i < seats.length; i++) {
     for (const p of seats[i]) {
       if (p.left < tr.left + 2 || p.right > tr.right - 2 || p.top < tr.top + 1 || p.bottom > tr.bottom - 1) return true;
@@ -874,7 +910,9 @@ function renderResults() {
       h('button.btn.primary.lg', { onclick: () => { haptic.tap(); send({ t: 'again' }); } }, '▶ Сыграть ещё')));
     return;
   }
-  $app.append(box, h('div.panel', h('button.btn.primary.wide.lg', { onclick: () => tg.close() }, 'Закрыть')));
+  $app.append(box, h('div.panel',
+    state.hub || state.canRematch ? h('button.btn.wide', { onclick: newLobby }, '+ Новое лобби') : null,
+    h('button.btn.primary.wide.lg', { onclick: () => tg.close() }, 'Закрыть')));
 }
 
 /* ------------------------------------------------------------------ sheets */
