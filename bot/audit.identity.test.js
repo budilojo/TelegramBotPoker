@@ -113,9 +113,9 @@ for (const g of GAME_LIST) {
     const HOST_ONLY = ['settings', 'kick', 'host', 'rebuy', 'role', 'finish', 'undo', 'pause', 'resume', 'pick', 'potNext', 'potBack', 'confirm'];
     for (const phase of ['lobby', 'playing']) {
       if (phase === 'playing') await startIt(t, cast);
-      // Дуэль между партиями (и в лобби) может закрыть любой из двоих — по
-      // замыслу (chess/rules.js endGame). Во время партии — только хост.
-      const list = g.maxPlayers === 2 && phase === 'lobby' ? HOST_ONLY.filter((x) => x !== 'finish') : HOST_ONLY;
+      // Лобби закрывает только хост — и в дуэлях тоже (A-03, решение владельца:
+      // гость может только встать). Между партиями дуэль закрывает любой из двоих.
+      const list = HOST_ONLY;
       for (let i = 0; i < STEPS / 2; i++) {
         const msg = randomMsg(rnd, { victimIds: ['101'] });
         msg.t = list[rnd(list.length)];
@@ -209,3 +209,20 @@ test('АУДИТ A-8: «нет такого» и «чужое» отвечают
   assert.deepEqual(openAs('admin'), openAs(ghost));
   assert.equal(t.errors.length, 0, t.errors.map(String).join('; '));
 });
+
+// A-03 (решение владельца): в дуэли лобби закрывает только хост; гость может встать.
+for (const g of GAME_LIST.filter((x) => x.maxPlayers === 2)) {
+  test(`АУДИТ A-03: ${g.title} — гость не закрывает лобби хоста, а встать может`, async () => {
+    const t = new Table();
+    const cast = { host: user(101, 'Хост'), guest: user(202, 'Гость') };
+    const room = await setUp(t, g.id, cast);
+    await t.send(cast.guest, { t: 'finish' });
+    assert.equal(t.lastError(cast.guest)?.code, 'NOT_HOST');
+    assert.equal(room.status, 'lobby', 'лобби живо');
+    await t.send(cast.guest, { t: 'leave' });
+    assert.equal(room.players.filter((p) => p.seated).length, 1, 'гость встал');
+    await t.send(cast.host, { t: 'finish' });
+    assert.equal(room.status, 'finished', 'хост закрыл');
+    t.app.stop();
+  });
+}

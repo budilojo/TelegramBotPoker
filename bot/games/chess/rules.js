@@ -598,7 +598,8 @@ export function markLeft(room, targetId, now = Date.now()) {
 /** Конец серии. Идущая партия не засчитывается. Закрыть может хост — или любой из двоих между партиями. */
 export function endGame(room, userId, now = Date.now()) {
   const p = findPlayer(room, userId);
-  const between = !live(room) && isSeated(p);
+  // Между партиями закрыть может любой из двоих; лобби — только хост (аудит A-03).
+  const between = room.status !== 'lobby' && !live(room) && isSeated(p);
   if (!isHost(room, userId) && !between) return { error: 'NOT_HOST' };
   if (room.status === 'finished') return { ok: true, noop: true };
   expireTurn(room, now);
