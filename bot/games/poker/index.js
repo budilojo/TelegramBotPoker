@@ -266,7 +266,9 @@ export default {
     const byId = new Map(room.players.map((p) => [p.id, p]));
     const players = tally(room)
       .filter((r) => r.role !== 'dealer' && r.handsPlayed > 0)
-      .filter((r) => !byId.get(r.id)?.kicked && !byId.get(r.id)?.left)
+      // Ушедший из группы остаётся в местах со своим стеком (аудит D-02: иначе
+      // выход перед концом спасал от −10). Удалённого хостом в местах нет.
+      .filter((r) => !byId.get(r.id)?.kicked)
       .sort((a, b) => b.net - a.net || b.stack - a.stack);
     if (players.length < 2) return [];
     return [{

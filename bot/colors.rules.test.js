@@ -386,7 +386,7 @@ test('15а. время вышло, а на нём висит «+2» — бот �
   assert.equal(room.deal.turn, '1', 'и пропустил');
 });
 
-test('16. ушёл из чата: втроём партия идёт дальше, вдвоём — прерывается', () => {
+test('16. ушёл из чата: втроём партия идёт дальше, вдвоём — он проиграл, партия засчитана (аудит D-02)', () => {
   const room = table(
     { 1: 'R1 R2 R3 R4 R5 R6 R7', 2: 'G1 G2 G3 G4 G5 G6 G7', 3: 'B1 B2 B3 B4 B5 B6 B7' },
     { top: 'G0' },
@@ -401,8 +401,14 @@ test('16. ушёл из чата: втроём партия идёт дальш�
   const two = table({ 1: 'R1 R2 R3 R4 R5 R6 R7', 2: 'G1 G2 G3 G4 G5 G6 G7' }, { top: 'G0' });
   assert.ok(C.markLeft(two, 2).ok);
   assert.equal(two.deal.phase, 'over');
-  assert.equal(two.deal.aborted, true, 'вдвоём доигрывать не из чего');
-  assert.equal(two.history.at(-1).aborted, true, 'и партия не засчитывается');
+  assert.ok(!two.deal.aborted, 'вдвоём партия кончается, а не отменяется');
+  assert.equal(two.history.at(-1).aborted, false);
+  assert.equal(two.history.at(-1).loser, '2', 'ушедший — последний');
+  assert.deepEqual(hand(two, 2), [], 'его карты ушли в сброс');
+  // А удалённый хостом вдвоём — партия по-прежнему прерывается и не засчитывается.
+  const kicked = table({ 1: 'R1 R2 R3 R4 R5 R6 R7', 2: 'G1 G2 G3 G4 G5 G6 G7' }, { top: 'G0' });
+  assert.ok(C.kickPlayer(kicked, '1', '2').ok);
+  assert.equal(kicked.deal.aborted, true);
 });
 
 test('16а. ушёл тот, чей был ход — ход идёт дальше, партия не висит', () => {

@@ -173,8 +173,13 @@ test('предел — на состав, а не на стол: пересоз�
 
 test('позвали третьего — это другой состав, и предел у него свой', () => {
   const store = new Store(':memory:');
-  for (let i = 0; i < PER_DAY; i++) apply(store, { game: 'durak', round: `r${i}`, places: people(1, 2), loserId: 2, at: DAY });
-  const three = apply(store, { game: 'durak', round: 'three', places: people(1, 2, 3), loserId: 3, at: DAY });
+  // Побеждали по очереди: у каждого по пять плюсов — предел на человека (аудит D-04) не мешает.
+  for (let i = 0; i < PER_DAY; i++) {
+    const [w, l] = i % 2 ? [1, 2] : [2, 1];
+    assert.equal(apply(store, { game: 'durak', round: `r${i}`, places: people(w, l), loserId: l, at: DAY }).ok, true);
+  }
+  assert.equal(apply(store, { game: 'durak', round: 'r-extra', places: people(1, 2), loserId: 2, at: DAY }).skipped, 'FARMED', 'вдвоём — предел состава');
+  const three = apply(store, { game: 'durak', round: 'three', places: people(3, 1, 2), loserId: 2, at: DAY });
   assert.equal(three.ok, true, 'вдвоём наигрались, втроём — играйте');
   store.close();
 });

@@ -366,7 +366,7 @@ test('20. таймер хода: истёк — взялась карта, хо�
 
 /* ------------------------------------------------------------ ушёл из чата */
 
-test('21. ушёл из группы: втроём партия идёт дальше, вдвоём — прерывается и не считается', async () => {
+test('21. ушёл из группы: втроём партия идёт дальше, вдвоём — он проиграл, партия засчитана (аудит D-02)', async () => {
   const cast = THREE();
   const t = new Table({ colorsDeck: colorsDecks(11) });
   const room = await begin(t, cast);
@@ -382,8 +382,8 @@ test('21. ушёл из группы: втроём партия идёт дал�
   const seen = t.state(cast.ivan);
   assert.equal(seen.players.find((p) => p.name === 'Дима').role, 'quit');
 
-  // А вдвоём доигрывать не из чего.
-  const t2 = new Table({ chatId: -1002, colorsDeck: colorsDecks(12) });
+  // Вдвоём доигрывать не из чего: ушедший проигрывает, партия засчитана.
+  const t2 = new Table({ chatId: -1002, colorsDeck: colorsDecks(12), store: new Store(':memory:') });
   const two = { ivan: user(101, 'Иван'), max: user(202, 'Макс') };
   const room2 = await begin(t2, two);
   await t2.raw({
@@ -393,8 +393,11 @@ test('21. ушёл из группы: втроём партия идёт дал�
     },
   });
   assert.equal(room2.deal.phase, 'over');
-  assert.equal(room2.deal.aborted, true);
-  assert.equal(room2.history.at(-1).aborted, true, 'партия не засчитывается');
+  assert.ok(!room2.deal.aborted);
+  const rated = Object.values(room2.rated)[0];
+  assert.ok(rated.ok, 'партия засчитана');
+  assert.deepEqual(rated.rows.map((r) => [r.userId, r.delta]), [['101', 20], ['202', -10]], 'ушедшему — минус');
+  t2.app.store.close();
 });
 
 /* -------------------------------------------------------------- рейтинг */

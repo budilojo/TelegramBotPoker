@@ -543,7 +543,26 @@ function endDeal(room, foolId) {
 }
 
 /**
- * Somebody went away in the middle of a game (left the group, removed by the
+ * Кто-то вышел из группы посреди партии. Он — дурак; остальные — по местам:
+ * кто уже вышел из игры, тот в своём порядке, кто ещё с картами — у кого
+ * меньше карт, тот выше (при равенстве — по порядку за столом).
+ */
+function forfeitDeal(room, leaverId) {
+  const d = room.deal;
+  d.discard.push(...d.table.flatMap((x) => (x.d ? [x.a, x.d] : [x.a])));
+  d.table = [];
+  const rest = d.order
+    .filter((id) => id !== leaverId && !d.out.includes(id))
+    .sort((a, b) => d.hands[a].length - d.hands[b].length || d.order.indexOf(a) - d.order.indexOf(b));
+  d.out.push(...rest);
+  d.forfeit = leaverId;
+  endDeal(room, leaverId);
+  room.notice = `${nameOf(room, leaverId)} вышел из чата посреди партии — он дурак. Остальным партия засчитана: у кого меньше карт, тот выше.`;
+  return true;
+}
+
+/**
+ * Somebody went away in the middle of a game (removed by the
  * host). Their cards nobody saw and nobody can play, so the game stops here
  * and does not count.
  */
@@ -728,7 +747,11 @@ export function markLeft(room, targetId) {
   if (!p || p.left) return { error: 'NO_PLAYER' };
   p.left = true;
   p.seated = false;
-  const stopped = inLiveDeal(room, p.id) && abortDeal(room, `${p.name} вышел из чата`);
+  // Ушёл из группы посреди партии — он дурак, остальным партия засчитана
+  // (аудит D-03: иначе выход спасал бы от «дурака» всех). Уже вышедший из
+  // партии с пустой рукой ничего не решает — партия идёт дальше без него.
+  const d = live(room);
+  const stopped = !!d && d.order.includes(p.id) && !d.out.includes(p.id) && forfeitDeal(room, p.id);
   if (room.hostId === p.id) reassignHost(room);
   if (!stopped) room.notice = `${p.name} вышел из чата`;
   touch(room);

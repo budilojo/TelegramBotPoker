@@ -811,12 +811,23 @@ export function kickPlayer(room, userId, targetId) {
  * Кто-то вышел из партии посреди неё (из группы, или его удалил хост).
  *
  * Втроём и больше партия продолжается без него: его карты уходят в сброс,
- * место ему — последнее. Вдвоём продолжать не из чего — партия прерывается и
- * не засчитывается.
+ * место ему — последнее. Вдвоём продолжать не из чего: ушедший из группы
+ * (`forfeit`) проигрывает — партия засчитывается, он последний (аудит D-02);
+ * удалённый хостом — партия прерывается и не засчитывается.
  */
-function dropFromDeal(room, id, why) {
+function dropFromDeal(room, id, why, { forfeit = false } = {}) {
   const d = live(room);
   if (!d || !d.order.includes(id) || d.out.includes(id) || d.quit.includes(id)) return null;
+  if (alive(d).length <= 2 && forfeit) {
+    d.discard.push(...d.hands[id]);
+    d.hands[id] = [];
+    d.quit.push(id);
+    note(d, { kind: 'quit', by: id });
+    for (const other of alive(d)) d.out.push(other);
+    endDeal(room, id);
+    room.notice = `🏁 Партия #${d.no}: ${nameOf(room, id)} вышел из чата посреди партии — он последний, партия засчитана.`;
+    return 'ended';
+  }
   if (alive(d).length <= 2) {
     abortDeal(room, why);
     return 'aborted';
@@ -849,7 +860,7 @@ export function markLeft(room, targetId) {
   if (!p || p.left) return { error: 'NO_PLAYER' };
   p.left = true;
   p.seated = false;
-  const r = dropFromDeal(room, p.id, `${p.name} вышел из чата`);
+  const r = dropFromDeal(room, p.id, `${p.name} вышел из чата`, { forfeit: true });
   if (room.hostId === p.id) reassignHost(room);
   if (!r) room.notice = `${p.name} вышел из чата`;
   touch(room);

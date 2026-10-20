@@ -124,11 +124,14 @@ export default {
   rounds(room) {
     return room.history.map((g) => {
       const quit = new Set(g.quit || []);
-      const order = (g.out || []).filter((id) => !quit.has(id));
+      // Ушедший из группы посреди партии — последний (аудит D-02); раньше ушедший —
+      // ниже. Удалённого хостом в местах нет: это решение хоста, а не бегство.
+      const fled = (g.quit || []).filter((id) => !C.findPlayer(room, id)?.kicked);
+      const order = [...(g.out || []).filter((id) => !quit.has(id)), ...fled.slice().reverse()];
       return {
         id: `${room.code}#${g.no}`,
         aborted: !!g.aborted,
-        loserId: g.loser || null,
+        loserId: fled[0] || g.loser || null,
         places: order.map((id) => ({ id, name: C.findPlayer(room, id)?.name ?? null })),
       };
     });

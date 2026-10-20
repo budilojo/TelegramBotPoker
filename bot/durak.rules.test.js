@@ -520,16 +520,20 @@ test('app · the limit reached ends the bout without waiting for anybody', () =>
   assert.equal(d.last?.kind, 'beaten', 'two cards on a defender who had two: nothing more can come');
 });
 
-test('app · somebody leaving in the middle of a game stops it, and it does not count', () => {
+test('app · somebody leaving the group mid-game is the durak, and the game counts for the rest (audit D-03)', () => {
   const room = table(3);
   D.startGame(room, '1', { deck: durakDecks(8) });
   refused(D.leave(room, '2'), 'IN_DEAL', 'standing up mid-game is refused');
+  const hands = { 1: room.deal.hands['1'].length, 3: room.deal.hands['3'].length };
   ok(D.markLeft(room, '2'));
   assert.equal(room.deal.phase, 'over');
-  assert.equal(room.deal.aborted, true);
-  assert.equal(room.deal.fool, null);
-  assert.match(room.notice, /Партия прервана: Макс вышел из чата/);
-  assert.ok(room.players.every((p) => p.stats.games === 0 && p.stats.fool === 0), 'nobody scored');
+  assert.ok(!room.deal.aborted);
+  assert.equal(room.deal.fool, '2', 'the one who left is the durak');
+  assert.match(room.notice, /Макс вышел из чата посреди партии — он дурак/);
+  const h = room.history.at(-1);
+  assert.equal(h.fool, '2');
+  assert.deepEqual(h.out, hands[1] <= hands[3] ? ['1', '3'] : ['3', '1'], 'the rest: fewer cards — higher place');
+  assert.equal(room.players.find((p) => p.id === '2').stats.fool, 1);
   ok(D.nextGame(room, '1', { deck: durakDecks(9) }));
   assert.deepEqual(room.deal.order, ['1', '3'], 'the next game without him');
 });

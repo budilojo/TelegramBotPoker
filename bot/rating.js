@@ -32,7 +32,16 @@ export const WHY = {
   DRAW: 'ничья — очков нет: делить победу нечем, а договорная ничья не должна кормить рейтинг',
   SHORT: 'партия короче 10 ходов — очков нет: сдаться на втором ходу не значит победить',
   FARMED: `партия без очков: с этим составом сегодня уже ${PER_DAY}`,
+  GAINED: `партия без очков: кто-то из игроков уже ${PER_DAY} раз сегодня получал очки в этой игре`,
 };
+
+/**
+ * Ключ дневного счёта «сколько раз человек сегодня получил очки в плюс» —
+ * в той же таблице, что и счёт составов. Предел на состав обходится
+ * подставными аккаунтами (аудит D-04): с каждым — свои десять. Предел на
+ * человека — нет: плюсов в сутки у одного человека не больше десяти.
+ */
+export const gainKey = (game, userId) => `gain:${game}:${userId}`;
 
 /** Сколько очков за место `i` (с нуля) из `n`. Последнему — минус. */
 export function points(i, n, { last = true } = {}) {
@@ -90,6 +99,8 @@ export function apply(store, { game, round, places, loserId = null, aborted = fa
   if (store.partyCount(print, at) >= PER_DAY) return { skipped: 'FARMED', why: WHY.FARMED };
 
   const rows = split(people, loserId);
+  const gainers = rows.filter((r) => r.delta > 0);
+  if (gainers.some((r) => store.partyCount(gainKey(game, r.userId), at) >= PER_DAY)) return { skipped: 'GAINED', why: WHY.GAINED };
   const written = [];
   for (const r of rows) {
     // Повтор той же партии (перезапуск, второй вызов) не удвоит очки: за это
@@ -98,6 +109,7 @@ export function apply(store, { game, round, places, loserId = null, aborted = fa
   }
   if (!written.length) return { skipped: 'ALREADY', why: 'эта партия уже засчитана' };
   store.countParty(print, at);
+  for (const r of written) if (r.delta > 0) store.countParty(gainKey(game, r.userId), at);
   return { ok: true, rows: written, month: ym(at) };
 }
 
