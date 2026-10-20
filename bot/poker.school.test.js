@@ -11,6 +11,10 @@
  *   ПОДСТРОЕННЫЕ КАРТЫ — ВСЕГДА ТЕ ЖЕ. Где бы ни стояла кнопка, у человека
  *   карты урока.
  */
+import { hints } from './hints.js';
+
+// Подсказки выключены у всех (bot/hints.js), но механизм остаётся — его и проверяем: этот файл включает их у себя.
+hints.on = true;
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Table, user, botRandom } from './harness.js';

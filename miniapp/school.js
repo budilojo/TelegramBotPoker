@@ -38,19 +38,19 @@ const play = (lesson) => {
   closeSheet();
 };
 
-/** Список уроков: азбука, уроки по порядку, свободная игра с подсказками. */
+/** Список уроков: азбука, уроки по порядку, свободная игра. */
 export function openSchool(lessons) {
   haptic.soft();
   showSheet('school', () => {
     const done = new Set(doneLessons());
     return h('div',
       h('h3', '🎓 Школа покера'),
-      h('div.sub', 'Против наставника: он подсказывает на каждом ходу и объясняет, почему так. В рейтинг не идёт.'),
+      h('div.sub', 'Против наставника: уроки по порядку и свободная игра. После раздачи — разбор. В рейтинг не идёт.'),
       h('div.menu-list.school-list',
         h('button.menu-item', { type: 'button', onclick: () => openAbc(0, lessons) }, '📖 Азбука покера', h('small', 'цель, ход раздачи, действия, комбинации, тест')),
         lessons.map((l, i) => h('button.menu-item', { type: 'button', onclick: () => play(i) },
           `${done.has(i) ? '✓' : `${i + 1}.`} ${l.title}`, h('small', l.goal))),
-        h('button.menu-item', { type: 'button', onclick: () => play(lessons.length) }, '♠ Свободная игра с подсказками', h('small', 'обычные раздачи один на один, наставник считает шансы'))),
+        h('button.menu-item', { type: 'button', onclick: () => play(lessons.length) }, '♠ Свободная игра', h('small', 'обычные раздачи один на один с наставником'))),
     );
   });
 }

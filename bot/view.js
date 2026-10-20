@@ -24,6 +24,7 @@ import {
 import { boardShown, BOARD_SIZE } from './cards.js';
 import { RANKS, rankOf, suitOf } from './deck.js';
 import { best5 } from './eval.js';
+import { hints } from './hints.js';
 
 const SUIT_CODE = ['S', 'H', 'D', 'C'];
 
@@ -300,7 +301,7 @@ export function tableView(room, viewerId, { now = Date.now(), botUsername = '' }
       allIn: !!meP?.allIn,
       notify: meP?.dm === 'ok',
       cards: codes(mine),
-      handName: myHandName(mine, board),
+      handName: hints.on ? myHandName(mine, board) : null, // имя своей руки — подсказка (bot/hints.js)
     },
     players,
     hand: h

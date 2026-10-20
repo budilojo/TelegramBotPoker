@@ -7,6 +7,7 @@
  * Time here is a fake clock that moves only when a test says so, so every
  * "59 seconds — not yet, 60 — now" is exact, and nothing sleeps.
  */
+import { hints } from './hints.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Table, user, stack, FakeClock, TEST_TOKEN, initDataFor } from './harness.js';
@@ -391,12 +392,14 @@ test('face up for all-ins: hands open first, the board runs out street by street
 });
 
 test('while the board turns over, your own hand name does not run ahead of the table', async () => {
+  hints.on = true; // имя своей руки — подсказка (выключена); механизм проверяем включённым
   const cast = THREE();
   const { t } = await allInPreflop(cast);
   await t.advance(1500); // the flop is out
   const st = t.state(cast.max);
   assert.deepEqual(st.me.cards, ['KD', 'KC']);
   assert.equal(st.me.handName, 'Пара K', 'judged on the flop, not on the river nobody has seen');
+  hints.on = false;
 });
 
 test('the automatic deal waits for the board to finish turning over', async () => {

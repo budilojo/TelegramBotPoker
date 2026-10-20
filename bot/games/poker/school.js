@@ -17,6 +17,7 @@ import crypto from 'node:crypto';
 import { parseCard, shuffled } from '../../deck.js';
 import { dealOrder } from '../../cards.js';
 import { equity } from './bot.js';
+import { hints } from '../../hints.js';
 
 /** Имя и место наставника за столом. */
 export const COACH_ID = 'bot1';
@@ -288,7 +289,8 @@ export function learnView(room, view) {
   const no = room.learn.lesson;
   const street = room.hand?.street || 'preflop';
   let tip = null;
-  if (view.legal) {
+  // Совет и шанс выиграть — подсказки: пока выключены (bot/hints.js), на телефон не уходят.
+  if (view.legal && hints.on) {
     if (L) {
       // Совет урока — в том виде, в каком его можно выполнить сейчас:
       // «сбросить», когда доплачивать не надо, — это чек; «поставить» после
@@ -307,7 +309,7 @@ export function learnView(room, view) {
     lesson: no,
     total: LESSONS.length,
     title: L ? L.title : 'Свободная игра',
-    goal: L ? L.goal : 'Играйте сами — наставник подсказывает на каждом ходу.',
+    goal: L ? L.goal : hints.on ? 'Играйте сами — наставник подсказывает на каждом ходу.' : 'Играйте сами против наставника.',
     tip: tip ? { text: tip.text, advice: tip.advice, label: ACTION_RU[tip.advice] || null } : null,
     result: room.learn.result || null,
     lessons: LESSONS.map((x) => x.title),

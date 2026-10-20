@@ -18,6 +18,7 @@ import { Hub } from '../bot/hub.js';
 import { startServer } from '../bot/server.js';
 import { TelegramStub, user } from '../bot/tg-stub.js';
 import { signInitData } from '../bot/webapp-auth.js';
+import { hints } from '../bot/hints.js';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.E2E_PORT || 8095);
@@ -83,6 +84,15 @@ try {
   await page.getByRole('button', { name: '▶ Первый урок' }).click();
   await page.waitForSelector('.coach');
   const room = () => app.soloOf('101');
+  // Подсказки выключены у всех: ни кнопки «совет», ни слова «Совет:» (по умолчанию).
+  for (let i = 0; i < 40 && !(await page.locator('.panel .btn').count()); i++) await page.waitForTimeout(250);
+  assert.equal(await page.locator('.coach-advice').count(), 0, 'совета нет');
+  assert.equal(await page.locator('.panel .btn.advised').count(), 0, 'кнопка с советом не подсвечена');
+  assert.ok(!/Шанс выиграть|Совет:/.test(await page.locator('body').innerText()), 'ни шанса, ни совета на экране');
+  step('подсказки выключены: в уроке нет ни совета, ни подсвеченной кнопки');
+  // Дальше — проверка самого механизма уроков: подсказки включаем на сервере (так же включит будущая настройка).
+  hints.on = true;
+  hub.broadcast(room());
   for (let i = 0; i < 60; i++) {
     if (await page.locator('.coach.ok, .coach.no').count()) break;
     const advised = page.locator('.panel .btn.advised');
