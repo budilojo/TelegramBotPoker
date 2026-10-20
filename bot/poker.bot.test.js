@@ -154,6 +154,68 @@ test('решение: со слабой рукой против большой �
   }
 });
 
+test('страх: чужой олл-ин до флопа не уравнивают рукой «посредственнее среднего» — ни один характер, любой уровень', () => {
+  // Стек 100 блайндов, сопернику (пока он один) ставят весь стек: уравнивать — отдать всё.
+  const view = (cards) => ({
+    seq: 3,
+    room: { settings: { startingStack: 10000, smallBlind: 50, bigBlind: 100 } },
+    me: { cards },
+    hand: { board: [] },
+    players: [{ isMe: true, inHand: true }, { isMe: false, inHand: true, folded: false }, { isMe: false, inHand: true, folded: false }, { isMe: false, inHand: true, folded: false }],
+    legal: { toCall: 9900, callAmount: 9900, canCheck: false, canCall: true, canBet: false, canRaise: false, minTotal: 10000, maxTotal: 10000, potTotal: 10200, stack: 9900, currentBet: 10000, myBet: 100 },
+  });
+  const mediocre = [['9S', '4H'], ['KD', '3C'], ['JC', '7D'], ['10H', '5S'], ['QS', '2D']];
+  for (const type of TYPES) {
+    if (['station', 'fish', 'gambler'].includes(type.id)) continue; // эти уравнивают по своей природе — для них отдельный тест ниже
+    for (let level = 1; level <= 3; level++) {
+      for (const hole of mediocre) {
+        const d = decidePoker(view(hole), { type: type.id, level }, botRandom(level * 31 + hole[0].length));
+        assert.equal(d.action, 'fold', `${type.name}, ур. ${level}, ${hole.join(' ')} — должен сбросить`);
+      }
+    }
+  }
+  // С тузами уравнивают (страх не должен превратить бота в труса).
+  for (const id of ['rock', 'math', 'tag']) {
+    const d = decidePoker(view(['AS', 'AH']), { type: id, level: 3 }, botRandom(5));
+    assert.notEqual(d.action, 'fold', `${id}: пара тузов против олл-ина не сбрасывается`);
+  }
+});
+
+test('страх, в живую: человек идёт олл-ин первым — боты почти не уравнивают друг за другом (раньше уравнивали в среднем двое из четырёх)', async () => {
+  let multi = 0;
+  let big = 0;
+  const SEEDS = 16;
+  for (let s = 1; s <= SEEDS; s++) {
+    const t = new Table({ botRng: botRandom(s * 101) });
+    const spy = spyOnBots();
+    try {
+      const room = await pokerVsBots(t, { opponents: 4, level: 1 });
+      const rows = [];
+      const wrap = g.bot.decide;
+      g.bot.decide = (args) => {
+        const out = wrap(args);
+        const l = args.view.legal;
+        if (!args.view.hand?.board?.length) rows.push(out?.action === 'allin' || (out?.action === 'call' && l.toCall >= 0.5 * (l.stack + l.myBet)));
+        return out;
+      };
+      for (let i = 0; i < 60 && room.hand?.phase !== 'complete'; i++) {
+        const st = t.state(IVAN);
+        if (st.legal) await t.send(IVAN, { t: 'act', action: 'allin', seq: st.seq });
+        else await t.advance(2500);
+      }
+      g.bot.decide = wrap;
+      const n = rows.filter(Boolean).length;
+      big += n;
+      if (n >= 2) multi++;
+    } finally {
+      spy.restore();
+      t.app.stop();
+    }
+  }
+  assert.ok(big / SEEDS < 1, `ботов, уравнявших олл-ин или пошедших ва-банк, на раздачу: ${(big / SEEDS).toFixed(2)} (раньше было ≈2)`);
+  assert.ok(multi / SEEDS < 0.25, `раздач, где пошли сразу двое и больше: ${multi} из ${SEEDS} (раньше ≈ 78%)`);
+});
+
 test('покер с ботами: партия идёт сама, боты ходят по своему виду и не видят чужих карт', async () => {
   const t = new Table({ botRng: botRandom(11) });
   const spy = spyOnBots();

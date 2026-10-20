@@ -228,16 +228,44 @@ export function decidePoker(view, spec, rng) {
 
   const strong = preflop ? rel >= p.pfr - pos : eq >= p.value - pos;
   const playable = preflop ? rel >= p.vpip - pos : eq * p.loose >= needed;
+  // «Сильная» — ещё не «готов отдать весь стек»: ва-банк и повышение поверх чужой
+  // ставки нужны с рукой, которая и вправду впереди (иначе стол за раздачу
+  // выносит всех, как у людей не бывает).
+  const premium = preflop ? rel >= Math.max(p.pfr + 0.45, 1.9) : eq >= 0.78;
+
+  // СТРАХ. Дорогая ставка — отдельный вопрос, а не «рука хорошая — иду»: чем
+  // больше от стека просят, тем сильнее нужна рука (шансы банка + запас на
+  // страх). Раньше до флопа решала одна сила руки, и чужой ва-банк
+  // уравнивали почти все — раздача кончалась тем, что вынесло половину стола.
+  const risk = legal.toCall > 0 ? clamp(legal.toCall / Math.max(1, legal.stack), 0, 1) : 0;
+  if (legal.toCall > 3 * bb && risk >= 0.25 && !legal.canCheck) {
+    // Против одной большой ставки играют двое-трое, а не весь стол: остальные ещё
+    // не ответили и могут сбросить — поэтому рука считается против двух.
+    let face = eq;
+    if (opponents > 2) {
+      face = equity(hole, board, 2, L.sims, rng);
+      if (L.noise) face = clamp(face + (rng() * 2 - 1) * L.noise, 0, 1);
+    }
+    const price = legal.toCall / (pot + legal.toCall);
+    const need = L.odds * price + (1 - L.odds) * (0.3 + 0.25 * risk);
+    const fear = 0.02 + Math.max(0, p.scared || 0) + 0.06 * risk;
+    // Азартные уравнивают чаще (loose > 1), осторожные реже; но с тузами не сбрасывает никто.
+    const threshold = Math.min(0.7, need + fear - (p.loose - 1) * 0.15);
+    if (face < threshold) return act('fold');
+  }
 
   // Ва-банк: короткий стек с хорошей рукой или любитель олл-инов.
-  if ((legal.canBet || legal.canRaise || legal.canCall) && strong && (shortStack || rng() < p.shove)) {
+  // Глубоким стеком и без по-настоящему сильной руки — только если характер такой (олл-инщик).
+  if ((legal.canBet || legal.canRaise || legal.canCall) && strong && (shortStack || (rng() < p.shove && (premium || p.shove >= 0.5)))) {
     return act('allin');
   }
 
   if (strong) {
     // Капкан: с очень сильной рукой иногда молчит, чтобы соперник поставил сам.
     if (legal.canCheck && rng() < p.slow) return act('check');
-    if ((legal.canBet || legal.canRaise) && rng() < p.aggr) {
+    // Повышать поверх уже сделанного повышения — с премиальной рукой; иначе уравнять.
+    const reRaise = legal.toCall > 2 * bb && !premium;
+    if ((legal.canBet || legal.canRaise) && !reRaise && rng() < p.aggr) {
       const fraction = p.polar ? (rng() < 0.5 ? 0.35 : 1.4) : p.size;
       return act(legal.canBet ? 'bet' : 'raise', sizeTo(legal, fraction, view));
     }
