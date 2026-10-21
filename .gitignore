@@ -23,3 +23,7 @@ backups/
 
 # Проверочная копия новой версии при обновлении сервера (deploy/update.sh)
 .update-check/
+
+# готовые картинки владельца до подключения (README остаётся в git)
+assets-incoming/*
+!assets-incoming/README.md
