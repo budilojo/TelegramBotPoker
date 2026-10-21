@@ -2,7 +2,8 @@
  * Морской бой настоящими браузерами: расстановка перетаскиванием и тапом,
  * поворот, «нельзя — касание», «Случайно», «Я готов»; бой — выстрел в два
  * шага (клетка → «Огонь»), ранил, убил, мимо; что видно сопернику и
- * зрителю; 320 px; сдача и оба флота открыты в конце.
+ * зрителю; 320 px; сдача и оба флота открыты в конце; партия против бота
+ * (форма → расстановка → бой → итоги → «Сыграть ещё») на 390×844 и 320×568.
  *
  *   node tools/e2e-battleship.mjs
  *
@@ -19,6 +20,7 @@ import { startServer } from '../bot/server.js';
 import { TelegramStub, cmdUpdate, user } from '../bot/tg-stub.js';
 import { signInitData } from '../bot/webapp-auth.js';
 import { shipCells } from '../bot/games/battleship/board.js';
+import battleshipGame from '../bot/games/battleship/index.js';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.E2E_PORT || 8099);
@@ -372,6 +374,101 @@ await app.settle();
 const lobby = app.liveRooms(String(CHAT)).find((r) => r.game === 'battleship' && r.status === 'lobby' && r !== room);
 assert.ok(lobby, '/battleship — лобби одной командой');
 step('/battleship в группе: лобби одной командой');
+
+/* ------------------------------------------------- против бота: вся партия */
+
+// Паузы бота «как у человека» (до полутора секунд) здесь не нужны — проверяем экран, а не темп.
+battleshipGame.bot.delay = () => 40;
+
+async function vsBot(u, size) {
+  const tag = `${size.width}×${size.height}`;
+  const page = await openPage(u, 'solo', size);
+  await page.waitForSelector('.game-card.g-battleship');
+  await page.locator('.game-card.g-battleship').click();
+  await page.waitForSelector('.sheet .section-label:has-text("Кто стреляет первым")');
+  for (const label of ['Я', 'Бот', 'Жребий']) assert.equal(await page.locator('.sheet .seg button', { hasText: new RegExp(`^${label}$`) }).count(), 1, `в форме — «${label}»`);
+  await page.locator('.sheet .seg button', { hasText: 'Матрос' }).click();
+  await page.locator('.sheet .seg button', { hasText: /^Я$/ }).click();
+  await page.getByRole('button', { name: '▶ Играть' }).click();
+  await until(() => !!app.soloOf(String(u.id)), 'партия с ботом создана');
+  const r = app.soloOf(String(u.id));
+  const botP = r.players.find((p) => p.bot);
+  assert.equal(botP.name, '🤖 Матрос');
+  assert.equal(botP.bot.level, 1);
+  await page.waitForSelector('.bs-tray');
+  const me = r.match.ids.indexOf(String(u.id));
+  const bs = 1 - me;
+  await until(() => r.match.ready[bs], 'бот расставил флот и готов');
+  await page.getByRole('button', { name: 'Случайно' }).click();
+  await until(() => !!r.match.fleets[me], 'флот расставлен');
+  await page.waitForFunction(() => !document.querySelector('.panel .k-btn--primary')?.disabled);
+  await page.getByRole('button', { name: 'Я готов' }).click();
+  await page.waitForSelector('.bs-fire');
+  assert.equal(r.match.phase, 'battle');
+  assert.equal(r.match.turn, me, '«Я» — первым стреляет человек');
+  const [sw, iw] = await page.evaluate(() => [document.documentElement.scrollWidth, innerWidth]);
+  assert.ok(sw <= iw, `${tag}: без горизонтального скролла`);
+  const fb = await page.locator('.bs-fire').boundingBox();
+  assert.ok(fb.y + fb.height <= size.height - 8, `${tag}: «Огонь» на экране с запасом (низ ${Math.round(fb.y + fb.height)})`);
+  step(`${tag}, против бота: форма («Кто стреляет первым: Я / Бот / Жребий», уровень «Матрос») → бот сам расставил флот → «Случайно», «Я готов» → бой, первым стреляю я`);
+
+  const shootAt = async (c) => {
+    const n = r.match.log.length;
+    await page.locator(`.bs-grid:not(.mini) .bs-cell[data-c="${c}"]`).click();
+    await page.waitForSelector(`.bs-grid:not(.mini) .bs-cell[data-c="${c}"].aim`);
+    await page.getByRole('button', { name: 'Огонь' }).click();
+    await until(() => r.match.log.length > n, `выстрел в ${c}`);
+  };
+  const botCells = r.match.fleets[bs].flatMap(shipCells);
+  const near = (a, b) => Math.abs((a % 10) - (b % 10)) <= 1 && Math.abs(Math.floor(a / 10) - Math.floor(b / 10)) <= 1;
+  const sea = Array.from({ length: 100 }, (_, c) => c).filter((c) => !botCells.some((x) => near(x, c)));
+  // Два промаха — бот дважды отвечает сам, через хаб, по своему виду.
+  for (const c of sea.slice(0, 2)) {
+    await shootAt(c);
+    await until(() => r.match.turn === me || !!r.match.over, 'бот отстрелялся', 15000);
+  }
+  const botShots = r.match.log.filter((x) => x.by === bs).length;
+  assert.ok(botShots >= 2, `бот стрелял (${botShots})`);
+  await page.waitForFunction((n) => document.querySelectorAll('.bs-grid.mini .bs-cell.miss, .bs-grid.mini .bs-cell.hit, .bs-grid.mini .bs-cell.sunk').length >= n, botShots);
+  // В трафике страницы до конца партии нет ни одного живого корабля бота.
+  // Своё поле из поиска убрано: свой корабль может стоять там же, где чужой.
+  const got = await page.evaluate((mine) => window.__got.map((raw) => {
+    const msg = JSON.parse(raw);
+    if (msg.state?.match?.boards?.[mine]) msg.state.match.boards[mine].ships = [];
+    return JSON.stringify(msg);
+  }).join('\n'), me);
+  for (const sh of r.match.fleets[bs]) {
+    const sunk = shipCells(sh).every((c) => r.match.shots[me].some((x) => x.c === c));
+    if (!sunk) assert.ok(!got.includes(JSON.stringify({ x: sh.x, y: sh.y, len: sh.len, dir: sh.dir })), `${tag}: в трафике живой корабль бота`);
+  }
+  step(`${tag}: два промаха — бот ответил ${botShots} выстрелами, они на моём поле; в трафике страницы ни одного живого корабля бота`);
+  // Топлю весь флот бота: попал — стреляю ещё.
+  for (const c of botCells) {
+    if (r.match.over) break;
+    if (r.match.turn !== me) await until(() => r.match.turn === me || !!r.match.over, 'мой ход', 15000);
+    if (!r.match.over && !r.match.shots[me].some((x) => x.c === c)) await shootAt(c);
+  }
+  await until(() => !!r.match.over, 'партия кончилась');
+  assert.equal(r.match.over.winner, me, 'победа человека');
+  await page.waitForSelector('.bs-result.won');
+  await page.getByRole('button', { name: 'Завершить' }).click();
+  await page.locator('.sheet .btn.danger:has-text("Завершить")').click();
+  await page.waitForSelector('h1:has-text("Итоги")');
+  await page.waitForSelector('.hint:has-text("без рейтинга")');
+  const again = page.getByRole('button', { name: '▶ Сыграть ещё' });
+  const ab = await again.boundingBox();
+  assert.ok(ab.y + ab.height <= size.height, `${tag}: «Сыграть ещё» на экране`);
+  await again.click();
+  await until(() => app.soloOf(String(u.id)) && app.soloOf(String(u.id)) !== r, 'новая партия с ботом');
+  const r2 = app.soloOf(String(u.id));
+  assert.equal(r2.players.find((p) => p.bot).bot.level, 1, 'тот же уровень');
+  assert.equal(r2.settings.first, 'host', 'та же очерёдность');
+  await page.waitForSelector('.bs-tray');
+  step(`${tag}: потопил флот бота — «Победа»; «Завершить» → итоги «без рейтинга» → «▶ Сыграть ещё» — новая партия с тем же уровнем, снова расстановка`);
+  await page.context().close();
+}
+await vsBot(user(505, 'Пётр'), { width: 390, height: 844 });
+await vsBot(user(606, 'Оля'), { width: 320, height: 568 });
 
 assert.deepEqual(problems, [], 'ошибок в консоли страниц нет');
 await browser.close();
