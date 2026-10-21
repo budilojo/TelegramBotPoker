@@ -554,7 +554,7 @@ function renderBattle() {
       board: foeBoard, mode: m.over ? 'view' : 'aim', label: 'Поле соперника', dead: deadOf(foeBoard), shown: !!m.over,
       last: lastShot && lastShot.by === me ? lastShot.c : null,
     }),
-    statusEl(),
+    h('div.bs-status', statusEl()),
     h('div.bs-row',
       h('div.bs-mine',
         boardEl({ board: myBoard, mode: 'view', mini: true, label: 'Ваш флот', dead: deadOf(myBoard), last: lastShot && lastShot.by === foe ? lastShot.c : null }),

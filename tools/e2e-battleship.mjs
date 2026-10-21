@@ -240,6 +240,28 @@ assert.equal(fireMsg.length, 1);
 assert.equal(fireMsg[0].cell, target);
 step(`тап — прицел и адрес «${want}» крупно; другой тап — прицел переехал, выстрела нет; «Огонь» — выстрел`);
 
+// Худший случай на 320×568: после попадания строка в две строки
+// («Ранил! Стреляйте ещё · Цель К10 — жмите «Огонь»»). Раньше «Огонь» уезжал
+// за нижний край на 4 px; теперь под строку всегда место на две строки,
+// «Огонь» не прыгает и до края не меньше 8 px.
+{
+  const ps = await openPage(ivan, room.code, { width: 320, height: 568 });
+  await ps.waitForSelector('.ch-status.mine');
+  const before = await ps.locator('.bs-fire').boundingBox();
+  await enemyCell(ps, water[0]).click();
+  await ps.waitForSelector(`.bs-grid:not(.mini) .bs-cell[data-c="${water[0]}"].aim`);
+  const st = await ps.locator('.ch-status.mine').boundingBox();
+  const text = (await ps.locator('.ch-status.mine').textContent()).trim();
+  assert.match(text, /Стреляйте ещё · Цель/, `строка после попадания: ${text}`);
+  assert.ok(st.height >= 40, `строка в две строки (${Math.round(st.height)} px) — проверяем худший случай`);
+  const after = await ps.locator('.bs-fire').boundingBox();
+  assert.ok(after.y + after.height <= 568 - 8, `«Огонь» на экране с запасом 8 px (низ ${Math.round(after.y + after.height)} из 568)`);
+  assert.equal(Math.round(after.y), Math.round(before.y), '«Огонь» не прыгает, когда строка стала длиннее');
+  assert.equal(room.match.log.length, 1, 'выбор на маленьком экране — не выстрел');
+  step(`320×568 после попадания: строка в две строки, «Огонь» на месте, до края ${Math.round(568 - after.y - after.height)} px`);
+  await ps.context().close();
+}
+
 // Добить корабль целиком — «убил»: рамка вокруг корабля, клетки вокруг — пустые.
 const ship = room.match.fleets[1].find((s) => shipCells(s).includes(target));
 for (const c of shipCells(ship)) if (!room.match.shots[0].some((x) => x.c === c)) await shoot(pi, c);
@@ -301,7 +323,7 @@ for (const page of [pi, pm, pd, small]) {
 const fireBox = await small.locator('.bs-fire').boundingBox();
 const gridBox = await small.locator('.bs-grid:not(.mini)').boundingBox();
 assert.ok(fireBox.height >= 44 && fireBox.width >= 44, `«Огонь» не меньше 44 px (${Math.round(fireBox.width)}×${Math.round(fireBox.height)})`);
-assert.ok(fireBox.y + fireBox.height <= 568, `«Огонь» на экране (низ ${Math.round(fireBox.y + fireBox.height)})`);
+assert.ok(fireBox.y + fireBox.height <= 568 - 8, `«Огонь» на экране с запасом 8 px (низ ${Math.round(fireBox.y + fireBox.height)})`);
 assert.ok(gridBox.x >= 0 && gridBox.x + gridBox.width <= 320, 'поле по ширине на экране');
 const cell = await small.locator('.bs-grid:not(.mini) .bs-cell').first().boundingBox();
 step(`на 320×568: без горизонтального скролла, поле и «Огонь» на экране (клетка ${Math.round(cell.width)} px — потому выстрел в два шага, «Огонь» ${Math.round(fireBox.width)}×${Math.round(fireBox.height)})`);

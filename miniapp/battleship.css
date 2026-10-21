@@ -19,11 +19,16 @@
   --bs-dead: #7d8b91;
   --bs-around: #7891a3;
   /* Своё поле на расстановке и чужое в бою — во всю ширину, но так, чтобы
-     под ним поместились строка, своё маленькое поле и «Огонь» (от 568 px высоты). */
+     под ним поместились строка, своё маленькое поле и «Огонь» (от 568 px высоты).
+     188 px — шапка 52, плашка соперника 56, строка в две строки 48 (.bs-status),
+     буквы над полем 16, низ ряда 8 и запас 8. Строка в бою бывает в две строки:
+     «Ранил! Стреляйте ещё · Цель К10 — жмите «Огонь»» на 320 px не влезает в одну
+     даже шрифтом Inter; раньше здесь было 172 (строка в одну) — и «Огонь»
+     уезжал за нижний край на 4 px. */
   --bs-mini: clamp(116px, 38vw, 196px);
   --bs-lab: var(--k-s16);
   --bs-w: max(200px, min(calc(100vw - 2 * var(--k-s8)), 504px,
-    calc(100dvh - 172px - var(--bs-mini) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))));
+    calc(100dvh - 188px - var(--bs-mini) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))));
   --bs-wp: max(200px, min(calc(100vw - 2 * var(--k-s8)), 504px,
     calc(100dvh - 300px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))));
   /* Зритель: оба поля одно под другим, у каждого своя плашка. */
@@ -32,6 +37,16 @@
 }
 
 .bs .ch-status { flex: none; }
+/* Место под строку в бою — всегда на две строки: одна она или две, поле
+   и «Огонь» не прыгают, пока целишься. */
+.bs-status {
+  flex: none;
+  min-height: var(--k-s48);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bs-status .ch-status { max-width: 100%; }
 
 /* Поле с буквами сверху и числами слева. */
 .bs-frame {
