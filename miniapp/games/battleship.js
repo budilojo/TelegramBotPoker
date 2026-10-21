@@ -657,12 +657,14 @@ function renderResults() {
         h('span.s.num', `${r.wins} · ${r.losses}`),
         h('span.pl.num', `${r.games} ${r.games === 1 ? 'партия' : r.games < 5 ? 'партии' : 'партий'}`)))
       : h('div.hint', 'Ни одной партии не сыграно.')),
-    h('div.hint', 'Победы · поражения. Итоги бот отправил и в группу.'),
+    h('div.hint', state.solo ? 'Победы · поражения. Партия с ботом — без рейтинга.' : 'Победы · поражения. Итоги бот отправил и в группу.'),
   );
   $app.append(box, h('div.panel',
     state.canShare ? h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: shareResult }, 'Поделиться') : null,
     (state.hub && !state.solo) || state.canRematch ? h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: newLobby }, '+ Новое лобби') : null,
-    h('button.btn.primary.wide.lg', { onclick: () => tg.close() }, 'Закрыть')));
+    // Партия с ботом: «Сыграть ещё» — новый стол с тем же уровнем и часами.
+    state.solo ? h('button.k-btn.k-btn--primary.k-btn--block', { onclick: () => { haptic.tap(); send({ t: 'again' }); } }, '▶ Сыграть ещё') : null,
+    h(`button.btn.wide.lg${state.solo ? '' : '.primary'}`, { onclick: () => tg.close() }, 'Закрыть')));
 }
 
 /* --------------------------------------------------------------- sheets */
@@ -787,8 +789,14 @@ export const lobby = {
   ].filter(Boolean),
 };
 
-/** Партия с ботом: часы вместо числа соперников (бот — этап 3). */
-export const solo = { duel: true, blurb: 'Морской бой против бота' };
+/** Партия с ботом (bot/games/battleship/bot.js): уровень, кто стреляет первым, часы. */
+export const solo = {
+  duel: true,
+  blurb: 'Морской бой против бота, от юнги до адмирала',
+  // Форма дуэлей спрашивает «side»; здесь это не цвет, а кто стреляет первым.
+  sideLabel: 'Кто стреляет первым',
+  sides: [['white', 'Я'], ['black', 'Бот'], ['random', 'Жребий']],
+};
 
 /** Чем игра подписана в хабе: корабль и попадание. */
 export const iconCards = ['/battleship/ship.svg', '/battleship/hit.svg'];

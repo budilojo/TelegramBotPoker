@@ -6,7 +6,8 @@
  *
  * Здесь — утечки флота во все каналы (вид игрока и зрителя, карточка
  * группы, «ваш ход», пульт, журнал, тексты отказов, перезапуск, новая
- * партия) и правила (касания, «попал — ещё», «за другого»). Строка «ПРОПУЩЕНО»
+ * партия) и правила (касания, «попал — ещё», «за другого»); бот — только по
+ * своему виду (утечка флота в его вид, подглядывание в комнату). Строка «ПРОПУЩЕНО»
  * значит: тест такую поломку не видит — он ничего не охраняет.
  */
 import fs from 'node:fs';
@@ -35,6 +36,10 @@ const M = [
   ['вокруг потопленного стрелять можно', G + 'rules.js', "  if (knownEmpty(m, s).has(c)) return { error: 'NEAR_SUNK' };", '', 'bot/battleship.rules.test.js'],
   ['попал — ход всё равно переходит', G + 'rules.js', "  if (r === 'miss') m.turn = 1 - s;", '  m.turn = 1 - s;', 'bot/battleship.rules.test.js'],
   ['перезапуск теряет флоты', G + 'rules.js', "  room.game = 'battleship';\n", "  room.game = 'battleship';\n  if (room.match) room.match.fleets = room.match.fleets.map(() => null);\n", 'bot/battleship.test.js'],
+  // Бот (bot.js): решает только по своему виду.
+  ['чужой флот целиком в виде бота', G + 'view.js', 'ships: fleet ? fleet.map(copyShip) : player ? sunk.map(copyShip) : [],', 'ships: (m.fleets[s] || []).map(copyShip),', 'bot/battleship.bot.test.js'],
+  ['чужой флот «сбоку» в виде бота (своё поле цело)', G + 'view.js', '      shots: m.log.length,', '      shots: m.log.length,\n      enemy: side != null && m.fleets[1 - side] ? m.fleets[1 - side].map(copyShip) : null,', 'bot/battleship.bot.test.js'],
+  ['бот подглядывает в комнату', G + 'bot.js', '  decide({ view, me, wait, rng }) {\n', "  decide({ room, view, me, wait, rng }) {\n    const m = room.match;\n    if (wait?.kind === 'move' && m?.fleets) {\n      const s = m.ids.indexOf(me.id);\n      const shot = new Set(m.shots[s].map((x) => x.c));\n      const c = m.fleets[1 - s].flatMap(shipCells).find((x) => !shot.has(x));\n      if (c != null) return { t: 'fire', cell: c, shot: m.log.length };\n    }\n", 'bot/battleship.bot.test.js'],
   ['«случайно» берёт флот со страницы', G + 'index.js', 'const r = B.placeRandom(room, uid, now(), opts());', 'const r = Array.isArray(msg.ships) ? B.place(room, uid, msg.ships, now(), opts()) : B.placeRandom(room, uid, now(), opts());', 'bot/battleship.test.js'],
 ];
 let bad = 0;
@@ -43,7 +48,7 @@ for (const [name, file, from, to, testFile] of M) {
   const orig = fs.readFileSync(p, 'utf8');
   if (orig.split(from).length !== 2) { console.log(`?? ${name}: образец не найден один раз`); bad++; continue; }
   fs.writeFileSync(p, orig.replace(from, to));
-  const r = spawnSync('node', ['--test', '--disable-warning=ExperimentalWarning', testFile], { cwd: root, encoding: 'utf8', env: { ...process.env, DRAFT_GAMES: '1' } });
+  const r = spawnSync('node', ['--test', '--test-reporter=tap', '--disable-warning=ExperimentalWarning', testFile], { cwd: root, encoding: 'utf8', env: { ...process.env, DRAFT_GAMES: '1' } });
   fs.writeFileSync(p, orig);
   const failed = (r.stdout.match(/^not ok \d+ - (.*)$/gm) || []).map((l) => l.replace(/^not ok \d+ - /, ''));
   if (r.status === 0) { console.log(`ПРОПУЩЕНО: ${name}`); bad++; }

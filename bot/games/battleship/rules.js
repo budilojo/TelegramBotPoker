@@ -53,12 +53,20 @@ export const realRandom = () => crypto.randomInt(2 ** 31) / 2 ** 31;
 
 /* ------------------------------------------------------------------ model */
 
-const settingsOf = (base, inc) => {
+/**
+ * Кто стреляет первым: жребий (по умолчанию) или — в партии с ботом, по
+ * выбору человека в форме — хост ('host') или его соперник ('guest').
+ * В настройках хранится, только когда это не жребий.
+ */
+export const FIRSTS = ['random', 'host', 'guest'];
+const settingsOf = (base, inc, first) => {
   const b = pick(base, BASES, 600);
-  return { base: b, inc: b ? pick(inc, INCS, 0) : 0 };
+  const out = { base: b, inc: b ? pick(inc, INCS, 0) : 0 };
+  if (FIRSTS.includes(first) && first !== 'random') out.first = first;
+  return out;
 };
 
-export function createRoom({ chatId, host, title = '', code = newRoomCode(), base = 600, inc = 0 }) {
+export function createRoom({ chatId, host, title = '', code = newRoomCode(), base = 600, inc = 0, first = 'random' }) {
   const room = {
     game: 'battleship',
     chatId: String(chatId),
@@ -67,7 +75,7 @@ export function createRoom({ chatId, host, title = '', code = newRoomCode(), bas
     createdAt: Date.now(),
     touchedAt: Date.now(),
     status: 'lobby',
-    settings: settingsOf(base, inc),
+    settings: settingsOf(base, inc, first),
     players: [],
     hostId: null,
     gameNo: 0,
@@ -162,6 +170,14 @@ export function startBlocker(room) {
  * Новая партия: флотов ещё нет ни у кого — каждый расставляет заново.
  * Прежние расстановки в новую партию не переходят никогда.
  */
+function firstSide(room, ids, rand) {
+  const host = ids.indexOf(room.hostId);
+  const want = room.settings.first;
+  if (host >= 0 && want === 'host') return host;
+  if (host >= 0 && want === 'guest') return 1 - host;
+  return rand() < 0.5 ? 0 : 1;
+}
+
 function newMatch(room, ids, opts) {
   room.gameNo += 1;
   const { base } = room.settings;
@@ -172,8 +188,9 @@ function newMatch(room, ids, opts) {
     phase: 'place',
     fleets: [null, null],
     ready: [false, false],
-    // Кто стреляет первым — жребий сервера; объявляется, когда начнётся бой.
-    first: rand() < 0.5 ? 0 : 1,
+    // Кто стреляет первым — жребий сервера (или выбор в форме партии с ботом);
+    // объявляется, когда начнётся бой.
+    first: firstSide(room, ids, rand),
     turn: null,
     shots: [[], []], // shots[s] — выстрелы стороны s: { c, r }
     log: [], // все выстрелы партии по порядку: { by, c, r }
@@ -447,6 +464,7 @@ export function updateSettings(room, userId, patch = {}) {
     inc: patch.inc != null ? pick(patch.inc, INCS, cur.inc) : cur.inc,
   };
   if (next.base === 0) next.inc = 0;
+  if (cur.first) next.first = cur.first;
   if (next.base === cur.base && next.inc === cur.inc) return { ok: true, noop: true };
   room.settings = next;
   room.notice = `Часы: ${controlRu(next)}`;

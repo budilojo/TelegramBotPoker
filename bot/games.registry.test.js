@@ -119,6 +119,6 @@ test('бот на сервере (без DRAFT_GAMES) видит морской 
   assert.ok(out.quick.includes('battleship') && out.menu.includes('battleship'), '/battleship есть и в меню «/»');
   assert.deepEqual(out.loaded, [['SEA1', 'battleship', 'object']], 'стол прочитан морским боем');
   assert.deepEqual(out.errors, []);
-  // Морского боя нет в «Играх с ботами», пока у него нет бота (этап 3).
-  assert.equal(GAMES.battleship.bot, undefined);
+  // Этап 3: у морского боя есть бот — игра есть и в «Играх с ботами».
+  assert.equal(typeof GAMES.battleship.bot?.decide, 'function');
 });

@@ -13,6 +13,7 @@
 import * as B from './rules.js';
 import { battleshipView } from './view.js';
 import { renderCard, renderResults, renderTurnPing, shareText, ICON } from './render.js';
+import bot from './bot.js';
 
 /** Что страница вправе просить у стола морского боя — и больше ничего. */
 const ACTIONS = new Set([
@@ -81,12 +82,15 @@ export default {
   maxPlayers: B.MAX_SEATS,
   errors: ERRORS,
   commands: [['battleship', 'морской бой — новое лобби одной командой']],
+  /** Соперник-бот для партии из «Игр с ботами» (bot.js). */
+  bot,
 
   /** Жребий первого выстрела и случайная расстановка — подменяются в тестах. */
   dealOpts: (room, app) => randOpts(app),
 
   create({ chatId, title, host, settings = null }) {
     const s = settings || {};
+    // «Кто первый» отсюда не берётся: в группе — только жребий (его ставит bot.prepare в партии с ботом).
     return B.createRoom({ chatId, title, host, base: s.base, inc: s.inc });
   },
 
