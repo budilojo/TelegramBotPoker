@@ -20,6 +20,22 @@
 сервер — после того, как все закончили (`docs/next-deploy-prompt.md`), одним
 заходом.
 
+## Как запустить агента (одна команда)
+
+Агенты описаны в `.claude/agents/`. В папке проекта на Mac, **после
+`git pull origin redesign`**, в отдельном окне Терминала:
+
+```
+claude --agent karty          # A — баг карт
+claude --agent obuchenie      # B — обучение в форме покера
+claude --agent smayliki       # C — смайлики
+claude --agent morskoy-boy    # D — морской бой
+claude --agent kartinki       # E — подключить картинки (позже)
+```
+
+Агент стартует и ждёт; напишите ему «Начинай» (или запускайте сразу с заданием:
+`claude --agent karty "Начинай"`).
+
 ## Где пересекаются зоны (и как не мешать друг другу)
 
 - **`miniapp/games/poker.js` и `durak.js`** трогают A (анимации, вёрстка стола) и
