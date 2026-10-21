@@ -190,7 +190,8 @@ function pick(id) {
 let layer = null;
 function layerEl() {
   if (layer?.isConnected) return layer;
-  layer = h('div#rx-layer.rx-layer', { 'aria-live': 'polite' });
+  // `h` понимает только `тег.класс`: `div#id` — недопустимое имя тега, createElement падает.
+  layer = h('div.rx-layer', { id: 'rx-layer', 'aria-live': 'polite' });
   document.body.append(layer);
   return layer;
 }
