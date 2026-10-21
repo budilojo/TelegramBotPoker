@@ -13,7 +13,7 @@
  * Moved here from app.js as it was; the shell (app.js) now picks the screen.
  */
 import {
-  tg, $app, h, fmt, clamp, cardImg, backImg, initial, STAGE, haptic, REDUCED, counter, animateOnce, offsetTo,
+  tg, $app, h, fmt, clamp, cardImg, backImg, initial, STAGE, haptic, REDUCED, counter, animateOnce, offsetTo, onRelayout,
   flyChips, muck, celebrate, edgeGlow, toast, ringSvg, showSheet, closeSheet, refreshSheet, currentSheet,
 } from '../ui.js';
 import { net, bus, send, serverNow } from '../net.js';
@@ -498,6 +498,15 @@ function learnButtons(s, panel) {
 const SEAT_W = 104; // the widest thing in a seat: its plate
 const SEAT_H = 90;
 const EDGE = 4;
+/*
+ * На вскрытии карты места лежат на аватаре и чуть выше него (выигравшие ещё
+ * и приподняты), а crowded() считает их приподнятыми с запасом. Сидящий
+ * напротив (наверху стола) упирался ими в край стола при ЛЮБОМ масштабе —
+ * и раскладка падала в «не влезает совсем»: стол и общие карты сжимались
+ * до самых мелких (63 → 29 px). Один на один соперник всегда наверху, так
+ * что это случалось почти на каждом вскрытии. Это место — под них.
+ */
+const SHOWN_ROOM = 8;
 
 /*
  * Where the others sit around you, clockwise from your left, in degrees on
@@ -519,7 +528,7 @@ function seatSpots(W, H, n, withHero, u) {
   const sw = SEAT_W * u;
   const sh = SEAT_H * u;
   const rx = Math.max(0, W / 2 - EDGE - sw / 2);
-  const ry = Math.max(0, H / 2 - EDGE - sh / 2);
+  const ry = Math.max(0, H / 2 - EDGE - SHOWN_ROOM - sh / 2);
   const spots = [];
   for (let k = 0; k < n; k++) {
     const deg = withHero && SEAT_MAP[n] ? SEAT_MAP[n][k] : 90 + ((withHero ? (k + 1) / (n + 1) : (k + 0.5) / n) * 360);
@@ -647,8 +656,8 @@ function crowded(t) {
   return false;
 }
 
-window.addEventListener('resize', layoutTable);
-tg?.onEvent?.('viewportChanged', layoutTable);
+// Окно поменялось, приложение вернулось из фона — заново, и ещё раз, когда доиграют анимации (ui.js).
+onRelayout(layoutTable);
 
 /** A board card lands: dealt from above and turned face up. The flop comes one card after another. */
 function boardCard(el, hd, i) {

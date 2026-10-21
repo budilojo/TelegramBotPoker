@@ -14,7 +14,7 @@
  *   are doing: ⚔ attacking, 🛡 defending, taking, «пас», out.
  */
 import {
-  tg, $app, h, clamp, cardImg, backImg, haptic, animateOnce, centerOf, offsetTo, spawn, edgeGlow, celebrate,
+  tg, $app, h, clamp, cardImg, backImg, haptic, animateOnce, centerOf, offsetTo, onRelayout, spawn, edgeGlow, celebrate,
   toast, ringSvg, showSheet, closeSheet, refreshSheet, avatar, REDUCED,
 } from '../ui.js';
 import { net, bus, send } from '../net.js';
@@ -601,7 +601,8 @@ function layoutHand() {
   const rows = [...hand.querySelectorAll('.dk-row')];
   const first = hand.querySelector('.dk-card');
   if (!first) return;
-  const cw = first.getBoundingClientRect().width;
+  // Ширина по раскладке, а не по рамке: карта в полёте ещё сжата (scale 0.5).
+  const cw = first.offsetWidth;
   const avail = hand.clientWidth - 6;
   const perRow = Math.max(...rows.map((r) => r.children.length));
   const need = perRow * cw;
@@ -640,8 +641,8 @@ const relayout = () => {
   layoutHand();
   layoutDurak();
 };
-window.addEventListener('resize', relayout);
-tg?.onEvent?.('viewportChanged', relayout);
+// Окно поменялось, приложение вернулось из фона — заново, и ещё раз, когда доиграют анимации (ui.js).
+onRelayout(relayout);
 
 /* ------------------------------------------------------------- results */
 

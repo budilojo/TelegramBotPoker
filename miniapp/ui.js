@@ -334,6 +334,52 @@ function watchKeyboard() {
 }
 watchKeyboard();
 
+/* -------------------------------------------------------------- пересчёт */
+
+/*
+ * Раскладка стола (покер, дурак) меряет экран и то, что на нём лежит. Если
+ * мерить посреди анимации, плашка в полёте ещё маленькая, карта ещё у
+ * колоды — и раскладка выбирает масштаб по картинке, которой через полсекунды
+ * не будет; а следующий пересчёт — только с новым состоянием. Поэтому:
+ * пересчитать сразу (окно уже другое) и ещё раз, когда всё, что сейчас
+ * движется, доиграет. Плюс возврат из фона: пока приложение было свёрнуто,
+ * окно могло поменяться без события resize (iPhone, Telegram).
+ */
+const relayouts = new Set();
+let settleWait = 0;
+
+function runRelayouts() {
+  for (const fn of relayouts) fn();
+}
+
+/** Конечные анимации на странице, кроме эффектов поверх стола (они не на столе). */
+function movingNow() {
+  return document.getAnimations().filter((a) => {
+    const t = a.effect?.getComputedTiming?.();
+    return a.playState !== 'finished' && t && Number.isFinite(t.endTime) && !a.effect.target?.closest?.('#fx');
+  });
+}
+
+/** Пересчитать раскладку сейчас и ещё раз, когда доиграет то, что движется. */
+export function relayoutSoon() {
+  runRelayouts();
+  const n = ++settleWait;
+  const moving = movingNow();
+  if (!moving.length) return;
+  const later = () => n === settleWait && runRelayouts();
+  // finished у отменённой анимации отклоняется — нам всё равно, чем кончилась.
+  Promise.allSettled(moving.map((a) => a.finished)).then(() => requestAnimationFrame(later));
+}
+
+/** Экран стола сообщает, как разложить себя заново. */
+export function onRelayout(fn) {
+  relayouts.add(fn);
+}
+
+window.addEventListener('resize', relayoutSoon);
+tg?.onEvent?.('viewportChanged', relayoutSoon);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) relayoutSoon(); });
+
 /* ------------------------------------------------------------------ sheets */
 
 /*

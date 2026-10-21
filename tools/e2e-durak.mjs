@@ -23,6 +23,7 @@ import { TelegramStub, cmdUpdate, user } from '../bot/tg-stub.js';
 import { signInitData } from '../bot/webapp-auth.js';
 import { durakDecks, durakStack } from '../bot/harness.js';
 import { allCovered, waitingThrowers } from '../bot/games/durak/rules.js';
+import { cardsInPlace, resizeMidAnimation } from './cards-in-place.mjs';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.E2E_PORT || 8092);
@@ -135,6 +136,15 @@ await until(() => room().deal?.phase === 'play', 'партия #1');
 for (const page of pages.values()) await page.waitForSelector('.dk-hand .dk-card');
 step('партия #1 сдана: у всех по 6 карт веером');
 
+// Карты на месте (владелец: «карты на столе отдаляются, и их не видно»):
+// Иван — iPhone 390×844, Макс — самый узкий 320×568, Дима — 360×740. Окно
+// меняется, пока карты ещё летят из колоды в руку.
+await pi.setViewportSize({ width: 390, height: 844 });
+await pm.setViewportSize({ width: 320, height: 568 });
+for (const page of pages.values()) await resizeMidAnimation(page, [375, 600]);
+for (const [id, page] of pages) await cardsInPlace(page, `раздача у ${id}`);
+step('после раздачи (окно менялось посреди неё) все карты стола и руки на месте: 390×844, 320×568, 360×740');
+
 /* --------------------------------------------- nobody sees another's cards */
 
 async function assertPrivacy(label) {
@@ -226,9 +236,12 @@ for (let guard = 0; room().deal.phase === 'play' && guard < 800; guard++) {
   }
   moves++;
   if (moves % 15 === 0) await assertPrivacy(`ход ${moves}`);
+  if (moves % 20 === 0) for (const [id, p] of pages) await cardsInPlace(p, `ход ${moves} у ${id}`);
 }
 const d1 = room().deal;
 assert.equal(d1.phase, 'over', 'партия доиграна тапами');
+for (const [id, page] of pages) await cardsInPlace(page, `конец партии у ${id}`, { empty: true });
+for (const page of [pi, pm]) await page.setViewportSize({ width: 360, height: 740 });
 step(`партия сыграна тапами: ${moves} действий — ${beats} раз покрыли, ${takes} раз взяли, ${throwsIn} подкинули`);
 
 const verdict = d1.fool ? `Дурак — ${room().players.find((p) => p.id === d1.fool).name}` : 'Ничья';

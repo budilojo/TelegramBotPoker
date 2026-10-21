@@ -21,6 +21,7 @@ import { startServer } from '../bot/server.js';
 import { TelegramStub, cmdUpdate, user } from '../bot/tg-stub.js';
 import { signInitData } from '../bot/webapp-auth.js';
 import { stack } from '../bot/harness.js';
+import { cardsInPlace, resizeMidAnimation } from './cards-in-place.mjs';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.E2E_PORT || 8091);
@@ -254,6 +255,63 @@ for (const page of pages.values()) await page.waitForSelector('.result-line');
 assert.equal(chips(), 30000);
 await noSideways('итог раздачи #2');
 step('раздача #2 сыграна, фишки сошлись');
+
+for (const [id, page] of pages) await cardsInPlace(page, `итог раздачи #2 у ${id}`);
+step('после анимаций все карты на месте у всех троих');
+
+/* ------------------- один на один: карты на столе не «отдаляются» */
+
+// Владелец (iPhone): «в какой-то момент карты на столе отдаляются, и их
+// становится не видно». Причина: на вскрытии карты соперника напротив
+// упирались в верхний край стола, раскладка решала «не влезает совсем» и
+// сжимала стол и общие карты до самых мелких. Один на один соперник всегда
+// напротив — проверяем вскрытие вдвоём, на iPhone и на самом узком экране,
+// с изменением размера окна посреди раздачи.
+const CHAT2 = -100779;
+const room2 = () => app.room(CHAT2);
+await app.handleUpdate(cmdUpdate(CHAT2, ivan, '/newgame', { message_id: 1 }));
+await app.settle();
+const code2 = room2().code;
+const duo = new Map();
+for (const [u, vp] of [[ivan, { width: 390, height: 844 }], [max, { width: 320, height: 568 }]]) {
+  const page = await browser.newPage({ viewport: vp, deviceScaleFactor: 3 });
+  page.on('pageerror', (e) => problems.push(`${u.first_name} (вдвоём): ${e.message}`));
+  const initData = signInitData({ auth_date: Math.floor(Date.now() / 1000), user: u, start_param: code2 }, TOKEN);
+  await page.route('https://telegram.org/**', (r) => r.fulfill({ contentType: 'text/javascript', body: sdkStub(initData) }));
+  await page.goto(`http://localhost:${PORT}/`);
+  await page.waitForSelector('.lobby');
+  duo.set(String(u.id), page);
+}
+await tap(duo.get('202'), 'Сесть за стол', () => room2().players.length === 2, 'Макс садится (вдвоём)');
+await tap(duo.get('101'), '▶ Начать', () => room2().status === 'playing', 'раздача вдвоём');
+// Окно меняется, пока карты ещё летят из середины стола.
+await Promise.all([...duo.values()].map((page) => page.waitForSelector('.hero-cards img.card')));
+await Promise.all([...duo.values()].map((page) => resizeMidAnimation(page, [375, 600])));
+for (const [id, page] of duo) await cardsInPlace(page, `вдвоём, префлоп у ${id}`);
+
+const river = new Map();
+while (room2().hand.phase === 'betting') {
+  const page = duo.get(room2().hand.actorId);
+  const n = room2().hand.log.length;
+  if (room2().hand.street === 'river' && !river.size) {
+    for (const [id, p] of duo) river.set(id, await cardsInPlace(p, `вдвоём, ривер у ${id}`));
+  }
+  await page.locator('.panel button', { hasText: /^(Check|Call)/ }).first().click();
+  await until(() => room2().hand.log.length > n || room2().hand.phase !== 'betting', 'чек или колл вдвоём');
+}
+await until(() => room2().hand.phase === 'complete' && !room2().ui.reveal, 'вскрытие вдвоём', 8000);
+for (const [id, page] of duo) {
+  await page.waitForSelector('.result-line');
+  // Соперник показал карты — они лежат на его месте наверху стола.
+  const other = id === '101' ? '202' : '101';
+  if (room2().hand.shown?.[other]) await page.waitForSelector('.minis.shown img.card');
+  const end = await cardsInPlace(page, `вдвоём, вскрытие у ${id}`);
+  const before = river.get(id);
+  assert.ok(end.boardW >= before.boardW * 0.9,
+    `вдвоём у ${id}: на вскрытии общие карты сжались — ${end.boardW} px, на ривере были ${before.boardW} px (масштаб ${before.u} → ${end.u})`);
+}
+assert.ok(Object.keys(room2().hand.shown || {}).length > 0, 'вдвоём: хотя бы один показал карты — иначе проверка вскрытия пустая');
+step(`вдвоём (390×844 и 320×568, окно менялось посреди раздачи): на вскрытии общие карты не сжимаются, все карты на месте`);
 
 assert.deepEqual(problems, [], 'ошибок в консоли страниц нет');
 await browser.close();
