@@ -32,4 +32,4 @@
 `miniapp/games/poker.js` (`SHOWN_ROOM`, `seatSpots`), `miniapp/ui.js`
 (раздел «пересчёт»), `miniapp/games/durak.js` (`layoutHand`). Охраняют
 `tools/e2e.mjs` (раздел «один на один») и `tools/e2e-durak.mjs` через
-`tools/cards-in-place.mjs`. Зонд — `tools/cards-probe.mjs`. Коммит `5d603a3`.
+`tools/cards-in-place.mjs`. Зонд — `tools/cards-probe.mjs`. Коммит `fd3163a`.
