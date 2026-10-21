@@ -28,10 +28,16 @@
 .rx-btn.cool { opacity: 0.4; }
 .rx-btn-face { font-size: var(--k-fs-section); line-height: 1; }
 
-/* Шапка дуэли (шахматы, шашки, нарды, морской бой): справа две кнопки.
-   Заголовок по центру своей колонки — сдвиг на полкнопки, зато не режется на 320 px. */
-.ch-head.rx { grid-template-columns: var(--k-tap) minmax(0, 1fr) auto; }
-.rx-pair { display: flex; align-items: center; gap: var(--k-s4); }
+/* Шапка дуэли (шахматы, шашки, нарды, морской бой). Без кнопки «назад»
+   смайлик встаёт слева, на пустое место: шапка симметрична, заголовок той же
+   ширины, что и без смайликов. С кнопкой «назад» — справа рядом с «⋯».
+   `.rx-pair` растворяется в сетке (display: contents), кнопки — её ячейки. */
+.ch-head.rx { grid-template-columns: var(--k-tap) minmax(0, 1fr) auto auto; }
+.ch-head.rx > .ch-title { grid-column: 2; grid-row: 1; }
+.ch-head.rx > .ch-head-gap { display: none; }
+.rx-pair { display: contents; }
+.ch-head-gap ~ .rx-pair > .rx-btn { grid-column: 1; grid-row: 1; }
+.ch-head-gap ~ .rx-pair > :last-child { grid-column: 3; grid-row: 1; }
 .rx-pair .rx-btn { border-color: transparent; background: transparent; }
 
 /* ---------------------------------------------------------------- шторка */

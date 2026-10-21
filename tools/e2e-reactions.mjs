@@ -236,6 +236,58 @@ for (const [w, h] of [[320, 568], [390, 844]]) {
   for (const p of [pi, pm]) await p.close();
 }
 
+/* -------------------------------- шапка дуэли: с кнопкой «назад» и без */
+
+/**
+ * Кнопки шапки не налезают друг на друга и на ТЕКСТ заголовка (рамка
+ * заголовка шире текста: кнопка «назад» 48 px и раньше заходила на её пустой
+ * край на 4 px). Возвращает: заголовок виден целиком?
+ */
+async function headOk(page, what) {
+  const btns = [];
+  for (const el of await page.locator('.ch-head button').all()) if (await el.isVisible()) btns.push(await el.boundingBox());
+  const text = await page.locator('.ch-title').evaluate((e) => {
+    const r = document.createRange();
+    r.selectNodeContents(e.firstChild);
+    const b = r.getBoundingClientRect();
+    return { x: b.left, y: b.top, width: b.width, height: b.height };
+  });
+  for (let i = 0; i < btns.length; i++) {
+    assert.ok(!overlap(btns[i], text), `${what}: кнопка ${i} налезает на текст заголовка`);
+    assert.ok(btns[i].x >= 0 && btns[i].x + btns[i].width <= page.viewportSize().width + 0.5, `${what}: кнопка ${i} за краем экрана`);
+    for (let j = i + 1; j < btns.length; j++) assert.ok(!overlap(btns[i], btns[j]), `${what}: кнопки ${i} и ${j} налезают`);
+  }
+  return page.locator('.ch-title').evaluate((e) => e.scrollWidth <= e.clientWidth + 1);
+}
+
+for (const w of [320, 390]) {
+  // Без «назад» (открыто по карточке): смайлик слева — заголовок целиком.
+  const room = app.createGame('chess', { chatId: String(CHAT - 30 - w), title: '', host: { id: 101, tgId: 101, name: 'Иван' }, settings: { base: 300 } });
+  const pi = await openPage(ivan, room.code, w, 640);
+  const pm = await openPage(max, room.code, w, 640);
+  await pm.waitForSelector('h1:has-text("Шахматы")');
+  await pm.getByRole('button', { name: 'Сесть за доску' }).click();
+  await until(() => room.players.length === 2, 'Макс сел');
+  await pi.getByRole('button', { name: '▶ Начать' }).click();
+  await pi.waitForSelector('.ch-head.rx');
+  const rx = await box(pi, '.ch-head .rx-btn');
+  const title = await box(pi, '.ch-head .ch-title');
+  assert.ok(rx.x + rx.width <= title.x + 1, `${w}px: без «назад» смайлик слева от заголовка`);
+  assert.ok(await headOk(pi, `${w}px без «назад»`), `${w}px: заголовок «${await pi.locator('.ch-title').innerText()}» не обрезан`);
+  await shot(pi, `chess-head-${w}`);
+  for (const p of [pi, pm]) await p.close();
+
+  // С «назад» (партия с ботом): обе кнопки справа, ничего не налезает.
+  const solo = await app.createSolo('chess', { id: '505', tgId: 505, name: 'Оля' }, { level: 0, side: 'white', base: 300 });
+  const po = await openPage(user(505, 'Оля'), solo.code, w, 640);
+  await po.waitForSelector('.ch-head.rx');
+  assert.equal(await po.locator('.ch-head > button').count(), 1, 'кнопка «назад» на месте');
+  const fits = await headOk(po, `${w}px с «назад»`);
+  step(`шапка шахмат ${w}px: без «назад» смайлик слева, заголовок целиком; с «назад» — две кнопки справа, заголовок ${fits ? 'целиком' : 'с многоточием'}`);
+  await shot(po, `chess-head-back-${w}`);
+  await po.close();
+}
+
 assert.deepEqual(problems, [], 'ошибок в консоли страниц нет');
 await browser.close();
 await web.close();
