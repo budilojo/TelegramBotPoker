@@ -3,7 +3,8 @@
  *
  * Что отсюда берут экраны игр (по одной строке в каждом):
  *   reactButton(state)   — кнопка «смайлик» в шапке стола (или null);
- *   reactMenuItem()      — пункт меню «Показывать / не показывать смайлики».
+ *   reactMenuItem(state) — пункт меню «Показывать / не показывать смайлики»;
+ *   reactSlot(state, ⋯) + reactOn(state) — то же для шапки дуэлей (две кнопки справа).
  * Остальное модуль делает сам: шторка 4×4, отправка `{t:'react', id}`,
  * пузырь над тем, кто прислал, бледная кнопка, пока «подождите».
  *
@@ -46,6 +47,9 @@ const SHOW_MS = 3_000;
 
 /* ------------------------------------------------------- «не показывать» */
 
+/** Сидит ли этот телефон за столом — только участники шлют смайлики. */
+const canReact = (s) => !!s?.me && s.me.seated !== false && s.me.seat >= 0 && !s.me.kicked;
+
 const OFF_KEY = 'reactions-off';
 export function reactionsOff() {
   try {
@@ -65,8 +69,9 @@ function setOff(on) {
   if (on) bubbles.clear();
 }
 
-/** Пункт для меню стола: включить или выключить смайлики на этом телефоне. */
-export function reactMenuItem() {
+/** Пункт для меню стола: включить или выключить смайлики на этом телефоне (только игроку). */
+export function reactMenuItem(s) {
+  if (!canReact(s)) return null;
   const off = reactionsOff();
   return h('button.menu-item', {
     'data-rx-toggle': off ? 'off' : 'on',
@@ -127,17 +132,26 @@ function paintCool() {
 
 /* ------------------------------------------------------------ кнопка */
 
-/** Сидит ли этот телефон за столом — только участники шлют смайлики. */
-const canReact = (s) => !!s?.me && s.me.seated !== false && s.me.seat >= 0 && !s.me.kicked;
+/** Показывать ли кнопку смайликов этому телефону: сидит за столом и не выключил. */
+export const reactOn = (s) => !reactionsOff() && canReact(s);
 
 /** Кнопка «смайлик» для шапки стола; null — если не за столом или смайлики выключены. */
 export function reactButton(s) {
   syncRoom();
-  if (reactionsOff() || !canReact(s)) return null;
+  if (!reactOn(s)) return null;
   const btn = h('button.rx-btn', { type: 'button', 'aria-label': 'Смайлики', onclick: openPicker },
     h('span.rx-emoji.rx-btn-face', { 'aria-hidden': 'true' }, '🙂'));
   if (coolUntil > serverNow()) btn.classList.add('cool');
   return btn;
+}
+
+/**
+ * Правый край шапки дуэли: кнопка смайликов рядом с «⋯» (или одно «⋯»).
+ * Шапке тогда нужен класс `.rx` — шире правая колонка (`reactOn`).
+ */
+export function reactSlot(s, menuBtn) {
+  const btn = reactButton(s);
+  return btn ? h('div.rx-pair', btn, menuBtn) : menuBtn;
 }
 
 function openPicker() {
@@ -212,6 +226,9 @@ function anchorOf(seat, s) {
   return q('.rx-btn') || app;
 }
 
+/** Пузырь у плашки дуэли — поменьше: плашка ниже большого пузыря. */
+const anchorInBar = (seat, s) => !!anchorOf(seat, s)?.closest?.('.ch-bar');
+
 /** Поставить пузырь над (или под, если сверху нет места) тем, кто прислал. */
 function place(el, anchor) {
   const r = anchor.getBoundingClientRect();
@@ -224,9 +241,13 @@ function place(el, anchor) {
   const wide = r.width > size * 3;
   let x = wide ? r.left + gap : r.left + r.width / 2 - size / 2;
   let y = r.top - size - gap;
-  if (anchor.classList.contains('av') && anchor.closest('.ch-bar')) {
+  const bar = anchor.closest('.ch-bar');
+  if (bar) {
+    // Дуэль: справа от аватара, по высоте — в пределах плашки, чтобы не
+    // заходить ни на доску, ни на соседнюю плашку.
+    const b = bar.getBoundingClientRect();
     x = r.right + gap;
-    y = r.top + r.height / 2 - size / 2;
+    y = Math.max(b.top, Math.min(r.top + r.height / 2 - size / 2, b.bottom - size));
   } else if (y < 8) y = r.bottom + gap;
   x = Math.min(Math.max(8, x), vw - size - 8);
   y = Math.min(Math.max(8, y), vh - size - 8);
@@ -256,7 +277,7 @@ function showBubble({ seat, id }) {
     'data-rx': id,
     role: 'img',
     'aria-label': `${name ? name + ': ' : ''}${BY_ID.get(id).label}`,
-  }, face(id, 'big'));
+  }, face(id, anchorInBar(seat, s) ? '' : 'big'));
   layerEl().append(el);
   place(el, anchorOf(seat, s));
   bubbles.set(seat, el);

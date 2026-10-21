@@ -22,6 +22,7 @@ import {
   tg, $app, h, haptic, toast, showSheet, closeSheet, refreshSheet, avatar, animateOnce, REDUCED,
 } from '../ui.js';
 import { net, bus, send } from '../net.js';
+import { reactOn, reactSlot, reactMenuItem } from '../reactions.js';
 
 const newReqId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
@@ -149,10 +150,10 @@ function renderTable() {
   const view = s.me.color || 'w';
   const top = view === 'w' ? 'b' : 'w';
   const root = h('div.ch.nd',
-    h('div.ch-head',
+    h(`div.ch-head${reactOn(s) ? '.rx' : ''}`,
       s.hub ? h('button.k-icon-btn', { 'aria-label': s.solo ? 'Игры с ботами' : 'Все игры группы', onclick: () => send({ t: 'hub' }, { lock: false }) }, backIcon()) : h('span.ch-head-gap'),
       h('div.ch-title', `Нарды · ${s.room.control}`, h('small', `Партия ${m.no}${s.room.title ? ' · ' + s.room.title : ''}`)),
-      h('button.k-icon-btn', { 'aria-label': 'Меню', onclick: openMenu }, dotsIcon())),
+      reactSlot(s, h('button.k-icon-btn', { 'aria-label': 'Меню', onclick: openMenu }, dotsIcon()))),
     playerBar(top),
     boardEl(view),
     playerBar(view),
@@ -487,6 +488,7 @@ function openMenu() {
     else if (!me.seated && !me.kicked && s.players.filter((p) => p.seated).length < 2) item('Сесть за доску', 'со следующей партии', () => { closeSheet(); send({ t: 'sit' }); });
     if (!me.notify && s.bot) item('🔔 Напоминать о ходе', 'нажмите Start у бота', () => tg.openTelegramLink(`https://t.me/${s.bot}?start=notify`));
     item('Правила и часы', s.room.control, openRules);
+    items.push(reactMenuItem(s));
     if (me.isHost) {
       items.push(h('div.section-label', 'Хост'));
       if (!live) item('Настройки', 'часы, цвет', openSettings);

@@ -27,6 +27,7 @@ import {
   tg, $app, h, haptic, toast, showSheet, closeSheet, refreshSheet, avatar, animateOnce,
 } from '../ui.js';
 import { net, bus, send } from '../net.js';
+import { reactOn, reactSlot, reactMenuItem } from '../reactions.js';
 
 const newReqId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
@@ -212,10 +213,10 @@ const dotsIcon = () => h('span', { html: '<svg viewBox="0 0 24 24" fill="current
 function head(sub = null) {
   const s = state;
   const m = s.match;
-  return h('div.ch-head',
+  return h(`div.ch-head${reactOn(s) ? '.rx' : ''}`,
     s.hub ? h('button.k-icon-btn', { 'aria-label': s.solo ? 'Игры с ботами' : 'Все игры группы', onclick: () => send({ t: 'hub' }, { lock: false }) }, backIcon()) : h('span.ch-head-gap'),
     h('div.ch-title', `Морской бой · ${s.room.control}`, h('small', sub || `Партия ${m.no}${s.room.title ? ' · ' + s.room.title : ''}`)),
-    h('button.k-icon-btn', { 'aria-label': 'Меню', onclick: openMenu }, dotsIcon()));
+    reactSlot(s, h('button.k-icon-btn', { 'aria-label': 'Меню', onclick: openMenu }, dotsIcon())));
 }
 
 function renderTable() {
@@ -685,6 +686,7 @@ function openMenu() {
     item('Правила и часы', s.room.control, openRules);
     if (me.isHost) {
       items.push(h('div.section-label', 'Хост'));
+    items.push(reactMenuItem(s));
       if (!live) item('Настройки', 'часы', openSettings);
       item('Передать права хоста', null, () => openPlayers('host'));
       item('Удалить игрока', live ? 'партия отменится' : null, () => openPlayers('kick'));

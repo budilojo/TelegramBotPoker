@@ -59,6 +59,15 @@ async function chess(t) {
   return room;
 }
 
+/**
+ * Снимок комнаты для сравнения «до/после». Часы блайндов покера идут по
+ * настоящему времени (bot/room.js, `Date.now()`), поэтому их поля между двумя
+ * снимками сдвигаются сами — без всякого смайлика. Тот же список «живых» полей,
+ * что в audit.identity.test.js.
+ */
+const VOLATILE = new Set(['ui', 'touchedAt', 'idleAt', 'idleWarned', 'botDue', 'deadline', 'remaining', 'runningSince', 'elapsedMs']);
+const snap = (room, now) => JSON.stringify(gameOf(room).serialize(room, now), (k, v) => (VOLATILE.has(k) ? undefined : v));
+
 const seatOf = (room, u) => room.players.findIndex((p) => p.id === String(u.id));
 
 /* ------------------------------------------------------------- набор */
@@ -201,7 +210,7 @@ test('не в комнату и не в базу: serialize, база и ном�
   try {
     const room = await poker(t);
     const now = t.clock.now();
-    const ser = JSON.stringify(gameOf(room).serialize(room, now));
+    const ser = snap(room, now);
     const rows = JSON.stringify(store.loadAll());
     const seq = room.seq;
     const keys = Object.keys(room).sort().join();
@@ -216,7 +225,7 @@ test('не в комнату и не в базу: serialize, база и ном�
     await t.send(BOB, { t: 'react', id: 'bluff' });
     assert.equal(writes, 0, 'смайлики не пишут в базу');
     assert.equal(reacts(t, CAROL).length, 2);
-    assert.equal(JSON.stringify(gameOf(room).serialize(room, now)), ser, 'serialize комнаты тот же');
+    assert.equal(snap(room, now), ser, 'serialize комнаты тот же (кроме часов, что идут сами)');
     assert.equal(JSON.stringify(store.loadAll()), rows, 'в базе то же самое');
     assert.equal(room.seq, seq, 'стол не «сдвинулся»');
     assert.equal(Object.keys(room).sort().join(), keys, 'в комнате не появилось полей');

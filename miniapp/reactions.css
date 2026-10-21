@@ -28,6 +28,12 @@
 .rx-btn.cool { opacity: 0.4; }
 .rx-btn-face { font-size: var(--k-fs-section); line-height: 1; }
 
+/* Шапка дуэли (шахматы, шашки, нарды, морской бой): справа две кнопки.
+   Заголовок по центру своей колонки — сдвиг на полкнопки, зато не режется на 320 px. */
+.ch-head.rx { grid-template-columns: var(--k-tap) minmax(0, 1fr) auto; }
+.rx-pair { display: flex; align-items: center; gap: var(--k-s4); }
+.rx-pair .rx-btn { border-color: transparent; background: transparent; }
+
 /* ---------------------------------------------------------------- шторка */
 
 .rx-grid {
@@ -43,7 +49,7 @@
   gap: var(--k-s4);
   min-width: 0;
   min-height: 72px;
-  padding: var(--k-s8) var(--k-s4);
+  padding: var(--k-s8) 0;
   border: 1px solid var(--border-color);
   border-radius: var(--k-r-lg);
   background: var(--bg-surface);
@@ -54,10 +60,15 @@
 .rx-cell:active { background: var(--bg-elevated); }
 .rx-cell:focus-visible { outline: 2px solid var(--color-success); outline-offset: -2px; }
 .rx-label {
+  /* Две строки: «Хорошая игра» и «Ну как так» на 320 px в одну не влезают. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   max-width: 100%;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  text-align: center;
   font-size: var(--k-fs-caption);
   line-height: var(--k-lh-caption);
   color: var(--text-secondary);
