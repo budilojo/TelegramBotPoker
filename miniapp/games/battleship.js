@@ -686,9 +686,9 @@ function openMenu() {
     else if (!me.seated && !me.kicked && s.players.filter((p) => p.seated).length < 2) item('Сесть за стол', 'со следующей партии', () => { closeSheet(); send({ t: 'sit' }); });
     if (!me.notify && s.bot) item('🔔 Напоминать о ходе', 'нажмите Start у бота', () => tg.openTelegramLink(`https://t.me/${s.bot}?start=notify`));
     item('Правила и часы', s.room.control, openRules);
+    items.push(reactMenuItem(s));
     if (me.isHost) {
       items.push(h('div.section-label', 'Хост'));
-    items.push(reactMenuItem(s));
       if (!live) item('Настройки', 'часы', openSettings);
       item('Передать права хоста', null, () => openPlayers('host'));
       item('Удалить игрока', live ? 'партия отменится' : null, () => openPlayers('kick'));
