@@ -29,6 +29,10 @@ export const bus = {
   render: () => {},
   onNotice: (text) => toast(text, 3200),
   onShare: openShare,
+  /** Смайлик за столом (miniapp/reactions.js ставит свой). */
+  onReact: () => {},
+  /** Отказ сервера — после тоста; смайлики так узнают «подождите N с». */
+  onError: () => {},
 };
 
 let ws = null;
@@ -78,6 +82,9 @@ export function connect() {
       setBusy(false);
       haptic.err();
       toast(msg.text || 'Не получилось');
+      bus.onError(msg);
+    } else if (msg.t === 'react') {
+      bus.onReact(msg);
     } else if (msg.t === 'share') {
       bus.onShare(msg);
     } else if (msg.t === 'notice') {

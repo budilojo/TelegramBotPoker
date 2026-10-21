@@ -26,6 +26,7 @@ import { HUB_PREFIX, MAX_LIVE_PER_GROUP, RATING_SOON_TEXT, TOO_MANY_GAMES_TEXT, 
 import { AUDIENCES, ERRORS as CAST_ERRORS } from './broadcast.js';
 import { PER_DAY, sign } from './rating.js';
 import { ym } from './fmt.js';
+import { ERRORS as REACT_ERRORS, ReactLimiter, react } from './reactions.js';
 
 const CORE_ERRORS = {
   BAD_REQUEST: 'Не понял запрос.',
@@ -44,7 +45,7 @@ const CORE_ERRORS = {
 };
 
 /** Error codes in words a person can act on — the core's and every game's. */
-export const ERRORS = Object.assign({}, ...Object.values(GAMES).map((g) => g.errors || {}), CORE_ERRORS);
+export const ERRORS = Object.assign({}, ...Object.values(GAMES).map((g) => g.errors || {}), REACT_ERRORS, CORE_ERRORS);
 
 /** What a page may say whatever it is looking at. */
 const COMMON = new Set(['visible']);
@@ -78,6 +79,8 @@ export class Hub {
     /** «Ещё один стол»: последний запрос хоста по reqId — повтор не плодит стол. */
     this.lastAgain = new Map();
     this.nextId = 1;
+    /** Смайлики: «не чаще» на человека. Только в памяти (bot/reactions.js). */
+    this.reactLimiter = new ReactLimiter();
   }
 
   /* -------------------------------------------------------------- sessions */
@@ -552,6 +555,15 @@ export class Hub {
     if (COMMON.has(msg.t)) {
       session.visible = !!msg.visible;
       return;
+    }
+    // Смайлик — не ход: комнату не трогает (даже «жива» не отмечает), в базу и
+    // в карточку группы не идёт, всем страницам стола — одно лёгкое сообщение.
+    if (msg.t === 'react') {
+      return void react({
+        room, uid: session.user.id, msg, now: app.clock.now(), limiter: this.reactLimiter,
+        sessions: this.byRoom.get(room.code) || [],
+        refuse: (code, text, wait) => session.send({ t: 'error', code, text: text || ERRORS[code], ...(wait ? { wait } : {}) }),
+      });
     }
     if (room.solo) room.solo.seenAt = app.clock.now(); // партия с ботами жива, пока её трогают
     if (msg.t === 'hub' && room.solo) return this.pushSolo(session);
