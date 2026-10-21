@@ -64,13 +64,41 @@ export const ERRORS = {
 const SOLO_ACTIONS = new Set(['start', 'act', 'next', 'pause', 'resume', 'finish', 'learn']);
 
 /**
+ * Стол с ботами: что можно выбрать в форме. Страница присылает выбор, но
+ * ей не верим — принимается только значение из этих наборов, остальное
+ * становится умолчанием (10.000 фишек, 50/100, блайнды растут).
+ */
+const SOLO_BLINDS = [[25, 50], [50, 100], [100, 200], [200, 400]];
+const SOLO_STACKS = [5000, 10000, 20000];
+const SOLO_DEFAULT = { bb: 100, stack: 10000, grow: 'on' };
+/** С ботами блайнды растут раз в 10 минут. */
+const SOLO_LEVEL_MINUTES = 10;
+
+function soloSettings(raw = {}) {
+  // Школа: стол наставника всегда один и тот же — урок это одна раздача.
+  if (raw.learn) return { startingStack: 10000, smallBlind: 50, bigBlind: 100, turnSeconds: 0, blindMode: 'fixed' };
+  const [smallBlind, bigBlind] = SOLO_BLINDS.find(([, bb]) => bb === raw.bb) || SOLO_BLINDS.find(([, bb]) => bb === SOLO_DEFAULT.bb);
+  const startingStack = SOLO_STACKS.includes(raw.stack) ? raw.stack : SOLO_DEFAULT.stack;
+  const grow = raw.grow === 'off' ? 'off' : SOLO_DEFAULT.grow;
+  return {
+    startingStack, smallBlind, bigBlind, turnSeconds: 0,
+    ...(grow === 'on' ? { blindMode: 'levels', levelMinutes: SOLO_LEVEL_MINUTES } : { blindMode: 'fixed' }),
+  };
+}
+
+/**
  * Боты покера и «Школа покера». В школе за столом один соперник —
  * наставник: в уроках он ходит по сценарию урока (сценарий не смотрит в
  * карты человека), в свободной игре — как спокойный крепкий игрок.
  */
 const bot = {
   ...pokerBot,
-  catalog: () => ({ ...pokerBot.catalog(), school: S.LESSONS.map((l) => ({ title: l.title, goal: l.goal })) }),
+  catalog: () => ({
+    ...pokerBot.catalog(),
+    school: S.LESSONS.map((l) => ({ title: l.title, goal: l.goal })),
+    table: { blinds: SOLO_BLINDS, stacks: SOLO_STACKS, ...SOLO_DEFAULT },
+  }),
+  settings: soloSettings,
   /** Как назвать партию на экране «Игры с ботами» (кнопка «Продолжить»). */
   label: (room) => (room.learn ? 'Школа покера' : null),
   lineup: (raw = {}, rng) => (raw.learn ? [{ type: 'coach', level: 1 }] : pokerBot.lineup(raw, rng)),

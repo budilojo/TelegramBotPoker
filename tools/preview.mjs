@@ -37,6 +37,7 @@ import { durakStack } from '../bot/harness.js';
 import { legalActions } from '../server/game.js';
 import { GAMES } from '../bot/games/index.js';
 import * as SCHOOL from '../bot/games/poker/school.js';
+import { hints } from '../bot/hints.js';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SIZE_TAG = process.env.PREVIEW_W || process.env.PREVIEW_H
@@ -595,6 +596,7 @@ if (GAMES.battleship) {
 {
   const someone = { id: 106, tgId: 106, name: 'Лена' };
   scene('34-solo', null, 105, { start: 'solo' });
+  scene('34а-solo-320', null, 105, { start: 'solo', width: 320, height: 640 });
   scene('34б-solo-chess-form', null, 105, { start: 'solo', click: 'Шахматы' });
   scene('34г-solo-resume', null, 106, { start: 'solo', before: () => {} });
   const vs = await app.createSolo('chess', someone, { level: 1, side: 'white' });
@@ -603,6 +605,9 @@ if (GAMES.battleship) {
   scene('34в-solo-chess-game', vs, 106);
   // Покер с ботами: форма (уровень, число соперников, характеры) и стол.
   scene('34д-solo-poker-form', null, 105, { start: 'solo', click: 'Покер' });
+  // Форма целиком (блайнды, стек, рост внизу) — высоким кадром, на 320 и 390 px.
+  scene('34д1-solo-poker-form-320-full', null, 105, { start: 'solo', click: 'Покер', width: 320, height: 1100 });
+  scene('34д2-solo-poker-form-390-full', null, 105, { start: 'solo', click: 'Покер', height: 1000 });
   scene('34е-solo-poker-types', null, 105, { start: 'solo', click: 'Покер', press: ['Выбрать самому'] });
   scene('34ж-solo-poker-type-pick', null, 105, { start: 'solo', click: 'Покер', press: ['Выбрать самому', 'Соперник 1'] });
   const pk = await app.createSolo('poker', { id: 104, tgId: 104, name: 'Дима' }, { opponents: 5, level: 2 });
@@ -622,10 +627,11 @@ if (GAMES.battleship) {
 
 // 28. Школа покера: список уроков, азбука, тест, урок с подсказкой и итог урока.
 {
-  scene('37-school-list', null, 105, { start: 'solo', click: 'Школа покера' });
-  scene('37б-school-abc-flow', null, 105, { start: 'solo', click: 'Школа покера', press: ['Азбука покера', 'Дальше →'] });
-  scene('37в-school-abc-combos', null, 105, { start: 'solo', click: 'Школа покера', press: ['Азбука покера', 'Дальше →', 'Дальше →', 'Дальше →'] });
-  scene('37г-school-quiz', null, 105, { start: 'solo', click: 'Школа покера', press: ['Азбука покера', 'Дальше →', 'Дальше →', 'Дальше →', 'Проверить себя →', 'Флеш'] });
+  scene('37-school-list', null, 105, { start: 'solo', click: 'Покер', press: ['Обучение'] });
+  scene('37а-school-list-320', null, 105, { start: 'solo', click: 'Покер', press: ['Обучение'], width: 320, height: 760 });
+  scene('37б-school-abc-flow', null, 105, { start: 'solo', click: 'Покер', press: ['Обучение', 'Азбука покера', 'Дальше →'] });
+  scene('37в-school-abc-combos', null, 105, { start: 'solo', click: 'Покер', press: ['Обучение', 'Азбука покера', 'Дальше →', 'Дальше →', 'Дальше →'] });
+  scene('37г-school-quiz', null, 105, { start: 'solo', click: 'Покер', press: ['Обучение', 'Азбука покера', 'Дальше →', 'Дальше →', 'Дальше →', 'Проверить себя →', 'Флеш'] });
 
   /** Довести раздачу урока: человек — по `human`, наставник — по сценарию. */
   const drive = async (room, human, until) => {
@@ -643,7 +649,9 @@ if (GAMES.battleship) {
   // До флопа: человек уравнивает — на флопе наставник ставит, и подсказка про ауты.
   await drive(draw, (v) => ({ action: v.legal.canCheck ? 'check' : 'call' }), (r) => r.hand.street === 'flop' && r.hand.actorId === '107');
   scene('37д-school-lesson-draw', draw, 107);
-  scene('37е-school-lesson-more', draw, 107, { press: ['Подробнее'] });
+  // «Подробнее» есть только у совета наставника, а советы выключены (decisions/016):
+  // кадр снимается с подсказками, включёнными на эту одну сцену, — как их включит будущая настройка.
+  scene('37е-school-lesson-more', draw, 107, { press: ['Подробнее'], before: () => { hints.on = true; }, after: () => { hints.on = false; } });
   const done = await app.createSolo('poker', { id: 108, tgId: 108, name: 'Ученица' }, { learn: true, lesson: 1 });
   await drive(done, (v) => ({ action: v.legal.canCheck ? 'check' : 'fold' }), (r) => r.hand.phase === 'complete');
   scene('37ж-school-lesson-passed', done, 108);

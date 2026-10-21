@@ -5,12 +5,13 @@
  * а прежнюю можно продолжить отсюда же.
  *
  * Что именно можно выбрать, говорит сервер (`games[].catalog`): уровни и, для
- * покера, типы ботов. Страница только рисует.
+ * покера, типы ботов, блайнды и стек, а ещё уроки «Школы покера» — она
+ * живёт в той же форме покера, режимом «Обучение». Страница только рисует.
  */
-import { $app, h, haptic, showSheet, closeSheet, refreshSheet } from './ui.js';
+import { $app, h, haptic, showSheet, closeSheet, refreshSheet, fmt } from './ui.js';
 import { bus, send } from './net.js';
 import { GAMES } from './games/index.js';
-import { openSchool } from './school.js';
+import { schoolItems } from './school.js';
 
 let state = null;
 
@@ -43,23 +44,10 @@ export function render() {
         h('div.gc-title', g.title),
         h('div.gc-blurb', soloOf(g.id).blurb || g.blurb)),
       h('span.gc-go', '›')))),
-    schoolCard(s),
     s.groups
       ? null
       : h('div.hint', 'Играть с друзьями — в группе: добавьте бота в группу и напишите там /game.'),
   ));
-}
-
-/** «Школа покера» — отдельной карточкой: это не партия, а обучение. */
-function schoolCard(s) {
-  const lessons = s.games.find((g) => g.id === 'poker')?.catalog?.school;
-  if (!lessons?.length) return null;
-  return h('button.game-card.g-school', { onclick: () => openSchool(lessons) },
-    h('div.gc-icon.g-school-icon', '🎓'),
-    h('div.gc-body',
-      h('div.gc-title', 'Школа покера'),
-      h('div.gc-blurb', 'Азбука и уроки с наставником — с нуля до первой игры')),
-    h('span.gc-go', '›'));
 }
 
 /* ----------------------------------------------------------- форма игры */
@@ -68,7 +56,11 @@ function openForm(g, keep = null) {
   if (!keep) haptic.soft();
   const cat = g.catalog || {};
   const S = soloOf(g.id);
-  const st = keep || { level: cat.defaultLevel ?? 1, opponents: Math.min(3, S.max || 1), side: 'white', base: 0, variant: S.variants?.[0][0], pick: false, types: [] };
+  const T = cat.table; // покер: блайнды, стек, рост блайндов
+  const st = keep || {
+    mode: 'game', level: cat.defaultLevel ?? 1, opponents: Math.min(3, S.max || 1), side: 'white', base: 0, variant: S.variants?.[0][0], pick: false, types: [],
+    bb: T?.bb, stack: T?.stack, grow: T?.grow,
+  };
   const levels = (cat.levels || []).map((name, i) => [i, name]);
 
   showSheet('solo-form', () => {
@@ -77,11 +69,21 @@ function openForm(g, keep = null) {
       onclick: () => { st[key] = v; refreshSheet(); },
     }, label)));
     const fields = [];
+    // Покер: «Партия» или «Обучение» (школа). В обучении нет ни уровня, ни
+    // соперников — за столом один наставник; уроки выбираются прямо здесь.
+    if (cat.school?.length) {
+      fields.push(seg([['game', 'Партия'], ['learn', 'Обучение']], 'mode', '.solo-mode'));
+      if (st.mode === 'learn') {
+        return h('div', h('h3', `${g.icon} ${g.title} — с ботами`), ...fields,
+          ...schoolItems(cat.school, () => openForm(g, st)));
+      }
+    }
     if (levels.length) fields.push(h('div.section-label', 'Уровень'), seg(levels, 'level', '.wide'));
     if (cat.levelHints?.[st.level]) fields.push(h('div.hint', cat.levelHints[st.level]));
     if (S.duel) {
       fields.push(
-        h('div.section-label', 'Ваш цвет'), seg([['white', 'Белые'], ['black', 'Чёрные'], ['random', 'Случайно']], 'side'),
+        // Подписи — от игры (морской бой: «Кто стреляет первым»); значения те же: white/black/random.
+        h('div.section-label', S.sideLabel || 'Ваш цвет'), seg(S.sides || [['white', 'Белые'], ['black', 'Чёрные'], ['random', 'Случайно']], 'side'),
         h('div.section-label', 'Часы'), seg([[0, 'Без часов'], [300, '5 мин'], [600, '10 мин']], 'base'));
     } else {
       const max = cat.maxOpponents || S.max || 1;
@@ -89,6 +91,13 @@ function openForm(g, keep = null) {
       fields.push(h('div.section-label', 'Соперников'), seg(counts, 'opponents'));
     }
     if (S.variants) fields.push(h('div.section-label', 'Вариант'), seg(S.variants, 'variant'));
+    if (T) {
+      fields.push(
+        h('div.section-label', 'Блайнды'), seg(T.blinds.map(([sb, bb]) => [bb, `${fmt(sb)}/${fmt(bb)}`]), 'bb'),
+        h('div.section-label', 'Стартовый стек'), seg(T.stacks.map((n) => [n, fmt(n)]), 'stack'),
+        h('div.section-label', 'Рост блайндов'), seg([['on', 'Растут'], ['off', 'Не растут']], 'grow'));
+      if (st.grow === 'on') fields.push(h('div.hint', 'Каждые 10 минут блайнды становятся больше.'));
+    }
     if (cat.types?.length) {
       fields.push(h('div.section-label', 'Характеры соперников'), seg([[false, 'Случайные'], [true, 'Выбрать самому']], 'pick'));
       if (st.pick) {
@@ -109,6 +118,7 @@ function openForm(g, keep = null) {
         else settings.opponents = st.opponents;
         if (S.variants) settings.variant = st.variant;
         if (st.pick) settings.types = st.types.slice(0, st.opponents);
+        if (T) Object.assign(settings, { bb: st.bb, stack: st.stack, grow: st.grow });
         send({ t: 'play', game: g.id, settings });
         closeSheet();
       } }, '▶ Играть'),

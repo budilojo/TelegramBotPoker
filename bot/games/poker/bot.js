@@ -314,12 +314,7 @@ export default {
     types: TYPES.map((t) => ({ id: t.id, name: t.name, blurb: t.blurb })),
   }),
 
-  /** Стол для игры с ботами: обычные фишки и блайнды, без таймера хода — человек играет в своём темпе. */
-  settings: (raw = {}) => ({
-    startingStack: 10000, smallBlind: 50, bigBlind: 100, turnSeconds: 0,
-    // С ботами блайнды растут раз в 10 минут; в школе стоят — урок это одна раздача.
-    ...(raw.learn ? { blindMode: 'fixed' } : { blindMode: 'levels', levelMinutes: 10 }),
-  }),
+  // Стол для игры с ботами (фишки, блайнды, рост) — `soloSettings` в ./index.js.
 
   /**
    * Состав: сколько соперников, какой уровень и какие характеры. Невыбранные

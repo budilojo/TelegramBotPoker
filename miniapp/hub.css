@@ -411,15 +411,11 @@
 /* Уровни — слова, а не цифры: по три в ряд, а не пять сплющенных. */
 .seg.wide button { min-width: 96px; }
 .solo .solo-resume { margin-bottom: var(--k-s8); }
+/* Покер: «Партия | Обучение» — над всей формой. */
+.seg.solo-mode { margin-bottom: var(--k-s8); }
 
 /* ------------------------------------------------------- школа покера */
 
-.hub .gc-icon.g-school-icon {
-  display: grid;
-  place-items: center;
-  font-size: var(--k-fs-section);
-  background: var(--table-felt);
-}
 .abc h3 { margin-bottom: var(--k-s8); }
 .abc-p { margin: var(--k-s8) 0; color: var(--k-text-2); font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); }
 .abc-list { margin: 0 0 var(--k-s8); padding-left: var(--k-s24); color: var(--k-text-2); font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); }

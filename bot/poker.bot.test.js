@@ -320,3 +320,64 @@ test('человек проиграл всё, пока боты живы — п�
   await t.advance(60_000);
   assert.equal(room.handNo, hands, 'боты без человека не играют');
 });
+
+/* ---------------------------------------- форма стола: блайнды, стек, рост */
+
+test('форма стола: выбранные блайнды, стек и рост доходят до стола и сохраняются на «Сыграть ещё»', async () => {
+  const t = new Table({ botRng: botRandom(4) });
+  const room = await pokerVsBots(t, { opponents: 2, level: 1, bb: 200, stack: 20000, grow: 'off' });
+  assert.equal(room.settings.smallBlind, 100);
+  assert.equal(room.settings.bigBlind, 200);
+  assert.equal(room.settings.startingStack, 20000);
+  assert.equal(room.settings.blindMode, 'fixed', 'блайнды не растут');
+  // Первая раздача уже идёт: у каждого — выбранный стек за вычетом поставленного.
+  assert.deepEqual(room.players.map((p) => p.stack + p.committed), [20000, 20000, 20000], 'у всех троих по 20.000');
+  assert.equal(Math.max(...room.players.map((p) => p.committed)), 200, 'большой блайнд — 200');
+
+  await t.send(IVAN, { t: 'finish' });
+  await t.send(IVAN, { t: 'again' });
+  const next = t.app.soloOf('101');
+  assert.notEqual(next.code, room.code);
+  assert.deepEqual(
+    [next.settings.smallBlind, next.settings.bigBlind, next.settings.startingStack, next.settings.blindMode],
+    [100, 200, 20000, 'fixed'], '«Сыграть ещё» — с теми же настройками');
+});
+
+test('форма стола: по умолчанию — 10.000 фишек, 50/100, блайнды растут раз в 10 минут; каждый вариант из набора принимается', () => {
+  const d = g.bot.settings({});
+  assert.deepEqual([d.startingStack, d.smallBlind, d.bigBlind, d.blindMode, d.levelMinutes, d.turnSeconds], [10000, 50, 100, 'levels', 10, 0]);
+  const cat = g.bot.catalog().table;
+  assert.deepEqual(cat.blinds, [[25, 50], [50, 100], [100, 200], [200, 400]]);
+  assert.deepEqual(cat.stacks, [5000, 10000, 20000]);
+  for (const [sb, bb] of cat.blinds) {
+    for (const stack of cat.stacks) {
+      for (const grow of ['on', 'off']) {
+        const s = g.bot.settings({ bb, stack, grow });
+        assert.deepEqual([s.smallBlind, s.bigBlind, s.startingStack, s.blindMode], [sb, bb, stack, grow === 'on' ? 'levels' : 'fixed']);
+      }
+    }
+  }
+});
+
+test('форма стола: подсунули чужое число — стол с умолчаниями, а не с ним', async () => {
+  const bad = [
+    { bb: 150 }, { bb: 1e9 }, { bb: -100 }, { bb: '200' }, { bb: 0 }, { bb: null }, { bb: [200] },
+    { stack: 999999 }, { stack: 1 }, { stack: '20000' }, { stack: 10000.5 },
+    { grow: 'maybe' }, { grow: true }, { grow: 1 },
+    { smallBlind: 5000, bigBlind: 10000, startingStack: 1e9, blindMode: 'fixed', levelMinutes: 1, turnSeconds: 5 },
+  ];
+  for (const raw of bad) {
+    const s = g.bot.settings(raw);
+    assert.deepEqual([s.startingStack, s.smallBlind, s.bigBlind, s.blindMode, s.levelMinutes, s.turnSeconds], [10000, 50, 100, 'levels', 10, 0],
+      `чужое ${JSON.stringify(raw)} не прошло`);
+  }
+  // И через настоящую страницу: стол создан, но с умолчаниями.
+  const t = new Table({ botRng: botRandom(5) });
+  const room = await pokerVsBots(t, { opponents: 1, bb: 777, stack: 1e9, grow: 'x', bigBlind: 10000 });
+  assert.deepEqual([room.settings.smallBlind, room.settings.bigBlind, room.settings.startingStack, room.settings.blindMode], [50, 100, 10000, 'levels']);
+});
+
+test('школа не берёт блайнды из формы: стол наставника всегда 50/100, 10.000, блайнды стоят', () => {
+  const s = g.bot.settings({ learn: true, bb: 400, stack: 5000, grow: 'on' });
+  assert.deepEqual([s.startingStack, s.smallBlind, s.bigBlind, s.blindMode], [10000, 50, 100, 'fixed']);
+});

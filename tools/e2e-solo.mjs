@@ -3,8 +3,10 @@
  *
  *   node tools/e2e-solo.mjs
  *
- * Человек открывает «Игры с ботами» без группы, проходит азбуку покера и
- * первый урок, нажимая то, что советует наставник; потом садится за дурака
+ * Человек открывает «Игры с ботами» без группы: карточки школы нет; в форме
+ * покера выбирает блайнды, стек и рост — выбор доходит до стола; режимом
+ * «Обучение» той же формы проходит азбуку покера и первый урок, нажимая то,
+ * что советует наставник; «Продолжить: Школа покера» возвращает в урок; потом садится за дурака
  * с ботами — боты ходят сами, на экране их карт нет; и открывает шахматы с
  * ботом — у дуэли в форме цвет и часы. Telegram — заглушка.
  */
@@ -65,8 +67,70 @@ try {
   await page.waitForSelector('h1:has-text("Игры с ботами")');
   step('из лички без групп: экран «Игры с ботами»');
 
+  // Школы отдельной карточкой больше нет: она — режим «Обучение» в форме покера.
+  assert.equal(await page.locator('.game-card', { hasText: 'Школа покера' }).count(), 0, 'карточки «Школа покера» на экране нет');
+  step('карточки «Школа покера» на экране нет');
+
+  // Форма покера, режим «Партия»: уровень, соперники, блайнды, стек, рост блайндов.
+  const pokerForm = async () => {
+    await page.locator('.game-card.g-poker').click();
+    await page.waitForSelector('.sheet .seg.solo-mode');
+  };
+  /** Шторка не шире экрана, все кнопки в ней — от 44 px. */
+  const sheetFits = async (what) => {
+    const bad = await page.evaluate(() => {
+      const out = [];
+      const doc = document.documentElement;
+      if (doc.scrollWidth > doc.clientWidth) out.push(`страница шире экрана: ${doc.scrollWidth} > ${doc.clientWidth}`);
+      for (const b of document.querySelectorAll('.sheet button')) {
+        const r = b.getBoundingClientRect();
+        if (r.width && r.height < 44) out.push(`кнопка «${b.textContent.trim().slice(0, 20)}» высотой ${r.height}`);
+        if (r.right > doc.clientWidth + 0.5 || r.left < -0.5) out.push(`кнопка «${b.textContent.trim().slice(0, 20)}» за краем`);
+      }
+      return out;
+    });
+    assert.deepEqual(bad, [], `${what}: ${bad.join('; ')}`);
+  };
+  await page.setViewportSize({ width: 320, height: 640 });
+  await pokerForm();
+  for (const label of ['Уровень', 'Соперников', 'Характеры соперников', 'Блайнды', 'Стартовый стек', 'Рост блайндов']) {
+    await page.waitForSelector(`.sheet .section-label:has-text("${label}")`);
+  }
+  await sheetFits('форма покера, 320 px');
+  await page.getByRole('button', { name: '100/200', exact: true }).click();
+  await page.getByRole('button', { name: '20.000', exact: true }).click();
+  await page.getByRole('button', { name: 'Не растут', exact: true }).click();
+  await page.locator('.sheet .seg button', { hasText: /^1$/ }).click();
+  await page.getByRole('button', { name: '▶ Играть' }).click();
+  await page.waitForSelector('.panel .btn, .seat');
+  const pk = app.soloOf('101');
+  assert.deepEqual([pk.game, pk.learn ?? null, pk.settings.smallBlind, pk.settings.bigBlind, pk.settings.startingStack, pk.settings.blindMode],
+    ['poker', null, 100, 200, 20000, 'fixed']);
+  assert.equal(pk.players.filter((p) => p.bot).length, 1);
+  step('форма покера на 320 px: блайнды 100/200, стек 20.000, «Не растут», 1 соперник — дошло до стола');
+  await page.setViewportSize({ width: 360, height: 740 });
+  await page.locator('.icon-btn[aria-label="Меню"]').click();
+  await page.getByRole('button', { name: '← Игры с ботами' }).click();
+  await page.waitForSelector('h1:has-text("Игры с ботами")');
+  await page.waitForSelector('.solo-resume:has-text("Покер")');
+
+  // Режим «Обучение»: ни уровня, ни соперников — азбука, уроки, свободная игра.
+  await pokerForm();
+  await page.locator('.sheet .seg.solo-mode button', { hasText: 'Обучение' }).click();
+  await page.waitForSelector('.sheet .menu-item:has-text("Азбука покера")');
+  for (const label of ['Уровень', 'Соперников', 'Блайнды']) {
+    assert.equal(await page.locator(`.sheet .section-label:has-text("${label}")`).count(), 0, `в обучении нет «${label}»`);
+  }
+  assert.equal(await page.locator('.sheet .menu-item').count(), 8, 'азбука, шесть уроков, свободная игра');
+  assert.equal(await page.getByRole('button', { name: '▶ Играть' }).count(), 0, 'урок начинается нажатием на него');
+  await sheetFits('обучение в форме покера, 360 px');
+  step('форма покера → «Обучение»: азбука, шесть уроков, свободная игра; уровня и соперников нет');
+  // Из азбуки «← К урокам» — обратно в форму, в режим «Обучение».
+  await page.getByRole('button', { name: 'Азбука покера' }).click();
+  await page.getByRole('button', { name: '← К урокам' }).click();
+  await page.waitForSelector('.sheet .seg.solo-mode button.on:has-text("Обучение")');
+
   // Азбука: четыре шага и тест.
-  await page.getByRole('button', { name: 'Школа покера' }).click();
   await page.getByRole('button', { name: 'Азбука покера' }).click();
   for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Дальше →' }).click();
   await page.waitForSelector('.abc-combo >> nth=9');
@@ -119,9 +183,21 @@ try {
   assert.equal(done, '[0]', 'телефон запомнил пройденный урок');
   step('пройденный урок отмечен на телефоне');
 
-  // Дурак с ботами: форма, игра идёт сама.
+  // «Продолжить: Школа покера» на экране ботов — возвращает в урок.
   await page.locator('.icon-btn[aria-label="Меню"]').click();
   await page.getByRole('button', { name: '← Игры с ботами' }).click();
+  await page.locator('.solo-resume:has-text("Школа покера")').click();
+  await page.waitForSelector('text=Урок 2 из 6');
+  await page.locator('.icon-btn[aria-label="Меню"]').click();
+  await page.getByRole('button', { name: '← Игры с ботами' }).click();
+  await pokerForm();
+  await page.locator('.sheet .seg.solo-mode button', { hasText: 'Обучение' }).click();
+  await page.waitForSelector('.sheet .menu-item:has-text("✓ ")');
+  await page.keyboard.press('Escape');
+  step('«▶ Продолжить: Школа покера» возвращает в урок; в списке урок отмечен ✓');
+
+  // Дурак с ботами: форма, игра идёт сама.
+  await page.reload();
   await page.waitForSelector('h1:has-text("Игры с ботами")');
   await page.getByRole('button', { name: /Дурак/ }).first().click();
   await page.getByRole('button', { name: 'Переводной', exact: true }).click();

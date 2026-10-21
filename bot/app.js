@@ -1653,8 +1653,8 @@ export class App {
  */
 function soloRaw(raw = {}) {
   const out = {};
-  for (const k of ['level', 'opponents', 'base', 'inc']) if (Number.isFinite(Number(raw[k]))) out[k] = Number(raw[k]);
-  for (const k of ['side', 'variant']) if (typeof raw[k] === 'string') out[k] = raw[k].slice(0, 16);
+  for (const k of ['level', 'opponents', 'base', 'inc', 'bb', 'stack']) if (Number.isFinite(Number(raw[k]))) out[k] = Number(raw[k]);
+  for (const k of ['side', 'variant', 'grow']) if (typeof raw[k] === 'string') out[k] = raw[k].slice(0, 16);
   if (raw.learn === true) out.learn = true;
   if (Number.isFinite(Number(raw.lesson))) out.lesson = Number(raw.lesson);
   if (Array.isArray(raw.types)) out.types = raw.types.slice(0, 8).map((x) => (typeof x === 'string' ? x.slice(0, 16) : null));

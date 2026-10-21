@@ -1,5 +1,5 @@
 /**
- * «Школа покера» на телефоне: азбука (что за игра, как идёт раздача, что
+ * «Школа покера» на телефоне (режим «Обучение» в форме покера с ботами): азбука (что за игра, как идёт раздача, что
  * можно делать, комбинации и маленький тест) и список уроков с отметками.
  *
  * Азбука живёт только на странице — серверу о ней знать нечего. Уроки идут
@@ -38,21 +38,21 @@ const play = (lesson) => {
   closeSheet();
 };
 
-/** Список уроков: азбука, уроки по порядку, свободная игра. */
-export function openSchool(lessons) {
-  haptic.soft();
-  showSheet('school', () => {
-    const done = new Set(doneLessons());
-    return h('div',
-      h('h3', '🎓 Школа покера'),
-      h('div.sub', 'Против наставника: уроки по порядку и свободная игра. После раздачи — разбор. В рейтинг не идёт.'),
-      h('div.menu-list.school-list',
-        h('button.menu-item', { type: 'button', onclick: () => openAbc(0, lessons) }, '📖 Азбука покера', h('small', 'цель, ход раздачи, действия, комбинации, тест')),
-        lessons.map((l, i) => h('button.menu-item', { type: 'button', onclick: () => play(i) },
-          `${done.has(i) ? '✓' : `${i + 1}.`} ${l.title}`, h('small', l.goal))),
-        h('button.menu-item', { type: 'button', onclick: () => play(lessons.length) }, '♠ Свободная игра', h('small', 'обычные раздачи один на один с наставником'))),
-    );
-  });
+/**
+ * Список уроков — режим «Обучение» в форме «Покер — с ботами»: азбука,
+ * уроки по порядку, свободная игра. `back` возвращает в эту форму (им
+ * пользуется азбука на кнопках «← К урокам» и «К списку уроков»).
+ */
+export function schoolItems(lessons, back) {
+  const done = new Set(doneLessons());
+  return [
+    h('div.sub', 'Против наставника: уроки по порядку и свободная игра. После раздачи — разбор. В рейтинг не идёт.'),
+    h('div.menu-list.school-list',
+      h('button.menu-item', { type: 'button', onclick: () => openAbc(0, lessons, back) }, '📖 Азбука покера', h('small', 'цель, ход раздачи, действия, комбинации, тест')),
+      lessons.map((l, i) => h('button.menu-item', { type: 'button', onclick: () => play(i) },
+        `${done.has(i) ? '✓' : `${i + 1}.`} ${l.title}`, h('small', l.goal))),
+      h('button.menu-item', { type: 'button', onclick: () => play(lessons.length) }, '♠ Свободная игра', h('small', 'обычные раздачи один на один с наставником'))),
+  ];
 }
 
 /* ------------------------------------------------------------- азбука */
@@ -112,7 +112,7 @@ const STEPS = [
       row(codes))))),
 ];
 
-function openAbc(step, lessons, quiz = { i: 0, picked: null, right: 0 }) {
+function openAbc(step, lessons, back, quiz = { i: 0, picked: null, right: 0 }) {
   haptic.soft();
   showSheet('abc', () => {
     const last = STEPS.length; // после азбуки — тест
@@ -120,15 +120,15 @@ function openAbc(step, lessons, quiz = { i: 0, picked: null, right: 0 }) {
       return h('div.abc',
         STEPS[step](),
         h('div.grid2.abc-nav',
-          h('button.btn', { type: 'button', onclick: () => (step ? openAbc(step - 1, lessons) : openSchool(lessons)) }, step ? '← Назад' : '← К урокам'),
-          h('button.btn.primary', { type: 'button', onclick: () => openAbc(step + 1, lessons) }, step + 1 < last ? 'Дальше →' : 'Проверить себя →')));
+          h('button.btn', { type: 'button', onclick: () => (step ? openAbc(step - 1, lessons, back) : back()) }, step ? '← Назад' : '← К урокам'),
+          h('button.btn.primary', { type: 'button', onclick: () => openAbc(step + 1, lessons, back) }, step + 1 < last ? 'Дальше →' : 'Проверить себя →')));
     }
     if (quiz.i >= QUIZ.length) {
       return h('div.abc',
         h('h3', 'Готово!'),
-        h('p.abc-p', `Правильных ответов: ${quiz.right} из ${QUIZ.length}. Теперь — за стол: наставник подскажет на каждом ходу.`),
+        h('p.abc-p', `Правильных ответов: ${quiz.right} из ${QUIZ.length}. Теперь — за стол: первый урок против наставника, после раздачи — разбор.`),
         h('button.btn.primary.wide.lg', { type: 'button', style: { width: '100%' }, onclick: () => play(0) }, '▶ Первый урок'),
-        h('button.btn', { type: 'button', style: { width: '100%', marginTop: '8px' }, onclick: () => openSchool(lessons) }, 'К списку уроков'));
+        h('button.btn', { type: 'button', style: { width: '100%', marginTop: '8px' }, onclick: () => back() }, 'К списку уроков'));
     }
     const q = QUIZ[quiz.i];
     const option = (key) => {
@@ -151,7 +151,7 @@ function openAbc(step, lessons, quiz = { i: 0, picked: null, right: 0 }) {
       option('b'),
       quiz.picked != null ? h('p.abc-p', quiz.picked === q.right ? `✓ Верно. ${q.why}` : `✗ Нет. ${q.why}`) : h('p.abc-p', 'Нажмите на более сильную руку.'),
       quiz.picked != null
-        ? h('button.btn.primary.wide.lg', { type: 'button', style: { width: '100%' }, onclick: () => openAbc(step, lessons, { i: quiz.i + 1, picked: null, right: quiz.right }) }, 'Дальше →')
+        ? h('button.btn.primary.wide.lg', { type: 'button', style: { width: '100%' }, onclick: () => openAbc(step, lessons, back, { i: quiz.i + 1, picked: null, right: quiz.right }) }, 'Дальше →')
         : null);
   });
 }
