@@ -35,6 +35,8 @@ export const bus = {
   onRanked: () => {},
   /** Чат за столом: chat, chat-sync, chat-unread (miniapp/chat.js ставит свой). */
   onChat: () => {},
+  /** Не показывать тост об этом отказе (чат объясняет сам). */
+  hideToast: () => false,
   /** Отказ сервера — после тоста; смайлики так узнают «подождите N с». */
   onError: () => {},
   /** Свой профиль (miniapp/profile.js ставит свой): { profile } или { error: {code, text} }. */
@@ -87,7 +89,7 @@ export function connect() {
     } else if (msg.t === 'error') {
       setBusy(false);
       haptic.err();
-      toast(msg.text || 'Не получилось');
+      if (!bus.hideToast(msg)) toast(msg.text || 'Не получилось');
       bus.onError(msg);
     } else if (msg.t === 'rtables') {
       bus.onRanked(msg);

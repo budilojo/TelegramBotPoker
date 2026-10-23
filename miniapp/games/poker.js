@@ -17,7 +17,7 @@ import {
   flyChips, muck, celebrate, edgeGlow, toast, ringSvg, showSheet, closeSheet, refreshSheet, currentSheet,
 } from '../ui.js';
 import { net, bus, send, serverNow } from '../net.js';
-import { reactButton, reactMenuItem } from '../reactions.js';
+import { chatMenuItem } from '../chat.js';
 import { markDone } from '../school.js';
 import { avatarEl } from '../profile.js';
 
@@ -419,7 +419,6 @@ function renderTable() {
     animateOnce(h(`div.stage${stageCls ? '.' + stageCls : ''}`, stage), `stage:${hd?.no}:${stage}`,
       [{ transform: 'scale(0.55)', opacity: 0, offset: 0 }], { duration: 420 }),
     h('div.top-meta', meta),
-    reactButton(s),
     h('button.icon-btn', { onclick: openMenu, 'aria-label': 'Меню' }, '⋯'),
   );
 
@@ -1144,7 +1143,7 @@ function openMenu() {
       if (s.room.status === 'playing') item('Пауза', 'боты подождут', () => { closeSheet(); send({ t: 'pause' }); });
       if (s.room.status === 'paused') item('Продолжить игру', null, () => { closeSheet(); send({ t: 'resume' }); });
       if (s.room.status !== 'lobby' && s.room.status !== 'finished') item('Завершить игру', 'итоги — на экране', () => confirmFinish(), 'danger');
-      items.push(reactMenuItem(s));
+      items.push(chatMenuItem(s));
       return h('div', h('h3', 'Меню'), h('div.sub', 'Игра с ботами'), h('div.menu-list', items));
     }
     if (me.seated && !me.sittingOut && me.role === 'player' && s.room.status !== 'lobby') {
@@ -1154,7 +1153,7 @@ function openMenu() {
     }
     if (!me.notify && s.bot) item('🔔 Напоминать о ходе', 'нажмите Start у бота', () => tg.openTelegramLink(`https://t.me/${s.bot}?start=notify`));
     if (s.hub) item(s.hubLabel || '← Все игры группы', 'стол останется, как есть', () => { closeSheet(); send({ t: 'hub' }, { lock: false }); });
-    items.push(reactMenuItem(s));
+    items.push(chatMenuItem(s));
 
     if (me.isHost) {
       items.push(h('div.section-label', 'Хост'));

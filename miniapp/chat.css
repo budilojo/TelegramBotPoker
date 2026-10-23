@@ -213,7 +213,7 @@
   flex: none;
   display: flex;
   align-items: center;
-  gap: var(--k-s8);
+  gap: var(--k-s4); /* пять реакций и «ещё» помещаются в 320 px */
   padding: var(--k-s4) var(--k-s12);
   border-top: 1px solid var(--border-color);
   overflow: hidden;
@@ -239,7 +239,7 @@
 .chat-q:active { background: var(--bg-elevated); }
 .chat-q .rx-face { width: var(--k-av-xs); height: var(--k-av-xs); }
 .chat-q.cool, .chat-cell.cool { opacity: 0.4; }
-.chat-q-more { margin-left: auto; padding: 0 var(--k-s12); }
+.chat-q-more { margin-left: auto; padding: 0 var(--k-s8); }
 
 .chat-sets {
   flex: none;
@@ -341,3 +341,4 @@
 @media (prefers-reduced-motion: reduce) {
   .chat-panel { transition: none; }
 }
+.chat-q .rx-emoji { font-size: var(--k-fs-section); }

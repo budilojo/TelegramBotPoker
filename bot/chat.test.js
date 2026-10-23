@@ -109,6 +109,7 @@ test('зритель не читает: история и счётчик ему 
   // Свежеоткрытая страница зрителя — тоже ничего.
   const late = user(5, 'Поздний');
   t.open(late);
+  await t.send(late, { t: 'chat-sync' });
   assert.doesNotMatch(JSON.stringify(t.page(late).inbox), /секрет стола/);
 });
 
@@ -246,6 +247,8 @@ test('история: последние 50, новому подключению
   }
   // Боб переоткрыл страницу.
   t.openRoom(BOB, room);
+  assert.equal(t.page(BOB).inbox.at(-1).t, 'state', 'при входе последним идёт состояние стола');
+  await t.send(BOB, { t: 'chat-sync' });
   const s = syncs(t, BOB).at(-1);
   assert.equal(s.log.length, CHAT_HISTORY);
   assert.equal(s.log[0].text, '№6');
@@ -280,6 +283,7 @@ test('реакция ложится в историю маленькой стр�
   assert.equal(t.page(ALICE).inbox.filter((m) => m.t === 'chat-unread').length, 0, 'автору счётчик не шлётся');
   assert.equal(t.page(DAVE).inbox.filter((m) => m.t === 'chat-unread').length, 0, 'зрителю тоже');
   t.openRoom(BOB, room);
+  await t.send(BOB, { t: 'chat-sync' });
   const log = syncs(t, BOB).at(-1).log;
   assert.deepEqual(log.map((l) => [l.k, l.react, l.name]), [['r', 'haha', 'Алиса']]);
 });

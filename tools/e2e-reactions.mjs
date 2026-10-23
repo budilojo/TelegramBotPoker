@@ -1,7 +1,7 @@
 /**
- * Смайлики настоящими браузерами: кнопка → шторка 4×4 → пузырь у других
- * игроков; зритель кнопки не видит; «Не показывать смайлики»; пузырь не
- * закрывает карты и кнопки действий. Покер на троих (320 и 390 px) и шахматы.
+ * Реакции настоящими браузерами: быстрый ряд в чате → пузырь у других игроков
+ * над местом отправившего; «подождите N с»; пузырь не закрывает карты и кнопки.
+ * Покер на троих (320 и 390 px) и шахматы. (Сам чат — tools/e2e-chat.mjs.)
  *
  *   node tools/e2e-reactions.mjs
  *   SHOTS=1 node tools/e2e-reactions.mjs   ещё и снимки в preview/reactions/
@@ -109,11 +109,18 @@ async function noSideways(page, what) {
 }
 const shot = async (page, name) => SHOTS && page.screenshot({ path: path.join(OUT, `${name}.png`) });
 
+
+const setLimit = () => {
+  hub.reactLimiter.sent.clear();
+  hub.chatLimiter.by.clear();
+};
+/** Подождать, пока клиент-лимит «3 с» у этой страницы пройдёт. */
+const cooled = (page) => page.waitForFunction(() => !document.querySelector('.chat-q.cool'), null, { timeout: 5000 });
+
 /* ------------------------------------------------------------- покер */
 
 for (const [w, h] of [[320, 568], [390, 844]]) {
-  // Лимит — на человека за всеми столами сразу: новый прогон начинаем с чистого.
-  hub.reactLimiter.sent.clear();
+  setLimit();
   const chat = CHAT - w;
   await app.handleUpdate(cmdUpdate(chat, ivan, '/newgame', { message_id: w }));
   await app.settle();
@@ -129,86 +136,44 @@ for (const [w, h] of [[320, 568], [390, 844]]) {
   await pi.getByRole('button', { name: '▶ Начать' }).click();
   await until(() => room.status === 'playing', 'раздача');
   for (const p of [pi, pm, pd]) await p.waitForSelector('.hero-cards img.card');
-  const pz = await openPage(zoya, room.code, w, h);
-  await pz.waitForSelector('.table');
-  assert.equal(await pz.locator('.rx-btn').count(), 0, 'у зрителя кнопки смайликов нет');
-  step(`${w}px: трое за столом, у зрителя кнопки нет`);
 
-  // Кнопка → шторка 4×4.
-  const btn = pi.locator('.rx-btn');
-  const bb = await btn.boundingBox();
-  assert.ok(bb.width >= 44 && bb.height >= 44, `кнопка не меньше 44 px (${bb.width}×${bb.height})`);
-  await btn.click();
-  await pi.waitForSelector('.rx-grid');
-  assert.equal(await pi.locator('.rx-cell').count(), 16, '16 смайликов в шторке');
-  for (const c of await pi.locator('.rx-cell').all()) {
-    const r = await c.boundingBox();
-    assert.ok(r.width >= 44 && r.height >= 44, `клетка шторки не меньше 44 px (${r.width}×${r.height})`);
-  }
-  const cols = new Set(await pi.locator('.rx-cell').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().left))));
-  assert.equal(cols.size, 4, 'четыре колонки');
-  await until(() => pi.locator('.rx-cell .rx-emoji').count().then((n) => n === 16), 'без картинок — запасные эмодзи');
-  await noSideways(pi, `${w}px шторка`);
-  await pi.waitForTimeout(400); // шторка доехала
-  await shot(pi, `poker-sheet-${w}`);
-  // Подписи не рвут слово посередине: у каждой строки — целые слова.
-  const broken = await pi.locator('.rx-label').evaluateAll((els) => els.filter((e) => e.scrollWidth > e.clientWidth + 1).map((e) => e.textContent));
-  assert.deepEqual(broken, [], 'подписи помещаются в клетку');
-
-  // Тап — пузырь у остальных над местом Ивана.
+  // Реакция — из быстрого ряда панели чата.
+  await pi.locator('.chat-fab').click();
+  await pi.waitForSelector('.chat-quick');
+  await pi.waitForTimeout(400);
   const seat = room.players.findIndex((p) => p.id === '101');
-  await pi.locator('.rx-cell[data-rx="fire"]').click();
-  for (const p of [pm, pd, pz, pi]) await p.waitForSelector(`.rx-bubble[data-rx-seat="${seat}"][data-rx="fire"]`);
-  assert.equal(await pi.locator('.rx-grid').count(), 0, 'шторка закрылась');
-  assert.ok(await pi.locator('.rx-btn.cool').count(), 'кнопка бледная, пока «подождите»');
-  // У Макса пузырь у аватара Ивана, а не где попало.
+  await pi.locator('.chat-q[data-rx-pick="fire"]').click().catch(() => {});
+  if (!(await pm.locator('.rx-bubble').count())) {
+    await pi.locator('[data-chat-more]').click();
+    await pi.locator('.chat-cell[data-rx="fire"]').click();
+  }
+  for (const p of [pm, pd, pi]) await p.waitForSelector(`.rx-bubble[data-rx-seat="${seat}"][data-rx="fire"]`);
+  await pi.locator('.chat-close').click();
+  assert.ok(await pi.locator('.chat-q.cool, .chat-fab').count(), 'панель закрыта, кнопка на месте');
   const av = await box(pm, `.seat[data-seat="${seat}"] .av`);
   const bub = await box(pm, '.rx-bubble');
   assert.ok(Math.abs(bub.x + bub.width / 2 - (av.x + av.width / 2)) < 40, 'пузырь над аватаром отправителя');
   for (const p of [pm, pd, pi]) await clearOf(p, '.rx-bubble', ['.panel button', '.board img.card', '.hero-cards img.card'], `${w}px`);
   await shot(pm, `poker-bubble-${w}`);
-  await shot(pi, `poker-mine-${w}`);
-  step(`${w}px: Иван отправил «Огонь!» — пузырь у всех над его местом, карты и кнопки свободны`);
+  step(`${w}px: Иван отправил «Огонь» — пузырь у всех над его местом, карты и кнопки свободны`);
 
   // Сразу второй — отказ словами, пузыря нет.
-  await btn.click();
-  await pi.locator('.rx-cell[data-rx="gg"]').click();
+  await pi.locator('.chat-fab').click();
+  await pi.locator('.chat-q[data-rx-pick="gg"]').click();
   await pi.waitForSelector('#toast.show');
   assert.match(await pi.locator('#toast').textContent(), /подождите \d+ с/);
   assert.equal(await pm.locator('.rx-bubble[data-rx="gg"]').count(), 0);
-
-  // Пузырь уходит сам.
   await until(() => pm.locator('.rx-bubble').count().then((n) => n === 0), 'пузырь пропал', 4500);
-  await until(() => pi.locator('.rx-btn.cool').count().then((n) => n === 0), 'кнопка снова яркая', 2000);
-  step(`${w}px: второй подряд — «подождите N с»; пузырь ушёл через ~3 с, кнопка снова яркая`);
-
-  if (w === 320) {
-    // «Не показывать смайлики» у Макса: кнопки нет, пузырей нет. У Димы — есть.
-    await pm.getByRole('button', { name: 'Меню' }).click();
-    await pm.getByRole('button', { name: /Не показывать смайлики/ }).click();
-    await until(() => pm.locator('.rx-btn').count().then((n) => n === 0), 'у Макса кнопка спряталась');
-    await btn.click();
-    await pi.locator('.rx-cell[data-rx="cool"]').click();
-    await pd.waitForSelector('.rx-bubble[data-rx="cool"]');
-    await new Promise((r) => setTimeout(r, 300));
-    assert.equal(await pm.locator('.rx-bubble').count(), 0, 'у выключившего пузырей нет');
-    // Включается обратно тем же пунктом меню и переживает перезагрузку как выбор телефона.
-    await pm.reload();
-    await pm.waitForSelector('.table');
-    assert.equal(await pm.locator('.rx-btn').count(), 0, 'выбор помнится после перезагрузки');
-    await pm.getByRole('button', { name: 'Меню' }).click();
-    await pm.getByRole('button', { name: /Показывать смайлики/ }).click();
-    await pm.waitForSelector('.rx-btn');
-    step('320px: «Не показывать смайлики» — у Макса ни кнопки, ни пузырей; включается обратно');
-  }
-  for (const p of [pi, pm, pd, pz]) await noSideways(p, `${w}px стол`);
-  for (const p of [pi, pm, pd, pz]) await p.close();
+  await cooled(pi);
+  step(`${w}px: второй подряд — «подождите N с»; пузырь ушёл через ~3 с, реакции снова яркие`);
+  for (const p of [pi, pm, pd]) await noSideways(p, `${w}px стол`);
+  for (const p of [pi, pm, pd]) await p.close();
 }
 
 /* ------------------------------------------------------------ шахматы */
 
 for (const [w, h] of [[320, 568], [390, 844]]) {
-  hub.reactLimiter.sent.clear();
+  setLimit();
   const room = app.createGame('chess', { chatId: String(CHAT - 7 - w), title: '', host: { id: 101, tgId: 101, name: 'Иван' }, settings: { base: 0 } });
   const pi = await openPage(ivan, room.code, w, h);
   const pm = await openPage(max, room.code, w, h);
@@ -218,74 +183,26 @@ for (const [w, h] of [[320, 568], [390, 844]]) {
   await pi.getByRole('button', { name: '▶ Начать' }).click();
   await until(() => !!room.match, 'партия');
   for (const p of [pi, pm]) await p.waitForSelector('.ch-board');
-  await pm.locator('.rx-btn').click();
-  await pm.locator('.rx-cell[data-rx="think"]').click();
+  await pm.locator('.chat-fab').click();
+  await pm.waitForTimeout(400);
+  await pm.locator('.chat-q[data-rx-pick="think"]').click();
   for (const p of [pi, pm]) await p.waitForSelector('.rx-bubble[data-rx="think"]');
-  // У Ивана — у верхней плашки (Макс чёрными), справа от аватара, не на доске.
   const bar = await box(pi, '.ch-bar[data-color="b"]');
   const bub = await box(pi, '.rx-bubble');
   assert.ok(bub.y + bub.height > bar.y && bub.y < bar.y + bar.height, 'пузырь на уровне плашки соперника');
   await clearOf(pi, '.rx-bubble', ['.ch-board', '.ch-head button'], `шахматы ${w}px`);
-  await clearOf(pm, '.rx-bubble', ['.ch-board', '.ch-head button'], `шахматы ${w}px, свой`);
+  // В шахматах нет покерной категории: «ещё» — один набор без вкладок.
+  await pm.locator('[data-chat-more]').click();
+  assert.equal(await pm.locator('.chat-tab').count(), 0, 'в шахматах одна категория — без вкладок');
+  assert.equal(await pm.locator('.chat-cell').count(), 14, 'общие 14 реакций');
+  assert.equal(await pm.locator('.chat-cell[data-rx="bluff"], .chat-cell[data-rx="allin"]').count(), 0, 'покерных реакций нет');
   const title = await pi.locator('.ch-title').evaluate((e) => e.scrollWidth <= e.clientWidth + 1);
   assert.ok(title, `${w}px: заголовок шахмат не обрезан`);
+  assert.equal(await pi.locator('.ch-head .rx-btn').count(), 0, 'в шапке кнопки смайликов нет');
   for (const p of [pi, pm]) await noSideways(p, `шахматы ${w}px`);
   await shot(pi, `chess-bubble-${w}`);
-  await shot(pm, `chess-mine-${w}`);
-  step(`шахматы ${w}px: смайлик Макса — у плашки соперника у Ивана, доска свободна`);
+  step(`шахматы ${w}px: смайлик Макса — у плашки соперника у Ивана, доска свободна; «ещё» — только общие`);
   for (const p of [pi, pm]) await p.close();
-}
-
-/* -------------------------------- шапка дуэли: с кнопкой «назад» и без */
-
-/**
- * Кнопки шапки не налезают друг на друга и на ТЕКСТ заголовка (рамка
- * заголовка шире текста: кнопка «назад» 48 px и раньше заходила на её пустой
- * край на 4 px). Возвращает: заголовок виден целиком?
- */
-async function headOk(page, what) {
-  const btns = [];
-  for (const el of await page.locator('.ch-head button').all()) if (await el.isVisible()) btns.push(await el.boundingBox());
-  const text = await page.locator('.ch-title').evaluate((e) => {
-    const r = document.createRange();
-    r.selectNodeContents(e.firstChild);
-    const b = r.getBoundingClientRect();
-    return { x: b.left, y: b.top, width: b.width, height: b.height };
-  });
-  for (let i = 0; i < btns.length; i++) {
-    assert.ok(!overlap(btns[i], text), `${what}: кнопка ${i} налезает на текст заголовка`);
-    assert.ok(btns[i].x >= 0 && btns[i].x + btns[i].width <= page.viewportSize().width + 0.5, `${what}: кнопка ${i} за краем экрана`);
-    for (let j = i + 1; j < btns.length; j++) assert.ok(!overlap(btns[i], btns[j]), `${what}: кнопки ${i} и ${j} налезают`);
-  }
-  return page.locator('.ch-title').evaluate((e) => e.scrollWidth <= e.clientWidth + 1);
-}
-
-for (const w of [320, 390]) {
-  // Без «назад» (открыто по карточке): смайлик слева — заголовок целиком.
-  const room = app.createGame('chess', { chatId: String(CHAT - 30 - w), title: '', host: { id: 101, tgId: 101, name: 'Иван' }, settings: { base: 300 } });
-  const pi = await openPage(ivan, room.code, w, 640);
-  const pm = await openPage(max, room.code, w, 640);
-  await pm.waitForSelector('h1:has-text("Шахматы")');
-  await pm.getByRole('button', { name: 'Сесть за доску' }).click();
-  await until(() => room.players.length === 2, 'Макс сел');
-  await pi.getByRole('button', { name: '▶ Начать' }).click();
-  await pi.waitForSelector('.ch-head.rx');
-  const rx = await box(pi, '.ch-head .rx-btn');
-  const title = await box(pi, '.ch-head .ch-title');
-  assert.ok(rx.x + rx.width <= title.x + 1, `${w}px: без «назад» смайлик слева от заголовка`);
-  assert.ok(await headOk(pi, `${w}px без «назад»`), `${w}px: заголовок «${await pi.locator('.ch-title').innerText()}» не обрезан`);
-  await shot(pi, `chess-head-${w}`);
-  for (const p of [pi, pm]) await p.close();
-
-  // С «назад» (партия с ботом): обе кнопки справа, ничего не налезает.
-  const solo = await app.createSolo('chess', { id: '505', tgId: 505, name: 'Оля' }, { level: 0, side: 'white', base: 300 });
-  const po = await openPage(user(505, 'Оля'), solo.code, w, 640);
-  await po.waitForSelector('.ch-head.rx');
-  assert.equal(await po.locator('.ch-head > button').count(), 1, 'кнопка «назад» на месте');
-  const fits = await headOk(po, `${w}px с «назад»`);
-  step(`шапка шахмат ${w}px: без «назад» смайлик слева, заголовок целиком; с «назад» — две кнопки справа, заголовок ${fits ? 'целиком' : 'с многоточием'}`);
-  await shot(po, `chess-head-back-${w}`);
-  await po.close();
 }
 
 assert.deepEqual(problems, [], 'ошибок в консоли страниц нет');

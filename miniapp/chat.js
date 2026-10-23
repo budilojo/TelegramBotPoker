@@ -59,15 +59,21 @@ const deadlineOf = (s) => s?.hand?.deadline ?? s?.deal?.deadline ?? s?.clock?.de
 /* --------------------------------------------------------------- данные */
 
 /** Ушли за другой стол — история и панель прежнего стола не нужны. */
+let wasConnected = false;
 function syncRoom() {
   const code = S()?.room?.code || null;
-  if (code === st.room) return;
-  st.room = code;
-  st.log = [];
-  st.unread = 0;
-  st.sending = false;
-  st.err = '';
-  if (st.open) closePanel();
+  // Связь пропадала и вернулась — пока нас не было, в чате могли писать.
+  const reconnected = net.connected && !wasConnected;
+  wasConnected = net.connected;
+  if (code === st.room && !(reconnected && code)) return;
+  if (code !== st.room) {
+    st.room = code;
+    st.log = [];
+    st.unread = 0;
+    st.sending = false;
+    st.err = '';
+    if (st.open) closePanel();
+  }
   if (code && available()) send({ t: 'chat-sync' }, { lock: false });
   paintBadge();
 }
@@ -132,6 +138,9 @@ hooks.manifest = () => {
   if (st.open) renderReactions();
 };
 
+// Отказ чата объясняется под полем ввода — тост поверх панели не нужен.
+bus.hideToast = (msg) => st.open && typeof msg.code === 'string' && msg.code.startsWith('CHAT_');
+
 const prevError = bus.onError;
 bus.onError = (msg) => {
   prevError(msg);
@@ -184,21 +193,24 @@ function paintBadge() {
  * кнопок, картинок, значков и небольших блоков (плашки, панели, подписи).
  * Большое — сукно, фон — кнопке не помеха.
  */
-function blocks(el) {
+function blocks(el, tier) {
   if (!el || el === document.documentElement || el === document.body || el.id === 'app') return false;
   if (el.closest('button, a, input, textarea, select, svg, canvas, img, [role="button"]')) return true;
+  // Надпись: у элемента есть свой текст (подсказка «Выберите шашку…», имя, число).
+  if (tier >= 1 && [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) return true;
+  if (tier < 2) return false;
   const r = el.getBoundingClientRect();
   return r.width * r.height < innerWidth * innerHeight * 0.3;
 }
 
-function freeAt(x, y, size) {
+function freeAt(x, y, size, tier) {
   const pts = [];
   for (const fx of [0, 0.5, 1]) for (const fy of [0, 0.5, 1]) pts.push([x + fx * size, y + fy * size]);
   for (const [px, py] of pts) {
     const els = document.elementsFromPoint(Math.min(innerWidth - 1, Math.max(0, px)), Math.min(innerHeight - 1, Math.max(0, py)));
     for (const el of els) {
       if (el.closest('#chat-root, .rx-layer, #fx, #toast')) continue;
-      if (blocks(el)) return false;
+      if (blocks(el, tier)) return false;
       break; // самый верхний «настоящий» элемент не мешает
     }
   }
@@ -215,11 +227,16 @@ export function placeFab() {
   const topLimit = Math.max(m, Math.round(vh * 0.4));
   fab.style.visibility = 'hidden';
   let best = null;
-  search: for (const x of [vw - size - m, m]) {
-    for (let y = bottomLimit; y >= topLimit; y -= 6) {
-      if (freeAt(x, y, size)) {
-        best = { x, y };
-        break search;
+  // Сначала — место, свободное от всего содержимого; нет такого — от кнопок,
+  // картинок и надписей; совсем плотный экран (лобби с текстом) — хотя бы от
+  // нажимного: поверх абзаца, но не поверх кнопки.
+  search: for (const tier of [2, 1, 0]) {
+    for (const x of [vw - size - m, m]) {
+      for (let y = bottomLimit; y >= topLimit; y -= 6) {
+        if (freeAt(x, y, size, tier)) {
+          best = { x, y };
+          break search;
+        }
       }
     }
   }
@@ -325,9 +342,11 @@ function buildPanel() {
     head, h('div.chat-main', ui.log, ui.newer), ui.sets, ui.quick, ui.err, form);
   ui.head = head;
   swipe(head);
-  ui.log.addEventListener('scroll', () => {
-    st.atBottom = ui.log.scrollTop + ui.log.clientHeight >= ui.log.scrollHeight - 24;
-    if (st.atBottom) ui.newer.hidden = true;
+  const log = ui.log;
+  const newer = ui.newer;
+  log.addEventListener('scroll', () => {
+    st.atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 24;
+    if (st.atBottom) newer.hidden = true;
   });
 }
 
@@ -376,7 +395,7 @@ function paintHead() {
   const dl = mine ? deadlineOf(s) : null;
   ui.turn.hidden = !mine;
   if (!mine) return ui.turn.replaceChildren();
-  ui.turn.replaceChildren('Ваш ход', dl ? h('span.num', { 'data-count': dl }) : null);
+  ui.turn.replaceChildren(...['Ваш ход', dl ? h('span.num', { 'data-count': dl }) : null].filter(Boolean));
 }
 
 function paintErr() {

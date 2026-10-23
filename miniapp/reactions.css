@@ -1,70 +1,13 @@
 /* ==========================================================================
    СМАЙЛИКИ ЗА СТОЛОМ — miniapp/reactions.js
 
-   Кнопка в шапке стола, шторка 4×4 и пузырь над тем, кто прислал. Плоско:
+   Картинка смайлика и пузырь над тем, кто прислал. Плоско:
    поверхность и линия из токенов, без тени и свечения. Картинка смайлика —
    содержание (как карта), а не оформление: её не перекрашиваем.
    ========================================================================== */
 
-/* ---------------------------------------------------------------- кнопка */
+/* Кнопки у смайликов больше нет — вход один, в чате (miniapp/chat.css). Здесь картинка и пузырь. */
 
-.rx-btn {
-  display: inline-grid;
-  place-items: center;
-  flex: none;
-  width: var(--k-tap);
-  height: var(--k-tap);
-  padding: 0;
-  border: 1px solid var(--border-color);
-  border-radius: var(--k-r-lg);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.rx-btn:active { background: var(--bg-elevated); }
-.rx-btn:focus-visible { outline: 2px solid var(--color-success); outline-offset: -2px; }
-/* «Подождите» — бледная, но нажимается: тап объяснит словами, сколько ждать. */
-.rx-btn.cool { opacity: 0.4; }
-.rx-btn-face { font-size: var(--k-fs-section); line-height: 1; }
-
-/* Шапка дуэли (шахматы, шашки, нарды, морской бой). Без кнопки «назад»
-   смайлик встаёт слева, на пустое место: шапка симметрична, заголовок той же
-   ширины, что и без смайликов. С кнопкой «назад» — справа рядом с «⋯».
-   `.rx-pair` растворяется в сетке (display: contents), кнопки — её ячейки. */
-.ch-head.rx { grid-template-columns: var(--k-tap) minmax(0, 1fr) auto auto; }
-.ch-head.rx > .ch-title { grid-column: 2; grid-row: 1; }
-.ch-head.rx > .ch-head-gap { display: none; }
-.rx-pair { display: contents; }
-.ch-head-gap ~ .rx-pair > .rx-btn { grid-column: 1; grid-row: 1; }
-.ch-head-gap ~ .rx-pair > :last-child { grid-column: 3; grid-row: 1; }
-.rx-pair .rx-btn { border-color: transparent; background: transparent; }
-
-/* ---------------------------------------------------------------- шторка */
-
-.rx-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--k-s8);
-}
-.rx-cell {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--k-s4);
-  min-width: 0;
-  min-height: 72px;
-  padding: var(--k-s8) 0;
-  border: 1px solid var(--border-color);
-  border-radius: var(--k-r-lg);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.rx-cell:active { background: var(--bg-elevated); }
-.rx-cell:focus-visible { outline: 2px solid var(--color-success); outline-offset: -2px; }
 .rx-label {
   /* Две строки: «Хорошая игра» и «Ну как так» на 320 px в одну не влезают. */
   display: -webkit-box;

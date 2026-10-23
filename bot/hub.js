@@ -244,8 +244,8 @@ export class Hub {
     if (!this.byRoom.has(room.code)) this.byRoom.set(room.code, new Set());
     this.byRoom.get(room.code).add(session);
     this.push(session, room);
-    // Участнику — история чата и счётчик непрочитанных (зрителю и столу с ботами — ничего).
-    if (!this.app.down) syncChat(room, this.chats, session);
+    // История чата сюда не шлётся: страница сама просит `chat-sync`, когда видит стол, —
+    // последним сообщением при входе остаётся состояние стола (на это опираются клиенты и тесты).
   }
 
   enterHub(session) {

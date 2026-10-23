@@ -26,8 +26,8 @@ import {
   refreshSheet, avatar, toast, REDUCED,
 } from '../ui.js';
 import { net, bus, send } from '../net.js';
-import { reactButton, reactMenuItem } from '../reactions.js';
 import { avatarEl } from '../profile.js';
+import { chatMenuItem } from '../chat.js';
 
 /** Идентификатор запроса: повтор того же тапа сервер узнаёт и не плодит лобби. */
 const newReqId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -192,7 +192,6 @@ function renderTable() {
     animateOnce(h('div.stage', d ? `ПАРТИЯ ${d.no}` : 'ПАРТИЯ'), `clstage:${d?.no}`,
       [{ transform: 'scale(0.55)', opacity: 0, offset: 0 }], { duration: 420 }),
     h('div.top-meta', d ? [h('span', 'цвет '), colorWord(d.color)] : null),
-    reactButton(s),
     h('button.icon-btn', { onclick: openMenu, 'aria-label': 'Меню' }, '⋯'),
   );
 
@@ -659,7 +658,7 @@ function openMenu() {
       h('button.menu-item', { onclick: openRules }, 'Правила', h('small', 'коротко, по делу')),
       h('button.menu-item', { onclick: openOrder }, 'Порядок карт в руке',
         h('small', handOrder() === 'dealt' ? 'как пришли' : 'по цвету')),
-      reactMenuItem(s),
+      chatMenuItem(s),
       // С ботами — только играть: ни настроек, ни прерываний; конец — на экране.
       s.solo ? h('button.menu-item', { onclick: () => { closeSheet(); send({ t: 'hub' }, { lock: false }); } }, s.hubLabel || '← Игры с ботами', h('small', 'партию можно будет продолжить')) : null,
       me.isHost && !s.solo ? h('button.menu-item', { onclick: openSettings }, 'Настройки', h('small', 'накопление, таймер')) : null,
