@@ -33,6 +33,8 @@ export const bus = {
   onReact: () => {},
   /** Рейтинговые столы игры (miniapp/rating.js). */
   onRanked: () => {},
+  /** Чат за столом: chat, chat-sync, chat-unread (miniapp/chat.js ставит свой). */
+  onChat: () => {},
   /** Отказ сервера — после тоста; смайлики так узнают «подождите N с». */
   onError: () => {},
   /** Свой профиль (miniapp/profile.js ставит свой): { profile } или { error: {code, text} }. */
@@ -93,6 +95,8 @@ export function connect() {
       bus.onProfile(msg);
     } else if (msg.t === 'react') {
       bus.onReact(msg);
+    } else if (msg.t === 'chat' || msg.t === 'chat-sync' || msg.t === 'chat-unread') {
+      bus.onChat(msg);
     } else if (msg.t === 'share') {
       bus.onShare(msg);
     } else if (msg.t === 'notice') {

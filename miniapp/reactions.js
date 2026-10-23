@@ -1,22 +1,21 @@
 /**
  * Смайлики во время игры — клиент. Сервер: bot/reactions.js.
  *
- * Что отсюда берут экраны игр (по одной строке в каждом):
- *   reactButton(state)   — кнопка «смайлик» в шапке стола (или null);
- *   reactMenuItem(state) — пункт меню «Показывать / не показывать смайлики»;
- *   reactSlot(state, ⋯) + reactOn(state) — то же для шапки дуэлей (две кнопки справа).
- * Остальное модуль делает сам: шторка 4×4, отправка `{t:'react', id}`,
- * пузырь над тем, кто прислал, бледная кнопка, пока «подождите».
+ * С волны 2 у смайликов нет своей кнопки: вход один — «чат и реакции» внизу
+ * экрана (miniapp/chat.js). Здесь остаётся то, что не про кнопку:
+ *   — набор: `miniapp/emoji/manifest.json` (агент R) → наборы и «быстрый ряд»
+ *     для этой игры; манифеста нет — прежние 16 реакций с запасными эмодзи;
+ *   — отправка `{t:'react', id}` и «подождите N с» (лимит 3 с / 6 в минуту);
+ *   — пузырь над тем, кто прислал;
+ *   — общий переключатель «Не показывать чат и реакции» (`reactionsOff`).
  *
- * КАРТИНКИ. Смайлик — `miniapp/emoji/<id>.png` (512×512, прозрачный фон).
- * Пока файла нет — запасной юникод-эмодзи из таблицы ниже: чтобы подключить
- * нарисованные, достаточно положить файлы, код не меняется. Всё грузится со
- * своего сервера — ничего с внешних доменов.
+ * КАРТИНКИ. Смайлик — `miniapp/emoji/<file из манифеста>`. Нет файла — запасной
+ * юникод-эмодзи. Всё грузится со своего сервера.
  *
- * Список id, порядок и подписи совпадают с bot/reactions.js — это сверяет
- * тест (bot/reactions.test.js).
+ * Список id, порядок и подписи запасного набора совпадают с bot/reactions.js —
+ * это сверяет тест (bot/reactions.test.js).
  */
-import { h, showSheet, closeSheet, haptic, REDUCED } from './ui.js';
+import { h, haptic, REDUCED } from './ui.js';
 import { net, bus, send, serverNow } from './net.js';
 
 export const REACTIONS = [
@@ -47,54 +46,90 @@ const SHOW_MS = 3_000;
 
 /* ------------------------------------------------------- «не показывать» */
 
-/** Сидит ли этот телефон за столом — только участники шлют смайлики. */
-const canReact = (s) => !!s?.me && s.me.seated !== false && s.me.seat >= 0 && !s.me.kicked;
+/** Сидит ли этот телефон за столом — только участники шлют смайлики и пишут в чат. */
+export const canReact = (s) => !!s?.me && s.me.seated !== false && s.me.seat >= 0 && !s.me.kicked;
 
-const OFF_KEY = 'reactions-off';
+const OFF_KEY = 'reactions-off'; // тот же ключ, что у переключателя смайликов волны 1: выбор людей сохраняется
 export function reactionsOff() {
   try {
-    return localStorage.getItem(OFF_KEY) === '1';
+    return localStorage.getItem(OFF_KEY) === '1' || offFallback;
   } catch {
-    return false;
+    return offFallback;
   }
 }
-function setOff(on) {
+/** Включить или выключить чат и реакции на этом телефоне. */
+export function setReactionsOff(on) {
   try {
     if (on) localStorage.setItem(OFF_KEY, '1');
     else localStorage.removeItem(OFF_KEY);
+    offFallback = false;
   } catch {
-    /* приватный режим: настройка проживёт до перезагрузки — и только */
+    offFallback = on; // приватный режим: настройка проживёт до перезагрузки — и только
   }
   if (on) for (const el of bubbles.values()) el.remove();
   if (on) bubbles.clear();
 }
+let offFallback = false;
 
-/** Пункт для меню стола: включить или выключить смайлики на этом телефоне (только игроку). */
-export function reactMenuItem(s) {
-  if (!canReact(s)) return null;
-  const off = reactionsOff();
-  return h('button.menu-item', {
-    'data-rx-toggle': off ? 'off' : 'on',
-    onclick: () => {
-      setOff(!off);
-      haptic.soft();
-      closeSheet();
-      bus.render();
-    },
-  }, off ? 'Показывать смайлики' : 'Не показывать смайлики', h('small', off ? 'сейчас скрыты на этом телефоне' : 'только у вас; другие их видят'));
+/* ------------------------------------------------------------- набор */
+
+/** { sets: [{id,title,games,items:[{id,file,label,quick}]}] } из манифеста; null — нет файла. */
+let manifest = null;
+let manifestAsked = false;
+function loadManifest() {
+  if (manifestAsked) return;
+  manifestAsked = true;
+  fetch('/emoji/manifest.json', { cache: 'no-cache' })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((m) => {
+      if (Array.isArray(m?.sets)) {
+        manifest = m;
+        hooks.manifest?.();
+      }
+    })
+    .catch(() => {});
 }
+
+/** Наборы для этой игры: [{ id, title, items: [{ id, label, file? , quick }] }]. */
+export function reactionSets(game) {
+  loadManifest();
+  if (!manifest) return [{ id: 'universal', title: 'Реакции', items: REACTIONS.map((r) => ({ id: r.id, label: r.label, quick: ['gg', 'haha', 'wow', 'sad', 'think'].includes(r.id) })) }];
+  return manifest.sets
+    .filter((x) => x.games === '*' || (Array.isArray(x.games) && x.games.includes(game)))
+    .map((x) => ({ id: x.id, title: x.title, items: (x.items || []).filter((i) => BY_ID.has(i.id)) }))
+    .filter((x) => x.items.length);
+}
+
+/** Быстрый ряд: до пяти реакций с пометкой `quick`. */
+export function quickReactions(game) {
+  const all = reactionSets(game).flatMap((x) => x.items);
+  const q = all.filter((i) => i.quick).slice(0, 5);
+  return q.length ? q : all.slice(0, 5);
+}
+
+/** Подпись реакции для чтения вслух и истории. */
+export const reactionLabel = (id) => {
+  for (const x of manifest?.sets || []) for (const i of x.items || []) if (i.id === id && i.label) return i.label;
+  return BY_ID.get(id)?.label || '';
+};
 
 /* ------------------------------------------------------------ картинки */
 
 /** id → 'missing': файла нет, дальше рисуем запасной эмодзи без запроса. */
 const missing = new Set();
 
+function fileOf(id) {
+  for (const x of manifest?.sets || []) for (const i of x.items || []) if (i.id === id && i.file) return i.file;
+  return `${id}.png`;
+}
+
 /** Картинка смайлика или запасной эмодзи, если файла нет. */
-function face(id, cls) {
+export function face(id, cls) {
   const r = BY_ID.get(id);
+  const file = fileOf(id);
   const fallback = () => h(`span.rx-face.rx-emoji${cls ? '.' + cls : ''}`, { 'aria-hidden': 'true' }, r?.emoji || '🙂');
   if (missing.has(id)) return fallback();
-  const img = h(`img.rx-face${cls ? '.' + cls : ''}`, { src: `/emoji/${id}.png`, alt: '', draggable: 'false' });
+  const img = h(`img.rx-face${cls ? '.' + cls : ''}`, { src: `/emoji/${file}`, alt: '', draggable: 'false', loading: 'lazy' });
   img.addEventListener('error', () => {
     missing.add(id);
     img.replaceWith(fallback());
@@ -102,13 +137,12 @@ function face(id, cls) {
   return img;
 }
 
-/* ------------------------------------------------------- лимит на кнопке */
+/* ------------------------------------------------------- лимит и отправка */
 
-/** Мои отправки за последнюю минуту — чтобы кнопка бледнела сразу, не дожидаясь отказа. */
+/** Мои отправки за последнюю минуту — чтобы подсказать «подождите» сразу, не дожидаясь отказа. */
 let mine = [];
-/** До какого времени (по часам сервера) кнопка бледная. */
+/** До какого времени (по часам сервера) реакции «остывают». */
 let coolUntil = 0;
-let coolTimer = null;
 
 function localWait(now) {
   mine = mine.filter((at) => now - at < 60_000);
@@ -120,68 +154,31 @@ function localWait(now) {
 
 function cool(ms) {
   coolUntil = Math.max(coolUntil, serverNow() + ms);
-  paintCool();
+  for (const b of document.querySelectorAll('[data-rx-pick]')) b.classList.toggle('cool', ms > 0);
+  setTimeout(() => {
+    if (coolUntil > serverNow()) return;
+    for (const b of document.querySelectorAll('[data-rx-pick]')) b.classList.remove('cool');
+  }, ms + 30);
 }
 
-function paintCool() {
-  const left = coolUntil - serverNow();
-  for (const b of document.querySelectorAll('.rx-btn')) b.classList.toggle('cool', left > 0);
-  clearTimeout(coolTimer);
-  if (left > 0) coolTimer = setTimeout(paintCool, left + 30);
-}
+/** Реакции сейчас «остывают» (бледные, но нажимаются: тап объяснит, сколько ждать). */
+export const reactCooling = () => coolUntil > serverNow();
 
-/* ------------------------------------------------------------ кнопка */
-
-/** Показывать ли кнопку смайликов этому телефону: сидит за столом и не выключил. */
-export const reactOn = (s) => !reactionsOff() && canReact(s);
-
-/** Кнопка «смайлик» для шапки стола; null — если не за столом или смайлики выключены. */
-export function reactButton(s) {
-  syncRoom();
-  if (!reactOn(s)) return null;
-  const btn = h('button.rx-btn', { type: 'button', 'aria-label': 'Смайлики', onclick: openPicker },
-    h('span.rx-emoji.rx-btn-face', { 'aria-hidden': 'true' }, '🙂'));
-  if (coolUntil > serverNow()) btn.classList.add('cool');
-  return btn;
-}
-
-/**
- * Правый край шапки дуэли: кнопка смайликов рядом с «⋯» (или одно «⋯»).
- * Шапке тогда нужен класс `.rx` — шире правая колонка (`reactOn`).
- */
-export function reactSlot(s, menuBtn) {
-  const btn = reactButton(s);
-  return btn ? h('div.rx-pair', btn, menuBtn) : menuBtn;
-}
-
-function openPicker() {
-  haptic.soft();
-  showSheet('reactions', () => h('div',
-    h('h3', 'Смайлики'),
-    h('div.sub', 'Увидят все за столом'),
-    h('div.rx-grid', REACTIONS.map((r) => h('button.rx-cell', {
-      type: 'button',
-      'data-rx': r.id,
-      'aria-label': r.label,
-      onclick: () => pick(r.id),
-    }, face(r.id), h('span.rx-label', r.label)))),
-  ));
-}
-
-function pick(id) {
+/** Отправить реакцию. Возвращает true, если ушла. */
+export function sendReaction(id) {
   const now = serverNow();
   const wait = localWait(now);
-  closeSheet();
   if (wait > 0) {
     cool(wait);
     bus.onNotice(`Не так часто — подождите ${Math.max(1, Math.ceil(wait / 1000))} с.`);
-    return;
+    return false;
   }
-  if (!send({ t: 'react', id }, { lock: false })) return;
+  if (!send({ t: 'react', id }, { lock: false })) return false;
   haptic.tap();
   mine.push(now);
   const next = localWait(now);
   if (next > 0) cool(next);
+  return true;
 }
 
 /* ------------------------------------------------------------- пузырь */
@@ -224,7 +221,7 @@ function anchorOf(seat, s) {
     const hand = q('.hero, .dk-hand, .cl-hand');
     if (hand) return hand;
   }
-  return q('.rx-btn') || app;
+  return q('.chat-fab') || app;
 }
 
 /** Пузырь у плашки дуэли — поменьше: плашка ниже большого пузыря. */
@@ -268,6 +265,7 @@ function syncRoom() {
 
 function showBubble({ seat, id }) {
   if (reactionsOff() || !BY_ID.has(id)) return;
+  hooks.react?.({ seat, id });
   const s = net.state;
   if (!s?.room) return;
   syncRoom();
@@ -277,7 +275,7 @@ function showBubble({ seat, id }) {
     'data-rx-seat': seat,
     'data-rx': id,
     role: 'img',
-    'aria-label': `${name ? name + ': ' : ''}${BY_ID.get(id).label}`,
+    'aria-label': `${name ? name + ': ' : ''}${reactionLabel(id)}`,
   }, face(id, anchorInBar(seat, s) ? '' : 'big'));
   layerEl().append(el);
   place(el, anchorOf(seat, s));
@@ -292,6 +290,10 @@ function showBubble({ seat, id }) {
 }
 
 /* ------------------------------------------------------------- связь */
+
+/** Крючки для chat.js: реакция пришла (ложится в историю чата). */
+export const hooks = { react: null, manifest: null };
+
 
 bus.onReact = showBubble;
 bus.onError = (msg) => {

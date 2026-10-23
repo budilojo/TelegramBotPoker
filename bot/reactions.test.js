@@ -308,3 +308,22 @@ test('во время обслуживания смайлики не прини�
   assert.equal(err(t, ALICE)?.code, 'DOWN');
   assert.equal(reacts(t, BOB).length, 0);
 });
+
+/* ------------------------------------- белый список по играм (набор эмодзи) */
+
+test('набор по играм: «Блеф» и «Олл-ин» — только за покерным столом, общие — везде', async () => {
+  const t = new Table();
+  const room = await poker(t);
+  await t.send(ALICE, { t: 'react', id: 'bluff' });
+  assert.equal(err(t, ALICE), null, 'в покере можно');
+  const d = new Table();
+  await durak(d, { ALICE, BOB, CAROL });
+  await d.send(BOB, { t: 'react', id: 'bluff' });
+  assert.equal(err(d, BOB)?.code, 'REACT_UNKNOWN', 'в дураке «Блефа» нет');
+  await d.send(BOB, { t: 'react', id: 'allin' });
+  assert.equal(err(d, BOB)?.code, 'REACT_UNKNOWN');
+  const errs = d.page(BOB).inbox.filter((m) => m.t === 'error').length;
+  await d.send(BOB, { t: 'react', id: 'gg' });
+  assert.equal(d.page(BOB).inbox.filter((m) => m.t === 'error').length, errs, 'общая реакция — везде');
+  assert.equal(reacts(d, ALICE).length, 1);
+});

@@ -19,6 +19,7 @@
  * Лимит — на человека, по часам приложения (`decisions/025`): не чаще раза в
  * 3 секунды и не больше шести в минуту.
  */
+import { readFileSync } from 'node:fs';
 import { sendUnread } from './chat.js';
 
 /** id → подпись по-русски. Порядок — порядок клеток в шторке 4×4. */
@@ -54,6 +55,28 @@ export const ERRORS = {
   REACT_NOT_SEATED: 'Смайлики отправляют те, кто играет за этим столом.',
   REACT_WAIT: 'Не так часто — подождите немного.',
 };
+
+/**
+ * Белый список по играм — из набора эмодзи (`miniapp/emoji/manifest.json`, его
+ * кладёт агент R): набор с `games: '*'` годится везде, набор с перечнем игр —
+ * только в них. Файла нет или он не читается — годятся все 16 (как до набора).
+ */
+let manifestSets = null;
+try {
+  const m = JSON.parse(readFileSync(new URL('../miniapp/emoji/manifest.json', import.meta.url), 'utf8'));
+  if (Array.isArray(m?.sets)) manifestSets = m.sets;
+} catch {
+  manifestSets = null;
+}
+export function reactionsFor(game) {
+  if (!manifestSets) return new Set(REACTION_IDS);
+  const ids = new Set();
+  for (const set of manifestSets) {
+    if (set.games !== '*' && !(Array.isArray(set.games) && set.games.includes(game))) continue;
+    for (const it of set.items || []) if (Object.hasOwn(REACTIONS, it.id)) ids.add(it.id);
+  }
+  return ids;
+}
 
 export const isReaction = (id) => typeof id === 'string' && Object.hasOwn(REACTIONS, id);
 
@@ -102,7 +125,7 @@ export function reactSeat(room, uid) {
  * Ничего в комнате не меняет. Возвращает то, что разослано, или отказ.
  */
 export function react({ room, uid, msg, now, limiter, sessions, refuse, chats = null }) {
-  if (!isReaction(msg.id)) return refuse('REACT_UNKNOWN');
+  if (!isReaction(msg.id) || !reactionsFor(room.game || 'poker').has(msg.id)) return refuse('REACT_UNKNOWN');
   const seat = reactSeat(room, uid);
   if (seat < 0) return refuse('REACT_NOT_SEATED');
   const wait = limiter.waitFor(uid, now);
