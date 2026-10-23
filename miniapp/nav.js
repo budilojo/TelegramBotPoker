@@ -14,6 +14,7 @@
 import { $app, h, haptic, tg } from './ui.js';
 import { bus, send } from './net.js';
 import { renderRanked, resetRanked } from './rating.js';
+import { renderProfileSettings } from './profile.js';
 
 /** На каких состояниях сервера панель есть. */
 const KINDS = new Set(['home', 'hub', 'solo', 'rating']);
@@ -89,15 +90,16 @@ export function renderView(s) {
   return true;
 }
 
+/** Экран профиля живёт в одном и том же элементе: его перерисовывают на каждое состояние, а поле ввода терять нельзя. */
+const profileBox = h('div.pf-host');
+
 function settings(s) {
   return h('div.lobby.hub.settings',
     h('div.hub-head', h('h1', 'Настройки'), h('div.sub', 'Этот телефон и бот')),
 
     h('section.set-block',
       h('div.section-label', 'Профиль'),
-      // Профиль (ник и аватар) делает отдельный модуль; пока его нет — честно так и говорим.
-      h('div.set-row.set-profile',
-        h('div.set-body', h('div.set-title', s.me?.name || 'Игрок'), h('div.set-sub', 'Имя и аватар пока берутся из Telegram. Свой профиль появится здесь.')))),
+      (renderProfileSettings(profileBox), profileBox)),
 
     s.bot ? h('section.set-block',
       h('div.section-label', 'Уведомления бота'),

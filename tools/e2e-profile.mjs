@@ -127,8 +127,8 @@ for (const [w, h] of [[320, 568], [390, 844]]) {
   await pm.getByRole('button', { name: 'Сесть за стол' }).first().click();
   await until(() => room.players.length === 2, 'Макс сел');
   const pi = await openPage(ivan, `g_${group.code}`, w, h);
-  await pi.waitForSelector('.pf-temp');
-  await pi.locator('.pf-temp').click();
+  await pi.waitForSelector('.nav');
+  await pi.getByRole('button', { name: 'Настройки' }).click();
   await pi.waitForSelector('.pf .pf-cell');
   await pi.waitForFunction(() => document.querySelectorAll('.pf-cell').length === 13);
   step(`${w}px: экран «Профиль» открыт, в сетке 13 клеток (без аватара + 12)`);

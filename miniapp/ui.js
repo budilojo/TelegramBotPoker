@@ -430,11 +430,18 @@ export function refreshSheet() {
  * checked against the pattern here as well — no path ever comes from data.
  */
 export const AVATAR_ID = /^av\d{2}$/;
+/**
+ * Лежат ли в `miniapp/avatars/` настоящие PNG (av01…av12.png). Пока нет — клиент
+ * сразу берёт временные SVG и не стучится за несуществующими PNG (иначе 404 на
+ * каждый аватар в консоли и в журнале сервера). Положили PNG — поставить `true`
+ * (`docs/profile.md`, «подключить аватарки»).
+ */
+export const AVATAR_PNG = false;
 export function avatar(name, hue, cls = '', avatarId = null) {
   const el = h(`div.av${cls ? '.' + cls : ''}`, { style: { '--h': hue } }, initial(name));
   if (typeof avatarId === 'string' && AVATAR_ID.test(avatarId)) {
-    const img = h('img.av-img', { src: `/avatars/${avatarId}.png`, alt: '', draggable: 'false' });
-    let tried = 'png';
+    const img = h('img.av-img', { src: `/avatars/${avatarId}.${AVATAR_PNG ? 'png' : 'svg'}`, alt: '', draggable: 'false' });
+    let tried = AVATAR_PNG ? 'png' : 'svg';
     img.addEventListener('error', () => {
       if (tried === 'png') {
         tried = 'svg';
