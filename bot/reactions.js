@@ -19,6 +19,7 @@
  * Лимит — на человека, по часам приложения (`decisions/025`): не чаще раза в
  * 3 секунды и не больше шести в минуту.
  */
+import { sendUnread } from './chat.js';
 
 /** id → подпись по-русски. Порядок — порядок клеток в шторке 4×4. */
 export const REACTIONS = Object.freeze({
@@ -100,7 +101,7 @@ export function reactSeat(room, uid) {
  * Одна реакция со страницы. `sessions` — все страницы этого стола.
  * Ничего в комнате не меняет. Возвращает то, что разослано, или отказ.
  */
-export function react({ room, uid, msg, now, limiter, sessions, refuse }) {
+export function react({ room, uid, msg, now, limiter, sessions, refuse, chats = null }) {
   if (!isReaction(msg.id)) return refuse('REACT_UNKNOWN');
   const seat = reactSeat(room, uid);
   if (seat < 0) return refuse('REACT_NOT_SEATED');
@@ -114,6 +115,11 @@ export function react({ room, uid, msg, now, limiter, sessions, refuse }) {
     } catch {
       /* страница уже закрылась */
     }
+  }
+  // Реакция ложится в историю чата маленькой строкой (`decisions/036`) и считается непрочитанной
+  // для остальных участников: им уходит только новое значение счётчика.
+  if (chats && chats.addReact(room, uid, msg.id, now)) {
+    for (const m of chats.members(room)) if (m !== uid) sendUnread(room, chats, sessions, m);
   }
   return out;
 }

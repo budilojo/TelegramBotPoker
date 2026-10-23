@@ -29,6 +29,7 @@ import { ym } from './fmt.js';
 import { rankedTables } from './ranked.js';
 import { PROFILE_ERRORS } from './profile.js';
 import { ERRORS as REACT_ERRORS, ReactLimiter, react } from './reactions.js';
+import { ERRORS as CHAT_ERRORS, Chats, ChatLimiter, chat, sendUnread, sync as syncChat } from './chat.js';
 
 const CORE_ERRORS = {
   BAD_REQUEST: 'Не понял запрос.',
@@ -49,7 +50,7 @@ const CORE_ERRORS = {
 };
 
 /** Error codes in words a person can act on — the core's and every game's. */
-export const ERRORS = Object.assign({}, ...Object.values(GAMES).map((g) => g.errors || {}), REACT_ERRORS, CORE_ERRORS);
+export const ERRORS = Object.assign({}, ...Object.values(GAMES).map((g) => g.errors || {}), REACT_ERRORS, CHAT_ERRORS, CORE_ERRORS);
 
 /** What a page may say whatever it is looking at. */
 const COMMON = new Set(['visible']);
@@ -85,6 +86,9 @@ export class Hub {
     this.nextId = 1;
     /** Смайлики: «не чаще» на человека. Только в памяти (bot/reactions.js). */
     this.reactLimiter = new ReactLimiter();
+    /** Чат за столом: история (50 строк на стол) и счётчики «не чаще» — только в памяти (bot/chat.js). */
+    this.chats = new Chats();
+    this.chatLimiter = new ChatLimiter();
   }
 
   /* -------------------------------------------------------------- sessions */
@@ -240,6 +244,8 @@ export class Hub {
     if (!this.byRoom.has(room.code)) this.byRoom.set(room.code, new Set());
     this.byRoom.get(room.code).add(session);
     this.push(session, room);
+    // Участнику — история чата и счётчик непрочитанных (зрителю и столу с ботами — ничего).
+    if (!this.app.down) syncChat(room, this.chats, session);
   }
 
   enterHub(session) {
@@ -582,10 +588,24 @@ export class Hub {
     if (msg.t === 'react') {
       return void react({
         room, uid: session.user.id, msg, now: app.clock.now(), limiter: this.reactLimiter,
+        sessions: this.byRoom.get(room.code) || [], chats: this.chats,
+        refuse: (code, text, wait) => session.send({ t: 'error', code, text: text || ERRORS[code], ...(wait ? { wait } : {}) }),
+      });
+    }
+    // Чат — тоже не ход: ни «жива», ни базы, ни карточки группы. Автор — только session.user.
+    if (msg.t === 'chat') {
+      this.chats.prune((code) => !!app.roomByCode(code));
+      return void chat({
+        room, uid: session.user.id, msg, now: app.clock.now(), chats: this.chats, limiter: this.chatLimiter,
         sessions: this.byRoom.get(room.code) || [],
         refuse: (code, text, wait) => session.send({ t: 'error', code, text: text || ERRORS[code], ...(wait ? { wait } : {}) }),
       });
     }
+    if (msg.t === 'chat-read') {
+      this.chats.read(room, session.user.id);
+      return void sendUnread(room, this.chats, this.byRoom.get(room.code) || [], session.user.id);
+    }
+    if (msg.t === 'chat-sync') return void syncChat(room, this.chats, session);
     if (room.solo) room.solo.seenAt = app.clock.now(); // партия с ботами жива, пока её трогают
     if (msg.t === 'hub' && room.solo) return this.pushSolo(session);
     if (msg.t === 'hub') {
