@@ -15,6 +15,7 @@
  * Сообщение — всегда текст: рисуем через `textContent`/`h()`, ссылок нет.
  */
 import { h, haptic, avatar, closeSheet } from './ui.js';
+import { avatarEl } from './profile.js';
 import { net, bus, send } from './net.js';
 import {
   reactionsOff, setReactionsOff, canReact, reactionSets, quickReactions, sendReaction, face, hooks, reactionLabel, reactCooling,
@@ -451,6 +452,12 @@ const timeOf = (at) => {
   }
 };
 
+/** Аватар автора: из набора профиля (T), если человек ещё за столом; иначе инициал. */
+function authorAvatar(m, name) {
+  const p = (S()?.players || []).find((x) => x.seat === m.seat);
+  return p ? avatarEl(p) : avatar(name, hueOf(m));
+}
+
 function lineEl(m) {
   const name = nameOf(m);
   if (m.k === 'r') {
@@ -465,7 +472,7 @@ function lineEl(m) {
     more.textContent = open ? 'Показать полностью' : 'Свернуть';
   } }, 'Показать полностью') : null;
   return h(`div.chat-msg${mine ? '.mine' : ''}`, { 'data-chat-msg': m.n ?? '' },
-    mine ? null : avatar(name, hueOf(m)),
+    mine ? null : authorAvatar(m, name),
     h('div.chat-body',
       mine ? null : h('div.chat-name', name),
       text, more,
