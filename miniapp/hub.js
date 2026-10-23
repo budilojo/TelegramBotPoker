@@ -8,12 +8,14 @@
 import { $app, h, haptic, showSheet, closeSheet, refreshSheet } from './ui.js';
 import { bus, send } from './net.js';
 import { GAMES } from './games/index.js';
+import { renderProfileSettings } from './profile.js'; // TEMP(T): вкладку «Настройки» делает S, он эти строки уберёт
 
 /** Форма «новое лобби» у каждой игры своя — хаб берёт её у игры. */
 const LOBBY = Object.fromEntries(Object.entries(GAMES).map(([id, g]) => [id, g.lobby]));
 const ICON = Object.fromEntries(Object.entries(GAMES).map(([id, g]) => [id, g.iconCards]));
 
 let state = null;
+let profileBox = null; // TEMP(T)
 
 export function onState(s) {
   state = s;
@@ -56,6 +58,8 @@ export function render() {
       ? h('div.lobby-list', s.lobbies.map((l) => lobbyRow(l, sameLooking(s.lobbies))))
       : h('div.hint', 'Пока ничего не открыто — выберите игру выше и создайте лобби. Друзья присоединятся по его карточке в группе или отсюда.'),
     h('div.hub-foot', 'Играть можно только с участниками группы'),
+    // TEMP(T): вход в профиль, пока нет нижней навигации (агент S)
+    h('button.k-btn.k-btn--secondary.pf-temp', { onclick: () => showSheet('profile', () => { profileBox ||= h('div'); renderProfileSettings(profileBox); return profileBox; }) }, 'Профиль'),
   );
   $app.append(box);
 }

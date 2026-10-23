@@ -27,6 +27,7 @@ import { AUDIENCES, ERRORS as CAST_ERRORS } from './broadcast.js';
 import { PER_DAY, sign } from './rating.js';
 import { ym } from './fmt.js';
 import { rankedTables } from './ranked.js';
+import { PROFILE_ERRORS } from './profile.js';
 import { ERRORS as REACT_ERRORS, ReactLimiter, react } from './reactions.js';
 
 const CORE_ERRORS = {
@@ -44,6 +45,7 @@ const CORE_ERRORS = {
   TOO_FAST: 'Подождите секунду и нажмите ещё раз.',
   RATING_SOON: RATING_SOON_TEXT,
   NO_RANKED_GAME: 'Такой игры в рейтинге нет.',
+  ...PROFILE_ERRORS,
 };
 
 /** Error codes in words a person can act on — the core's and every game's. */
@@ -370,7 +372,7 @@ export class Hub {
       live: this.app.liveRooms(g.chatId).length,
     }));
     session.send({ t: 'state', state: {
-      kind: 'home', now: this.app.clock.now(), bot: this.app.botUsername, me: { name: session.user.name }, groups,
+      kind: 'home', now: this.app.clock.now(), bot: this.app.botUsername, me: this.app.profiles.me(session.user), groups,
       solo: true, // кнопка «Играть с ботом»
       rankGames: GAME_LIST.map((g) => ({ id: g.id, title: g.title, icon: g.icon })),
       // Тот же текст, что на хабе группы: один закрытый рейтинг — одно
@@ -392,7 +394,7 @@ export class Hub {
       kind: 'solo',
       now: this.app.clock.now(),
       bot: this.app.botUsername,
-      me: { name: session.user.name },
+      me: this.app.profiles.me(session.user),
       games: GAME_LIST.filter((g) => g.bot).map((g) => ({ id: g.id, title: g.title, icon: g.icon, blurb: g.blurb, catalog: g.bot.catalog?.() ?? {} })),
       resume: live ? { code: live.code, game: live.game, title: gameOf(live).bot?.label?.(live) || gameOf(live).title, icon: gameOf(live).icon } : null,
       groups: this.app.groupsOf(session.user.id).length,
@@ -546,6 +548,15 @@ export class Hub {
     // рейтинг открыт. Пока закрыт — отказ словами, список не собирается.
     if (msg.t === 'rtables' && ['hub', 'home', 'solo', 'rating'].includes(session.kind)) return this.sendRanked(session, msg);
     if (msg.t === 'rjoin' && ['hub', 'home', 'solo', 'rating'].includes(session.kind)) return this.joinRanked(session, msg);
+    // Свой профиль (ник, аватар): кто — только из подписанного initData, «чей» в теле нет.
+    if (msg.t === 'profile' && session.kind !== 'admin') {
+      const r = this.app.profiles.update(session.user, msg);
+      // Отказ приходит тем же типом сообщения: экран настроек пишет его под полем, а не тостом.
+      if (r.error) return void session.send({ t: 'profile', error: { code: r.error, text: r.text } });
+      session.send({ t: 'profile', profile: r.profile });
+      for (const s of this.byGroup.get(session.group) || []) this.pushHub(s);
+      return;
+    }
     if (session.kind === 'hub') return this.handleHub(session, msg);
     if (session.kind === 'home') return this.handleHome(session, msg);
     if (session.kind === 'solo') return this.handleSolo(session, msg);
@@ -938,7 +949,7 @@ export function hubView(app, group, user, { home = false } = {}) {
     full: live.length >= MAX_LIVE_PER_GROUP, // лимит достигнут — кнопка выключена
     maxLive: MAX_LIVE_PER_GROUP,
     home, // opened without a group: «← Мои группы»
-    me: { name: user.name },
+    me: app.profiles.me(user),
     ratingSoon: app.ratingSoon ? RATING_SOON_TEXT : null,
     rankGames: GAME_LIST.map((g) => ({ id: g.id, title: g.title, icon: g.icon })),
     games: GAME_LIST.map((g) => ({ id: g.id, title: g.title, icon: g.icon, blurb: g.blurb, min: g.minPlayers, max: g.maxPlayers })),
@@ -964,7 +975,7 @@ export function ratingView(app, user, {
   const top = store.ratingTop(game, { month, limit: 50, chatId }).map((r, i) => ({
     place: i + 1,
     userId: String(r.userId),
-    name: r.name || 'Игрок',
+    ...app.profiles.shown(r.userId, r.name || 'Игрок'),
     points: r.points,
     played: r.played,
     wins: r.wins,
@@ -976,7 +987,7 @@ export function ratingView(app, user, {
     if (!r) return null;
     return {
       userId: String(id),
-      name: r.name || 'Игрок',
+      ...app.profiles.shown(id, r.name || 'Игрок'),
       points: r.points,
       place: r.place,
       total: r.total,
@@ -991,7 +1002,7 @@ export function ratingView(app, user, {
     kind: 'rating',
     now,
     bot: app.botUsername,
-    me: { name: user.name },
+    me: app.profiles.me(user),
     back,
     game,
     period,

@@ -26,6 +26,7 @@ import { identify } from './identity.js';
 import { Outbox } from './outbox.js';
 import { NullStore } from './store.js';
 import { esc } from './fmt.js';
+import { Profiles } from './profile.js';
 import { GAMES, GAME_LIST, HIDDEN_DRAFTS, gameOf } from './games/index.js';
 import { apply as rateRound } from './rating.js';
 
@@ -230,6 +231,8 @@ export class App {
     this.inflight = new Set();
     /** Случайность ботов (задержка, выбор): в тестах — повторимая. */
     this.botRng = botRng;
+    /** Ник и аватар для показа (bot/profile.js): права они не дают. */
+    this.profiles = new Profiles(this);
   }
 
   attachHub(hub) {
@@ -516,6 +519,7 @@ export class App {
    * closed gets a nudge.
    */
   draw(room, { immediate = false } = {}) {
+    this.profiles.settleNames(room); // ники и аватарки игроков — до того, как строятся виды
     this.syncClocks(); // the view carries the turn deadline: set it first
     this.hub?.broadcast(room);
     // В базу — сразу, а не после ответа Telegram: не принял он карточку

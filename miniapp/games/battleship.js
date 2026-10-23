@@ -30,6 +30,7 @@ import {
 } from '../ui.js';
 import { net, bus, send } from '../net.js';
 import { reactOn, reactSlot, reactMenuItem } from '../reactions.js';
+import { avatarEl } from '../profile.js';
 
 const newReqId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
@@ -182,7 +183,7 @@ function renderLobby() {
   const slots = [0, 1].map((i) => {
     const p = seated[i];
     return p
-      ? animateOnce(h(`div.lseat${p.isMe ? '.me' : ''}`, withMark(avatar(p.name, p.hue), p.isHost), h('div.nm', p.name)),
+      ? animateOnce(h(`div.lseat${p.isMe ? '.me' : ''}`, withMark(avatarEl(p), p.isHost), h('div.nm', p.name)),
         `bslseat:${p.name}`, [{ transform: 'scale(0.4)', opacity: 0, offset: 0 }], { duration: 450, delay: i * 45 })
       : h('div.lseat.empty', h('div.av', '+'), h('div.nm', 'свободно'));
   });
@@ -253,7 +254,7 @@ function playerBar(side, { extra = null } = {}) {
   const turn = !m.over && m.turn === side;
   const b = m.boards[side];
   return h(`div.ch-bar${turn ? '.turn' : ''}${p && !p.seated ? '.away' : ''}`, { 'data-side': String(side) },
-    p ? avatar(p.name, p.hue, 'sm') : h('div.av.sm', '?'),
+    p ? avatarEl(p, 'sm') : h('div.av.sm', '?'),
     h('div.ch-who',
       h('div.ch-name', p ? p.name : '—', p?.isMe ? h('small', ' · вы') : null),
       h('div.ch-eaten.bs-meta', h('span.num', extra || `на плаву ${afloat(b)} из 10`))),

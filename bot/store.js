@@ -161,6 +161,16 @@ CREATE TABLE IF NOT EXISTS rating_log (
 CREATE INDEX IF NOT EXISTS rating_log_by_user ON rating_log (user_id, game, at DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS rating_log_once ON rating_log (user_id, game, round);
 
+-- Профиль игрока (ник и аватар для показа). Только отображение: личность и
+-- права определяет Telegram. Таблица ДОБАВЛЕНА без смены версии схемы —
+-- старый код открывает такую базу и просто не знает про эту таблицу.
+CREATE TABLE IF NOT EXISTS profiles (
+  user_id    TEXT PRIMARY KEY,
+  nickname   TEXT,
+  avatar     TEXT,
+  updated_at INTEGER
+);
+
 -- Сколько зачётных партий у этого состава сегодня. Вдвоём за час можно
 -- нарисовать любое число — вот это и не даёт.
 CREATE TABLE IF NOT EXISTS party_day (
@@ -202,6 +212,11 @@ export class Store {
       putAds: this.db.prepare(
         "INSERT INTO users (user_id, dm, ads, updated_at) VALUES (?, 'ok', ?, ?) " +
           'ON CONFLICT(user_id) DO UPDATE SET ads = excluded.ads, updated_at = excluded.updated_at'
+      ),
+      getProfile: this.db.prepare('SELECT nickname, avatar FROM profiles WHERE user_id = ?'),
+      putProfile: this.db.prepare(
+        'INSERT INTO profiles (user_id, nickname, avatar, updated_at) VALUES (?, ?, ?, ?) ' +
+          'ON CONFLICT(user_id) DO UPDATE SET nickname = excluded.nickname, avatar = excluded.avatar, updated_at = excluded.updated_at'
       ),
       getMeta: this.db.prepare('SELECT value FROM meta WHERE key = ?'),
       putMeta: this.db.prepare('INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'),
@@ -590,6 +605,16 @@ export class Store {
     return this.db.prepare(sql).all(...args).map((r) => ({ ...r, userId: String(r.user_id) }));
   }
 
+  /** Профиль для показа: ник и id аватара (или null, null). */
+  getProfile(userId) {
+    const r = this.q.getProfile.get(String(userId));
+    return { nickname: r?.nickname ?? null, avatar: r?.avatar ?? null };
+  }
+
+  putProfile(userId, { nickname = null, avatar = null } = {}, at = Date.now()) {
+    this.q.putProfile.run(String(userId), nickname, avatar, at);
+  }
+
   /** Строка одного человека: его очки, место и сколько всего в списке. */
   ratingOf(userId, game, { month = null, chatId = null } = {}) {
     const id = String(userId);
@@ -651,6 +676,7 @@ export class Store {
 export class NullStore {
   constructor() {
     this.dm = new Map();
+    this.profiles = new Map();
     this.ads = new Map();
     this.settings = new Map();
     /** Рассылки живут в памяти: тесты, которым они нужны, берут настоящий Store. */
@@ -740,6 +766,12 @@ export class NullStore {
     const n = (this.parties.get(key) ?? 0) + 1;
     this.parties.set(key, n);
     return n;
+  }
+  getProfile(userId) {
+    return { ...(this.profiles.get(String(userId)) ?? { nickname: null, avatar: null }) };
+  }
+  putProfile(userId, { nickname = null, avatar = null } = {}) {
+    this.profiles.set(String(userId), { nickname, avatar });
   }
   ratingTop(game, { month = null, limit = 50, offset = 0, chatId = null } = {}) {
     const chat = chatId == null ? null : String(chatId);

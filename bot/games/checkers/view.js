@@ -16,6 +16,7 @@ import {
   live, isHost, findPlayer, isSeated, seatedPlayers, startBlocker, colorOfPlayer, mover, leftOf, score, takebackBlocker, askWait,
   MAX_SEATS, controlRu, KIND_RU, SIDE_RU,
 } from './rules.js';
+import { avatarId } from '../../profile.js';
 
 /** Стабильный цвет аватарки без отправки чьего-либо id (как в остальных играх). */
 function hueOf(id) {
@@ -55,6 +56,7 @@ export function checkersView(room, viewerId, { now = Date.now(), botUsername = '
       seat: i,
       name: p.name,
       hue: hueOf(p.id),
+      avatar: avatarId(p.avatar),
       isHost: isHost(room, p.id),
       isMe: p.id === uid,
       seated: isSeated(p),

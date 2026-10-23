@@ -25,6 +25,7 @@ import { boardShown, BOARD_SIZE } from './cards.js';
 import { RANKS, rankOf, suitOf } from './deck.js';
 import { best5 } from './eval.js';
 import { hints } from './hints.js';
+import { avatarId } from './profile.js';
 
 const SUIT_CODE = ['S', 'H', 'D', 'C'];
 
@@ -225,6 +226,7 @@ export function tableView(room, viewerId, { now = Date.now(), botUsername = '' }
       seat,
       name: p.name,
       hue: hueOf(p.id),
+      avatar: avatarId(p.avatar),
       stack: p.stack - (unpaid.get(p.id) || 0),
       bet: h && h.phase !== 'complete' ? p.bet : 0,
       role: roleOf(p),

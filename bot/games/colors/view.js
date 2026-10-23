@@ -23,6 +23,7 @@ import {
   MAX_SEATS, MIN_PLAYERS, CALL_MS, SHOUT,
 } from './rules.js';
 import { sortHand, COLOR_SHAPE, COLORS } from './cards.js';
+import { avatarId } from '../../profile.js';
 
 /** Устойчивый цвет аватара, не выдающий ничьего id (как в покере и дураке). */
 function hueOf(id) {
@@ -63,6 +64,7 @@ export function colorsView(room, viewerId, { now = Date.now(), botUsername = '' 
       seat: i,
       name: p.name,
       hue: hueOf(p.id),
+      avatar: avatarId(p.avatar),
       isHost: isHost(room, p.id),
       isMe: p.id === uid,
       seated: isSeated(p),

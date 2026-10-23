@@ -22,6 +22,7 @@ import {
 } from '../ui.js';
 import { net, bus, send, serverNow } from '../net.js';
 import { reactOn, reactSlot, reactMenuItem } from '../reactions.js';
+import { avatarEl } from '../profile.js';
 
 /** Идентификатор запроса: повтор того же тапа сервер узнаёт и не плодит лобби. */
 const newReqId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -187,7 +188,7 @@ function renderLobby() {
   const slots = [0, 1].map((i) => {
     const p = seated[i];
     return p
-      ? animateOnce(h(`div.lseat${p.isMe ? '.me' : ''}`, withMark(avatar(p.name, p.hue), p.isHost), h('div.nm', p.name)),
+      ? animateOnce(h(`div.lseat${p.isMe ? '.me' : ''}`, withMark(avatarEl(p), p.isHost), h('div.nm', p.name)),
         `chlseat:${p.name}`, [{ transform: 'scale(0.4)', opacity: 0, offset: 0 }], { duration: 450, delay: i * 45 })
       : h('div.lseat.empty', h('div.av', '+'), h('div.nm', 'свободно'));
   });
@@ -295,7 +296,7 @@ function playerBar(color) {
   const lead = color === 'w' ? m.material : -m.material;
   const away = p && !p.seated;
   return h(`div.ch-bar${turn ? '.turn' : ''}${away ? '.away' : ''}`, { 'data-color': color },
-    p ? avatar(p.name, p.hue, 'sm') : h('div.av.sm', '?'),
+    p ? avatarEl(p, 'sm') : h('div.av.sm', '?'),
     h('div.ch-who',
       h('div.ch-name', p ? p.name : '—', p?.isMe ? h('small', ' · вы') : null),
       h('div.ch-eaten', ...eaten.map((x) => img(code(x), 'mini')), lead > 0 ? h('span.ch-lead.num', `+${lead}`) : null)),

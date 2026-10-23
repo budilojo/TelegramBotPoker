@@ -35,6 +35,8 @@ export const bus = {
   onRanked: () => {},
   /** Отказ сервера — после тоста; смайлики так узнают «подождите N с». */
   onError: () => {},
+  /** Свой профиль (miniapp/profile.js ставит свой): { profile } или { error: {code, text} }. */
+  onProfile: () => {},
 };
 
 let ws = null;
@@ -87,6 +89,8 @@ export function connect() {
       bus.onError(msg);
     } else if (msg.t === 'rtables') {
       bus.onRanked(msg);
+    } else if (msg.t === 'profile') {
+      bus.onProfile(msg);
     } else if (msg.t === 'react') {
       bus.onReact(msg);
     } else if (msg.t === 'share') {

@@ -1,0 +1,65 @@
+/* Профиль: аватар-картинка в круге и экран настроек. Токены — tokens.css; плоско, без свечения. */
+
+/* Картинка лежит поверх инициала; не загрузилась — убирается, остаётся инициал. */
+.av-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+}
+/* корона и кольцо таймера — поверх картинки */
+.av .host-mark, .av .fool-mark, .av > svg { z-index: 2; }
+
+.pf { display: flex; flex-direction: column; gap: var(--k-s16); padding: var(--k-s16); }
+.pf-label { font: var(--k-w-semibold) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font); color: var(--k-text); }
+
+.pf-prev {
+  display: flex; flex-direction: column; gap: var(--k-s8);
+  padding: var(--k-s12) var(--k-s16);
+  background: var(--k-surface);
+  border: 1px solid var(--k-divider);
+  border-radius: var(--k-r-md);
+}
+.pf-prev-cap { font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font); color: var(--k-text-2); }
+.pf-prev-row { display: flex; align-items: center; gap: var(--k-s12); min-width: 0; }
+.pf-prev-av .av { width: 40px; height: 40px; font-size: var(--k-fs-component); }
+.pf-prev-name { font: var(--k-w-semibold) var(--k-fs-body)/var(--k-lh-body) var(--k-font); color: var(--k-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+.pf-edit { display: flex; flex-direction: column; gap: var(--k-s8); }
+.pf-field { position: relative; }
+.pf-input { padding-right: 64px; }
+.pf-count { position: absolute; right: var(--k-s12); top: 50%; transform: translateY(-50%); font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font); color: var(--k-text-2); pointer-events: none; }
+.pf-err { min-height: var(--k-lh-caption); }
+.pf-err:empty { display: none; }
+.pf-actions { display: flex; flex-wrap: wrap; gap: var(--k-s8); }
+.pf-actions .k-btn { min-height: 44px; flex: 1 1 auto; }
+
+.pf-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--k-s8); }
+.pf-cell {
+  position: relative;
+  min-height: 64px;
+  display: grid; place-items: center;
+  padding: var(--k-s4);
+  background: var(--k-surface);
+  border: 1px solid var(--k-divider);
+  border-radius: var(--k-r-md);
+  cursor: pointer;
+}
+.pf-cell .av.pf-cell-av { width: 52px; height: 52px; font-size: var(--k-fs-section); }
+/* Выбранный отмечен рамкой И галочкой — не только цветом. */
+.pf-cell.on { border: 2px solid var(--on-felt-accent-line); background: var(--k-elevated); }
+.pf-check {
+  position: absolute; right: 4px; bottom: 4px;
+  width: 20px; height: 20px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--color-success); color: var(--text-on-success);
+  font: var(--k-w-semibold) var(--k-fs-caption)/1 var(--k-font);
+  border: 1px solid var(--on-felt-accent-line);
+}
+.pf-none { background: transparent; border: 1px dashed var(--k-text-2); color: var(--k-text-2); }
+.pf-note { padding-bottom: var(--k-s16); }

@@ -19,6 +19,7 @@ import {
   score, MAX_SEATS, VARIANT_RU,
 } from './rules.js';
 import { sortHand } from './cards.js';
+import { avatarId } from '../../profile.js';
 
 /** A stable colour for an avatar, without sending anybody's id (same as poker's). */
 function hueOf(id) {
@@ -62,6 +63,7 @@ export function durakView(room, viewerId, { now = Date.now(), botUsername = '' }
       seat: i,
       name: p.name,
       hue: hueOf(p.id),
+      avatar: avatarId(p.avatar),
       isHost: isHost(room, p.id),
       isMe: p.id === uid,
       seated: isSeated(p),

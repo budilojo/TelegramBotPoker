@@ -25,6 +25,7 @@ import {
   live, isHost, findPlayer, isSeated, seatedPlayers, startBlocker, sideOf, mover, leftOf, score, fleetLeft, firstPhase,
   MAX_SEATS, controlRu, KIND_RU, RESULT_RU, PLACE_MS,
 } from './rules.js';
+import { avatarId } from '../../profile.js';
 
 function hueOf(id) {
   let h = 0x811c9dc5;
@@ -83,6 +84,7 @@ export function battleshipView(room, viewerId, { now = Date.now(), botUsername =
       seat: i,
       name: p.name,
       hue: hueOf(p.id),
+      avatar: avatarId(p.avatar),
       isHost: isHost(room, p.id),
       isMe: p.id === uid,
       seated: isSeated(p),

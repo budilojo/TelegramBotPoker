@@ -19,6 +19,13 @@ import {
 import { net, bus, send, serverNow } from '../net.js';
 import { reactButton, reactMenuItem } from '../reactions.js';
 import { markDone } from '../school.js';
+import { avatarEl } from '../profile.js';
+
+/** Корона хоста поверх аватарки. */
+const withHost = (av, host) => {
+  if (host) av.append(h('span.host-mark', '👑'));
+  return av;
+};
 
 /** Идентификатор запроса: повтор того же тапа сервер узнаёт и не плодит лобби. */
 const newReqId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -180,7 +187,7 @@ function renderLobby() {
     slots.push(
       p
         ? animateOnce(
-          h(`div.lseat${p.isMe ? '.me' : ''}`, h('div.av', { style: { '--h': p.hue } }, initial(p.name), p.isHost ? h('span.host-mark', '👑') : null), h('div.nm', p.name)),
+          h(`div.lseat${p.isMe ? '.me' : ''}`, withHost(avatarEl(p), p.isHost), h('div.nm', p.name)),
           `lseat:${p.name}`, [{ transform: 'scale(0.4)', opacity: 0, offset: 0 }], { duration: 450, delay: i * 45 })
         : h('div.lseat.empty', h('div.av', '+'), h('div.nm', 'свободно'))
     );
@@ -336,7 +343,7 @@ function seatEl(p, s) {
   const cls = ['seat', p.isActor && 'turn', (p.folded || p.status === 'fold') && 'folded', away && 'away', win && 'win']
     .filter(Boolean).join('.');
 
-  const av = h('div.av', { style: { '--h': p.hue } }, initial(p.name));
+  const av = avatarEl(p);
   if (win) {
     animateOnce(av, `winav:${h0.no}:${p.seat}`,
       [{ borderColor: 'rgba(0, 0, 0, 0.5)', boxShadow: '0 4px 10px rgba(0, 0, 0, 0.45)', offset: 0 }], { duration: 500, delay: plan.best });
@@ -1113,7 +1120,7 @@ function openWinner() {
         ' — можно отметить нескольких, банк разделится'),
       h('div.pick-grid', pot.eligible.map((seat) => h(`button.pick${pot.winners.includes(seat) ? '.on' : ''}`, {
         onclick: () => { haptic.soft(); send({ t: 'pick', pot: f.potIndex, seat }, { lock: false }); },
-      }, h('div.av', { style: { '--h': hue(seat) } }, initial(name(seat))), name(seat)))),
+      }, avatarEl(state.players.find((q) => q.seat === seat) || { name: name(seat), hue: hue(seat) }), name(seat)))),
       h('div.grid2',
         h('button.btn', { disabled: at <= 0, onclick: () => send({ t: 'potBack' }) }, '← Назад'),
         h('button.btn.primary', { disabled: !pot.winners.length, onclick: () => send({ t: 'potNext' }) }, at + 1 < f.steps.length ? 'Далее →' : 'Итог →')),

@@ -422,5 +422,26 @@ export function refreshSheet() {
   if (openSheet && sheetRenderers[openSheet]) sheetRenderers[openSheet]();
 }
 
-/** Initials in a coloured circle — the same avatar at every table. */
-export const avatar = (name, hue, cls = '') => h(`div.av${cls ? '.' + cls : ''}`, { style: { '--h': hue } }, initial(name));
+/**
+ * Initials in a coloured circle — the same avatar at every table. With an
+ * `avatarId` from the fixed set (av01…av12) a picture lies on top of the
+ * initial: first /avatars/<id>.png, if it is missing /avatars/<id>.svg, if
+ * that is missing too the picture goes away and the initial stays. The id is
+ * checked against the pattern here as well — no path ever comes from data.
+ */
+export const AVATAR_ID = /^av\d{2}$/;
+export function avatar(name, hue, cls = '', avatarId = null) {
+  const el = h(`div.av${cls ? '.' + cls : ''}`, { style: { '--h': hue } }, initial(name));
+  if (typeof avatarId === 'string' && AVATAR_ID.test(avatarId)) {
+    const img = h('img.av-img', { src: `/avatars/${avatarId}.png`, alt: '', draggable: 'false' });
+    let tried = 'png';
+    img.addEventListener('error', () => {
+      if (tried === 'png') {
+        tried = 'svg';
+        img.src = `/avatars/${avatarId}.svg`;
+      } else img.remove();
+    });
+    el.append(img);
+  }
+  return el;
+}

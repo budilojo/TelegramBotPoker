@@ -12,6 +12,7 @@
  */
 import { $app, h, fmt, haptic, initial, showSheet, closeSheet } from './ui.js';
 import { bus, send } from './net.js';
+import { avatarEl } from './profile.js';
 
 let state = null;
 
@@ -90,7 +91,7 @@ function row(r) {
   const place = r.sticky ? (r.place || '—') : r.place;
   return h(`button.rt-row${r.me ? '.me' : ''}`, { onclick: () => openWho(r.userId) },
     h('div.rt-place', r.place <= 3 && !r.sticky ? MEDAL[r.place - 1] : String(place)),
-    h('div.av.rt-av', { style: { '--h': hueOf(r.name || r.userId) } }, initial(r.name)),
+    avatarEl({ name: r.name, hue: hueOf(r.name || r.userId), avatar: r.avatar }, 'rt-av'),
     h('div.rt-body',
       h('div.rt-name', r.name, r.me ? h('span.rt-you', ' — вы') : null),
       h('div.rt-sub', r.sticky && r.total

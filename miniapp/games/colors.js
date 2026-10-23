@@ -27,6 +27,7 @@ import {
 } from '../ui.js';
 import { net, bus, send } from '../net.js';
 import { reactButton, reactMenuItem } from '../reactions.js';
+import { avatarEl } from '../profile.js';
 
 /** Идентификатор запроса: повтор того же тапа сервер узнаёт и не плодит лобби. */
 const newReqId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -148,7 +149,7 @@ function renderLobby() {
   for (let i = 0; i < s.room.maxSeats; i++) {
     const p = seated[i];
     slots.push(p
-      ? animateOnce(h(`div.lseat${p.isMe ? '.me' : ''}`, withMark(avatar(p.name, p.hue), p.isHost), h('div.nm', p.name)),
+      ? animateOnce(h(`div.lseat${p.isMe ? '.me' : ''}`, withMark(avatarEl(p), p.isHost), h('div.nm', p.name)),
         `cllseat:${p.name}`, [{ transform: 'scale(0.4)', opacity: 0, offset: 0 }], { duration: 450, delay: i * 45 })
       : h('div.lseat.empty', h('div.av', '+'), h('div.nm', 'свободно')));
   }
@@ -230,7 +231,7 @@ function colorWord(c) {
 
 function seatEl(p, s) {
   const d = s.deal;
-  const av = avatar(p.name, p.hue);
+  const av = avatarEl(p);
   if (p.isHost) av.append(h('span.host-mark', '👑'));
   // Тонкое кольцо вместо цифр: цифры нервируют, кольцо считывается боковым зрением.
   if (p.turn && d?.deadline && s.room.settings.turnSeconds) av.append(ringSvg(d.deadline, s.room.settings.turnSeconds));
