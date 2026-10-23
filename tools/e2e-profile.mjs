@@ -193,6 +193,7 @@ for (const [w, h] of [[320, 568], [390, 844]]) {
   step(`${w}px: «Сбросить к имени из Telegram» — снова «Иван»`);
 
   // Клавиатура: видимая область сжимается, поле и кнопка остаются на экране.
+  await pi.waitForTimeout(600); // новые состояния хаба после сохранения уже пришли (шторка перерисовывается)
   await pi.setViewportSize({ width: w, height: Math.round(h * 0.5) });
   await pi.locator('.pf-input').focus();
   await pi.waitForTimeout(200);
