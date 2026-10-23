@@ -26,6 +26,7 @@ import { HUB_PREFIX, MAX_LIVE_PER_GROUP, RATING_SOON_TEXT, TOO_MANY_GAMES_TEXT, 
 import { AUDIENCES, ERRORS as CAST_ERRORS } from './broadcast.js';
 import { PER_DAY, sign } from './rating.js';
 import { ym } from './fmt.js';
+import { rankedTables } from './ranked.js';
 import { ERRORS as REACT_ERRORS, ReactLimiter, react } from './reactions.js';
 
 const CORE_ERRORS = {
@@ -42,6 +43,7 @@ const CORE_ERRORS = {
   SHARE_UNAVAILABLE: 'Бот не знает своего адреса — поделиться пока нельзя.',
   TOO_FAST: 'Подождите секунду и нажмите ещё раз.',
   RATING_SOON: RATING_SOON_TEXT,
+  NO_RANKED_GAME: 'Такой игры в рейтинге нет.',
 };
 
 /** Error codes in words a person can act on — the core's and every game's. */
@@ -370,6 +372,7 @@ export class Hub {
     session.send({ t: 'state', state: {
       kind: 'home', now: this.app.clock.now(), bot: this.app.botUsername, me: { name: session.user.name }, groups,
       solo: true, // кнопка «Играть с ботом»
+      rankGames: GAME_LIST.map((g) => ({ id: g.id, title: g.title, icon: g.icon })),
       // Тот же текст, что на хабе группы: один закрытый рейтинг — одно
       // объяснение, а не отказ на одном экране и спокойная шторка на другом.
       ratingSoon: this.app.ratingSoon ? RATING_SOON_TEXT : null,
@@ -393,6 +396,8 @@ export class Hub {
       games: GAME_LIST.filter((g) => g.bot).map((g) => ({ id: g.id, title: g.title, icon: g.icon, blurb: g.blurb, catalog: g.bot.catalog?.() ?? {} })),
       resume: live ? { code: live.code, game: live.game, title: gameOf(live).bot?.label?.(live) || gameOf(live).title, icon: gameOf(live).icon } : null,
       groups: this.app.groupsOf(session.user.id).length,
+      ratingSoon: this.app.ratingSoon ? RATING_SOON_TEXT : null,
+      rankGames: GAME_LIST.map((g) => ({ id: g.id, title: g.title, icon: g.icon })),
     } });
   }
 
@@ -402,6 +407,7 @@ export class Hub {
       session.visible = !!msg.visible;
       return;
     }
+    if (msg.t === 'rating') return this.enterRating(session, msg);
     if (msg.t === 'home' || msg.t === 'refresh') {
       if (msg.t === 'home' && this.app.groupsOf(session.user.id).length) return this.pushHome(session);
       return this.pushSolo(session);
@@ -536,6 +542,10 @@ export class Hub {
       this.refuse(session, 'DOWN', `⏸ Идёт обслуживание. ${this.app.downText}`);
       return void this.resend(session);
     }
+    // Рейтинговые столы: спросить можно с любого экрана хаба, но только когда
+    // рейтинг открыт. Пока закрыт — отказ словами, список не собирается.
+    if (msg.t === 'rtables' && ['hub', 'home', 'solo', 'rating'].includes(session.kind)) return this.sendRanked(session, msg);
+    if (msg.t === 'rjoin' && ['hub', 'home', 'solo', 'rating'].includes(session.kind)) return this.joinRanked(session, msg);
     if (session.kind === 'hub') return this.handleHub(session, msg);
     if (session.kind === 'home') return this.handleHome(session, msg);
     if (session.kind === 'solo') return this.handleSolo(session, msg);
@@ -697,6 +707,27 @@ export class Hub {
     this.pushRating(session);
   }
 
+  /** «Рейтинговые столы игры»: ответ — отдельное сообщение, не состояние экрана. */
+  sendRanked(session, msg) {
+    if (this.app.ratingSoon) return this.refuse(session, 'RATING_SOON');
+    const game = GAMES[String(msg.game || '')];
+    if (!game) return this.refuse(session, 'NO_RANKED_GAME');
+    session.send({ t: 'rtables', game: game.id, tables: rankedTables(this.app, session.user.id, game.id) });
+  }
+
+  /**
+   * «Присоединиться» к рейтинговому столу. Садиться можно только за стол из
+   * списка, который сервер отдал бы этому человеку (`rankedTables`): код стола
+   * с обычного стола, чужой группы или уже идущей игры не подойдёт.
+   */
+  joinRanked(session, msg) {
+    if (this.app.ratingSoon) return this.refuse(session, 'RATING_SOON');
+    const room = this.app.roomByCode(String(msg.code || ''));
+    const ok = room && rankedTables(this.app, session.user.id, room.game).some((t) => t.code === room.code);
+    if (!ok) return this.refuse(session, 'NO_ROOM');
+    return this.enterRoom(session, room);
+  }
+
   pushRating(session) {
     if (this.app.down) return void session.send({ t: 'state', state: this.downState() });
     try {
@@ -736,6 +767,7 @@ export class Hub {
         return this.pushRating(session);
       case 'back':
         if (session.group && this.app.groupByCode(session.group)) return this.enterHub(session);
+        if (session.solo && !this.app.groupsOf(session.user.id).length) return this.pushSolo(session);
         return this.pushHome(session);
       default:
         return this.refuse(session, 'BAD_REQUEST');
@@ -908,6 +940,7 @@ export function hubView(app, group, user, { home = false } = {}) {
     home, // opened without a group: «← Мои группы»
     me: { name: user.name },
     ratingSoon: app.ratingSoon ? RATING_SOON_TEXT : null,
+    rankGames: GAME_LIST.map((g) => ({ id: g.id, title: g.title, icon: g.icon })),
     games: GAME_LIST.map((g) => ({ id: g.id, title: g.title, icon: g.icon, blurb: g.blurb, min: g.minPlayers, max: g.maxPlayers })),
     lobbies,
   };

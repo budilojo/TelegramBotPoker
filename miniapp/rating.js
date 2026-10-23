@@ -137,3 +137,77 @@ function showWho(p) {
     },
   });
 }
+
+/* ------------------------------------------- путь «игра → столы → сесть» */
+
+/**
+ * Вкладка «Рейтинг» нижней панели: выбор игры, рейтинговые столы, «Присоединиться».
+ *
+ * Пока рейтинг закрыт (сервер присылает `ratingSoon`), этого пути нет: ни
+ * карточек игр, ни запроса столов, ни кнопки «Присоединиться» — только
+ * объяснение. Открыт — берём настоящий список с сервера, и обычных столов в
+ * нём нет: сервер отдаёт только те, что сами объявлены рейтинговыми.
+ */
+let ranked = { game: null, tables: null, loading: false };
+let rankedTimer = null;
+
+export function resetRanked() {
+  ranked = { game: null, tables: null, loading: false };
+  clearTimeout(rankedTimer);
+}
+
+bus.onRanked = (msg) => {
+  if (msg.game !== ranked.game) return;
+  clearTimeout(rankedTimer);
+  ranked = { ...ranked, tables: Array.isArray(msg.tables) ? msg.tables : [], loading: false };
+  bus.render();
+};
+
+function askTables(game) {
+  haptic.soft();
+  ranked = { game, tables: null, loading: true };
+  clearTimeout(rankedTimer);
+  // Ответа нет (отказ или обрыв) — не висеть вечно на «Загружаем…».
+  rankedTimer = setTimeout(() => { ranked = { ...ranked, loading: false }; bus.render(); }, 4000);
+  send({ t: 'rtables', game }, { lock: false });
+  bus.render();
+}
+
+export function renderRanked(s) {
+  const head = h('div.hub-head', h('h1', 'Рейтинг игроков'), h('div.sub', 'Игры, где идут очки'));
+  if (s.ratingSoon) {
+    return h('div.lobby.hub.ranked',
+      head,
+      h('div.set-row.rk-soon',
+        h('div.set-body',
+          h('div.set-title', 'Пока закрыт', h('span.rt-soon-tag', 'скоро')),
+          h('div.set-sub', s.ratingSoon))),
+      h('div.hint', 'Очки за доигранные партии уже копятся. Рейтинговые столы появятся, когда откроются рейтинговые группы: обычные столы в рейтинг не идут.'));
+  }
+
+  const games = s.rankGames || s.games || [];
+  const sel = ranked.game;
+  return h('div.lobby.hub.ranked',
+    head,
+    s.kind === 'rating' ? null : h('button.rt-open', { onclick: () => { haptic.tap(); send({ t: 'rating' }, { lock: false }); } },
+      h('div.rt-cup', '🏆'),
+      h('div.rt-open-body', h('div.rt-open-title', 'Таблица лидеров'), h('div.rt-open-sub', 'Кто чего стоит — за месяц и за всё время')),
+      h('div.rt-open-go', '›')),
+    h('div.section-label', '1. Выберите игру'),
+    h('div.rk-games', games.map((g) => h(`button.rt-chip${g.id === sel ? '.on' : ''}`, { 'aria-pressed': g.id === sel ? 'true' : 'false', onclick: () => askTables(g.id) }, g.title))),
+    sel ? h('div.section-label', '2. Рейтинговые столы') : null,
+    sel ? tablesBlock() : null);
+}
+
+function tablesBlock() {
+  if (ranked.loading) return h('div.hint', 'Загружаем…');
+  if (!ranked.tables) {
+    return h('div.hint', 'Не получилось загрузить столы. ', h('button.link', { onclick: () => askTables(ranked.game) }, 'Ещё раз'));
+  }
+  if (!ranked.tables.length) return h('div.hint', 'Рейтинговых столов в этой игре пока нет. Обычные столы вашей группы — на вкладке «Игры»; очков за них рейтинг не даёт.');
+  return h('div.lobby-list', ranked.tables.map((t) => h('div.lrow',
+    h('div.lr-body',
+      h('div.lr-title', t.host ? `Стол · ${t.host}` : 'Стол'),
+      h('div.lr-sub', h('b.num', `${t.seated}/${t.max}`), t.detail ? h('span.lr-detail', t.detail) : null)),
+    h('button.btn.sm.primary', { onclick: () => { haptic.tap(); send({ t: 'rjoin', code: t.code }); } }, 'Присоединиться'))));
+}

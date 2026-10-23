@@ -15,6 +15,7 @@ import * as admin from './admin.js';
 import * as down from './down.js';
 import { GAMES } from './games/index.js';
 import * as solo from './solo.js';
+import * as nav from './nav.js';
 
 const SCREENS = { hub, rating, admin, down, solo, ...GAMES };
 
@@ -34,7 +35,10 @@ let prevSame = null;
 bus.onState = (wasConnected) => {
   const s = net.state;
   const moved = placeOf(net.prev) !== placeOf(s);
-  if (moved) closeSheet();
+  if (moved) {
+    closeSheet();
+    nav.onMove();
+  }
   prevSame = moved ? null : net.prev;
   SCREENS[screenOf(s)].onState(s, prevSame, { wasConnected });
   backButton(s);
@@ -58,10 +62,15 @@ function render() {
     return;
   }
   const screen = screenOf(net.state);
-  SCREENS[screen].render();
+  // Вкладки «Рейтинг» и «Настройки» рисует страница сама поверх экрана хаба;
+  // панель внизу — только на экранах хаба, за столом её нет.
+  const own = nav.renderView(net.state);
+  if (!own) SCREENS[screen].render();
+  if (nav.showsBar(net.state)) $app.append(nav.bar(net.state));
   // Which state is on screen — for the browser checks (tools/e2e*.mjs) and for
   // the few common things a screen needs to move out of its own way.
-  document.body.dataset.screen = screen;
+  document.body.dataset.screen = own ? 'nav' : screen;
+  document.body.dataset.nav = nav.showsBar(net.state) ? '1' : '';
   document.body.dataset.seq = net.state.seq ?? '';
   if (!net.connected) $app.append(h('div.conn', 'Нет связи — переподключаемся…'));
   tickClocks(serverNow());

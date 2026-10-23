@@ -31,6 +31,8 @@ export const bus = {
   onShare: openShare,
   /** Смайлик за столом (miniapp/reactions.js ставит свой). */
   onReact: () => {},
+  /** Рейтинговые столы игры (miniapp/rating.js). */
+  onRanked: () => {},
   /** Отказ сервера — после тоста; смайлики так узнают «подождите N с». */
   onError: () => {},
 };
@@ -83,6 +85,8 @@ export function connect() {
       haptic.err();
       toast(msg.text || 'Не получилось');
       bus.onError(msg);
+    } else if (msg.t === 'rtables') {
+      bus.onRanked(msg);
     } else if (msg.t === 'react') {
       bus.onReact(msg);
     } else if (msg.t === 'share') {

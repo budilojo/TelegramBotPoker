@@ -213,6 +213,7 @@ const TABLE = [
   ['светлый контур к красной заливке', tok('--on-felt-accent-line'), tok('--color-danger'), 'nontext'],
   ['зелёная полоса «чей ход» на фоне', tok('--color-success'), tok('--bg-main'), 'nontext'],
   ['зелёная рамка на поверхности', tok('--color-success'), tok('--bg-surface'), 'nontext'],
+  ['зелёная полоса активной вкладки на панели навигации', tok('--color-success'), tok('--bg-surface'), 'nontext'],
   ['красная рамка на поверхности', tok('--color-danger'), tok('--bg-surface'), 'nontext'],
   ['зелёная точка знака числа на фоне', tok('--color-success'), tok('--bg-main'), 'nontext'],
   ['красная точка знака числа на фоне', tok('--color-danger'), tok('--bg-main'), 'nontext'],
