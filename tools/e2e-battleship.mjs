@@ -1,7 +1,7 @@
 /**
  * Морской бой настоящими браузерами: расстановка перетаскиванием и тапом,
- * поворот, «нельзя — касание», «Случайно», «Я готов»; бой — выстрел в два
- * шага (клетка → «Огонь»), ранил, убил, мимо; что видно сопернику и
+ * поворот и «Повернуть», «нельзя — касание», «Расставить случайно», «Я готов»;
+ * бой — выстрел одним касанием, двойной тап и уехавший палец, ранил, убил, мимо; что видно сопернику и
  * зрителю; 320 px; сдача и оба флота открыты в конце; партия против бота
  * (форма → расстановка → бой → итоги → «Сыграть ещё») на 390×844 и 320×568.
  *
@@ -19,7 +19,7 @@ import { Hub } from '../bot/hub.js';
 import { startServer } from '../bot/server.js';
 import { TelegramStub, cmdUpdate, user } from '../bot/tg-stub.js';
 import { signInitData } from '../bot/webapp-auth.js';
-import { shipCells } from '../bot/games/battleship/board.js';
+import { shipCells, checkFleet } from '../bot/games/battleship/board.js';
 import battleshipGame from '../bot/games/battleship/index.js';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -129,6 +129,22 @@ await pi.locator('.bs-grid:not(.mini) .bs-cell[data-c="0"]').click();
 await pi.waitForFunction(() => document.querySelector('.bs-grid:not(.mini) .bs-ship')?.classList.contains('v'));
 step('перетаскивание из лотка на А1 — корабль примагнитился; тап по нему — повернулся вниз');
 
+// Выбор и поворот: выбранный корабль подписан ориентацией; «Повернуть» крутит его туда и обратно.
+{
+  const cap = () => pi.locator('.bs-seltext').textContent();
+  assert.match(await cap(), /четырёхпалубный: ↕ вертикально/, 'выбранный корабль подписан ориентацией');
+  assert.ok(await pi.locator('.bs-grid:not(.mini) .bs-ship.sel').count() === 1, 'выбранный корабль подсвечен на поле');
+  const rot = pi.getByRole('button', { name: 'Повернуть выбранный корабль' });
+  const rb = await rot.boundingBox();
+  assert.ok(rb.height >= 44 && rb.width >= 44, `«Повернуть» не меньше 44 px (${Math.round(rb.width)}×${Math.round(rb.height)})`);
+  await rot.click();
+  await pi.waitForFunction(() => document.querySelector('.bs-grid:not(.mini) .bs-ship')?.classList.contains('h'));
+  assert.match(await cap(), /четырёхпалубный: ↔ горизонтально/);
+  await rot.click();
+  await pi.waitForFunction(() => document.querySelector('.bs-grid:not(.mini) .bs-ship')?.classList.contains('v'));
+  step('тап по кораблю — выбран, подпись «четырёхпалубный: ↕ вертикально» и подсветка; «Повернуть» крутит туда и обратно (≥ 44 px)');
+}
+
 // Трёхпалубный вплотную, углом к нему (Б5 касается А4 по диагонали) — не встаёт.
 await dragTo(pi, await tray(pi, 3).boundingBox(), 41);
 assert.equal(await placedOn(pi), 1, 'касание углом — не поставили');
@@ -159,7 +175,7 @@ step('пока тащим: «не встанет» — пунктир с кре�
 // Утащить с поля — обратно в лоток.
 {
   const shipCell = await cellBox(pi, 77);
-  const out = await pi.locator('.bs-hint').boundingBox();
+  const out = await pi.locator('.bs-selrow').boundingBox();
   await pi.mouse.move(shipCell.x + shipCell.width / 2, shipCell.y + shipCell.height / 2);
   await pi.mouse.down();
   await pi.mouse.move(shipCell.x + 20, shipCell.y + 20, { steps: 3 });
@@ -174,13 +190,29 @@ step('корабль, утащенный с поля, возвращается �
 await tray(pi, 1).click();
 await pi.locator('.bs-grid:not(.mini) .bs-cell[data-c="99"]').click();
 assert.equal(await placedOn(pi), 3, 'однопалубный — на К10 тапом');
+// Только что поставленный выбран: подпись с ориентацией; однопалубный не поворачивается — кнопка выключена.
+assert.match(await pi.locator('.bs-seltext').textContent(), /однопалубный/);
+assert.equal(await pi.getByRole('button', { name: 'Повернуть выбранный корабль' }).isDisabled(), true, 'однопалубный — «Повернуть» выключена');
 assert.equal(await pi.getByRole('button', { name: 'Я готов' }).isDisabled(), true, 'пока не все — «Я готов» выключена');
 assert.equal(room.match.fleets[0], null, 'черновик на странице, серверу ещё ничего не ушло');
 step('тап по лотку → тап по клетке — тоже ставит; «Я готов» ждёт, пока на поле все десять');
 
+// «Расставить случайно»: нажимать можно снова — каждый раз новый флот, и каждый раз правильный.
+{
+  const seen = new Set();
+  for (let i = 0; i < 3; i++) {
+    await pi.getByRole('button', { name: 'Расставить случайно' }).click();
+    await until(() => !!room.match.fleets[0] && !seen.has(JSON.stringify(room.match.fleets[0])), `случайная расстановка ${i + 1}`);
+    seen.add(JSON.stringify(room.match.fleets[0]));
+    assert.ok(checkFleet(room.match.fleets[0]).ok, 'сервер прислал правильный флот');
+    await pi.waitForFunction(() => document.querySelectorAll('.bs-grid:not(.mini) .bs-ship').length === 10);
+  }
+  assert.equal(seen.size, 3, 'три нажатия — три разные расстановки');
+  step('«Расставить случайно» три раза подряд — три разных флота, каждый проходит правила');
+}
 await pi.getByRole('button', { name: 'Очистить' }).click();
 assert.equal(await placedOn(pi), 0);
-await pi.getByRole('button', { name: 'Случайно' }).click();
+await pi.getByRole('button', { name: 'Расставить случайно' }).click();
 await until(() => !!room.match.fleets[0], 'сервер расставил Ивану флот');
 await pi.waitForFunction(() => document.querySelectorAll('.bs-grid:not(.mini) .bs-ship').length === 10);
 const randomMsg = await pi.evaluate(() => window.__sent.filter((m) => m.t === 'random'));
@@ -194,13 +226,13 @@ await pm.waitForSelector('.ch-title small:has-text("соперник готов"
 step('«Очистить», «Случайно» (расставил сервер), «Я готов» — флот ушёл на проверку и заперт; Макс видит «соперник готов»');
 
 // Макс: случайно и готов. Иван стреляет первым (жребий).
-await pm.getByRole('button', { name: 'Случайно' }).click();
+await pm.getByRole('button', { name: 'Расставить случайно' }).click();
 await until(() => !!room.match.fleets[1], 'флот Макса');
 await pm.waitForFunction(() => document.querySelectorAll('.bs-grid:not(.mini) .bs-ship').length === 10);
 await pm.getByRole('button', { name: 'Я готов' }).click();
 await until(() => room.match.phase === 'battle', 'бой начался');
-await pi.waitForSelector('.bs-fire');
-await pm.waitForSelector('.bs-fire');
+await pi.waitForSelector('.bs-row');
+await pm.waitForSelector('.bs-row');
 const pd = await openPage(dima, room.code);
 await pd.waitForSelector('.bs-pair');
 step('оба готовы — бой; первым стреляет Иван (жребий); Дима открыл стол зрителем');
@@ -215,54 +247,24 @@ const water = Array.from({ length: 100 }, (_, c) => c).filter((c) => !maxCells.i
 async function shoot(page, c) {
   const n = room.match.log.length;
   await enemyCell(page, c).click();
-  await page.waitForSelector(`.bs-grid:not(.mini) .bs-cell[data-c="${c}"].aim`);
-  assert.equal(room.match.log.length, n, 'тап по клетке не стреляет — только выбирает');
-  await page.getByRole('button', { name: 'Огонь' }).click();
   await until(() => room.match.log.length === n + 1, `выстрел в ${c}`);
 }
 
-// Первый шаг — выбор: прицел и адрес крупно; второй — «Огонь».
+// Одно касание — выстрел сразу. Адрес — крупно, как подтверждение.
 const target = maxCells[0];
-await enemyCell(pi, target).click();
-await pi.waitForSelector('.bs-cell.aim');
 const LET = 'АБВГДЕЖЗИК';
 const want = `${LET[target % 10]}${Math.floor(target / 10) + 1}`;
-assert.equal((await pi.locator('.bs-addr').textContent()).trim(), want, 'адрес цели — крупно');
-// Тап по другой клетке — прицел переезжает, выстрела нет.
-await enemyCell(pi, water[0]).click();
-await pi.waitForSelector(`.bs-cell.aim[data-c="${water[0]}"]`);
-assert.equal(room.match.log.length, 0, 'выбор — не выстрел');
 await enemyCell(pi, target).click();
-await pi.getByRole('button', { name: 'Огонь' }).click();
-await until(() => room.match.log.length === 1, 'первый выстрел');
+await until(() => room.match.log.length === 1, 'первый выстрел — одним касанием');
+assert.equal(room.match.log[0].c, target, 'стрельнуло в ту клетку, по которой тапнули');
 assert.equal(room.match.log[0].r === 'miss', false, 'попал');
 await pi.waitForSelector(`.bs-grid:not(.mini) .bs-cell[data-c="${target}"].hit, .bs-grid:not(.mini) .bs-cell[data-c="${target}"].sunk`);
+assert.match((await pi.locator('.bs-addr').textContent()).trim(), new RegExp(`^${want} — (ранил|убил)$`), 'после выстрела — адрес и результат крупно');
 const fireMsg = await pi.evaluate(() => window.__sent.filter((m) => m.t === 'fire'));
-assert.equal(fireMsg.length, 1);
+assert.equal(fireMsg.length, 1, 'ровно один запрос на выстрел');
 assert.equal(fireMsg[0].cell, target);
-step(`тап — прицел и адрес «${want}» крупно; другой тап — прицел переехал, выстрела нет; «Огонь» — выстрел`);
-
-// Худший случай на 320×568: после попадания строка в две строки
-// («Ранил! Стреляйте ещё · Цель К10 — жмите «Огонь»»). Раньше «Огонь» уезжал
-// за нижний край на 4 px; теперь под строку всегда место на две строки,
-// «Огонь» не прыгает и до края не меньше 8 px.
-{
-  const ps = await openPage(ivan, room.code, { width: 320, height: 568 });
-  await ps.waitForSelector('.ch-status.mine');
-  const before = await ps.locator('.bs-fire').boundingBox();
-  await enemyCell(ps, water[0]).click();
-  await ps.waitForSelector(`.bs-grid:not(.mini) .bs-cell[data-c="${water[0]}"].aim`);
-  const st = await ps.locator('.ch-status.mine').boundingBox();
-  const text = (await ps.locator('.ch-status.mine').textContent()).trim();
-  assert.match(text, /Стреляйте ещё · Цель/, `строка после попадания: ${text}`);
-  assert.ok(st.height >= 40, `строка в две строки (${Math.round(st.height)} px) — проверяем худший случай`);
-  const after = await ps.locator('.bs-fire').boundingBox();
-  assert.ok(after.y + after.height <= 568 - 8, `«Огонь» на экране с запасом 8 px (низ ${Math.round(after.y + after.height)} из 568)`);
-  assert.equal(Math.round(after.y), Math.round(before.y), '«Огонь» не прыгает, когда строка стала длиннее');
-  assert.equal(room.match.log.length, 1, 'выбор на маленьком экране — не выстрел');
-  step(`320×568 после попадания: строка в две строки, «Огонь» на месте, до края ${Math.round(568 - after.y - after.height)} px`);
-  await ps.context().close();
-}
+assert.equal(await pi.locator('.bs-fire').count(), 0, 'кнопки «Огонь» больше нет');
+step(`один тап по клетке «${want}» — выстрел сразу; крупно «${want} — ранил/убил»; кнопки «Огонь» нет`);
 
 // Добить корабль целиком — «убил»: рамка вокруг корабля, клетки вокруг — пустые.
 const ship = room.match.fleets[1].find((s) => shipCells(s).includes(target));
@@ -270,22 +272,53 @@ for (const c of shipCells(ship)) if (!room.match.shots[0].some((x) => x.c === c)
 await pi.waitForFunction(() => document.querySelectorAll('.bs-grid:not(.mini) .bs-ship.sunk').length === 1);
 assert.ok(await enemy(pi).locator('.bs-cell.around').count() >= 3, 'вокруг убитого — точки');
 assert.equal(await enemy(pi).locator('.bs-ship').count(), 1, 'на поле соперника — только потопленный корабль');
-// В клетку около убитого — не выбрать.
-await enemyCell(pi, await enemy(pi).locator('.bs-cell.around').first().getAttribute('data-c').then(Number)).click();
-await pi.waitForSelector('#toast.show:has-text("Рядом с потопленным")');
-step(`убил ${ship.len}-палубный: рамка вокруг корабля, клетки вокруг — точки; туда не прицелиться`);
+// Клетка около убитого — потрачена: касание на неё ничего не делает (не выстрел и не отказ-кнопка).
+const aroundCell = await enemy(pi).locator('.bs-cell.around').first().getAttribute('data-c').then(Number);
+await enemyCell(pi, aroundCell).click({ force: true }).catch(() => null);
+await pi.waitForTimeout(150);
+assert.equal(room.match.log.length, 1 + shipCells(ship).filter((c) => c !== target).length, 'около убитого выстрела нет');
+step(`убил ${ship.len}-палубный: рамка вокруг корабля, клетки вокруг — точки; туда выстрела нет`);
 
-// Мимо — ход у Макса; у Макса на своём поле — точка.
-await shoot(pi, water[1]);
-assert.equal(room.match.turn, 1);
-await pm.waitForSelector('.ch-status.mine');
-await pm.waitForSelector(`.bs-grid.mini .bs-cell[data-c="${water[1]}"].miss`).catch(() => null);
-const maxMineMiss = await pm.locator(`.bs-grid.mini .bs-cell.miss`).count();
-assert.equal(maxMineMiss, 1, 'Макс видит промах Ивана на своём поле');
+// Двойной тап: два касания подряд, пока ответа нет, — один выстрел. Вода: промах, ход переходит.
+const n0 = room.match.log.length;
+await pi.evaluate((c) => {
+  const grid = document.querySelector('.bs-grid:not(.mini)');
+  const cell = grid.querySelector(`.bs-cell[data-c="${c}"]`);
+  const r = cell.getBoundingClientRect();
+  const ev = (type) => new PointerEvent(type, { clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, pointerId: 7, bubbles: true, button: 0 });
+  for (let i = 0; i < 2; i++) { grid.dispatchEvent(ev('pointerdown')); grid.dispatchEvent(ev('pointerup')); }
+}, water[0]);
+await until(() => room.match.log.length === n0 + 1, 'промах в воду');
+await pi.waitForTimeout(300);
+assert.equal(room.match.log.length, n0 + 1, 'двойной тап: один выстрел, а не два');
+assert.equal(room.match.log.at(-1).c, water[0]);
+assert.equal(room.match.turn, 1, 'после промаха ход у Макса');
+step('двойной тап по воде (два касания подряд до ответа) — один выстрел');
+
+// Макс: палец уехал больше чем на 8 px — выстрела нет.
+const ivanWater = Array.from({ length: 100 }, (_, c) => c).filter((c) => !room.match.fleets[0].flatMap(shipCells).includes(c));
+const nM = room.match.log.length;
+await pm.evaluate((c) => {
+  const grid = document.querySelector('.bs-grid:not(.mini)');
+  const cell = grid.querySelector(`.bs-cell[data-c="${c}"]`);
+  const r = cell.getBoundingClientRect();
+  const ev = (type, dx) => new PointerEvent(type, { clientX: r.left + r.width / 2 + dx, clientY: r.top + r.height / 2, pointerId: 9, bubbles: true, button: 0 });
+  grid.dispatchEvent(ev('pointerdown', 0));
+  grid.dispatchEvent(ev('pointermove', 30));
+  grid.dispatchEvent(ev('pointerup', 30));
+}, ivanWater[0]);
+await pm.waitForTimeout(250);
+assert.equal(room.match.log.length, nM, 'палец уехал — выстрела нет');
+step('палец, который уехал больше чем на 8 px, выстрелом не становится');
+
+// Мимо — ход у Макса; у Макса на своём поле — точка (один промах Ивана).
+assert.equal(await pm.locator('.bs-grid.mini .bs-cell.miss').count(), 1, 'Макс видит промах Ивана на своём поле');
 assert.equal(await pm.locator('.bs-grid.mini .bs-ship').count(), 10, 'свой флот — весь');
 await pi.waitForSelector('.ch-status:has-text("Стреляет соперник")');
-assert.equal(await pi.getByRole('button', { name: 'Огонь' }).isDisabled(), true, 'не в свой ход «Огонь» выключен');
-step('мимо — ход у Макса; у Макса на своём поле точка; у Ивана «Огонь» выключен');
+await enemyCell(pi, water[3]).click();
+await pi.waitForSelector('#toast.show:has-text("Сейчас стреляет соперник")');
+assert.equal(room.match.log.length, n0 + 1, 'не в свой ход касание выстрела не даёт');
+step('мимо — ход у Макса; у Макса на своём поле точка; у Ивана касание не в свой ход — только подсказка');
 
 /* ------------------------------------------------------ что видно кому */
 
@@ -317,18 +350,20 @@ step('зритель на 390×844: оба поля и строка — цели
 /* ---------------------------------------------------------- 320 px */
 
 const small = await openPage(max, room.code, { width: 320, height: 568 });
-await small.waitForSelector('.bs-fire');
+await small.waitForSelector('.bs-row');
 for (const page of [pi, pm, pd, small]) {
   const [sw, iw] = await page.evaluate(() => [document.documentElement.scrollWidth, innerWidth]);
   assert.ok(sw <= iw, `страница шире экрана (${sw} > ${iw})`);
 }
-const fireBox = await small.locator('.bs-fire').boundingBox();
 const gridBox = await small.locator('.bs-grid:not(.mini)').boundingBox();
-assert.ok(fireBox.height >= 44 && fireBox.width >= 44, `«Огонь» не меньше 44 px (${Math.round(fireBox.width)}×${Math.round(fireBox.height)})`);
-assert.ok(fireBox.y + fireBox.height <= 568 - 8, `«Огонь» на экране с запасом 8 px (низ ${Math.round(fireBox.y + fireBox.height)})`);
-assert.ok(gridBox.x >= 0 && gridBox.x + gridBox.width <= 320, 'поле по ширине на экране');
+const rowBox = await small.locator('.bs-row').boundingBox();
+const mineBox = await small.locator('.bs-mine .bs-grid').boundingBox();
+assert.ok(gridBox.x >= 0 && gridBox.x + gridBox.width <= 320, 'поле соперника по ширине на экране');
+assert.ok(rowBox.y + rowBox.height <= 568, `нижний ряд (свой флот и часы) на экране (низ ${Math.round(rowBox.y + rowBox.height)})`);
+assert.ok(mineBox.width >= 96 - 1, `свой флот не меньше 96 px (${Math.round(mineBox.width)})`);
 const cell = await small.locator('.bs-grid:not(.mini) .bs-cell').first().boundingBox();
-step(`на 320×568: без горизонтального скролла, поле и «Огонь» на экране (клетка ${Math.round(cell.width)} px — потому выстрел в два шага, «Огонь» ${Math.round(fireBox.width)}×${Math.round(fireBox.height)})`);
+assert.ok(cell.width >= 24, `клетка соперника не уже 24 px (${Math.round(cell.width)})`);
+step(`на 320×568: без горизонтального скролла, поле соперника ${Math.round(gridBox.width)} px (клетка ${Math.round(cell.width)} px), нижний ряд на экране`);
 
 // Расстановка на 320: лоток и кнопки — не меньше 44 px.
 {
@@ -352,10 +387,7 @@ step(`на 320×568: без горизонтального скролла, по�
 /* ------------------------------------------------- сдача и оба флота */
 
 // Макс промахивается, Иван — тоже, чтобы оба выстрелили (до этого сдаться нельзя).
-const ivanCells = room.match.fleets[0].flatMap(shipCells);
-const ivanWater = Array.from({ length: 100 }, (_, c) => c).filter((c) => !ivanCells.includes(c));
-await enemyCell(pm, ivanWater[0]).click();
-await pm.getByRole('button', { name: 'Огонь' }).click();
+await shoot(pm, ivanWater[0]);
 await until(() => room.match.turn === 0, 'Макс промахнулся');
 await pm.locator('.k-icon-btn[aria-label="Меню"]').click();
 await pm.getByRole('button', { name: /Сдаться/ }).click();
@@ -399,24 +431,22 @@ async function vsBot(u, size) {
   const me = r.match.ids.indexOf(String(u.id));
   const bs = 1 - me;
   await until(() => r.match.ready[bs], 'бот расставил флот и готов');
-  await page.getByRole('button', { name: 'Случайно' }).click();
+  await page.getByRole('button', { name: 'Расставить случайно' }).click();
   await until(() => !!r.match.fleets[me], 'флот расставлен');
   await page.waitForFunction(() => !document.querySelector('.panel .k-btn--primary')?.disabled);
   await page.getByRole('button', { name: 'Я готов' }).click();
-  await page.waitForSelector('.bs-fire');
+  await page.waitForSelector('.bs-row');
   assert.equal(r.match.phase, 'battle');
   assert.equal(r.match.turn, me, '«Я» — первым стреляет человек');
   const [sw, iw] = await page.evaluate(() => [document.documentElement.scrollWidth, innerWidth]);
   assert.ok(sw <= iw, `${tag}: без горизонтального скролла`);
-  const fb = await page.locator('.bs-fire').boundingBox();
-  assert.ok(fb.y + fb.height <= size.height - 8, `${tag}: «Огонь» на экране с запасом (низ ${Math.round(fb.y + fb.height)})`);
+  const rb = await page.locator('.bs-row').boundingBox();
+  assert.ok(rb.y + rb.height <= size.height, `${tag}: нижний ряд на экране (низ ${Math.round(rb.y + rb.height)})`);
   step(`${tag}, против бота: форма («Кто стреляет первым: Я / Бот / Жребий», уровень «Матрос») → бот сам расставил флот → «Случайно», «Я готов» → бой, первым стреляю я`);
 
   const shootAt = async (c) => {
     const n = r.match.log.length;
     await page.locator(`.bs-grid:not(.mini) .bs-cell[data-c="${c}"]`).click();
-    await page.waitForSelector(`.bs-grid:not(.mini) .bs-cell[data-c="${c}"].aim`);
-    await page.getByRole('button', { name: 'Огонь' }).click();
     await until(() => r.match.log.length > n, `выстрел в ${c}`);
   };
   const botCells = r.match.fleets[bs].flatMap(shipCells);

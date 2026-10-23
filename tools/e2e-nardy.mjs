@@ -231,6 +231,25 @@ const panel = await small.locator('.panel').boundingBox();
 assert.ok(board.x >= 0 && board.x + board.width <= 320, 'доска по ширине на экране');
 assert.ok(status.y + status.height <= panel.y + 1, 'строка под доской не уходит под кнопки');
 const col = await small.locator('.nd-pt').first().boundingBox();
+// Перегородка посередине: планка по центру доски, высотой во всю доску, пункты по обе стороны одной ширины.
+for (const [name, page] of [['320', small], ['390', pi]]) {
+  const bd = await page.locator('.nd-board').boundingBox();
+  const bars = await page.locator('.nd-bar').evaluateAll((els) => els.map((e) => e.getBoundingClientRect()));
+  const mid = await page.locator('.nd-mid').boundingBox();
+  const midCenter = bd.x + bd.width / 2;
+  assert.equal(bars.length, 2, `${name}: планка в каждом ряду`);
+  const paint = await page.evaluate(() => [getComputedStyle(document.querySelector('.nd-bar')).backgroundColor, getComputedStyle(document.querySelector('.nd-mid'), '::before').backgroundColor, getComputedStyle(document.querySelector('.nd-board')).backgroundColor]);
+  assert.ok(paint[0] !== 'rgba(0, 0, 0, 0)' && paint[0] !== paint[2], `${name}: планка окрашена, а не сливается с сукном (${paint[0]})`);
+  assert.ok(paint[1] === paint[0], `${name}: средний ряд окрашен так же (${paint[1]})`);
+  for (const r of bars) assert.ok(Math.abs(r.x + r.width / 2 - midCenter) <= 2 && Math.abs(r.width - 8) < 0.5, `${name}: планка 8 px по центру доски`);
+  const total = bars[0].height + mid.height + bars[1].height;
+  assert.ok(Math.abs(total - (bd.height - 8)) <= 2, `${name}: планка от края до края доски (${Math.round(total)} из ${bd.height - 8})`);
+  assert.ok(Math.abs(mid.x + mid.width / 2 - midCenter) <= 2, `${name}: средний ряд по центру`);
+  const widths = await page.evaluate(() => [...document.querySelectorAll('.nd-pt')].map((e) => e.getBoundingClientRect().width));
+  assert.ok(Math.min(...widths) >= 24 - 0.1 || name === '390', `${name}: пункт не уже 24 px (${Math.min(...widths)})`);
+  assert.ok(Math.max(...widths) - Math.min(...widths) < 0.5, `${name}: все пункты одной ширины`);
+}
+step('перегородка: планка по центру доски во всю высоту, пункты по обе стороны одной ширины, на 320 px пункт не уже 24 px');
 step(`на 320×568 доска и строка помещаются, горизонтального скролла нет (пункт ${Math.round(col.width)}×${Math.round(col.height)} px)`);
 
 assert.deepEqual(problems, [], 'ошибок в консоли страниц нет');

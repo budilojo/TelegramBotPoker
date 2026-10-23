@@ -15,9 +15,11 @@
  * кораблю в лотке, потом по клетке. «Случайно» расставляет сервер, «Я
  * готов» отправляет флот на проверку и запирает его.
  *
- * БОЙ — выстрел в два шага: тап выбирает клетку (на ней прицел, её адрес
- * крупно рядом с кнопкой), «Огонь» стреляет. На 320 px клетка около 28 px —
- * меньше нормальной зоны нажатия, а промах в соседнюю клетку необратим.
+ * БОЙ — выстрел в одно касание: тап по клетке сразу стреляет. Чтобы промах
+ * пальцем не стал необратимым по ошибке, клетки, в которые уже стреляли (и
+ * рядом с потопленным), на касание не реагируют; палец, который поехал
+ * (сдвиг больше 8 px), выстрелом не считается; пока ответ сервера не пришёл,
+ * второй выстрел не уходит. Решение — docs/brain/decisions/033.
  *
  * Отметки различаются не только цветом: мимо — точка, около потопленного —
  * точка поменьше, ранил — крест на светлой клетке, убит — тёмная клетка со
@@ -41,8 +43,12 @@ const BASES = [[0, 'Нет'], [180, '3'], [300, '5'], [600, '10'], [900, '15']];
 const INCS = [[0, '0'], [2, '+2 с'], [5, '+5 с'], [10, '+10 с']];
 
 let state = null;
-/** Выбранная цель в бою (клетка 0…99) или null. */
-let aim = null;
+/** Клетка, в которую выстрел уже ушёл и ждёт ответа сервера (0…99) или null. */
+let pending = null;
+/** Выбранный на поле корабль (индекс в черновике) — подписан ориентацией, его можно повернуть кнопкой. */
+let sel = null;
+/** Палец в бою: где начали касание и не уехал ли он (выстрел — только тап без сдвига). */
+let aimTouch = null;
 /** Черновик расстановки: корабль на каждое место лотка (или null), с какой партии и какой флот сервера уже принят. */
 let draft = { no: null, ships: FLEET.map(() => null), server: '' };
 /** Выбранный в лотке размер корабля (тап по лотку → тап по клетке). */
@@ -112,7 +118,7 @@ export function onState(s, p) {
   if (!m || draft.no !== m.no) {
     draft = { no: m?.no ?? null, ships: FLEET.map(() => null), server: '' };
     pick = null;
-    aim = null;
+    sel = null;
   }
   if (m && m.phase === 'place' && m.mySide != null) {
     const mine = m.boards[m.mySide].ships;
@@ -122,8 +128,8 @@ export function onState(s, p) {
       draft.server = key;
     }
   }
-  // Цель, о которой уже всё известно, — больше не цель.
-  if (aim != null && (!myTurn(s) || isKnownEnemy(aim))) aim = null;
+  // Пришёл ответ (или любое новое состояние) — выстрел, что ждал, уже учтён или отклонён.
+  pending = null;
   if (myTurn(s) && !(p && myTurn(p))) haptic.turn();
   // Выстрелы и так видны на поле — во всплывашку только остальное.
   const n = s.room.notice;
@@ -257,11 +263,11 @@ function playerBar(side, { extra = null } = {}) {
 /**
  * Поле. `marks` — отметки выстрелов, `around` — пусто около потопленных,
  * `ships` — корабли (свои, потопленные чужие, в конце — все), `mode`:
- *   'aim'   — поле соперника в бою: клетки — кнопки, тап выбирает цель;
+ *   'aim'   — поле соперника в бою: тап по клетке — выстрел; потраченные клетки не реагируют;
  *   'place' — своё поле на расстановке: тянуть и поворачивать корабли;
  *   'view'  — только смотреть.
  */
-function boardEl({ board, mode, mini = false, spec = false, label, dead = new Set(), shown = false, last = null, preview = null }) {
+function boardEl({ board, mode, mini = false, spec = false, label, dead = new Set(), shown = false, last = null, preview = null, selected = -1 }) {
   const k = known(board);
   const grid = h(`div.bs-grid${mini ? '.mini' : ''}`, { role: 'grid', 'aria-label': label });
   const shipCells = new Map();
@@ -272,14 +278,19 @@ function boardEl({ board, mode, mini = false, spec = false, label, dead = new Se
     if (r) cls.push(r);
     else if (k.around.has(c)) cls.push('around');
     if (shipCells.has(c)) cls.push('deck');
-    if (aim === c && mode === 'aim') cls.push('aim');
+    if (pending === c && mode === 'aim') cls.push('aim');
     if (last === c) cls.push('last');
     if (preview?.cells.has(c)) cls.push(preview.ok ? 'pv' : 'pv-bad');
     const what = r ? RESULT_RU[r] : k.around.has(c) ? 'пусто, рядом потопленный' : shipCells.has(c) ? 'корабль' : mode === 'aim' ? 'не стреляли' : 'вода';
     const attrs = { 'data-c': String(c), 'aria-label': `${addr(c)}, ${what}`, role: 'gridcell' };
-    grid.append(mode === 'aim'
-      ? h(`button.${cls.join('.')}`, { ...attrs, type: 'button', onclick: () => tapAim(c) })
-      : h(`div.${cls.join('.')}`, attrs));
+    // В прицеле клетка, в которую уже стреляли или рядом с потопленным, — не кнопка: на касание не реагирует.
+    const spent = !!r || k.around.has(c);
+    if (mode === 'aim' && !spent) {
+      // Клавиатура (Enter/пробел) — click с detail 0; касание и мышь идут через pointer-события сетки.
+      grid.append(h(`button.${cls.join('.')}`, { ...attrs, type: 'button', onclick: (e) => { if (e.detail === 0) tapAim(c); } }));
+    } else {
+      grid.append(h(`div.${cls.join('.')}${mode === 'aim' ? '.spent' : ''}`, attrs));
+    }
   }
   // Корабли — поверх воды, под отметками: рамка целиком на корабль.
   board.ships.forEach((s, i) => {
@@ -287,6 +298,7 @@ function boardEl({ board, mode, mini = false, spec = false, label, dead = new Se
     const cls = ['bs-ship', s.dir];
     if (sunk) cls.push('sunk');
     else if (shown) cls.push('shown');
+    if (i === selected) cls.push('sel');
     if (mode === 'place' && drag && drag.moved && drag.slot === i) cls.push('lifted');
     grid.append(h(`div.${cls.join('.')}`, { style: { '--x': s.x, '--y': s.y, '--len': s.len }, 'aria-hidden': 'true' }));
   });
@@ -300,6 +312,12 @@ function boardEl({ board, mode, mini = false, spec = false, label, dead = new Se
     grid.addEventListener('pointermove', dragMove);
     grid.addEventListener('pointerup', dragEnd);
     grid.addEventListener('pointercancel', dragCancel);
+  }
+  if (mode === 'aim') {
+    grid.addEventListener('pointerdown', aimDown);
+    grid.addEventListener('pointermove', aimMove);
+    grid.addEventListener('pointerup', aimUp);
+    grid.addEventListener('pointercancel', aimCancel);
   }
   return frame;
 }
@@ -346,17 +364,41 @@ function renderPlace() {
   // Своё поле — из черновика: что лежит на поле сейчас, а не то, что когда-то прислал сервер.
   const board = { ...m.boards[me], ships: draft.ships.filter(Boolean), shots: [], around: [] };
   const preview = drag?.moved && drag.cand ? { cells: new Set(cellsOf(drag.cand)), ok: drag.ok } : null;
+  const selShip = sel != null ? draft.ships[sel] : null;
+  const selIdx = selShip ? draft.ships.filter(Boolean).indexOf(selShip) : -1;
   root.append(
     h('div.ch-status', placedAll() ? 'Все на месте — «Я готов»' : 'Расставьте флот', left ? ' · ' : null, left),
-    boardEl({ board, mode: 'place', label: 'Ваше поле: расстановка', preview }),
+    boardEl({ board, mode: 'place', label: 'Ваше поле: расстановка', preview, selected: selIdx }),
     trayEl(),
-    h('div.hint.bs-hint', 'Тяните корабль на поле; тап — повернуть, с поля — в лоток. Корабли не касаются даже углами.'));
+    selRowEl(selShip));
   const panel = h('div.panel',
-    h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: () => { haptic.tap(); pick = null; send({ t: 'random' }); } }, 'Случайно'),
+    h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: randomPlace }, 'Расставить случайно'),
     h('button.k-btn.k-btn--secondary.k-btn--block', { disabled: !draft.ships.some(Boolean), onclick: clearDraft }, 'Очистить'),
     h('button.k-btn.k-btn--primary.k-btn--block', { disabled: !placedAll(), onclick: sendReady }, 'Я готов'));
   if (net.busy) panel.classList.add('busy');
   $app.append(root, panel);
+}
+
+/**
+ * Строка под лотком: что выбрано и куда он смотрит, и кнопка «Повернуть» (≥ 44 px).
+ * Без выбора — подсказка, как выбрать; кнопка тогда выключена.
+ */
+function selRowEl(ship) {
+  const text = ship
+    ? `${DECKS_RU[ship.len]}: ${ship.dir === 'h' ? '↔ горизонтально' : '↕ вертикально'}`
+    : 'Тап по кораблю — выбрать и повернуть';
+  return h('div.bs-selrow',
+    h('div.bs-seltext' + (ship ? '.on' : ''), { 'aria-live': 'polite' }, text),
+    h('button.k-btn.k-btn--secondary.bs-rot', { type: 'button', disabled: !ship || ship.len === 1, 'aria-label': 'Повернуть выбранный корабль', onclick: () => { haptic.tap(); rotate(sel); } }, '↻ Повернуть'));
+}
+
+/** «Расставить случайно»: сервер ставит флот заново; черновик обновится с ответом, даже если расстановка совпала. */
+function randomPlace() {
+  haptic.tap();
+  pick = null;
+  sel = null;
+  draft.server = '';
+  send({ t: 'random' });
 }
 
 /** Лоток: по кнопке на размер — рисунок корабля и сколько ещё не поставлено. */
@@ -391,6 +433,7 @@ function clearDraft() {
   haptic.tap();
   draft.ships = FLEET.map(() => null);
   pick = null;
+  sel = null;
   bus.render();
 }
 
@@ -416,7 +459,10 @@ function cellAt(x, y) {
 /** Тап по клетке на расстановке: по кораблю — повернуть; по воде — поставить выбранный в лотке. */
 function tapPlace(c) {
   const slot = draft.ships.findIndex((s) => s && cellsOf(s).includes(c));
-  if (slot >= 0) return rotate(slot);
+  if (slot >= 0) {
+    sel = slot;
+    return rotate(slot);
+  }
   if (pick == null) return toast('Выберите корабль в лотке — или перетащите его на поле', 2400);
   const free = FLEET.findIndex((l, i) => l === pick && !draft.ships[i]);
   if (free < 0) return;
@@ -424,19 +470,37 @@ function tapPlace(c) {
   const s = [{ ...at, dir: 'h' }, { ...at, dir: 'v' }].find((x) => fits(x, free));
   if (!s) return toast('Сюда не встанет: край поля или соседний корабль', 2400);
   draft.ships[free] = s;
+  sel = free;
   haptic.tap();
   if (!FLEET.some((l, i) => l === pick && !draft.ships[i])) pick = null;
   bus.render();
 }
 
+/** Поворот выбранного (или тапнутого) корабля. Нельзя — слова и короткое «дёргание» корабля. */
 function rotate(slot) {
-  const s = draft.ships[slot];
-  if (s.len === 1) return;
+  const s = slot == null ? null : draft.ships[slot];
+  if (!s) return toast('Сначала выберите корабль на поле', 2000);
+  if (s.len === 1) return toast('Однопалубный корабль поворачивать не нужно', 2000);
   const r = { ...s, dir: s.dir === 'h' ? 'v' : 'h' };
-  if (!fits(r, slot)) return toast('Повернуть не выходит: мешает край поля или соседний корабль', 2400);
+  if (!fits(r, slot)) {
+    nudgeShip(slot);
+    return toast('Повернуть не выходит: мешает край поля или соседний корабль', 2400);
+  }
   draft.ships[slot] = r;
+  sel = slot;
   haptic.tap();
   bus.render();
+}
+
+/** Короткое «дёрг» корабля на поле — видно, что нажатие дошло, но поворота нет. Без анимации — рамкой (CSS). */
+function nudgeShip(slot) {
+  const idx = draft.ships.filter(Boolean).indexOf(draft.ships[slot]);
+  const el = document.querySelectorAll('.bs-grid:not(.mini) .bs-ship')[idx];
+  if (!el) return;
+  el.classList.remove('nudge');
+  void el.offsetWidth;
+  el.classList.add('nudge');
+  setTimeout(() => el.classList.remove('nudge'), 450);
 }
 
 const DRAG_PX = 6;
@@ -450,6 +514,7 @@ function dragFromBoard(e) {
     return;
   }
   const s = draft.ships[slot];
+  sel = slot;
   const grab = cellsOf(s).indexOf(c);
   drag = { slot, len: s.len, dir: s.dir, grab, from: s, id: e.pointerId, x0: e.clientX, y0: e.clientY, moved: false, cand: null, ok: false, el: e.currentTarget };
 }
@@ -565,15 +630,36 @@ function renderBattle() {
   if (m.over) $app.append(overPanel());
 }
 
-/** Прицел: адрес выбранной клетки крупно, «Огонь», свои часы. */
+/** Справа от своего поля: свои часы и крупно — последний свой выстрел (подтверждение «К10 — мимо/ранил/убил»). */
 function aimEl() {
-  const s = state;
-  const m = s.match;
-  const mine = myTurn(s);
+  const m = state.match;
+  const mine = m.log.filter((x) => x.by === m.mySide).at(-1);
+  const text = pending != null ? `${addr(pending)} …` : mine ? `${addr(mine.c)} — ${RESULT_RU[mine.r]}` : '—';
   return h('div.bs-aim',
     h('div.bs-aim-head', h('span', 'Ваши часы'), clockEl(m.mySide, m.turn === m.mySide)),
-    h('div.bs-addr.num', { 'aria-live': 'polite', 'aria-label': aim == null ? 'цель не выбрана' : `цель ${addr(aim)}` }, aim == null ? '—' : addr(aim)),
-    h('button.k-btn.k-btn--primary.k-btn--block.bs-fire', { disabled: !mine || aim == null, onclick: fire }, 'Огонь'));
+    h('div.bs-addr.num', { 'aria-live': 'polite', 'aria-label': pending != null ? `выстрел ${addr(pending)}` : mine ? `ваш последний выстрел ${addr(mine.c)}` : 'выстрелов ещё не было' }, text));
+}
+
+/** Палец в прицеле: тап без заметного сдвига — выстрел; прокрутка или перетаскивание — нет. */
+const AIM_PX = 8;
+function aimDown(e) {
+  if (e.button > 0) return;
+  aimTouch = { id: e.pointerId, x0: e.clientX, y0: e.clientY, moved: false };
+}
+function aimMove(e) {
+  if (!aimTouch || e.pointerId !== aimTouch.id) return;
+  if (Math.hypot(e.clientX - aimTouch.x0, e.clientY - aimTouch.y0) >= AIM_PX) aimTouch.moved = true;
+}
+function aimUp(e) {
+  const t = aimTouch;
+  aimTouch = null;
+  if (!t || e.pointerId !== t.id || t.moved) return;
+  if (Math.hypot(e.clientX - t.x0, e.clientY - t.y0) >= AIM_PX) return;
+  const c = cellAt(e.clientX, e.clientY);
+  if (c != null) tapAim(c);
+}
+function aimCancel(e) {
+  if (aimTouch && e.pointerId === aimTouch.id) aimTouch = null;
 }
 
 function resultEl() {
@@ -602,26 +688,24 @@ function statusEl() {
   if (me == null) return h('div.ch-status', `Стреляет ${name(m.turn)}${last ? ` · ${name(last.by)}: ${lastText}` : ''}`);
   if (myTurn(s)) {
     const again = last && last.by === me && last.r !== 'miss' ? `${RESULT_RU[last.r][0].toUpperCase()}${RESULT_RU[last.r].slice(1)}! Стреляйте ещё · ` : '';
-    return h('div.ch-status.mine', again, aim == null ? 'Выберите клетку на поле соперника' : `Цель ${addr(aim)} — жмите «Огонь»`);
+    return h('div.ch-status.mine', again, pending != null ? 'Выстрел…' : 'Тап по клетке — выстрел');
   }
   return h('div.ch-status', `Стреляет соперник${last && last.by !== me ? ` · ${lastText}` : ''}`);
 }
 
+/**
+ * Выстрел одним касанием. Пока ответ сервера не пришёл (net.busy, pending), второй
+ * выстрел не уходит — ни в ту же клетку, ни в другую. Сервер сверяет номер хода
+ * (`shot`): запоздалый выстрел в уже сыгранный ход отказывает словами.
+ */
 function tapAim(c) {
-  if (net.busy) return;
+  if (net.busy || pending != null) return;
   if (!myTurn(state)) return toast('Сейчас стреляет соперник', 1800);
   if (isKnownEnemy(c)) return toast(state.match.boards[1 - state.match.mySide].around.includes(c) ? 'Рядом с потопленным кораблей не бывает' : 'Сюда вы уже стреляли', 1800);
-  aim = aim === c ? null : c;
   haptic.tap();
+  pending = c;
+  if (!send({ t: 'fire', cell: c, shot: state.match.shots })) pending = null;
   bus.render();
-}
-
-function fire() {
-  if (aim == null || net.busy || !myTurn(state)) return;
-  haptic.tap();
-  const cell = aim;
-  aim = null;
-  send({ t: 'fire', cell, shot: state.match.shots });
 }
 
 function overPanel() {
@@ -704,7 +788,7 @@ function openRules() {
     h('div.rules',
       h('p', 'Поле 10×10: буквы А…К слева направо, числа 1…10 сверху вниз. Флот: один четырёхпалубный, два трёхпалубных, три двухпалубных, четыре однопалубных. Корабли не касаются друг друга, даже углами.'),
       h('p', 'Расстановка — тайная и проверяется сервером; на неё 2 минуты. Не успели — сервер поставит флот за вас. Кто стреляет первым — жребий.'),
-      h('p', 'Выстрел — в два шага: выберите клетку, потом «Огонь». Попали — стреляете ещё; мимо — ход соперника. Потопленный корабль открывается целиком, клетки вокруг него отмечаются пустыми.'),
+      h('p', 'Выстрел — одно касание по клетке. Попали — стреляете ещё; мимо — ход соперника. Потопленный корабль открывается целиком, клетки вокруг него отмечаются пустыми.'),
       h('p', 'Мимо — точка; рядом с потопленным — точка поменьше; ранил — крест на светлой клетке; убил — тёмная клетка со светлым крестом и рамка вокруг корабля.'),
       h('p', 'Кто первым потопил весь флот соперника — выиграл; ничьей нет. Первый выстрел — за минуту; дальше часы партии, прибавка — когда ход переходит. Упал флажок — проигрыш.'),
       h('p', 'Чужого флота до конца партии не видно никому: ни сопернику, ни зрителям. В конце открываются оба.')),

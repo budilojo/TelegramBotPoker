@@ -19,13 +19,11 @@
   --bs-dead: #7d8b91;
   --bs-around: #7891a3;
   /* Своё поле на расстановке и чужое в бою — во всю ширину, но так, чтобы
-     под ним поместились строка, своё маленькое поле и «Огонь» (от 568 px высоты).
-     188 px — шапка 52, плашка соперника 56, строка в две строки 48 (.bs-status),
-     буквы над полем 16, низ ряда 8 и запас 8. Строка в бою бывает в две строки:
-     «Ранил! Стреляйте ещё · Цель К10 — жмите «Огонь»» на 320 px не влезает в одну
-     даже шрифтом Inter; раньше здесь было 172 (строка в одну) — и «Огонь»
-     уезжал за нижний край на 4 px. */
-  --bs-mini: clamp(116px, 38vw, 196px);
+     под ним поместились строка, своё маленькое поле и часы с последним выстрелом
+     (от 568 px высоты). 188 px — шапка 52, плашка соперника 56, строка в две строки 48
+     (.bs-status), буквы над полем 16, низ ряда 8 и запас 8. Своё поле в ряду
+     (--bs-mini) — 96…160 px: кнопки «Огонь» больше нет, чужое поле стало крупнее. */
+  --bs-mini: clamp(96px, 30vw, 160px);
   --bs-lab: var(--k-s16);
   --bs-w: max(200px, min(calc(100vw - 2 * var(--k-s8)), 504px,
     calc(100dvh - 188px - var(--bs-mini) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))));
@@ -222,7 +220,40 @@ button.bs-cell { cursor: pointer; }
 
 .bs-hint { flex: none; text-align: center; padding: 0 var(--k-s16); }
 
-/* Бой: под полем соперника — своё маленькое поле и прицел. */
+/* Строка под лотком: выбранный корабль с ориентацией и «Повернуть» (≥ 44 px). */
+.bs-selrow {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--k-s8);
+  padding: 0 var(--k-s8);
+  min-height: var(--k-tap);
+}
+.bs-seltext {
+  min-width: 0;
+  color: var(--text-secondary);
+  font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font);
+}
+.bs-seltext.on { color: var(--text-primary); font-weight: var(--k-w-semibold); }
+.bs-rot { flex: none; min-height: var(--k-tap); }
+/* Три кнопки в ряд на 320 px: длинная подпись («Расставить случайно») переносится, а не режется. */
+.bs.placing ~ .panel .k-btn { white-space: normal; line-height: 1.15; padding: 0 var(--k-s4); min-height: var(--k-tap); }
+
+/* Выбранный корабль на поле — рамка снаружи (поверх воды, не закрывает клетки). */
+.bs-ship.sel { z-index: 3; outline: 2px solid var(--text-primary); outline-offset: 1px; }
+/* Поворот нельзя — корабль коротко «дёргается» (без движения — рамкой). */
+.bs-ship.nudge { animation: bs-nudge 0.36s ease-in-out; }
+@keyframes bs-nudge {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bs-ship.nudge { animation: none; outline: 2px solid var(--color-danger); outline-offset: 1px; }
+}
+
+/* Бой: под полем соперника — своё маленькое поле и последний выстрел крупно. */
 .bs-row {
   flex: none;
   display: flex;
@@ -252,7 +283,8 @@ button.bs-cell { cursor: pointer; }
   color: var(--text-primary);
   font: var(--k-w-semibold) var(--k-fs-title)/var(--k-lh-title) var(--k-font);
 }
-.bs-fire { min-height: var(--k-tap); }
+/* Потраченная клетка (уже стреляли, рядом с потопленным) — не кнопка, на касание не реагирует. */
+.bs-cell.spent { cursor: default; }
 .bs-result .bs-addr { font-size: var(--k-fs-section); line-height: var(--k-lh-section); }
 
 /* Зритель: оба поля одно под другим. */

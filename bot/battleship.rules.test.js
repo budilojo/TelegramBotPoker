@@ -121,6 +121,34 @@ test('в клетку, куда уже стрелял, — отказ одним
   for (const bad of [-1, 100, 1.5, 'Б7', null, undefined]) assert.equal(B.fire(room, '101', bad, T0).error, 'BAD_CELL', String(bad));
 });
 
+test('двойной тап: два выстрела с одним номером хода — второй отказывает «STALE», ни в ту же клетку, ни в другую', () => {
+  // Выстрел в одно касание: клиент шлёт `shot` = число ходов, которое он видит. Попал — ход его же,
+  // так что второй запрос дошёл бы и по очереди; защита — номер хода: он уже не совпадает.
+  const room = battle();
+  const hit = colsCells[0];
+  assert.equal(B.fire(room, '101', hit, T0, 0).r, 'hit');
+  assert.equal(room.match.turn, 0, 'попал — ход Ивана');
+  assert.equal(B.fire(room, '101', hit, T0, 0).error, 'STALE', 'та же клетка, тот же номер');
+  assert.equal(B.fire(room, '101', water(colsCells), T0, 0).error, 'STALE', 'другая клетка, тот же номер');
+  assert.deepEqual(room.match.log, [{ by: 0, c: hit, r: 'hit' }], 'один выстрел, журнал не тронут');
+  // С актуальным номером — обычный выстрел проходит.
+  assert.ok(B.fire(room, '101', water(colsCells), T0, 1).ok);
+});
+
+test('«Расставить случайно» тысячу раз подряд — каждый раз флот по правилам и не такой же, как прежний', () => {
+  const room = table();
+  let prev = null;
+  let same = 0;
+  for (let i = 0; i < 1000; i++) {
+    assert.ok(B.placeRandom(room, '202', T0).ok);
+    const f = room.match.fleets[1];
+    assert.ok(checkFleet(f).ok, `попытка ${i}`);
+    if (prev && JSON.stringify(prev) === JSON.stringify(f)) same++;
+    prev = f;
+  }
+  assert.ok(same < 5, `повторов почти нет (${same})`);
+});
+
 test('убил: корабль открыт; вокруг него стрелять нельзя — там кораблей не бывает', () => {
   const room = battle();
   // У Макса (COLS) однопалубный в А10.

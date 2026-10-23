@@ -18,9 +18,12 @@
   --nd-pt-dark: #6a5038;
   --nd-die: #f7f5ef;
   --nd-pip: #0a1216;
+  /* Перегородка посередине: 8 px (как был зазор — пункт на 320 px ровно 24 px), цвет — игровой, как у пунктов. */
+  --nd-bar-w: var(--k-s8);
+  --nd-bar: #5b4a3a;
   /* Ширина доски и колонки пункта: 12 колонок и перегородка. */
   --nd-w: min(calc(100vw - 2 * var(--k-s8)), 520px);
-  --nd-col: calc((var(--nd-w) - var(--k-s8) - 2 * var(--k-s4)) / 12);
+  --nd-col: calc((var(--nd-w) - var(--nd-bar-w) - 2 * var(--k-s4)) / 12);
   /* Шашка: по ширине колонки, но и по высоте экрана — под доской ещё плашка, кубики, строка и кнопки. */
   --nd-pc: min(calc(var(--nd-col) - 2px), 30px, calc((100dvh - 380px - env(safe-area-inset-top, 0px)) / 9.2));
 }
@@ -46,8 +49,13 @@
   -webkit-user-select: none;
 }
 .nd-row { display: flex; }
+/* Класс .down есть и в admin.css (центровка «пустого экрана»): без этого нижний ряд сжимал перегородку в ноль и съедал зазор. */
+.nd-row.down { align-items: stretch; justify-content: normal; gap: 0; text-align: inherit; }
 .nd-half { flex: 1; display: grid; grid-template-columns: repeat(6, 1fr); }
-.nd-bar { width: var(--k-s8); }
+.nd-bar { width: var(--nd-bar-w); background: var(--nd-bar); }
+/* Перегородка продолжается и через средний ряд: получается одна планка по всей доске. */
+.nd-mid { position: relative; }
+.nd-mid::before { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: var(--nd-bar-w); transform: translateX(-50%); background: var(--nd-bar); }
 
 /* Пункт: треугольник от края к середине, шашки стопкой от края. */
 .nd-pt {
