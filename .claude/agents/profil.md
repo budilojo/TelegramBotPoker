@@ -1,5 +1,6 @@
 ---
 name: profil
+model: sonnet
 description: Агент T (волна 2): профиль — ник и аватар из готового набора
 ---
 
