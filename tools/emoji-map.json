@@ -1,0 +1,25 @@
+{
+  "_": "Карта сборки набора эмодзи: файл владельца -> набор, id (навсегда неизменный), подпись (до 18 символов), быстрый ли. Порядок строк = порядок показа.",
+  "sets": [
+    { "id": "universal", "title": "Реакции", "games": "*", "items": [
+      { "src": "gg.png",       "id": "gg",       "label": "Хорошая игра", "quick": true },
+      { "src": "haha.png",     "id": "haha",     "label": "Ха-ха",        "quick": true },
+      { "src": "wow.png",      "id": "wow",      "label": "Ого!",         "quick": true },
+      { "src": "sad.png",      "id": "sad",      "label": "Не повезло",   "quick": true },
+      { "src": "think.png",    "id": "think",    "label": "Думаю" ,       "quick": true },
+      { "src": "hello.png",    "id": "hello",    "label": "Привет" },
+      { "src": "thanks.png",   "id": "thanks",   "label": "Спасибо" },
+      { "src": "sorry.png",    "id": "sorry",    "label": "Прости" },
+      { "src": "wait.png",     "id": "wait",     "label": "Жду" },
+      { "src": "cheers.png",   "id": "cheers",   "label": "Ура!" },
+      { "src": "cool.png",     "id": "cool",     "label": "Круто" },
+      { "src": "fire.png",     "id": "fire",     "label": "В ударе" },
+      { "src": "facepalm.png", "id": "facepalm", "label": "Ну как так" },
+      { "src": "angry.png",    "id": "angry",    "label": "Злюсь" }
+    ] },
+    { "id": "poker", "title": "Покер", "games": ["poker"], "items": [
+      { "src": "allin.png", "id": "allin", "label": "Олл-ин" },
+      { "src": "bluff.png", "id": "bluff", "label": "Блеф" }
+    ] }
+  ]
+}

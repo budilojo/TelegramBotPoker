@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "sets": [
+    {
+      "id": "universal",
+      "title": "Реакции",
+      "games": "*",
+      "items": [
+        {
+          "id": "gg",
+          "file": "universal/gg.png",
+          "label": "Хорошая игра",
+          "quick": true
+        },
+        {
+          "id": "haha",
+          "file": "universal/haha.png",
+          "label": "Ха-ха",
+          "quick": true
+        },
+        {
+          "id": "wow",
+          "file": "universal/wow.png",
+          "label": "Ого!",
+          "quick": true
+        },
+        {
+          "id": "sad",
+          "file": "universal/sad.png",
+          "label": "Не повезло",
+          "quick": true
+        },
+        {
+          "id": "think",
+          "file": "universal/think.png",
+          "label": "Думаю",
+          "quick": true
+        },
+        {
+          "id": "hello",
+          "file": "universal/hello.png",
+          "label": "Привет"
+        },
+        {
+          "id": "thanks",
+          "file": "universal/thanks.png",
+          "label": "Спасибо"
+        },
+        {
+          "id": "sorry",
+          "file": "universal/sorry.png",
+          "label": "Прости"
+        },
+        {
+          "id": "wait",
+          "file": "universal/wait.png",
+          "label": "Жду"
+        },
+        {
+          "id": "cheers",
+          "file": "universal/cheers.png",
+          "label": "Ура!"
+        },
+        {
+          "id": "cool",
+          "file": "universal/cool.png",
+          "label": "Круто"
+        },
+        {
+          "id": "fire",
+          "file": "universal/fire.png",
+          "label": "В ударе"
+        },
+        {
+          "id": "facepalm",
+          "file": "universal/facepalm.png",
+          "label": "Ну как так"
+        },
+        {
+          "id": "angry",
+          "file": "universal/angry.png",
+          "label": "Злюсь"
+        }
+      ]
+    },
+    {
+      "id": "poker",
+      "title": "Покер",
+      "games": [
+        "poker"
+      ],
+      "items": [
+        {
+          "id": "allin",
+          "file": "poker/allin.png",
+          "label": "Олл-ин"
+        },
+        {
+          "id": "bluff",
+          "file": "poker/bluff.png",
+          "label": "Блеф"
+        }
+      ]
+    }
+  ]
+}
