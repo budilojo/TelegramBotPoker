@@ -51,6 +51,8 @@ export function render() {
 
     s.again ? againButton(s) : null,
 
+    s.solo ? h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: () => { haptic.tap(); send({ t: 'solo' }, { lock: false }); } }, '🤖 Играть с ботами') : null,
+
     h('div.section-label', 'Открытые игры'),
     s.lobbies.length
       ? h('div.lobby-list', s.lobbies.map((l) => lobbyRow(l, sameLooking(s.lobbies))))

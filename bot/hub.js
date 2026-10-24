@@ -55,7 +55,7 @@ export const ERRORS = Object.assign({}, ...Object.values(GAMES).map((g) => g.err
 /** What a page may say whatever it is looking at. */
 const COMMON = new Set(['visible']);
 /** What a page may say on a group's hub. */
-const HUB_ACTIONS = new Set(['create', 'again', 'join', 'home', 'rating']);
+const HUB_ACTIONS = new Set(['create', 'again', 'join', 'home', 'rating', 'solo']);
 /** Код, по которому открывается админка. Пускает не он, а список в `.env`. */
 const ADMIN_CODE = 'admin';
 /** Что страница админки может попросить. Всё остальное — отказ. */
@@ -842,6 +842,8 @@ export class Hub {
       return this.pushHome(session);
     }
     if (msg.t === 'rating') return this.enterRating(session, msg);
+    // «🤖 Играть с ботами» с хаба группы: личная партия, группа в ней не участвует.
+    if (msg.t === 'solo') return this.pushSolo(session);
 
     if (msg.t === 'join') {
       const room = app.roomByCode(String(msg.code || ''));
@@ -969,6 +971,7 @@ export function hubView(app, group, user, { home = false } = {}) {
     full: live.length >= MAX_LIVE_PER_GROUP, // лимит достигнут — кнопка выключена
     maxLive: MAX_LIVE_PER_GROUP,
     home, // opened without a group: «← Мои группы»
+    solo: true, // кнопка «🤖 Играть с ботами» (личная партия, группа не нужна)
     me: app.profiles.me(user),
     ratingSoon: app.ratingSoon ? RATING_SOON_TEXT : null,
     rankGames: GAME_LIST.map((g) => ({ id: g.id, title: g.title, icon: g.icon })),

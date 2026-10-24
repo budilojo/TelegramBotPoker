@@ -63,6 +63,49 @@ test('without a registered Mini App, /play goes through the private chat, which 
   assert.deepEqual(dm.markup.inline_keyboard[0][0].web_app, { url: `https://poker.example/?room=g_${t.group.code}` });
 });
 
+test('под карточкой группы две кнопки: «Выбрать игру» и «🤖 Играть с ботом» (личная партия, ссылкой — в группах web_app нельзя)', async () => {
+  const t = new Table({ botUsername: 'All_InPoker_bot', miniAppName: 'table' });
+  await t.cmd(user(101, 'Иван'), '/play');
+  const btns = t.tg.live(t.chatId).markup.inline_keyboard.flat();
+  assert.equal(btns.length, 2);
+  assert.equal(btns[0].url, `https://t.me/All_InPoker_bot/table?startapp=g_${t.group.code}`);
+  assert.equal(btns[1].text, '🤖 Играть с ботом');
+  assert.equal(btns[1].url, 'https://t.me/All_InPoker_bot/table?startapp=solo');
+  assert.ok(btns.every((b) => b.url && !b.web_app), 'в группе только ссылки');
+});
+
+test('без зарегистрированного Mini App кнопка с ботом ведёт в личку (start=solo), а личка отвечает кнопкой на игры с ботами', async () => {
+  const t = new Table({ botUsername: 'All_InPoker_bot', miniAppName: '', webappUrl: 'https://poker.example' });
+  await t.cmd(user(101, 'Иван'), '/play');
+  const btns = t.tg.live(t.chatId).markup.inline_keyboard.flat();
+  assert.equal(btns[1].url, 'https://t.me/All_InPoker_bot?start=solo');
+  const max = user(202, 'Макс');
+  await t.start(max, 'solo');
+  const dm = t.tg.messages.get([...t.tg.messages.keys()].at(-1));
+  assert.deepEqual(dm.markup.inline_keyboard[0][0].web_app, { url: 'https://poker.example/?room=solo' });
+});
+
+test('с хаба группы — «Играть с ботами»: страница получает экран игр с ботами; «подделка» с не-хаба отказывает', async () => {
+  const t = new Table();
+  const ivan = user(101, 'Иван');
+  await t.start(ivan);
+  await t.cmd(ivan, '/play');
+  t.openHub(ivan);
+  assert.equal(t.state(ivan).solo, true, 'хаб предлагает кнопку');
+  await t.send(ivan, { t: 'solo' });
+  const s = t.state(ivan);
+  assert.equal(s.kind, 'solo', 'экран игр с ботами');
+  assert.ok(s.games.length > 0);
+  // Страница стола (не хаба и не «мои группы») такого сообщения не принимает.
+  const room = t.app.createGame('durak', { chatId: String(t.chatId), title: 'Т', host: ivan });
+  const max = user(202, 'Макс');
+  await t.start(max);
+  t.openRoom(max, room);
+  const before = t.page(max).inbox.length;
+  await t.send(max, { t: 'solo' });
+  assert.ok(t.page(max).inbox.slice(before).every((m) => m.t !== 'state' || m.state.kind !== 'solo'), 'за столом экран ботов не открывается');
+});
+
 test('/play in the private chat creates nothing', async () => {
   const t = new Table();
   const u = user(101, 'Иван');

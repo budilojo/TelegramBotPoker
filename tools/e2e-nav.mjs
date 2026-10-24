@@ -226,6 +226,14 @@ try {
   await group(C, -5001, 'Рейтинговая');
   const ro = await open(C, '');
   await ro.waitForSelector('h1:has-text("Выберите игру")'); // группа одна: сразу хаб
+  // С хаба группы можно сразу играть с ботом — без захода в личку бота.
+  await ro.getByRole('button', { name: '🤖 Играть с ботами' }).click();
+  await ro.waitForSelector('h1:has-text("Игры с ботами")');
+  step('хаб группы → «🤖 Играть с ботами» → экран игр с ботами (из группы, без личного чата)');
+  await ro.locator('.back-link', { hasText: 'Мои группы' }).click();
+  await ro.waitForSelector('.lobby.hub');
+  await ro.getByRole('button', { name: 'Открыть' }).first().click();
+  await ro.waitForSelector('h1:has-text("Выберите игру")');
   await ro.locator('.game-card.g-durak').click();
   await ro.getByRole('button', { name: 'Создать лобби' }).click();
   await ro.waitForSelector('.lobby:not(.hub)');

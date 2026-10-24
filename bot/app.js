@@ -504,6 +504,13 @@ export class App {
     return `https://t.me/${this.botUsername}?start=${HUB_PREFIX}${group.code}`;
   }
 
+  /** «Играть с ботом» из группы: ссылка на экран игр с ботами (`startapp=solo`); без Mini App — через личку (`start=solo`). */
+  soloLink() {
+    if (!this.botUsername) return null;
+    if (this.miniAppName) return `https://t.me/${this.botUsername}/${this.miniAppName}?startapp=${SOLO_CODE}`;
+    return `https://t.me/${this.botUsername}?start=${SOLO_CODE}`;
+  }
+
   /** A `web_app` button — private chats only. */
   webAppButton(room, text = '🃏 Открыть стол') {
     if (!this.webappUrl) return null;
@@ -1046,6 +1053,8 @@ export class App {
           : 'Стол есть, но адрес мини-приложения не настроен (WEBAPP_URL). Скажите тому, кто запускает бота.';
         return void (await this.outbox.post(user.tgId, text, btn ? [[btn]] : null));
       }
+      // Кнопка «🤖 Играть с ботом» под карточкой группы, когда у бота нет зарегистрированного Mini App.
+      if (cmd.rest === SOLO_CODE) return this.sendSolo(user);
       if (!cmd.rest) return this.sendMyGames(user, `${WELCOME_DM}\n\n${HELP_DM}`);
       const gm = /^g_([a-z0-9]{4,32})$/.exec(cmd.rest);
       const group = gm ? this.groupByCode(gm[1]) : null;
@@ -1299,9 +1308,12 @@ export class App {
     const link = this.hubLink(group);
     const lines = ['🎮 <b>Во что играем?</b>', ''];
     for (const g of GAME_LIST) lines.push(`${g.icon} <b>${g.title}</b> — ${esc(g.blurb)}, ${g.minPlayers}–${g.maxPlayers} игроков`);
-    lines.push('', '<i>Откройте приложение, выберите игру и создайте лобби — друзья присоединятся по его карточке.</i>');
+    lines.push('', '<i>Откройте приложение, выберите игру и создайте лобби — друзья присоединятся по его карточке. А если друзей рядом нет — можно сыграть с ботом.</i>');
+    // Играть с ботом — личная партия: подпись Telegram даёт ей личность того, кто нажал, а не группы.
+    const solo = this.soloLink();
+    const rows = link ? [[{ text: '🎮 Выбрать игру', url: link }], ...(solo ? [[{ text: '🤖 Играть с ботом', url: solo }]] : [])] : null;
     try {
-      const m = await this.outbox.post(group.chatId, lines.join('\n'), link ? [[{ text: '🎮 Выбрать игру', url: link }]] : null);
+      const m = await this.outbox.post(group.chatId, lines.join('\n'), rows);
       group.ui = { ...(group.ui || {}), hubMessageId: m?.message_id ?? null };
       this.seenInChat(group.chatId, m?.message_id);
     } catch (err) {
