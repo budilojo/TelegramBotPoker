@@ -18,6 +18,7 @@ import * as solo from './solo.js';
 import * as nav from './nav.js';
 import * as train from './train/screens.js';
 import './train/link-wire.js'; // крючки связки Обучение↔Тренировка и определения уровня (Y)
+import './learn/hook.js';
 import { activeRoute, resetRoute } from './train/route.js';
 
 const SCREENS = { hub, rating, admin, down, solo, ...GAMES };

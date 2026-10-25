@@ -9,6 +9,8 @@
  * и «урок», не трогая остальное приложение. Внутри урока все интерактивные примеры меняют
  * только свои узлы (см. parts.js) — экран не «прыгает».
  *
+ * `returnButton()` — элемент «Вернуться к заданию» от связки (или null).
+ * `hasTraining(topic)` — есть ли упражнения по теме (иначе кнопки «Потренироваться» нет).
  * `school` — список уроков «Школы покера» (`catalog.school` от сервера): если передан,
  * в курсе есть «Практика с наставником». `openTraining({topic})` — вход в Тренировку по теме
  * (отдаёт агент Y); пока его нет, кнопки «Потренироваться» просто нет.
@@ -25,6 +27,21 @@ import { tag } from './parts.js';
 
 let host = null;
 let hostOpts = {};
+/**
+ * Что сейчас на экране курса. Страница перерисовывает экран при каждом новом состоянии
+ * сервера, а курс не должен при этом «забывать», где вы: урок остаётся уроком.
+ */
+let view = { kind: 'course' };
+
+/**
+ * Заранее выбрать урок, который покажет следующий `renderLearn` (так «Изучить тему» из ошибки
+ * упражнения открывает полный экран курса сразу на нужном уроке).
+ */
+export function prepareLesson(topicId, { returnTo = null } = {}) {
+  if (!lessonFor(topicId)) return false;
+  view = { kind: 'lesson', topic: topicId, returnTo };
+  return true;
+}
 
 /* ---------------------------------------------------------- блоки */
 
@@ -72,22 +89,24 @@ export function openLesson(topicId, opts = {}) {
   const lesson = lessonFor(topicId);
   if (!lesson) return false;
   host = box; hostOpts = { ...hostOpts, ...o };
+  view = { kind: 'lesson', topic: topicId, returnTo: o.returnTo || null };
   const sec = SECTIONS.find((s) => s.id === lesson.section);
   const list = allLessons(); const idx = list.indexOf(lesson);
-  const backToCourse = () => renderLearn(box, o);
+  const backToCourse = () => { view = { kind: 'course' }; renderLearn(box, o); };
   const backFn = o.returnTo?.go ? () => o.returnTo.go() : backToCourse;
   const finish = () => { markRead(lesson.topic); haptic.tap(); };
   const next = list[idx + 1];
 
   box.replaceChildren(h('div.learn.hub.ln-lesson',
-    h('button.back-link', { type: 'button', onclick: backFn }, o.returnTo ? '← Вернуться к заданию' : '← К курсу'),
+    h('button.back-link', { type: 'button', onclick: backFn }, o.returnTo?.go ? '← Вернуться к заданию' : '← К курсу'),
     h('div.hub-head', h('div.sub', `${sec.title} · урок ${sec.lessons.indexOf(lesson) + 1} из ${sec.lessons.length}`), h('h1', lesson.title)),
     h('div.ln-goal', h('b', 'Что вы узнаете'), h('p.ln-p', lesson.goal)),
     lesson.blocks.map(renderBlock),
     h('div.ln-remember', h('h3.ln-h', 'Запомните'), h('ul.ln-list', lesson.remember.map((x) => h('li', txt(x))))),
     renderQuiz(lesson),
     h('div.ln-actions',
-      o.openTraining ? h('button.k-btn.k-btn--secondary.k-btn--block', { type: 'button', onclick: () => { finish(); o.openTraining({ topic: lesson.topic }); } }, 'Потренироваться') : null,
+      o.openTraining && (o.hasTraining ? o.hasTraining(lesson.topic) : true) ? h('button.k-btn.k-btn--secondary.k-btn--block', { type: 'button', onclick: () => { finish(); o.openTraining({ topic: lesson.topic }); } }, 'Потренироваться') : null,
+      o.returnButton?.(),
       o.returnTo?.go ? h('button.k-btn.k-btn--primary.k-btn--block', { type: 'button', onclick: () => { finish(); o.returnTo.go(); } }, 'Вернуться к заданию') : null,
       h('button.k-btn.k-btn--block' + (o.returnTo?.go ? '.k-btn--ghost' : '.k-btn--primary'), {
         type: 'button',
@@ -101,6 +120,9 @@ export function openLesson(topicId, opts = {}) {
 
 export function renderLearn(container, opts = {}) {
   host = container; hostOpts = { ...opts };
+  if (view.kind === 'lesson' && lessonFor(view.topic)) return void openLesson(view.topic, { container, returnTo: view.returnTo, ...opts });
+  if (view.kind === 'mentor' && opts.school?.length) return showMentor(container, opts);
+  view = { kind: 'course' };
   const done = readTopics();
   const total = allLessons().length;
   const rec = nextLesson(done);
@@ -130,8 +152,9 @@ export function renderLearn(container, opts = {}) {
 
 /** Существующая «Школа покера» — азбука и уроки-раздачи; кнопка «назад» возвращает в курс. */
 function showMentor(container, opts) {
+  view = { kind: 'mentor' };
   container.replaceChildren(h('div.learn.hub',
-    h('button.back-link', { type: 'button', onclick: () => renderLearn(container, opts) }, '← К курсу'),
+    h('button.back-link', { type: 'button', onclick: () => { view = { kind: 'course' }; renderLearn(container, opts); } }, '← К курсу'),
     h('div.hub-head', h('h1', 'Практика с наставником')),
     ...schoolItems(opts.school, () => showMentor(container, opts))));
 }

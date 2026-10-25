@@ -68,7 +68,8 @@ function openForm(g, keep = null) {
     const seg = (options, key, cls = '') => h(`div.seg${cls}`, options.map(([v, label]) => h(`button${st[key] === v ? '.on' : ''}`, {
       type: 'button',
       // «Тренировка» — не режим шторки, а полный экран страницы (docs/poker-training.md).
-      onclick: () => { if (key === 'mode' && v === 'train') { closeSheet(); openRoute('train'); return; } st[key] = v; refreshSheet(); },
+      onclick: () => { if (key === 'mode' && v === 'train') { closeSheet(); openRoute('train'); return; }
+        if (key === 'mode' && v === 'learn') { closeSheet(); openRoute('learn'); return; } st[key] = v; refreshSheet(); },
     }, label)));
     const fields = [];
     // Покер: «Партия» или «Обучение» (школа). В обучении нет ни уровня, ни
