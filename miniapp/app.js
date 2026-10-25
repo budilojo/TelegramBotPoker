@@ -16,6 +16,8 @@ import * as down from './down.js';
 import { GAMES } from './games/index.js';
 import * as solo from './solo.js';
 import * as nav from './nav.js';
+import * as train from './train/screens.js';
+import { activeRoute, resetRoute } from './train/route.js';
 
 const SCREENS = { hub, rating, admin, down, solo, ...GAMES };
 
@@ -37,6 +39,7 @@ bus.onState = (wasConnected) => {
   const moved = placeOf(net.prev) !== placeOf(s);
   if (moved) {
     closeSheet();
+    resetRoute();
     nav.onMove();
   }
   prevSame = moved ? null : net.prev;
@@ -64,13 +67,17 @@ function render() {
   const screen = screenOf(net.state);
   // Вкладки «Рейтинг» и «Настройки» рисует страница сама поверх экрана хаба;
   // панель внизу — только на экранах хаба, за столом её нет.
-  const own = nav.renderView(net.state);
-  if (!own) SCREENS[screen].render();
-  if (nav.showsBar(net.state)) $app.append(nav.bar(net.state));
+  // Тренировка и Обучение — полные экраны страницы (train/route.js): панели внизу нет.
+  const trainOn = !!activeRoute() && nav.showsBar(net.state);
+  const own = !trainOn && nav.renderView(net.state);
+  if (trainOn) train.render();
+  else if (!own) SCREENS[screen].render();
+  const bar = !trainOn && nav.showsBar(net.state);
+  if (bar) $app.append(nav.bar(net.state));
   // Which state is on screen — for the browser checks (tools/e2e*.mjs) and for
   // the few common things a screen needs to move out of its own way.
-  document.body.dataset.screen = own ? 'nav' : screen;
-  document.body.dataset.nav = nav.showsBar(net.state) ? '1' : '';
+  document.body.dataset.screen = trainOn ? 'train' : own ? 'nav' : screen;
+  document.body.dataset.nav = bar ? '1' : '';
   document.body.dataset.seq = net.state.seq ?? '';
   if (!net.connected) $app.append(h('div.conn', 'Нет связи — переподключаемся…'));
   tickClocks(serverNow());

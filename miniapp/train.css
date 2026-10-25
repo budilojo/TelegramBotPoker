@@ -1,0 +1,74 @@
+/* ==========================================================================
+   «Тренировка» (docs/poker-training.md). Только токены из tokens.css:
+   плоско, без градиентов и теней; зелёный — смысл (верно, выбрано, ход).
+   ========================================================================== */
+
+.tr { gap: var(--k-s16); }
+.tr .tr-sec { display: contents; }
+.tr .tr-note { padding: var(--k-s12) var(--k-s16); background: var(--k-surface); border-radius: var(--k-r-lg); font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); color: var(--text-secondary); }
+.tr .game-cards { display: flex; flex-direction: column; gap: var(--k-s8); }
+.tr .tr-meta { margin-top: var(--k-s4); font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); color: var(--text-secondary); }
+.tr .tr-track.soon { opacity: 0.6; }
+.tr-dots { display: inline-flex; gap: var(--k-s4); flex: none; }
+.tr-dots i { width: var(--k-s8); height: var(--k-s8); border-radius: var(--k-r-pill); border: 1px solid var(--text-secondary); }
+.tr-dots i.on { background: var(--color-success); border-color: var(--color-success); }
+
+.tr-recbox { display: flex; flex-direction: column; gap: var(--k-s8); }
+.tr-rec { display: flex; align-items: center; justify-content: space-between; gap: var(--k-s12); width: 100%; text-align: left; height: auto; min-height: var(--k-control-h); padding-top: var(--k-s8); padding-bottom: var(--k-s8); }
+.tr-rec { white-space: normal; }
+.tr-rec-body { display: flex; flex-direction: column; gap: var(--k-s4); }
+.tr-rec-body small { font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); color: var(--text-secondary); font-weight: var(--k-w-regular); }
+
+.tr .tr-levels { display: flex; gap: var(--k-s8); }
+.tr .tr-levels button { flex: 1; min-height: var(--k-tap); }
+.tr-lv-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--k-s4); }
+.tr-lv-list li { display: flex; justify-content: space-between; gap: var(--k-s12); padding: var(--k-s8) var(--k-s12); background: var(--k-surface); border-radius: var(--k-r-md); }
+.tr-lv-list li.cur { border: 1px solid var(--color-success); }
+.tr-lv-list small, .tr-rows small { color: var(--text-secondary); font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); }
+.tr-suggest { padding: var(--k-s12) var(--k-s16); background: var(--k-surface); border: 1px solid var(--color-success); border-radius: var(--k-r-lg); font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); display: flex; flex-direction: column; gap: var(--k-s8); }
+.tr-suggest-btns { display: flex; gap: var(--k-s8); flex-wrap: wrap; }
+.tr-total { font-size: var(--k-fs-section); line-height: var(--k-lh-section); }
+.tr-list { margin: 0; padding-left: var(--k-s16); display: flex; flex-direction: column; gap: var(--k-s4); font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); }
+.tr-list small { display: block; color: var(--text-secondary); }
+
+.tr-skills { display: flex; flex-direction: column; gap: var(--k-s12); }
+.tr-skill-top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--k-s8); margin-bottom: var(--k-s4); flex-wrap: wrap; }
+.tr-skill-top small { color: var(--text-secondary); font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); }
+.tr-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--k-s8); }
+.tr-rows li { display: flex; flex-direction: column; gap: var(--k-s4); padding: var(--k-s8) var(--k-s12); background: var(--k-surface); border-radius: var(--k-r-md); }
+.tr-rows li .k-btn { align-self: flex-start; }
+
+.tr-bar { height: var(--k-s8); background: var(--bg-elevated); border-radius: var(--k-r-pill); overflow: hidden; }
+.tr-bar-fill { height: 100%; background: var(--color-success); border-radius: var(--k-r-pill); transition: width var(--k-fast) var(--k-ease); }
+
+/* --- экран задания: шапка, прокручиваемое тело, нижняя панель на месте --- */
+.tr-ex { flex: 1; min-height: 0; display: flex; flex-direction: column; padding-top: var(--sat, 0px); }
+.tr-head { display: grid; grid-template-columns: var(--k-tap) 1fr; align-items: center; gap: 0 var(--k-s8); padding: var(--k-s8) var(--k-s16) 0; }
+.tr-back { width: var(--k-tap); height: var(--k-tap); background: transparent; border: 0; color: var(--text-primary); font-size: var(--k-fs-section); cursor: pointer; border-radius: var(--k-r-md); }
+.tr-head-t { display: flex; flex-direction: column; min-width: 0; }
+.tr-head-t small { color: var(--text-secondary); font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); }
+.tr-head-bar { grid-column: 1 / -1; padding: var(--k-s4) 0 var(--k-s8); }
+.tr-body { flex: 1; min-height: 0; overflow-y: auto; padding: var(--k-s8) var(--k-s16) var(--k-s16); display: flex; flex-direction: column; gap: var(--k-s16); }
+.tr-prompt { margin: 0; font-size: var(--k-fs-component); line-height: var(--k-lh-component); font-weight: var(--k-w-semibold); }
+.tr-foot { flex: none; padding: var(--k-s12) var(--k-s16) var(--k-sticky-bottom); background: var(--bg-main); border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: var(--k-s8); }
+.tr-foot-row { display: flex; gap: var(--k-s8); }
+.tr-foot-row .k-btn { flex: 1; }
+
+.tr-choice { display: flex; flex-direction: column; gap: var(--k-s8); }
+.tr-opt { display: flex; align-items: center; gap: var(--k-s12); width: 100%; min-height: var(--k-tap); padding: var(--k-s12) var(--k-s16); text-align: left; background: var(--k-surface); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: var(--k-r-lg); font: inherit; font-size: var(--k-fs-body); cursor: pointer; }
+.tr-opt-mark { width: var(--k-s16); height: var(--k-s16); flex: none; border-radius: var(--k-r-pill); border: 2px solid var(--text-secondary); }
+.tr-opt.on { border-color: var(--color-success); background: var(--bg-elevated); }
+.tr-opt.on .tr-opt-mark { background: var(--color-success); border-color: var(--color-success); }
+.tr-opt.right { border-color: var(--color-success); background: var(--bg-elevated); color: var(--text-primary); }
+.tr-opt.right .tr-opt-mark { background: var(--color-success); border-color: var(--color-success); }
+.tr-opt.wrong { border-color: var(--color-danger); }
+.tr-opt.wrong .tr-opt-mark { background: var(--color-danger); border-color: var(--color-danger); }
+.tr-opt:disabled { opacity: 1; color: var(--text-primary); cursor: default; }
+
+.tr-explain { display: flex; flex-direction: column; gap: var(--k-s12); padding: var(--k-s12) var(--k-s16); background: var(--k-surface); border-radius: var(--k-r-lg); border: 1px solid var(--border-color); font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); }
+.tr-explain.ok { border-color: var(--color-success); }
+.tr-explain.bad { border-color: var(--color-danger); }
+.tr-verdict { font-size: var(--k-fs-component); line-height: var(--k-lh-component); font-weight: var(--k-w-semibold); }
+.tr-explain .section-label { margin-bottom: var(--k-s4); }
+.tr-explain .alts li.good b { text-decoration: underline; text-decoration-color: var(--color-success); text-decoration-thickness: 2px; }
+.tr-reset { margin-top: var(--k-s8); }

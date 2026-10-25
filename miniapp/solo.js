@@ -12,6 +12,7 @@ import { $app, h, haptic, showSheet, closeSheet, refreshSheet, fmt } from './ui.
 import { bus, send } from './net.js';
 import { GAMES } from './games/index.js';
 import { schoolItems } from './school.js';
+import { openRoute } from './train/route.js';
 
 let state = null;
 
@@ -66,13 +67,14 @@ function openForm(g, keep = null) {
   showSheet('solo-form', () => {
     const seg = (options, key, cls = '') => h(`div.seg${cls}`, options.map(([v, label]) => h(`button${st[key] === v ? '.on' : ''}`, {
       type: 'button',
-      onclick: () => { st[key] = v; refreshSheet(); },
+      // «Тренировка» — не режим шторки, а полный экран страницы (docs/poker-training.md).
+      onclick: () => { if (key === 'mode' && v === 'train') { closeSheet(); openRoute('train'); return; } st[key] = v; refreshSheet(); },
     }, label)));
     const fields = [];
     // Покер: «Партия» или «Обучение» (школа). В обучении нет ни уровня, ни
     // соперников — за столом один наставник; уроки выбираются прямо здесь.
     if (cat.school?.length) {
-      fields.push(seg([['game', 'Партия'], ['learn', 'Обучение']], 'mode', '.solo-mode'));
+      fields.push(seg([['game', 'Партия'], ['learn', 'Обучение'], ['train', 'Тренировка']], 'mode', '.solo-mode'));
       if (st.mode === 'learn') {
         return h('div', h('h3', `${g.icon} ${g.title} — с ботами`), ...fields,
           ...schoolItems(cat.school, () => openForm(g, st)));

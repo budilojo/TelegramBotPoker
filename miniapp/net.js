@@ -41,6 +41,8 @@ export const bus = {
   onError: () => {},
   /** Свой профиль (miniapp/profile.js ставит свой): { profile } или { error: {code, text} }. */
   onProfile: () => {},
+  /** Личный прогресс «Тренировки» (miniapp/train/screens.js): { progress } или { error }. */
+  onTrain: () => {},
 };
 
 let ws = null;
@@ -95,6 +97,8 @@ export function connect() {
       bus.onRanked(msg);
     } else if (msg.t === 'profile') {
       bus.onProfile(msg);
+    } else if (msg.t === 'train') {
+      bus.onTrain(msg);
     } else if (msg.t === 'react') {
       bus.onReact(msg);
     } else if (msg.t === 'chat' || msg.t === 'chat-sync' || msg.t === 'chat-unread') {
