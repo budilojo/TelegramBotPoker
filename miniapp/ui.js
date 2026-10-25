@@ -394,17 +394,31 @@ export const sheetRenderers = {};
 /** The name of the sheet on screen, or null. */
 export const currentSheet = () => openSheet;
 
+/**
+ * «Оболочка» шторки — затемнение, сама `.sheet` (она и прокручивается) и
+ * ручка — создаётся один раз и живёт, пока шторка открыта. Перерисовка
+ * заменяет только содержимое внутри неё, поэтому браузер сам сохраняет
+ * `scrollTop`, а анимация появления не играет заново (docs/scroll.md).
+ */
+let shell = null; // { sheet, content }
+
 export function showSheet(name, build, opts = {}) {
+  // Та же шторка уже открыта (например, «К урокам» в форме) — оболочка остаётся.
+  if (openSheet !== name) shell = null;
   openSheet = name;
   sheetOpts = opts;
   sheetRenderers[name] = () => {
     if (openSheet !== name) return;
     const body = build();
     if (!body) return closeSheet();
-    $sheets.replaceChildren(
-      h('div.backdrop', { onclick: () => closeSheet(true) }),
-      h('div.sheet', h('div.grab'), body),
-    );
+    if (shell && shell.sheet.isConnected) {
+      shell.content.replaceWith(body);
+      shell.content = body;
+      return;
+    }
+    const sheet = h('div.sheet', h('div.grab'), body);
+    shell = { sheet, content: body };
+    $sheets.replaceChildren(h('div.backdrop', { onclick: () => closeSheet(true) }), sheet);
   };
   sheetRenderers[name]();
 }
@@ -414,6 +428,7 @@ export function closeSheet(byUser = false) {
   if (byUser) sheetOpts.onDismiss?.();
   openSheet = null;
   sheetOpts = {};
+  shell = null;
   $sheets.replaceChildren();
 }
 

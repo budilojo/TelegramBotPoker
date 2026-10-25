@@ -50,8 +50,23 @@ bus.onState = (wasConnected) => {
 
 bus.render = render;
 
+/*
+ * Прокручивается у экранов хаба и лобби корневой `.lobby` (у body overflow:
+ * hidden). Если пересоздавать его на каждое состояние с сервера, прокрутка
+ * каждый раз падала в ноль. Поэтому пока экран тот же, живой `.lobby`
+ * остаётся в странице, а новое содержимое переезжает в него (docs/scroll.md).
+ * Прокрутку никто не запоминает и не возвращает: узел-скроллер просто тот же.
+ */
+let drawnKey = null;
+
 function render() {
-  $app.replaceChildren();
+  const key = net.state ? `${screenOf(net.state)}|${net.state.kind || ''}|${placeOf(net.state)}|${nav.activeTab(net.state)}` : null;
+  const keep = key && key === drawnKey && !net.fatal && tg && initData ? $app.firstElementChild : null;
+  const stay = keep && keep.matches('.lobby') ? keep : null;
+  drawnKey = null;
+  if (stay) {
+    for (const c of [...$app.children]) if (c !== stay) c.remove();
+  } else $app.replaceChildren();
   if (!tg || !initData) {
     $app.append(h('div.fatal', h('h2', 'Откройте игру из Telegram'), h('div', 'Это мини-приложение работает внутри Telegram: нажмите кнопку в группе.')));
     return;
@@ -79,9 +94,21 @@ function render() {
   document.body.dataset.screen = trainOn ? 'train' : own ? 'nav' : screen;
   document.body.dataset.nav = bar ? '1' : '';
   document.body.dataset.seq = net.state.seq ?? '';
+  if (stay) adoptLobby(stay);
+  drawnKey = key;
   if (!net.connected) $app.append(h('div.conn', 'Нет связи — переподключаемся…'));
   tickClocks(serverNow());
   flushAnimations({ still: !prevSame });
+}
+
+/** Новый `.lobby` (первый после старого) отдаёт содержимое старому и исчезает. */
+function adoptLobby(stay) {
+  const fresh = stay.nextElementSibling;
+  if (!fresh || !fresh.matches('.lobby')) { stay.remove(); return; }
+  for (const a of [...stay.attributes]) if (!fresh.hasAttribute(a.name)) stay.removeAttribute(a.name);
+  for (const a of fresh.attributes) stay.setAttribute(a.name, a.value);
+  stay.replaceChildren(...fresh.childNodes);
+  fresh.remove();
 }
 
 setInterval(() => tickClocks(serverNow()), 250);
