@@ -1,0 +1,42 @@
+/* Определение уровня (агент Y). Токены — tokens.css; плоско, без свечения; зелёный — только смысл. */
+.pl { display: flex; flex-direction: column; gap: var(--k-s16); padding: var(--k-s16); }
+.pl-h { margin: 0; font: var(--k-w-semibold) var(--k-fs-section)/var(--k-lh-section) var(--k-font); color: var(--k-text); }
+.pl-sub { font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font); color: var(--k-text-2); }
+.pl-cards { display: flex; flex-direction: column; gap: var(--k-s12); }
+.pl-card {
+  display: flex; flex-direction: column; gap: var(--k-s4); text-align: left;
+  min-height: 44px; padding: var(--k-s12) var(--k-s16);
+  background: var(--k-surface); border: 1px solid var(--border-color); border-radius: var(--k-r-lg);
+  color: var(--k-text); font-family: var(--k-font);
+}
+.pl-card:active:not([aria-disabled]) { background: var(--bg-elevated); }
+.pl-card[aria-disabled] { color: var(--k-text-2); }
+.pl-card-t { font: var(--k-w-semibold) var(--k-fs-component)/var(--k-lh-component) var(--k-font); }
+.pl-card-s, .pl-card-n { font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font); color: var(--k-text-2); }
+.pl-top { display: flex; align-items: center; justify-content: space-between; gap: var(--k-s8); }
+.pl-count { font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font); color: var(--k-text-2); }
+.pl-mini { min-height: 44px; padding: 0 var(--k-s12); }
+.pl-bar { height: 8px; background: var(--bg-elevated); border-radius: var(--k-r-pill); overflow: hidden; }
+.pl-bar-in { height: 100%; background: var(--color-success); border-radius: var(--k-r-pill); }
+.pl-tag { font: var(--k-w-semibold) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font); color: var(--k-text-2); }
+.pl-prompt { font: var(--k-w-regular) var(--k-fs-body)/var(--k-lh-body) var(--k-font); color: var(--k-text); }
+.pl-task { display: flex; flex-direction: column; gap: var(--k-s8); }
+.pl-opt, .pl-skip, .pl-go, .pl-exit, .pl-del { min-height: 44px; width: 100%; }
+.pl-rows { display: flex; flex-direction: column; gap: var(--k-s12); }
+.pl-row { display: grid; grid-template-columns: 1fr auto; gap: var(--k-s4) var(--k-s12); padding: var(--k-s12) var(--k-s16); background: var(--k-surface); border: 1px solid var(--border-color); border-radius: var(--k-r-md); }
+.pl-row-t { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: var(--k-s8); font: var(--k-w-semibold) var(--k-fs-body)/var(--k-lh-body) var(--k-font); color: var(--k-text); }
+.pl-lvl-wrap { font-weight: 400; color: var(--k-text-2); font-size: var(--k-fs-secondary); }
+.pl-scale { display: flex; gap: var(--k-s4); align-self: center; }
+.pl-seg { flex: 1; height: 8px; min-width: 20px; background: var(--bg-elevated); border-radius: var(--k-r-sm); }
+.pl-seg.on { background: var(--color-success); }
+.pl-word { grid-column: 1; font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font); color: var(--k-text-2); }
+.pl-pms { grid-column: 2; grid-row: 2 / span 2; display: flex; gap: var(--k-s8); }
+.pl-pm { width: 44px; min-width: 44px; height: 44px; min-height: 44px; padding: 0; }
+.pl-why { padding: var(--k-s12) var(--k-s16); background: var(--k-surface); border: 1px solid var(--border-color); border-radius: var(--k-r-md); display: flex; flex-direction: column; gap: var(--k-s8); }
+.pl-why-t { font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font); color: var(--k-text); }
+.pl-why-l { margin: 0; padding-left: var(--k-s16); font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font); color: var(--k-text-2); }
+.pl-why-n { font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font); color: var(--k-text-2); }
+.pl-err:empty { display: none; }
+.pl-actions { display: flex; flex-direction: column; gap: var(--k-s8); }
+.pl-actions .k-btn { min-height: 44px; }
+.pl-set { display: flex; flex-direction: column; gap: var(--k-s8); }

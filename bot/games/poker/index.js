@@ -17,6 +17,7 @@ import { num } from '../../fmt.js';
 import { results as tally } from '../../../server/game.js';
 import pokerBot, { decidePoker } from './bot.js';
 import * as S from './school.js';
+import { begin as beginDecision } from '../../decisions.js';
 
 /** What the page may ask for at a poker table, and nothing else. */
 const ACTIONS = new Set([
@@ -392,7 +393,10 @@ export default {
         if (!['fold', 'check', 'call', 'bet', 'raise', 'allin'].includes(action)) return refuse('BAD_REQUEST');
         const amount = msg.amount == null ? null : Number(msg.amount);
         const seq = Number.isInteger(msg.seq) ? msg.seq : undefined;
+        // Журнал решений (Y): снимок «до хода» и запись после успеха; ошибки журнала глотаются внутри.
+        const noteDecision = beginDecision(room, uid, app.store, () => app.clock.now());
         if (fail(R.act(room, uid, action, amount, seq))) return push();
+        noteDecision(action, amount);
         if (room.learn) {
           S.noteAct(room, uid, action);
           S.judge(room);

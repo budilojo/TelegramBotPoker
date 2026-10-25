@@ -220,6 +220,31 @@ CREATE TABLE IF NOT EXISTS train_pass (
   PRIMARY KEY (user_id, track, level)
 );
 
+-- Журнал решений игрока за покерным столом (агент Y, решение 071). ТОЛЬКО то,
+-- что видел сам игрок: его карты, общий борд, банк, ставки, позиция. Чужих карт
+-- здесь нет и быть не может. Последние DECISION_KEEP на игрока; игрок может
+-- удалить всё. Таблица ДОБАВЛЕНА без смены версии схемы (как profiles).
+CREATE TABLE IF NOT EXISTS decision_log (
+  id       INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id  TEXT NOT NULL,
+  hand_key TEXT,
+  street   TEXT,
+  position TEXT,
+  hole     TEXT,
+  board    TEXT,
+  pot      INTEGER,
+  to_call  INTEGER,
+  stack    INTEGER,
+  opps     INTEGER,
+  bb       INTEGER,
+  action   TEXT,
+  amount   INTEGER,
+  strength REAL,
+  equity   REAL,
+  kind     TEXT,
+  at       INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS decision_log_by_user ON decision_log (user_id, id DESC);
 
 -- Сколько зачётных партий у этого состава сегодня. Вдвоём за час можно
 -- нарисовать любое число — вот это и не даёт.
@@ -232,6 +257,12 @@ CREATE TABLE IF NOT EXISTS party_day (
 `;
 
 export const SCHEMA_VERSION = '5';
+
+const decisionFromRow = (r) => ({
+  id: r.id, handKey: r.hand_key, street: r.street, position: r.position, hole: r.hole, board: r.board,
+  pot: r.pot, toCall: r.to_call, stack: r.stack, opps: r.opps, bb: r.bb, action: r.action, amount: r.amount,
+  strength: r.strength, equity: r.equity, kind: r.kind, at: r.at,
+});
 
 export class Store {
   /** @param file path, or ':memory:' for tests */
@@ -291,6 +322,15 @@ export class Store {
           'ON CONFLICT(user_id, topic, code) DO UPDATE SET n = n + 1, last_at = excluded.last_at'
       ),
       trPutPass: this.db.prepare('INSERT OR IGNORE INTO train_pass (user_id, track, level, passed_at) VALUES (?, ?, ?, ?)'),
+      addDecision: this.db.prepare(
+        'INSERT INTO decision_log (user_id, hand_key, street, position, hole, board, pot, to_call, stack, opps, bb, action, amount, strength, equity, kind, at) ' +
+          'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      ),
+      trimDecisions: this.db.prepare(
+        'DELETE FROM decision_log WHERE user_id = ? AND id NOT IN (SELECT id FROM decision_log WHERE user_id = ? ORDER BY id DESC LIMIT ?)'
+      ),
+      getDecisions: this.db.prepare('SELECT * FROM decision_log WHERE user_id = ? ORDER BY id DESC LIMIT ?'),
+      delDecisions: this.db.prepare('DELETE FROM decision_log WHERE user_id = ?'),
       getMeta: this.db.prepare('SELECT value FROM meta WHERE key = ?'),
       putMeta: this.db.prepare('INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'),
       addCast: this.db.prepare(
@@ -773,6 +813,27 @@ export class Store {
     return this.db.prepare('SELECT COUNT(DISTINCT user_id) AS n FROM train_result').get().n;
   }
 
+  /** Журнал решений: записать одну строку и подрезать до последних `keep` у этого игрока. */
+  addDecision(userId, row, keep = 300) {
+    const u = String(userId);
+    this.q.addDecision.run(
+      u, row.handKey ?? null, row.street ?? null, row.position ?? null, row.hole ?? null, row.board ?? null,
+      row.pot ?? null, row.toCall ?? null, row.stack ?? null, row.opps ?? null, row.bb ?? null, row.action ?? null, row.amount ?? null,
+      row.strength ?? null, row.equity ?? null, row.kind ?? null, row.at
+    );
+    this.q.trimDecisions.run(u, u, keep);
+  }
+
+  /** Последние решения игрока, новые первыми. */
+  decisionsOf(userId, limit = 300) {
+    return this.q.getDecisions.all(String(userId), limit).map(decisionFromRow);
+  }
+
+  /** «Удалить историю решений» — всё, что записано про этого игрока. */
+  deleteDecisions(userId) {
+    return Number(this.q.delDecisions.run(String(userId)).changes);
+  }
+
   close() {
     try {
       this.db.close();
@@ -791,6 +852,8 @@ export class NullStore {
   constructor() {
     this.dm = new Map();
     this.profiles = new Map();
+    this.decisions = new Map();
+    this.nextDecision = 1;
     this.ads = new Map();
     this.settings = new Map();
     /** Рассылки живут в памяти: тесты, которым они нужны, берут настоящий Store. */
@@ -930,6 +993,21 @@ export class NullStore {
   }
   putProfile(userId, { nickname = null, avatar = null } = {}) {
     this.profiles.set(String(userId), { nickname, avatar });
+  }
+  addDecision(userId, row, keep = 300) {
+    const u = String(userId);
+    const list = this.decisions.get(u) ?? [];
+    list.unshift({ id: this.nextDecision++, ...row });
+    list.length = Math.min(list.length, keep);
+    this.decisions.set(u, list);
+  }
+  decisionsOf(userId, limit = 300) {
+    return (this.decisions.get(String(userId)) ?? []).slice(0, limit).map((r) => ({ ...r }));
+  }
+  deleteDecisions(userId) {
+    const n = (this.decisions.get(String(userId)) ?? []).length;
+    this.decisions.delete(String(userId));
+    return n;
   }
   ratingTop(game, { month = null, limit = 50, offset = 0, chatId = null } = {}) {
     const chat = chatId == null ? null : String(chatId);
