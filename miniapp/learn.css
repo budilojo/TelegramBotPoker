@@ -1,0 +1,128 @@
+/* ==========================================================================
+   Курс «Обучение» (покер) — miniapp/learn/. Только токены из tokens.css:
+   плоско, без градиентов и свечения, зелёный — только смысл (выбрано, верно,
+   действие), красный — неверно. Размеры шрифта и отступы — из шкалы.
+   Экран курса кладётся в контейнер хозяина (поля даёт он, как у .lobby).
+   ========================================================================== */
+
+.learn { display: flex; flex-direction: column; gap: var(--k-s16); min-width: 0; }
+.learn * { box-sizing: border-box; }
+.learn .menu-list { display: flex; flex-direction: column; gap: var(--k-s8); }
+.learn .menu-item { min-height: var(--k-tap); color: var(--text-primary); font-size: var(--k-fs-body); line-height: var(--k-lh-body); font-weight: var(--k-w-semibold); }
+.learn .menu-item small { font-weight: var(--k-w-regular); font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); color: var(--text-secondary); }
+.ln-section { display: flex; flex-direction: column; gap: var(--k-s8); }
+.ln-best { color: var(--text-secondary); }
+
+/* ------------------------------------------------------------ текст урока */
+.ln-p { margin: 0; color: var(--text-primary); font-size: var(--k-fs-body); line-height: var(--k-lh-body); overflow-wrap: anywhere; }
+.ln-h { margin: var(--k-s8) 0 0; font: var(--k-w-semibold) var(--k-fs-component)/var(--k-lh-component) var(--k-font); color: var(--text-primary); }
+.ln-list { margin: 0; padding-left: var(--k-s24); color: var(--text-primary); font-size: var(--k-fs-body); line-height: var(--k-lh-body); }
+.ln-list li { margin-bottom: var(--k-s8); overflow-wrap: anywhere; }
+.ln-goal, .ln-remember, .ln-rule { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--k-r-lg); padding: var(--k-s12) var(--k-s16); display: flex; flex-direction: column; gap: var(--k-s8); }
+.ln-goal b { font-weight: var(--k-w-semibold); font-size: var(--k-fs-secondary); color: var(--text-secondary); }
+.ln-remember .ln-h { margin-top: 0; }
+.ln-remember .ln-list { padding-left: var(--k-s16); }
+.ln-rule { border-style: dashed; }
+.ln-tag { align-self: flex-start; border: 1px solid var(--text-secondary); border-radius: var(--k-r-pill); padding: 0 var(--k-s8); font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); color: var(--text-secondary); }
+.ln-actions { display: flex; flex-direction: column; gap: var(--k-s8); }
+
+/* ------------------------------------------------------- интерактивный блок */
+.ln-play { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--k-r-lg); padding: var(--k-s12); display: flex; flex-direction: column; gap: var(--k-s12); min-width: 0; }
+.ln-note { color: var(--text-secondary); font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); }
+.ln-play-text { margin: 0; color: var(--text-primary); font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); }
+.ln-play-card { background: var(--bg-elevated); border-radius: var(--k-r-md); padding: var(--k-s12); display: flex; flex-direction: column; gap: var(--k-s8); }
+.ln-play-card b { font-weight: var(--k-w-semibold); }
+.ln-segs { display: flex; flex-wrap: wrap; }
+.ln-segs .k-seg { flex: 1 1 auto; min-width: 0; }
+.ln-stat { display: flex; justify-content: space-between; gap: var(--k-s12); font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); color: var(--text-secondary); }
+.ln-stat-val { color: var(--text-primary); font-weight: var(--k-w-semibold); text-align: right; font-variant-numeric: tabular-nums; }
+.ln-slider-val { color: var(--text-primary); font-weight: var(--k-w-semibold); font-variant-numeric: tabular-nums; }
+.ln-verdict { border-radius: var(--k-r-md); padding: var(--k-s8) var(--k-s12); background: var(--bg-elevated); color: var(--text-primary); font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); min-height: var(--k-s32); }
+.ln-verdict.ok { border-left: 4px solid var(--color-success); }
+.ln-verdict.bad { border-left: 4px solid var(--color-danger); }
+.ln-row { display: flex; gap: var(--k-s12); flex-wrap: wrap; align-items: flex-start; }
+.ln-col { display: flex; flex-direction: column; gap: var(--k-s4); min-width: 0; }
+.ln-col small { color: var(--text-secondary); font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); }
+
+.ln-bar { display: flex; flex-direction: column; gap: var(--k-s4); }
+.ln-bar-top { display: flex; justify-content: space-between; font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); color: var(--text-secondary); }
+.ln-bar-top b { color: var(--text-primary); font-weight: var(--k-w-semibold); font-variant-numeric: tabular-nums; }
+.ln-bar-track { height: var(--k-s8); border-radius: var(--k-r-pill); background: var(--border-color); overflow: hidden; }
+.ln-bar-fill { height: 100%; width: 0; background: var(--text-secondary); }
+.ln-bar.ok .ln-bar-fill { background: var(--color-success); }
+
+/* -------------------------------------------------------------- карты */
+.ln-cards { display: flex; gap: var(--k-s4); flex-wrap: nowrap; }
+.ln-cards img.card { width: 44px; height: auto; border-radius: var(--k-r-sm); }
+.ln-cards.mini img.card { width: 30px; }
+.ln-board { display: flex; gap: var(--k-s4); min-height: 62px; }
+.ln-board .ln-cards { display: contents; }
+.ln-board.empty { border: 1px dashed var(--border-color); border-radius: var(--k-r-sm); }
+.ln-combos { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: var(--k-s8); }
+
+/* --------------------------------------------------------- улицы, лесенка */
+.ln-streets { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--k-s4); }
+.ln-street { background: var(--bg-elevated); border: 1px solid var(--border-color); border-radius: var(--k-r-sm); padding: var(--k-s8) var(--k-s4); display: flex; flex-direction: column; align-items: center; gap: var(--k-s4); font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); color: var(--text-secondary); text-align: center; min-width: 0; }
+.ln-street b { color: var(--text-primary); font-weight: var(--k-w-semibold); font-size: var(--k-fs-caption); }
+.ln-street.on { border-color: var(--text-primary); background: var(--color-success); color: var(--text-on-success); }
+.ln-street.on b { color: var(--text-on-success); }
+.ln-ladder { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--k-s8); }
+.ln-ladder li { display: flex; align-items: center; gap: var(--k-s8); background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--k-r-md); padding: var(--k-s8); }
+.ln-ladder-n { width: var(--k-s24); text-align: center; color: var(--text-secondary); font-size: var(--k-fs-secondary); font-variant-numeric: tabular-nums; flex: none; }
+.ln-ladder-txt { flex: 1; min-width: 0; font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); }
+.ln-ladder-txt b { display: block; font-weight: var(--k-w-semibold); }
+.ln-ladder-txt small { display: block; color: var(--text-secondary); font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); }
+.ln-ladder .ln-cards.mini img.card { width: 24px; }
+.ln-tree { display: grid; grid-template-columns: 1fr 1fr; gap: var(--k-s8); }
+.ln-tree-col { display: flex; flex-direction: column; gap: var(--k-s8); }
+.ln-tree-head { color: var(--text-secondary); font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); }
+.ln-tree-leaf { background: var(--bg-elevated); border: 1px solid var(--border-color); border-radius: var(--k-r-md); padding: var(--k-s8) var(--k-s12); display: flex; flex-direction: column; font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); color: var(--text-secondary); }
+.ln-tree-leaf b { color: var(--text-primary); font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); font-weight: var(--k-w-semibold); }
+@media (max-width: 359px) { .ln-tree { grid-template-columns: 1fr; } }
+
+/* ---------------------------------------------------------- стол (SVG) */
+.ln-table { width: 100%; max-width: 360px; height: auto; align-self: center; display: block; }
+.ln-felt { fill: var(--table-felt); stroke: var(--on-felt-line); stroke-width: 1; }
+.ln-seat { cursor: pointer; outline: none; }
+.ln-seat circle { fill: var(--bg-surface); stroke: var(--on-felt-line); stroke-width: 1.5; }
+.ln-seat text { fill: var(--text-primary); font: var(--k-w-semibold) 12px var(--k-font); pointer-events: none; }
+.ln-seat.on circle { fill: var(--color-success); stroke: var(--on-felt-accent-line); stroke-width: 2; }
+.ln-seat:focus-visible circle { stroke: var(--text-primary); stroke-width: 3; }
+.ln-dealer circle { fill: var(--text-primary); }
+.ln-dealer text { fill: var(--bg-main); font: var(--k-w-semibold) 12px var(--k-font); }
+
+/* --------------------------------------------------- матрица 13×13 (схема) */
+.ln-matrix { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 1px; width: 100%; max-width: 360px; align-self: center; }
+.ln-mh { text-align: center; color: var(--text-secondary); font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); }
+.ln-cell { aspect-ratio: 1; background: var(--bg-main); border-radius: 2px; border: 1px solid var(--border-color); }
+.ln-cell.k-p { border-color: var(--text-secondary); }
+.ln-cell.on { background: var(--color-success); border-color: var(--on-felt-accent-line); }
+
+/* ------------------------------------------------------ колода (ауты) */
+.ln-deck { display: flex; flex-direction: column; gap: 2px; }
+.ln-deck-row { display: grid; grid-template-columns: var(--k-s16) repeat(13, minmax(0, 1fr)); gap: 2px; align-items: center; }
+.ln-deck-suit { text-align: center; font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); color: var(--text-primary); }
+.ln-deck-suit.red { color: var(--color-danger); }
+.ln-deck-card { text-align: center; font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); border-radius: 2px; border: 1px solid var(--border-color); background: var(--bg-elevated); color: var(--text-primary); overflow: hidden; }
+.ln-deck-card.dead { background: var(--bg-main); color: var(--text-secondary); border-style: dashed; }
+.ln-deck-card.out { background: var(--color-success); color: var(--text-on-success); border-color: var(--on-felt-accent-line); }
+
+/* ---------------------------------------------------------------- SPR */
+.ln-spr { display: flex; flex-direction: column; gap: var(--k-s8); }
+.ln-spr-row { display: grid; grid-template-columns: var(--k-s48) 1fr; align-items: center; gap: var(--k-s8); color: var(--text-secondary); font-size: var(--k-fs-secondary); }
+.ln-spr-track { height: var(--k-s16); border-radius: var(--k-r-sm); background: var(--border-color); overflow: hidden; }
+.ln-spr-fill { height: 100%; width: 0; background: var(--text-secondary); }
+.ln-spr-fill.pot { background: var(--color-success); }
+
+/* ---------------------------------------------------- «проверьте себя» */
+.ln-quiz { display: flex; flex-direction: column; gap: var(--k-s12); }
+.ln-q { display: flex; flex-direction: column; gap: var(--k-s8); }
+.ln-q b { font-weight: var(--k-w-semibold); font-size: var(--k-fs-body); line-height: var(--k-lh-body); }
+.ln-options { display: flex; flex-direction: column; gap: var(--k-s8); }
+.ln-option { min-height: var(--k-tap); text-align: left; padding: var(--k-s8) var(--k-s16); border-radius: var(--k-r-md); background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-color); font: var(--k-w-regular) var(--k-fs-body)/var(--k-lh-body) var(--k-font); }
+.ln-option:active:not(:disabled) { background: var(--bg-elevated); }
+.ln-option.right { border-color: var(--color-success); border-width: 2px; }
+.ln-option.wrong { border-color: var(--color-danger); border-width: 2px; }
+.ln-option:disabled { opacity: 1; color: var(--text-primary); }
+.ln-why { color: var(--text-secondary); font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); }
+.ln-why[hidden] { display: none; }
