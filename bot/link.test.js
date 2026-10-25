@@ -83,6 +83,13 @@ test('endChain сбрасывает цепочку; новая ошибка на
   for (let i = 0; i < L.MAX_HOPS; i++) assert.equal(L.openLesson('ev', { returnTo: { exercise: 'x', seed: 1 } }).ok, true);
 });
 
+test('другое задание — новая цепочка: старые заходы не мешают', () => {
+  setup();
+  for (let i = 0; i < L.MAX_HOPS; i++) { L.openLesson('ev', { returnTo: { exercise: 'a', seed: 1 } }); L.returnToTask(); }
+  assert.equal(L.openLesson('ev', { returnTo: { exercise: 'b', seed: 2 } }).ok, true);
+  assert.equal(L.pending().exercise, 'b');
+});
+
 test('«Потренироваться»: кнопка есть только если по теме есть упражнения', () => {
   const has = { exercisesOf: ({ topic }) => (topic === 'pot-odds' ? [{ id: 'a' }] : []) };
   assert.equal(L.canPractice('pot-odds', has), true);

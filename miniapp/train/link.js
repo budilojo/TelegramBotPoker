@@ -74,7 +74,9 @@ export function clearLink() {
 /** «Изучить тему»: из ошибки в упражнении — в урок, запомнив, куда вернуться. */
 export function openLesson(topicId, { returnTo = null } = {}) {
   const prev = read();
-  const hops = returnTo ? (prev?.hops || 0) + 1 : 0;
+  // Считаем только повторные заходы в урок из ТОГО ЖЕ задания: другое задание — новая цепочка.
+  const same = prev && returnTo && prev.exercise === String(returnTo.exercise) && prev.seed === returnTo.seed;
+  const hops = returnTo ? (same ? prev.hops || 0 : 0) + 1 : 0;
   if (returnTo && hops > MAX_HOPS) {
     clearLink();
     router.home?.({ reason: 'loop' });
