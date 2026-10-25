@@ -24,7 +24,11 @@ import * as bar from './widgets/progress-bar.js';
  * Виджеты ответа по виду задания. Новый вид = модуль виджета + строка здесь
  * (`import * as rangeGrid from './widgets/range-grid.js'` и `range: rangeGrid`).
  */
-export const ANSWER_WIDGETS = { pick: choice };
+import * as cardsW from './widgets/cards.js';
+import * as sliderW from './widgets/odds-bar.js';
+import * as betW from './widgets/bet-slider.js';
+import * as tableW from './widgets/table-seat.js';
+export const ANSWER_WIDGETS = { pick: choice, cards: cardsW, slider: sliderW, bet: betW, table: tableW };
 
 const EMPTY = { started: false, total: 0, skills: [], tracks: [], weak: [], due: [], mistakes: [], masteredTopics: [] };
 const M = {
