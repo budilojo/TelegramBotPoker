@@ -13,7 +13,8 @@
  *   text    true — поле «77+, ATs+, KQo»
  *   hint    строка-подсказка под матрицей
  * В режиме diff (есть `result`) верный ответ — `result.solution`, ответ игрока — `value`.
- * В режиме flag игрок отмечает «неверные» клетки готового диапазона `setup.grid.ref`.
+ * В режиме flag игрок отмечает «неверные» клетки готового диапазона `setup.grid.ref`;
+ * в разборе `result.solution` — массив неверных клеток.
  *
  * Рендер: DOM матрицы строится ОДИН раз; нажатие меняет только изменившиеся
  * клетки (иначе экран «подпрыгивает»). Ничего не грузит извне.
@@ -68,7 +69,7 @@ export function mount(props) {
   bZoom.setAttribute('aria-pressed', 'false');
   bDraw.setAttribute('aria-pressed', 'false');
   tools.append(bUndo, bRedo, bZoom, bDraw);
-  top.append(count, tools);
+  top.append(count);
 
   const presets = el('div', 'rg-presets');
   const textRow = el('div', 'rg-text');
@@ -108,7 +109,8 @@ export function mount(props) {
     }
   }
 
-  root.append(top, presets, textRow, err, wrap, loupe, legend, hint);
+  // матрица сразу под счётчиком: на 568 px она должна быть на виду, кнопки — под ней
+  root.append(top, wrap, loupe, legend, tools, presets, textRow, err, hint);
 
   /* ---------------------------------------------------------- отрисовка */
 
@@ -194,10 +196,10 @@ export function mount(props) {
     const result = p.result || null;
     let mode = g.mode || 'edit';
     st.steps = g.steps === 3 ? 3 : 2;
-    st.refMap = toMap(result ? result.solution : g.ref);
+    st.refMap = toMap(result && g.mode !== 'flag' ? result.solution : g.ref);
     if (result && (mode === 'edit' || mode === 'diff' || mode === 'flag')) {
       if (mode === 'flag') {
-        const wrong = new Set(g.wrong || []);
+        const wrong = new Set(Array.isArray(result.solution) ? result.solution : []);
         const marked = new Set(Array.isArray(p.value) ? p.value : []);
         st.flagResult = { wrong, marked };
         st.refMap = toMap(g.ref);

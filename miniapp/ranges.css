@@ -21,7 +21,7 @@
 .rg-top { display: flex; align-items: center; justify-content: space-between; gap: var(--k-s8); flex-wrap: wrap; }
 .rg-count { font: var(--k-w-semibold) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font); color: var(--k-text); font-variant-numeric: tabular-nums; }
 .rg-tools { display: flex; gap: var(--k-s8); flex-wrap: wrap; }
-.rg-tools .k-btn { min-width: var(--k-tap); }
+.rg-tools .k-btn, .rg-presets .k-btn { min-width: var(--k-tap); padding: 0 var(--k-s8); }
 .rg-presets { display: flex; gap: var(--k-s8); flex-wrap: wrap; }
 
 .rg-wrap { overflow: hidden; border-radius: var(--k-r-md); background: var(--k-surface); }
@@ -81,3 +81,14 @@
 .rg-err { font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font); color: var(--k-text); }
 .rg-err:empty { display: none; }
 .rg-hint { font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font); color: var(--k-text-2); }
+
+/* display:flex у строк не должен перебивать атрибут hidden */
+.rg [hidden] { display: none; }
+
+/* В «Крупно» буквы рядов и столбцов остаются на виду при прокрутке внутри матрицы. */
+.rg-wrap.zoom .rg-h[data-col] { position: sticky; top: 0; z-index: 3; }
+.rg-wrap.zoom .rg-h[data-row] { position: sticky; left: 0; z-index: 2; }
+.rg-wrap.zoom .rg-corner { position: sticky; top: 0; left: 0; z-index: 4; }
+
+/* Одномастные (выше диагонали) чуть светлее разномастных: вторая подсказка к положению клетки. */
+.rg-c.suited { background: var(--k-elevated); }

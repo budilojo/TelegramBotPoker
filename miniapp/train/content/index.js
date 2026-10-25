@@ -9,6 +9,7 @@
  * X:  outs, potodds, postflop, hands, advanced — добавьте свои строки ниже
  */
 import './starter.js';
+import './ranges.js'; // W: тренажёр диапазонов
 // W:
 // X:
 import './outs.js';
