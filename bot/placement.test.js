@@ -124,3 +124,51 @@ test('итог можно поменять руками, граница 1…5; �
   assert.deepEqual(cleanPlacement(Q.placementMessage(Q.zeroLevels(), 'zero')), Q.zeroLevels());
   assert.deepEqual(Q.levelsFromHistory({ skills: { math: { enough: true, level: 3 }, preflop: { enough: false, level: null } } }), { preflop: null, ranges: null, math: 3, postflop: null });
 });
+
+/* ---------------------------------------- через хаб, как на настоящем телефоне */
+
+import { Table, user } from './harness.js';
+import { Store } from './store.js';
+
+test('через хаб: решения за столом → журнал; placement, history, удаление, сброс — только свои', async () => {
+  const A = user(1, 'Алиса'); const B = user(2, 'Боб'); const C = user(3, 'Катя');
+  const store = new Store(':memory:');
+  const t = new Table({ store });
+  await t.begin({ A, B, C });
+  const tr = async (u, msg) => {
+    const before = t.page(u).inbox.length;
+    await t.send(u, { t: 'train', ...msg });
+    return t.page(u).inbox.slice(before).filter((m) => m.t === 'train').at(-1) ?? null;
+  };
+  let guard = 0;
+  while (t.room.hand?.phase === 'betting' && guard++ < 40) {
+    const who = t.actorOf({ A, B, C });
+    const l = t.state(who).legal;
+    await t.act(who, l?.canCheck ? 'check' : 'call');
+  }
+  const mine = store.decisionsOf(A.id).length;
+  assert.ok(mine > 0);
+  const h = await tr(A, { op: 'history' });
+  assert.equal(h.history.total, mine);
+  assert.equal(h.history.available, false);
+
+  const z = await tr(A, { op: 'placement', via: 'zero', skills: { preflop: 1, ranges: 1, math: 1, postflop: 1 }, uid: '2' });
+  assert.ok(z.progress, JSON.stringify(z));
+  const bad = await tr(A, { op: 'placement', via: 'quiz', skills: { math: 9 } });
+  assert.ok(bad.error);
+  assert.match(bad.error.text, /./);
+  const few = await tr(A, { op: 'placement', via: 'history', skills: { math: 3 } });
+  assert.equal(few.error.code, 'FEW_DECISIONS');
+
+  const other = store.decisionsOf(B.id).length;
+  const cleared = await tr(A, { op: 'decisions-clear' });
+  assert.equal(cleared.cleared, mine);
+  assert.equal(store.decisionsOf(A.id).length, 0);
+  assert.equal(store.decisionsOf(B.id).length, other, 'у Боба — на месте');
+
+  // «Сбросить мой прогресс» стирает и журнал решений
+  assert.ok(store.decisionsOf(C.id).length > 0);
+  await tr(C, { op: 'reset' });
+  assert.equal(store.decisionsOf(C.id).length, 0);
+  assert.ok(store.decisionsOf(B.id).length > 0);
+});

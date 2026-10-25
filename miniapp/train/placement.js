@@ -191,13 +191,11 @@ export function showPlacement(root, ctx) {
   function historyScreen() {
     const a = st.history;
     if (!a?.available) return choose();
-    const errs = (a.mistakes || []).slice(0, 4).map((m) => h('li', `${m.text} — ${m.count}`));
     result(Q.levelsFromHistory(a), 'history', {
       only: true,
       note: 'На чём основана оценка — ниже.',
       extra: h('div.pl-why',
         h('div.pl-why-t', a.summary),
-        errs.length ? h('ul.pl-why-l', ...errs) : null,
         h('div.pl-why-n', 'Это грубая оценка по правилам, а не разбор солвера. Выиграли вы или проиграли — не учитывается.')),
     });
   }

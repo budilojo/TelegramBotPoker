@@ -56,7 +56,9 @@ export function handleY(msg, { userId, store, saveSkills }) {
       if (!a.available) return { error: 'FEW_DECISIONS', text: ERRORS.FEW_DECISIONS };
       for (const id of Object.keys(skills)) if (!a.skills[id]?.enough) return { error: 'BAD_PLACEMENT', text: ERRORS.BAD_PLACEMENT };
     }
-    return { t: 'train', progress: saveSkills(userId, skills, msg.via) };
+    const p = saveSkills(userId, skills, msg.via);
+    if (p?.error) return { error: p.error, text: p.text };
+    return { t: 'train', progress: p };
   }
   return { error: 'BAD_PLACEMENT', text: ERRORS.BAD_PLACEMENT };
 }
