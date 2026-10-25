@@ -114,21 +114,26 @@ try {
   await page.waitForSelector('h1:has-text("Игры с ботами")');
   await page.waitForSelector('.solo-resume:has-text("Покер")');
 
-  // Режим «Обучение»: ни уровня, ни соперников — азбука, уроки, свободная игра.
-  await pokerForm();
-  await page.locator('.sheet .seg.solo-mode button', { hasText: 'Обучение' }).click();
-  await page.waitForSelector('.sheet .menu-item:has-text("Азбука покера")');
+  // Режим «Обучение» теперь открывает полный экран курса (miniapp/learn/); прежняя школа с
+  // наставником живёт в нём как «Практика с наставником»: азбука, уроки-раздачи, свободная игра.
+  const openMentor = async () => {
+    await pokerForm();
+    await page.locator('.sheet .seg.solo-mode button', { hasText: 'Обучение' }).click();
+    await page.waitForSelector('.learn h1:has-text("Обучение")');
+    await page.getByRole('button', { name: /Практика с наставником/ }).click();
+    await page.waitForSelector('.learn .menu-item:has-text("Азбука покера")');
+  };
+  await openMentor();
   for (const label of ['Уровень', 'Соперников', 'Блайнды']) {
-    assert.equal(await page.locator(`.sheet .section-label:has-text("${label}")`).count(), 0, `в обучении нет «${label}»`);
+    assert.equal(await page.locator(`.learn .section-label:has-text("${label}")`).count(), 0, `в обучении нет «${label}»`);
   }
-  assert.equal(await page.locator('.sheet .menu-item').count(), 8, 'азбука, шесть уроков, свободная игра');
+  assert.equal(await page.locator('.learn .menu-item').count(), 8, 'азбука, шесть уроков, свободная игра');
   assert.equal(await page.getByRole('button', { name: '▶ Играть' }).count(), 0, 'урок начинается нажатием на него');
-  await sheetFits('обучение в форме покера, 360 px');
-  step('форма покера → «Обучение»: азбука, шесть уроков, свободная игра; уровня и соперников нет');
-  // Из азбуки «← К урокам» — обратно в форму, в режим «Обучение».
+  step('форма покера → «Обучение» → «Практика с наставником»: азбука, шесть уроков, свободная игра; уровня и соперников нет');
+  // Из азбуки «← К урокам» — обратно в практику с наставником.
   await page.getByRole('button', { name: 'Азбука покера' }).click();
   await page.getByRole('button', { name: '← К урокам' }).click();
-  await page.waitForSelector('.sheet .seg.solo-mode button.on:has-text("Обучение")');
+  await page.waitForSelector('.learn .menu-item:has-text("Азбука покера")');
 
   // Азбука: четыре шага и тест.
   await page.getByRole('button', { name: 'Азбука покера' }).click();
@@ -190,10 +195,8 @@ try {
   await page.waitForSelector('text=Урок 2 из 6');
   await page.locator('.icon-btn[aria-label="Меню"]').click();
   await page.getByRole('button', { name: '← Игры с ботами' }).click();
-  await pokerForm();
-  await page.locator('.sheet .seg.solo-mode button', { hasText: 'Обучение' }).click();
-  await page.waitForSelector('.sheet .menu-item:has-text("✓ ")');
-  await page.keyboard.press('Escape');
+  await openMentor();
+  await page.waitForSelector('.learn .menu-item:has-text("✓ ")');
   step('«▶ Продолжить: Школа покера» возвращает в урок; в списке урок отмечен ✓');
 
   // Дурак с ботами: форма, игра идёт сама.

@@ -7,7 +7,7 @@ import { h, cardImg, haptic } from '../ui.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 
-/** svg('rect', {x:1}, ...дети) — узел SVG без innerHTML. */
+/** svg('rect', {x:1}, ...дети) — узел SVG, строится через createElementNS. */
 export function svg(tag, attrs = {}, ...kids) {
   const el = document.createElementNS(NS, tag);
   for (const [k, v] of Object.entries(attrs)) {

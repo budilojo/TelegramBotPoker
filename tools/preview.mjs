@@ -627,11 +627,11 @@ if (GAMES.battleship) {
 
 // 28. Школа покера: список уроков, азбука, тест, урок с подсказкой и итог урока.
 {
-  scene('37-school-list', null, 105, { start: 'solo', click: 'Покер', press: ['Обучение'] });
-  scene('37а-school-list-320', null, 105, { start: 'solo', click: 'Покер', press: ['Обучение'], width: 320, height: 760 });
-  scene('37б-school-abc-flow', null, 105, { start: 'solo', click: 'Покер', press: ['Обучение', 'Азбука покера', 'Дальше →'] });
-  scene('37в-school-abc-combos', null, 105, { start: 'solo', click: 'Покер', press: ['Обучение', 'Азбука покера', 'Дальше →', 'Дальше →', 'Дальше →'] });
-  scene('37г-school-quiz', null, 105, { start: 'solo', click: 'Покер', press: ['Обучение', 'Азбука покера', 'Дальше →', 'Дальше →', 'Дальше →', 'Проверить себя →', 'Флеш'] });
+  scene('37-school-list', null, 105, { start: 'solo', click: 'Покер', press: ['Обучение', 'Практика с наставником'] });
+  scene('37а-school-list-320', null, 105, { start: 'solo', click: 'Покер', press: ['Обучение', 'Практика с наставником'], width: 320, height: 760 });
+  scene('37б-school-abc-flow', null, 105, { start: 'solo', click: 'Покер', press: ['Обучение', 'Практика с наставником', 'Азбука покера', 'Дальше →'] });
+  scene('37в-school-abc-combos', null, 105, { start: 'solo', click: 'Покер', press: ['Обучение', 'Практика с наставником', 'Азбука покера', 'Дальше →', 'Дальше →', 'Дальше →'] });
+  scene('37г-school-quiz', null, 105, { start: 'solo', click: 'Покер', press: ['Обучение', 'Практика с наставником', 'Азбука покера', 'Дальше →', 'Дальше →', 'Дальше →', 'Проверить себя →', 'Флеш'] });
 
   /** Довести раздачу урока: человек — по `human`, наставник — по сценарию. */
   const drive = async (room, human, until) => {
