@@ -1,0 +1,83 @@
+/* ==========================================================================
+   Матрица 13×13 (виджет miniapp/train/widgets/range-grid.js), волна 3, агент W.
+   Только токены из tokens.css. Без градиентов, свечения и теней.
+
+   СМЫСЛ ЦВЕТА НЕ ЕДИНСТВЕННЫЙ НОСИТЕЛЬ (дальтоники):
+     выбрано      — зелёная заливка + светлая рамка внутри клетки;
+     «иногда»     — плоская полоса заливки снизу (высота = частота), рамка пунктиром;
+     пропущено    — пунктирная красная рамка, без заливки;
+     лишнее       — красная заливка + перечёркивание;
+     верно        — зелёная заливка + светлая рамка.
+   Никаких штриховок-градиентов: полоса — обычный блок.
+
+   44 px. Клетка на 320 px ≈ 20 px и не может быть больше. Способ, а не
+   молчаливое нарушение: режим «Крупно» (клетка ровно 44 px, прокрутка
+   внутри матрицы), лупа над пальцем при рисовании, строка/столбец одним
+   нажатием, готовые наборы, поле ввода строкой. docs/brain/decisions/063.
+   ========================================================================== */
+
+.rg { --rg-cell: calc((100vw - 2 * var(--k-s16)) / 14); position: relative; display: flex; flex-direction: column; gap: var(--k-s12); font-family: var(--k-font); }
+
+.rg-top { display: flex; align-items: center; justify-content: space-between; gap: var(--k-s8); flex-wrap: wrap; }
+.rg-count { font: var(--k-w-semibold) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font); color: var(--k-text); font-variant-numeric: tabular-nums; }
+.rg-tools { display: flex; gap: var(--k-s8); flex-wrap: wrap; }
+.rg-tools .k-btn { min-width: var(--k-tap); }
+.rg-presets { display: flex; gap: var(--k-s8); flex-wrap: wrap; }
+
+.rg-wrap { overflow: hidden; border-radius: var(--k-r-md); background: var(--k-surface); }
+.rg-wrap.zoom { overflow: auto; overscroll-behavior: contain; max-height: 72vh; touch-action: pan-x pan-y; }
+.rg-wrap.zoom.draw { touch-action: none; }
+
+.rg-board { display: grid; grid-template-columns: repeat(14, var(--rg-cell)); grid-auto-rows: var(--rg-cell); width: max-content; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: pan-y; outline: none; }
+.rg.draw .rg-board { touch-action: none; }
+.rg.ro .rg-board { touch-action: auto; }
+
+.rg-h, .rg-c { position: relative; display: flex; align-items: center; justify-content: center; box-sizing: border-box; font: var(--k-w-semibold) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font); font-variant-numeric: tabular-nums; }
+.rg-h { color: var(--k-text-2); background: var(--k-elevated); border: 1px solid var(--k-divider); }
+.rg-h.line { cursor: pointer; }
+.rg-h.line:active { background: var(--k-press); }
+.rg-corner { background: var(--k-surface); }
+
+/* Клетка. Фон — «пусто»; ::before — плоская полоса заливки снизу, высота = частота. */
+.rg-c { background: var(--k-surface); color: var(--k-text-2); border: 1px solid var(--k-divider); overflow: hidden; cursor: pointer; }
+.rg-c.pair { color: var(--k-text); }
+.rg-c::before { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--f, 0) * 100%); background: var(--k-green); }
+.rg-c > span { position: relative; z-index: 1; }
+.rg-sfx { display: none; }
+.rg-wrap.zoom .rg-sfx { display: inline; }
+.rg-c.f { color: var(--k-on-green); }
+.rg-c.f1 { box-shadow: none; outline: 2px solid var(--on-felt-accent-line); outline-offset: -3px; }
+.rg-c.fh { border-style: dashed; border-color: var(--k-text); color: var(--k-text); }
+
+/* Разбор. */
+.rg-c.missed { border: 2px dashed var(--k-suit-red); color: var(--k-text); }
+.rg-c.extra { background: var(--k-suit-red); color: var(--k-text); }
+.rg-c.extra::before { height: 0; }
+.rg-c.extra::after { content: ''; position: absolute; left: -2px; right: -2px; top: 50%; height: 2px; background: var(--k-text); transform: rotate(-45deg); z-index: 2; }
+.rg-c.off { border: 2px dashed var(--k-text); }
+.rg-c.hit { color: var(--k-on-green); }
+
+.rg-c:focus-visible, .rg-c.focus { outline: 2px solid var(--k-text); outline-offset: -2px; }
+.rg.ro .rg-c, .rg.off .rg-c { cursor: default; }
+
+.rg-loupe { position: absolute; z-index: 5; display: grid; grid-template-columns: repeat(3, var(--k-s48)); grid-auto-rows: var(--k-s48); background: var(--k-bg); border: 2px solid var(--k-text); border-radius: var(--k-r-md); overflow: hidden; pointer-events: none; }
+.rg-loupe[hidden] { display: none; }
+.rg-lp { position: relative; display: flex; align-items: center; justify-content: center; font: var(--k-w-semibold) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font); background: var(--k-surface); color: var(--k-text-2); border: 1px solid var(--k-divider); box-sizing: border-box; overflow: hidden; }
+.rg-lp::before { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--f, 0) * 100%); background: var(--k-green); }
+.rg-lp > span { position: relative; }
+.rg-lp.f { color: var(--k-on-green); }
+.rg-lp.mid { outline: 2px solid var(--k-text); outline-offset: -2px; }
+
+.rg-legend { display: flex; gap: var(--k-s12); flex-wrap: wrap; font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font); color: var(--k-text-2); }
+.rg-legend i { display: inline-block; vertical-align: middle; width: var(--k-s16); height: var(--k-s16); margin-right: var(--k-s4); box-sizing: border-box; border-radius: var(--k-r-sm); background: var(--k-surface); border: 1px solid var(--k-divider); position: relative; overflow: hidden; }
+.rg-legend i.hit { background: var(--k-green); outline: 2px solid var(--on-felt-accent-line); outline-offset: -3px; }
+.rg-legend i.missed { border: 2px dashed var(--k-suit-red); }
+.rg-legend i.extra { background: var(--k-suit-red); }
+.rg-legend i.extra::after { content: ''; position: absolute; left: -2px; right: -2px; top: 50%; height: 2px; background: var(--k-text); transform: rotate(-45deg); }
+.rg-legend i.off { border: 2px dashed var(--k-text); }
+
+.rg-text { display: flex; gap: var(--k-s8); }
+.rg-text .k-input { flex: 1; min-width: 0; }
+.rg-err { font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font); color: var(--k-text); }
+.rg-err:empty { display: none; }
+.rg-hint { font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font); color: var(--k-text-2); }
