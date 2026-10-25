@@ -118,6 +118,12 @@ const recCard = (r) => h('button.k-btn.k-btn--secondary.tr-rec', { type: 'button
 /* -------------------------------------------------------------------- главная */
 
 function home() {
+  // Первый запуск: определение уровня (агент Y) вместо списка направлений.
+  if (hooks.needsPlacement?.(P()) && hooks.placement) {
+    const box = h('div.lobby.hub.tr');
+    hooks.placement(box, { done: () => openRoute('train'), exit: () => openRoute('train') });
+    return box;
+  }
   const root = h('div.lobby.hub.tr',
     back('← К покеру', closeRoute),
     h('div.hub-head', h('h1', 'Тренировка'), h('div.sub', 'Задания по картам и ставкам с разбором. Прогресс видите только вы.')),
@@ -134,6 +140,7 @@ function home() {
           h('div.tr-meta', hasTasks(t.id) ? levelText(levelOfTrack(t.id)) : 'Скоро')),
         hasTasks(t.id) ? dots(t.id) : null, h('span.gc-go', '›')))),
         h('button.k-btn.k-btn--secondary.k-btn--block', { type: 'button', 'data-go': 'stats', onclick: () => { haptic.soft(); openRoute('train-stats'); } }, 'Мой прогресс'),
+        hooks.placement ? h('button.k-btn.k-btn--ghost.k-btn--block', { type: 'button', 'data-go': 'placement', onclick: () => { haptic.soft(); const box = h('div.lobby.hub.tr'); $app.replaceChildren(box); hooks.placement(box, { done: () => openRoute('train'), exit: () => openRoute('train') }); } }, 'Определить уровень заново') : null,
       ];
     }));
   return root;
@@ -266,6 +273,7 @@ function exerciseScreen() {
     }
     haptic.tap();
     cur.review = review;
+    if (review.ok) hooks.endChain?.();
     run.results.push({ score: review.score, topics: review.mistakes.map((m) => m.topic) });
     // Сервер принимает коды ошибок строками (до 8); тема в журнале — тема задания.
     const codes = [...new Set(review.mistakes.map((m) => m.code))].filter((c) => /^[a-z0-9][a-z0-9._-]{0,39}$/i.test(c)).slice(0, 8);
@@ -278,6 +286,7 @@ function exerciseScreen() {
   drawFoot();
 
   const leave = () => {
+    hooks.endChain?.();
     if (cur.value != null && !cur.review) return void confirmLeave();
     openRoute('train-track', { track: run.track });
   };
@@ -353,6 +362,7 @@ function stats() {
         p.weak.length ? [h('div.section-label', 'Повторение'), h('ul.tr-rows', p.weak.map((w) => h('li', h('span', topicById(w.topic)?.title || w.topic), h('small', w.due ? 'пора повторить' : `через ${Math.max(1, Math.ceil((w.dueAt - p.now) / 86_400_000))} дн.`))))] : null,
         p.mistakes.length ? [h('div.section-label', 'Последние ошибки'), h('ul.tr-rows', p.mistakes.map((m) => h('li', h('span', topicById(m.topic)?.title || m.topic), h('small', `ошибок: ${m.n}`),
           hooks.openLesson ? h('button.k-btn.k-btn--secondary.k-btn--compact', { type: 'button', onclick: () => hooks.openLesson(m.topic, { returnTo: null }) }, 'Изучить тему') : null)))] : null,
+        hooks.decisionSettings ? (() => { const ds = h('div.tr-ds'); hooks.decisionSettings(ds); return ds; })() : null,
         h('button.k-btn.k-btn--ghost.k-btn--block.tr-reset', { type: 'button', 'data-go': 'reset', onclick: confirmReset }, 'Сбросить мой прогресс'),
       ];
     }));

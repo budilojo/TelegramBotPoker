@@ -112,7 +112,7 @@ export function update(el, props)       // необязательно
 { t:'train', op:'result', ex, track, topic, level, score, ms, seed, mistakes }
                                                          → { t:'train', progress, saved:true }
 { t:'train', op:'level',  skill, level }                 → { t:'train', progress }   // ручной уровень навыка
-{ t:'train', op:'reset', confirm:true }                  → { t:'train', progress }   // «Сбросить мой прогресс»
+{ t:'train', op:'reset' }                                → { t:'train', progress }   // «Сбросить мой прогресс»
 { t:'train', op:'placement', … }                         // агент Y: регистрируется через Trainer.registerOp
 ```
 

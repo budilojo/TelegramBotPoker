@@ -35,7 +35,15 @@ export function resetRoute() {
  *   hooks.renderLearn — агент U (`learn/`): (container, api) → нарисовать «Обучение».
  * Пока крючка нет, соответствующая кнопка просто не показывается.
  */
-export const hooks = { openLesson: null, renderLearn: null };
+export const hooks = {
+  openLesson: null,
+  renderLearn: null,
+  /** Агент Y (`link-wire.js`): нужно ли определение уровня; экран определения; настройки журнала решений; цепочка «ошибка → урок → задание». */
+  needsPlacement: null,
+  placement: null,
+  decisionSettings: null,
+  endChain: null,
+};
 
 /** Открыть упражнение (для Y: «Вернуться к заданию» — тот же exercise и seed). */
 export function openTrainingExercise({ track, topic = null, exercise = null, seed = null, level = null }) {
