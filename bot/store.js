@@ -171,6 +171,56 @@ CREATE TABLE IF NOT EXISTS profiles (
   updated_at INTEGER
 );
 
+-- «Тренировка» (покер): личный прогресс игрока. Таблицы ДОБАВЛЕНЫ без смены
+-- версии схемы — старый код открывает такую базу и просто не знает про них.
+CREATE TABLE IF NOT EXISTS train_skill (
+  user_id    TEXT NOT NULL,
+  skill      TEXT NOT NULL,
+  level      INTEGER NOT NULL,
+  rating     REAL NOT NULL DEFAULT 0,
+  n          INTEGER NOT NULL DEFAULT 0,
+  updated_at INTEGER,
+  PRIMARY KEY (user_id, skill)
+);
+CREATE TABLE IF NOT EXISTS train_result (
+  id      INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
+  ex      TEXT NOT NULL,
+  track   TEXT NOT NULL,
+  topic   TEXT NOT NULL,
+  level   INTEGER NOT NULL,
+  score   REAL NOT NULL,
+  ms      INTEGER NOT NULL,
+  at      INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS train_result_by_user ON train_result (user_id, id DESC);
+CREATE TABLE IF NOT EXISTS train_topic (
+  user_id       TEXT NOT NULL,
+  topic         TEXT NOT NULL,
+  mastery       INTEGER NOT NULL DEFAULT 0,
+  interval_days INTEGER NOT NULL DEFAULT 0,
+  due_at        INTEGER,
+  lapses        INTEGER NOT NULL DEFAULT 0,
+  updated_at    INTEGER,
+  PRIMARY KEY (user_id, topic)
+);
+CREATE TABLE IF NOT EXISTS train_mistake (
+  user_id TEXT NOT NULL,
+  topic   TEXT NOT NULL,
+  code    TEXT NOT NULL,
+  n       INTEGER NOT NULL DEFAULT 1,
+  last_at INTEGER NOT NULL,
+  PRIMARY KEY (user_id, topic, code)
+);
+CREATE TABLE IF NOT EXISTS train_pass (
+  user_id   TEXT NOT NULL,
+  track     TEXT NOT NULL,
+  level     INTEGER NOT NULL,
+  passed_at INTEGER NOT NULL,
+  PRIMARY KEY (user_id, track, level)
+);
+
+
 -- Сколько зачётных партий у этого состава сегодня. Вдвоём за час можно
 -- нарисовать любое число — вот это и не даёт.
 CREATE TABLE IF NOT EXISTS party_day (
@@ -218,6 +268,29 @@ export class Store {
         'INSERT INTO profiles (user_id, nickname, avatar, updated_at) VALUES (?, ?, ?, ?) ' +
           'ON CONFLICT(user_id) DO UPDATE SET nickname = excluded.nickname, avatar = excluded.avatar, updated_at = excluded.updated_at'
       ),
+      trSkills: this.db.prepare('SELECT skill, level, rating, n, updated_at FROM train_skill WHERE user_id = ?'),
+      trResults: this.db.prepare('SELECT ex, track, topic, level, score, ms, at FROM train_result WHERE user_id = ? ORDER BY id DESC'),
+      trTopics: this.db.prepare('SELECT topic, mastery, interval_days, due_at, lapses, updated_at FROM train_topic WHERE user_id = ?'),
+      trMistakes: this.db.prepare('SELECT topic, code, n, last_at FROM train_mistake WHERE user_id = ? ORDER BY last_at DESC'),
+      trPasses: this.db.prepare('SELECT track, level, passed_at FROM train_pass WHERE user_id = ?'),
+      trPutSkill: this.db.prepare(
+        'INSERT INTO train_skill (user_id, skill, level, rating, n, updated_at) VALUES (?, ?, ?, ?, ?, ?) ' +
+          'ON CONFLICT(user_id, skill) DO UPDATE SET level = excluded.level, rating = excluded.rating, n = excluded.n, updated_at = excluded.updated_at'
+      ),
+      trAddResult: this.db.prepare('INSERT INTO train_result (user_id, ex, track, topic, level, score, ms, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'),
+      trTrim: this.db.prepare(
+        'DELETE FROM train_result WHERE user_id = ? AND id NOT IN (SELECT id FROM train_result WHERE user_id = ? ORDER BY id DESC LIMIT ?)'
+      ),
+      trPutTopic: this.db.prepare(
+        'INSERT INTO train_topic (user_id, topic, mastery, interval_days, due_at, lapses, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ' +
+          'ON CONFLICT(user_id, topic) DO UPDATE SET mastery = excluded.mastery, interval_days = excluded.interval_days, ' +
+          'due_at = excluded.due_at, lapses = excluded.lapses, updated_at = excluded.updated_at'
+      ),
+      trAddMistake: this.db.prepare(
+        'INSERT INTO train_mistake (user_id, topic, code, n, last_at) VALUES (?, ?, ?, 1, ?) ' +
+          'ON CONFLICT(user_id, topic, code) DO UPDATE SET n = n + 1, last_at = excluded.last_at'
+      ),
+      trPutPass: this.db.prepare('INSERT OR IGNORE INTO train_pass (user_id, track, level, passed_at) VALUES (?, ?, ?, ?)'),
       getMeta: this.db.prepare('SELECT value FROM meta WHERE key = ?'),
       putMeta: this.db.prepare('INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'),
       addCast: this.db.prepare(
@@ -659,6 +732,47 @@ export class Store {
       .all(...scope, String(userId), String(game), limit);
   }
 
+  // ---- «Тренировка»: личный прогресс (bot/train.js) ----
+  trainLoad(userId) {
+    const u = String(userId);
+    const q = this.q;
+    return {
+      skills: q.trSkills.all(u).map((r) => ({ skill: r.skill, level: r.level, rating: r.rating, n: r.n, updatedAt: r.updated_at })),
+      results: q.trResults.all(u).map((r) => ({ ex: r.ex, track: r.track, topic: r.topic, level: r.level, score: r.score, ms: r.ms, at: r.at })),
+      topics: q.trTopics.all(u).map((r) => ({ topic: r.topic, mastery: r.mastery, intervalDays: r.interval_days, dueAt: r.due_at, lapses: r.lapses, updatedAt: r.updated_at })),
+      mistakes: q.trMistakes.all(u).map((r) => ({ topic: r.topic, code: r.code, n: r.n, lastAt: r.last_at })),
+      passed: q.trPasses.all(u).map((r) => ({ track: r.track, level: r.level, at: r.passed_at })),
+    };
+  }
+  trainSetSkill(userId, { skill, level, rating, n }, at) {
+    this.q.trPutSkill.run(String(userId), skill, level, rating, n, at);
+  }
+  trainAddResult(userId, r, cap) {
+    const u = String(userId);
+    this.q.trAddResult.run(u, r.ex, r.track, r.topic, r.level, r.score, r.ms, r.at);
+    this.q.trTrim.run(u, u, cap);
+  }
+  trainSetTopic(userId, t, at) {
+    this.q.trPutTopic.run(String(userId), t.topic, t.mastery, t.intervalDays, t.dueAt, t.lapses, at);
+  }
+  trainAddMistake(userId, topic, code, at) {
+    this.q.trAddMistake.run(String(userId), topic, code, at);
+  }
+  trainSetPass(userId, track, level, at) {
+    this.q.trPutPass.run(String(userId), track, level, at);
+  }
+  /** «Сбросить мой прогресс»: всё личное по Тренировке, ничего чужого. */
+  trainReset(userId) {
+    const u = String(userId);
+    for (const t of ['train_skill', 'train_result', 'train_topic', 'train_mistake', 'train_pass']) {
+      this.db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).run(u);
+    }
+  }
+  /** Сколько человек открывали Тренировку — только число, без имён. */
+  trainPeople() {
+    return this.db.prepare('SELECT COUNT(DISTINCT user_id) AS n FROM train_result').get().n;
+  }
+
   close() {
     try {
       this.db.close();
@@ -686,6 +800,50 @@ export class NullStore {
     this.rating = new Map();
     this.rated = new Set();
     this.parties = new Map();
+    this.train = new Map();
+  }
+  // ---- «Тренировка» в памяти (тот же интерфейс, что у Store) ----
+  trainBox(userId) {
+    const u = String(userId);
+    if (!this.train.has(u)) this.train.set(u, { skills: new Map(), results: [], topics: new Map(), mistakes: new Map(), passed: new Map() });
+    return this.train.get(u);
+  }
+  trainLoad(userId) {
+    const b = this.trainBox(userId);
+    return {
+      skills: [...b.skills.values()].map((x) => ({ ...x })),
+      results: b.results.map((x) => ({ ...x })).reverse(),
+      topics: [...b.topics.values()].map((x) => ({ ...x })),
+      mistakes: [...b.mistakes.values()].map((x) => ({ ...x })).sort((x, y) => y.lastAt - x.lastAt),
+      passed: [...b.passed.values()].map((x) => ({ ...x })),
+    };
+  }
+  trainSetSkill(userId, { skill, level, rating, n }, at) {
+    this.trainBox(userId).skills.set(skill, { skill, level, rating, n, updatedAt: at });
+  }
+  trainAddResult(userId, r, cap) {
+    const b = this.trainBox(userId);
+    b.results.push({ ...r });
+    if (b.results.length > cap) b.results.splice(0, b.results.length - cap);
+  }
+  trainSetTopic(userId, t, at) {
+    this.trainBox(userId).topics.set(t.topic, { ...t, updatedAt: at });
+  }
+  trainAddMistake(userId, topic, code, at) {
+    const m = this.trainBox(userId).mistakes;
+    const k = `${topic}:${code}`;
+    const cur = m.get(k);
+    m.set(k, { topic, code, n: (cur?.n ?? 0) + 1, lastAt: at });
+  }
+  trainSetPass(userId, track, level, at) {
+    const p = this.trainBox(userId).passed;
+    if (!p.has(`${track}:${level}`)) p.set(`${track}:${level}`, { track, level, at });
+  }
+  trainReset(userId) {
+    this.train.delete(String(userId));
+  }
+  trainPeople() {
+    return [...this.train.values()].filter((b) => b.results.length).length;
   }
   getDm(userId) {
     return this.dm.get(String(userId)) ?? null;

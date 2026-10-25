@@ -27,6 +27,7 @@ import { Outbox } from './outbox.js';
 import { NullStore } from './store.js';
 import { esc } from './fmt.js';
 import { Profiles } from './profile.js';
+import { Training } from './train.js';
 import { GAMES, GAME_LIST, HIDDEN_DRAFTS, gameOf } from './games/index.js';
 import { apply as rateRound } from './rating.js';
 
@@ -233,6 +234,8 @@ export class App {
     this.botRng = botRng;
     /** Ник и аватар для показа (bot/profile.js): права они не дают. */
     this.profiles = new Profiles(this);
+    /** Личный прогресс «Тренировки» в покере (bot/train.js): ни в вид стола, ни в рейтинг не идёт. */
+    this.training = new Training(this);
   }
 
   attachHub(hub) {

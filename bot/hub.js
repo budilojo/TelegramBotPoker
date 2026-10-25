@@ -563,6 +563,10 @@ export class Hub {
       for (const s of this.byGroup.get(session.group) || []) this.pushHub(s);
       return;
     }
+    // «Тренировка» (покер): личный прогресс. Кто — только из session.user; в тело «чей» не смотрим.
+    if (msg.t === 'train' && session.kind !== 'admin') {
+      return void session.send(this.app.training.handle(session.user, msg));
+    }
     if (session.kind === 'hub') return this.handleHub(session, msg);
     if (session.kind === 'home') return this.handleHome(session, msg);
     if (session.kind === 'solo') return this.handleSolo(session, msg);
