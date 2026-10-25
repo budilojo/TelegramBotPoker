@@ -1,0 +1,87 @@
+/* ==========================================================================
+   Виджеты Тренировки: карты, борд, банк, стол, ставка, полоса (агент X).
+   Только токены из tokens.css; плоско; зоны нажатия ≥ 44 px; 320 px.
+   Классы начинаются с tm- (train math), чтобы не пересекаться с другими.
+   ========================================================================== */
+.tm-scene, .tm-table, .tm-bet, .tm-slider, .tm-cards { display: flex; flex-direction: column; gap: var(--k-s12); padding-bottom: var(--tm-kb, 0px); }
+.tm-table, .tm-bet, .tm-slider, .tm-cards { min-width: 0; }
+
+/* Карта: тем же рисунком, что за столом (/cards/*.svg) */
+.tm-card { display: block; width: var(--tm-card-w, 44px); aspect-ratio: 200 / 280; height: auto; border-radius: var(--k-r-sm); }
+.tm-ctext.red { color: var(--color-danger); }
+
+/* Борд */
+.tm-board { display: flex; flex-direction: column; gap: var(--k-s4); align-items: center; }
+.tm-board-row { display: flex; gap: var(--k-s4); justify-content: center; }
+.tm-slot { --tm-card-w: 52px; width: 52px; aspect-ratio: 200 / 280; border-radius: var(--k-r-sm); border: 1px dashed var(--border-color); position: relative; }
+.tm-slot:not(.empty) { border: 0; }
+.tm-slot .tm-card { --tm-card-w: 52px; }
+.tm-slot.mark { outline: 2px solid var(--on-felt-accent-line); outline-offset: 2px; }
+.tm-board-cap { font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); color: var(--text-secondary); min-height: 16px; }
+
+/* Банк, ваши карты */
+.tm-pot { display: flex; flex-wrap: wrap; gap: var(--k-s8); }
+.tm-pot > span { display: flex; flex-direction: column; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--k-r-md); padding: var(--k-s8) var(--k-s12); min-width: 0; }
+.tm-pot b { font-size: var(--k-fs-section); line-height: var(--k-lh-section); font-weight: var(--k-w-semibold); }
+.tm-pot-k, .tm-hero-k { font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); color: var(--text-secondary); }
+.tm-mid { display: flex; flex-wrap: wrap; gap: var(--k-s12); align-items: flex-end; justify-content: space-between; }
+.tm-hero { display: flex; flex-direction: column; gap: var(--k-s4); }
+.tm-hero-cards { display: flex; gap: var(--k-s4); }
+.tm-hero-cards .tm-card { --tm-card-w: 56px; }
+
+/* Места */
+.tm-seats { display: flex; flex-wrap: wrap; gap: var(--k-s8); }
+.tm-seat { flex: 1 1 120px; min-width: 0; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--k-r-md); padding: var(--k-s8) var(--k-s12); }
+.tm-seat.hero { border-color: var(--text-secondary); }
+.tm-seat.folded { opacity: 0.5; }
+.tm-seat-top { display: flex; gap: var(--k-s8); align-items: center; font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); }
+.tm-pos { font-weight: var(--k-w-semibold); background: var(--bg-elevated); border-radius: var(--k-r-sm); padding: 0 var(--k-s4); }
+.tm-seat-name { color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.tm-dealer { margin-left: auto; width: 24px; height: 24px; border-radius: 999px; background: var(--text-primary); color: var(--bg-main); font-size: var(--k-fs-caption); display: grid; place-items: center; font-weight: var(--k-w-semibold); }
+.tm-seat-stack, .tm-seat-bet { font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); }
+.tm-seat-bet { color: var(--text-primary); font-weight: var(--k-w-semibold); }
+.tm-history { margin: 0; padding-left: var(--k-s16); font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); color: var(--text-secondary); }
+
+/* Выбор действия (стол) */
+.tm-options { display: flex; flex-direction: column; gap: var(--k-s8); }
+.tm-opt, .tm-q { min-height: var(--k-tap, 44px); border-radius: var(--k-r-md); border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); font: inherit; font-size: var(--k-fs-body); padding: var(--k-s8) var(--k-s12); text-align: left; cursor: pointer; }
+.tm-opt[aria-pressed='true'], .tm-q.on { background: var(--color-success); border-color: var(--text-primary); color: var(--text-on-success); }
+.tm-opt.right { border-color: var(--text-primary); background: var(--color-success); color: var(--text-on-success); }
+.tm-opt.wrong { border-color: var(--color-danger); background: var(--bg-elevated); }
+.tm-opt:disabled, .tm-q:disabled { cursor: default; }
+.tm-step { display: flex; flex-direction: column; gap: var(--k-s8); border-top: 1px solid var(--border-color); padding-top: var(--k-s12); }
+.tm-step-h { margin: 0; font-size: var(--k-fs-component); line-height: var(--k-lh-component); }
+.tm-step-t { margin: 0; font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); color: var(--text-secondary); }
+
+/* Выбор карт (ауты) */
+.tm-pool { display: flex; flex-wrap: wrap; gap: var(--k-s8); }
+.tm-pick { padding: var(--k-s4); min-width: var(--k-tap, 44px); min-height: var(--k-tap, 44px); border-radius: var(--k-r-md); border: 2px solid transparent; background: var(--bg-surface); cursor: pointer; display: grid; place-items: center; }
+.tm-pick .tm-card { --tm-card-w: 40px; }
+.tm-pick.on { border-color: var(--text-primary); background: var(--color-success); }
+.tm-pick.ok { border-color: var(--text-primary); background: var(--color-success); }
+.tm-pick.extra { border-color: var(--color-danger); background: var(--bg-elevated); }
+.tm-pick.miss { border: 2px dashed var(--text-primary); }
+.tm-pick:disabled { cursor: default; }
+.tm-pool-cap, .tm-count { font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); color: var(--text-secondary); }
+
+/* Ползунок и поле суммы */
+.tm-betbox { display: flex; flex-direction: column; gap: var(--k-s8); }
+.tm-amount-l { display: flex; align-items: center; justify-content: space-between; gap: var(--k-s12); font-size: var(--k-fs-body); }
+.tm-amount-wrap { display: inline-flex; align-items: center; gap: var(--k-s4); }
+.tm-unit { color: var(--text-secondary); }
+.tm-amount { width: 140px; max-width: 100%; min-height: var(--k-tap, 44px); box-sizing: border-box; background: var(--bg-surface); border: 1px solid var(--text-secondary); border-radius: var(--k-r-md); color: var(--text-primary); font: inherit; font-size: var(--k-fs-section); text-align: right; padding: 0 var(--k-s12); }
+.tm-rangebox { position: relative; min-height: var(--k-tap, 44px); display: flex; align-items: center; }
+.tm-range { width: 100%; min-height: var(--k-tap, 44px); margin: 0; background: transparent; accent-color: var(--color-success); touch-action: pan-y; }
+.tm-mark { position: absolute; left: var(--tm-at, 0%); top: 0; transform: translateX(-50%); font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); background: var(--text-primary); color: var(--bg-main); border-radius: var(--k-r-sm); padding: 0 var(--k-s4); pointer-events: none; }
+.tm-mark[hidden] { display: none; }
+.tm-bounds { display: flex; justify-content: space-between; font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); color: var(--text-secondary); }
+.tm-quick { display: flex; flex-wrap: wrap; gap: var(--k-s8); }
+.tm-q { flex: 1 1 56px; text-align: center; }
+
+/* Полоса «ваша / нужная доля» */
+.tm-odds { display: flex; flex-direction: column; gap: var(--k-s4); }
+.tm-bar { position: relative; height: 12px; border-radius: var(--k-r-pill, 999px); background: var(--bg-elevated); overflow: hidden; }
+.tm-bar-fill { position: absolute; inset: 0 auto 0 0; background: var(--text-secondary); }
+.tm-bar.enough .tm-bar-fill { background: var(--color-success); }
+.tm-bar-need { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--text-primary); }
+.tm-odds-cap { display: flex; justify-content: space-between; gap: var(--k-s8); font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); color: var(--text-secondary); }

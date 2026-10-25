@@ -11,3 +11,8 @@
 import './starter.js';
 // W:
 // X:
+import './outs.js';
+import './potodds.js';
+import './postflop.js';
+import './hands.js';
+import './advanced.js';
