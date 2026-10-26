@@ -74,3 +74,40 @@
 .tr-explain .section-label { margin-bottom: var(--k-s4); }
 .tr-explain .alts li.good b { text-decoration: underline; text-decoration-color: var(--color-success); text-decoration-thickness: 2px; }
 .tr-reset { margin-top: var(--k-s8); }
+
+/* ------------------------------------------- ситуация задания над ответом */
+
+.tr-widget > .tm-scene { margin-bottom: var(--k-s12); }
+.tm-positions { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--k-s4); }
+.tm-pos-chip {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-width: 0; min-height: 44px; padding: var(--k-s4);
+  background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--k-r-sm);
+  color: var(--text-secondary); text-align: center;
+}
+.tm-pos-chip b { font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); font-weight: var(--k-w-semibold); }
+.tm-pos-chip small { font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.tm-pos-chip.me { border: 2px solid var(--text-primary); color: var(--text-primary); background: var(--bg-elevated); }
+.tm-pos-chip.op { border-style: dashed; border-color: var(--text-primary); color: var(--text-primary); }
+.tm-hist { margin: 0; font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); color: var(--text-secondary); }
+.tm-pot.bb { display: flex; flex-wrap: wrap; gap: var(--k-s8) var(--k-s16); }
+.tm-grid { margin-top: var(--k-s4); }
+.tm-reveal { display: flex; flex-direction: column; gap: var(--k-s8); }
+.tm-reveal-item { border: 1px solid var(--border-color); border-radius: var(--k-r-md); padding: var(--k-s8); background: var(--bg-surface); }
+.tm-reveal-item > summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: var(--k-w-semibold); font-size: var(--k-fs-secondary); list-style: none; }
+.tm-reveal-item > summary::-webkit-details-marker { display: none; }
+.tm-reveal-item > summary::before { content: '▸'; margin-right: var(--k-s8); color: var(--text-secondary); }
+.tm-reveal-item[open] > summary::before { content: '▾'; }
+
+.tm-cell-note { margin: var(--k-s8) 0 0; min-height: calc(var(--k-lh-secondary) * 5); /* место под самую длинную подпись: страница не растёт от нажатия */ font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); color: var(--text-secondary); }
+
+/* ------------------------------------------- серия подхода и «Где ошибались» */
+.tr-run { display: flex; align-items: center; justify-content: space-between; gap: var(--k-s8); min-height: var(--k-s24); }
+.tr-run-dots { display: inline-flex; gap: var(--k-s4); }
+.tr-run-dots i { width: var(--k-s8); height: var(--k-s8); border-radius: var(--k-r-pill); border: 1px solid var(--text-secondary); }
+.tr-run-dots i.ok { background: var(--color-success); border-color: var(--color-success); }
+.tr-run-dots i.bad { background: var(--color-danger); border-color: var(--color-danger); }
+.tr-run-dots i.cur { border-color: var(--text-primary); border-width: 2px; }
+.tr-streak { font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); color: var(--text-primary); font-weight: var(--k-w-semibold); }
+.tr-redo { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--k-s12); }
+.tr-redo li { display: flex; flex-direction: column; gap: var(--k-s8); align-items: flex-start; font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); }

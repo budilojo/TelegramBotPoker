@@ -177,15 +177,17 @@ export function pickExercise({ track, level, topic = null, recent = [], rand = M
  *     prompt, setup, options, correct: 'id',
  *     why: 'почему верно (2–4 предложения)',
  *     mistake: { code, topic },       // что записать в историю ошибок при промахе
- *   })
+ *     reveal,                         // необязательно: диапазоны, которые показать на матрице ПОСЛЕ ответа
+ *   })                                // { grids: [{ title, ref (как answerForm), mark: ['AKs'] }] }
  */
-export function makePick(rng, { prompt, setup = {}, options, correct, why, mistake }) {
+export function makePick(rng, { prompt, setup = {}, options, correct, why, mistake, reveal = null }) {
   if (!options.some((o) => o.id === correct)) throw new Error('makePick: верного варианта нет среди options');
   const shown = rng.shuffle(options);
   return {
     prompt,
     setup: { ...setup, options: shown.map(({ id, label }) => ({ id, label })) },
     solution: correct,
+    reveal,
     check(answer) {
       const ok = answer === correct;
       return {

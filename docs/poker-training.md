@@ -209,3 +209,9 @@ export function update(el, props)       // необязательно
 ## Математика и постфлоп (агент X)
 
 `miniapp/train/poker-math.js` — оценщик, ауты, эквити, pot odds, EV, MDF, SPR (тест `bot/train.math.test.js`). Виджеты X: `cards` (ответ — массив карт 0…51), `slider` = `odds-bar` (число), `bet` = `bet-slider` (число), `table` = `table-seat` (id или массив id для раздач). Упражнения: 50 штук, `content/{outs,potodds,postflop,hands,advanced}.js` (+ `x-util.js`); тест `bot/train.math.exercises.test.js`. Допущения: диапазоны и доли фолдов названы в заданиях; «ориентир» — размер по текстуре, линия по SPR. Раздачи: 2–3 решения. Не проверено на устройстве.
+
+## Волна 4 (F): ситуация и диапазон на экране задания
+
+- Виды `pick` и `range` показывают над ответом **сцену** (`sceneEl` в `widgets/table-seat.js`): ряд позиций, карты (`hero:[карты]` или `hole:[карты]` + `hero:'BTN'`), банк/стек в BB, борд, история, готовая матрица `setup.grid` режима `readonly`. `setup.you` — ваша позиция, когда `opener` — тот, на кого смотрим (3-бет, чтение диапазона): `hero` строкой в таких заданиях **не ставить**.
+- `task.reveal = { grids:[{ title, ref, mark:[рука] }] }` (через `makePick`) — после ответа в разборе раскрывается диапазон на матрице, рука задания обведена; нажатие на клетку отвечает строкой (`ranges/cell-note.js`). Пустые диапазоны не рисуются.
+- Точки подхода и «Где ошибались» — `screens.js`. Проверки: `bot/train.scenes.test.js`, `tools/e2e-train-scenes.mjs`.

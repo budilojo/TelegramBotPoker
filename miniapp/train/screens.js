@@ -29,7 +29,17 @@ import * as sliderW from './widgets/odds-bar.js';
 import * as betW from './widgets/bet-slider.js';
 import * as tableW from './widgets/table-seat.js';
 import * as rangeGrid from './widgets/range-grid.js';
+import * as revealW from './widgets/reveal.js';
+import { sceneEl } from './widgets/table-seat.js';
 export const ANSWER_WIDGETS = { pick: choice, cards: cardsW, slider: sliderW, bet: betW, table: tableW, range: rangeGrid };
+
+/**
+ * Виды заданий, чей виджет сам НЕ рисует ситуацию (карты, позиции, банк, показанную матрицу): для них
+ * картинку над ответом рисует сцена. Остальные (cards, table, bet…) показывают сцену внутри себя.
+ */
+const SCENE_KINDS = new Set(['pick', 'range']);
+const hasScene = (s = {}) => !!(s.hero || s.hole || s.board || s.opener || s.position || s.pot != null || s.seats || s.history || s.grid?.mode === 'readonly');
+const revealOf = (task) => (task.reveal ? revealW.mount(task.reveal) : null);
 
 const EMPTY = { started: false, total: 0, skills: [], tracks: [], weak: [], due: [], mistakes: [], masteredTopics: [] };
 const M = {
@@ -249,11 +259,26 @@ function exerciseScreen() {
   }
   if (mod) {
     wEl = mod.mount(props());
+    // Ситуация задания — картинкой: ваши карты, позиции, банк, борд, показанный диапазон.
+    if (SCENE_KINDS.has(exercise.kind) && hasScene(task.setup)) host.append(sceneEl(task.setup, { grid: true }));
     host.append(wEl);
   } else {
     host.append(h('div.tr-note', 'Этот вид задания ещё не подключён.'));
   }
-  if (cur.review) reviewHost.append(explain.mount({ review: cur.review }));
+  if (cur.review) reviewHost.append(explain.mount({ review: cur.review, extra: revealOf(task) }));
+
+  /** Точки подхода: верно / неверно / текущее — и серия верных подряд. Меняется на месте, без пересборки экрана. */
+  const strip = h('div.tr-run', { role: 'img' });
+  function drawStrip() {
+    const rs = run.results;
+    let streak = 0;
+    for (let i = rs.length - 1; i >= 0 && rs[i].score >= PASS_SCORE; i--) streak += 1;
+    strip.setAttribute('aria-label', `Подход: верно ${rs.filter((r) => r.score >= PASS_SCORE).length} из ${rs.length}${streak > 1 ? `, подряд ${streak}` : ''}`);
+    strip.replaceChildren(...[
+      h('span.tr-run-dots', { 'aria-hidden': 'true' }, Array.from({ length: ROUND }, (_, i) => h(`i${i < rs.length ? (rs[i].score >= PASS_SCORE ? '.ok' : '.bad') : i === rs.length ? '.cur' : ''}`))),
+      streak > 1 ? h('span.tr-streak', `${streak} верных подряд`) : null].filter(Boolean)); // null в replaceChildren стал бы словом «null»
+  }
+  drawStrip();
 
   /** Ответ готов к проверке: по умолчанию «что-то выбрано»; многошаговые задания говорят сами (task.isComplete). */
   const ready = () => (cur.value != null && (typeof task.isComplete !== 'function' || !!task.isComplete(cur.value)));
@@ -279,15 +304,16 @@ function exerciseScreen() {
       console.warn('train: check упал', err);
       return void toast('Не удалось проверить это задание.');
     }
-    haptic.tap();
+    (review.ok ? haptic.win : haptic.err)();
     cur.review = review;
     if (review.ok) hooks.endChain?.();
-    run.results.push({ score: review.score, topics: review.mistakes.map((m) => m.topic) });
+    run.results.push({ score: review.score, topics: review.mistakes.map((m) => m.topic), exercise: exercise.id, seed: cur.seed, prompt: task.prompt });
+    drawStrip();
     // Сервер принимает коды ошибок строками (до 8); тема в журнале — тема задания.
     const codes = [...new Set(review.mistakes.map((m) => m.code))].filter((c) => /^[a-z0-9][a-z0-9._-]{0,39}$/i.test(c)).slice(0, 8);
     ask({ op: 'result', ex: exercise.id, track: run.track, topic: exercise.topic, level: exercise.level, score: review.score, ms: Math.min(3_600_000, Date.now() - cur.t0), mistakes: codes, seed: cur.seed });
     if (wEl) mod.update?.(wEl, props());
-    reviewHost.replaceChildren(explain.mount({ review }));
+    reviewHost.replaceChildren(explain.mount({ review, extra: revealOf(task) }));
     drawFoot();
     reviewHost.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
   }
@@ -302,7 +328,7 @@ function exerciseScreen() {
     h('div.tr-head',
       h('button.tr-back', { type: 'button', 'aria-label': 'Назад', onclick: () => { haptic.soft(); leave(); } }, '←'),
       h('div.tr-head-t', h('b', t.title), h('small', `Уровень ${exercise.level} · ${Math.min(run.i + 1, ROUND)}/${ROUND}`)),
-      h('div.tr-head-bar', bar.mount({ value: run.i / ROUND, label: 'Прогресс подхода' }))),
+      h('div.tr-head-bar', bar.mount({ value: run.i / ROUND, label: 'Прогресс подхода' }), strip)),
     h('div.tr-body', h('h2.tr-prompt', task.prompt), host, reviewHost),
     foot);
 }
@@ -334,6 +360,10 @@ function summary() {
         h('button.k-btn.k-btn--primary.k-btn--compact', { type: 'button', onclick: () => { haptic.tap(); ask({ op: 'level', skill: t.skill, level: s.suggest.to }); run.level = s.suggest.to; } }, `Перейти на ${s.suggest.to}-й`),
         h('button.k-btn.k-btn--ghost.k-btn--compact', { type: 'button', onclick: () => ask({ op: 'level', skill: t.skill, level: s.level }) }, 'Остаться'))) : null;
     }),
+    run.results.some((r) => r.score < PASS_SCORE) ? h('div.tr-block', h('div.section-label', 'Где ошибались'),
+      h('ul.tr-redo', run.results.filter((r) => r.score < PASS_SCORE && r.exercise).map((r) => h('li',
+        h('span', r.prompt.length > 110 ? `${r.prompt.slice(0, 107)}…` : r.prompt),
+        h('button.k-btn.k-btn--secondary.k-btn--compact', { type: 'button', 'data-go': 'redo', onclick: () => { haptic.soft(); startRun({ track: run.track, exercise: r.exercise, seed: r.seed, level: run.level }); } }, 'Решить снова'))))) : null,
     topics.length ? h('div.tr-block', h('div.section-label', 'Над чем стоит поработать'),
       h('ul.tr-list', topics.map((id) => h('li', topicById(id)?.title || id)))) : null,
     h('button.k-btn.k-btn--primary.k-btn--block', { type: 'button', 'data-go': 'more', onclick: () => { haptic.tap(); startRun({ track: run.track }); } }, 'Ещё подход'),

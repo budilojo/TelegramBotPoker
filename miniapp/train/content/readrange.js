@@ -49,6 +49,7 @@ const open1 = {
       setup: { opener: pos },
       options: [inR, ...out].map((c) => ({ id: c, label: `${c} — ${handName(c)}`, why: range.has(c) ? `${rankNote(c)}: входит в диапазон ${pos}.` : `${rankNote(c)}: вне диапазона ${pos} (верхние ${fmtPct(pct)}).` })),
       correct: inR,
+      reveal: { grids: [{ title: `Диапазон открытия с ${pos}`, ref: answerForm(range), mark: [inR, ...out] }] },
       why: `Диапазон открытия с ${pos} — верхние ${fmtPct(pct)} рук (${fmtNum(comboCount(range))} комбо из 1.326). ${rankNote(inR)} — внутри. Остальные варианты лежат далеко за границей. Учебный ориентир, не солвер.`,
       mistake: { code: 'rr-open-hand', topic: 'range-reading' },
     });
@@ -108,7 +109,7 @@ const threebet3 = {
     const ref = defendRange(hero, opener).threebet;
     return {
       prompt: `Вы открылись рейзом с ${POSITION_NAMES[opener]}, и игрок с ${POSITION_NAMES[hero]} сделал 3-бет. Закрасьте на матрице диапазон, которым он, по учебному ориентиру, так играет.`,
-      setup: { grid: { mode: 'edit', steps: 2, text: true, presets: ['pairs', 'aces', 'top:5', 'top:10'] }, opener, hero },
+      setup: { grid: { mode: 'edit', steps: 2, text: true, presets: ['pairs', 'aces', 'top:5', 'top:10'] }, opener: hero, you: opener },
       solution: answerForm(ref),
       check: (answer) => reviewRange({ user: answer, ref, thresholds: [rangePercent(ref)], topics: { wide: 'range-reading', tight: 'range-reading', hands: 'starting-hands' }, what: `3-бет с ${hero} против ${opener}`, extraWhy: '3-бет — узкий диапазон: сильные руки на вэлью и немного блефов с блокером туза (A5s, A4s).' }),
     };

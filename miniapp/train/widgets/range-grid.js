@@ -54,7 +54,7 @@ function el(tag, cls, attrs) {
 
 export function mount(props) {
   ensureCss();
-  const st = { props, mode: 'edit', steps: 2, zoom: false, draw: false, focus: 'AA', ed: null, cells: new Map(), board: null, loupe: null, lp: [] };
+  const st = { props, mode: 'edit', marks: new Set(), steps: 2, zoom: false, draw: false, focus: 'AA', ed: null, cells: new Map(), board: null, loupe: null, lp: [] };
   const root = el('div', 'rg');
   root._rg = st;
 
@@ -154,7 +154,11 @@ export function mount(props) {
       }
       return { f: ref, cls: ref ? (flagged ? 'off f' : 'f f1') : (flagged ? 'off' : ''), say: flagged ? 'отмечена как ошибка' : '' };
     }
-    if (mode === 'readonly' || mode === 'heat') return { f: freqOf(st.refMap, code) };
+    if (mode === 'readonly' || mode === 'heat') {
+      const f = freqOf(st.refMap, code);
+      // Обведённая рука задания: рамка, а не цвет (видно и тем, кто не различает зелёное и красное)
+      return st.marks.has(code) ? { f, cls: f > 0 ? 'f f1 mk' : 'mk', say: 'рука из задания' } : { f };
+    }
     return { f: st.ed.get(code) };
   }
 
@@ -196,7 +200,8 @@ export function mount(props) {
     const result = p.result || null;
     let mode = g.mode || 'edit';
     st.steps = g.steps === 3 ? 3 : 2;
-    st.refMap = toMap(result && g.mode !== 'flag' ? result.solution : g.ref);
+    st.refMap = toMap(result && g.mode !== 'flag' && g.mode !== 'readonly' ? result.solution : g.ref);
+    st.marks = new Set(Array.isArray(g.mark) ? g.mark : []);
     if (result && (mode === 'edit' || mode === 'diff' || mode === 'flag')) {
       if (mode === 'flag') {
         const wrong = new Set(Array.isArray(result.solution) ? result.solution : []);

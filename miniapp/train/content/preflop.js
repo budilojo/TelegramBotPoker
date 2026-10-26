@@ -17,6 +17,9 @@ import { reviewRange, answerForm, fmtNum, fmtPct, handsBetween, holeOf, rankNote
 const ACT = { fold: 'Fold', call: 'Call', raise: 'Raise', threebet: '3-bet', fourbet: '4-bet', open: 'Raise (открыть)' };
 const BLUFFS = ['A5s', 'A4s'];
 
+/** Что показать на матрице после ответа: диапазон(ы) по названию и рука задания, обведённая рамкой. */
+const reveal = (code, ...grids) => ({ grids: grids.map(([title, set]) => ({ title, ref: answerForm(set), mark: [code] })) });
+
 /** Рука из пула с учётом того, что границы-«спорные» полосы обойдены. */
 const pickFrom = (rng, pool) => rng.pick(pool);
 
@@ -38,7 +41,7 @@ function whyAction(code, correct, ctx) {
 }
 
 /** Задание-выбор «действие»: options — список id. */
-function actionPick(rng, { code, prompt, setup, options, correct, ctx, topicIn, topicOut, notes = {} }) {
+function actionPick(rng, { code, prompt, setup, options, correct, ctx, topicIn, topicOut, notes = {}, reveal = null }) {
   const mistakeTopic = correct === 'fold' ? topicOut : topicIn;
   return makePick(rng, {
     prompt,
@@ -50,6 +53,7 @@ function actionPick(rng, { code, prompt, setup, options, correct, ctx, topicIn, 
     })),
     correct,
     why: whyAction(code, correct, ctx),
+    reveal,
     mistake: { code: correct === 'fold' ? 'pf-too-loose' : correct === 'call' ? 'pf-call-spot' : 'pf-too-tight', topic: mistakeTopic, text: undefined },
   });
 }
@@ -77,6 +81,7 @@ const open1 = {
       ctx: `С ${pos} в этом ориентире открываются верхние ${fmtPct(pct)} рук (${fmtNum(comboCount(range))} комбо из 1.326).`,
       topicIn: 'open-raise',
       topicOut: 'starting-hands',
+      reveal: reveal(code, [`Диапазон открытия с ${pos}`, range]),
       notes: {
         raise: range.has(code) ? 'Рука входит в диапазон открытия: рейзим, а не лимпим.' : 'Рука слишком слаба для этой позиции.',
         fold: range.has(code) ? 'Сбросить такую руку — потерять выгодный рейз.' : 'Рука вне диапазона открытия — отдаём руку без потерь.',
@@ -126,6 +131,7 @@ const open2 = {
       ctx: `Граница открытия с ${pos} — верхние ${fmtPct(pct)} рук; эта рука лежит рядом с границей (${fmtPct(midPercent(code))}).`,
       topicIn: 'open-raise',
       topicOut: 'range-by-position',
+      reveal: reveal(code, [`Диапазон открытия с ${pos}`, range]),
     });
   },
 };
@@ -155,6 +161,7 @@ const bb2 = {
       ctx: `Против ${opener} большой блайнд защищается около ${fmtPct(BB_DEFEND[opener].total)} рук, из них 3-бетит около ${fmtPct(BB_DEFEND[opener].threebet)} (плюс блеф-3-беты A5s и A4s). Так как в банке уже есть ${fmtNum(1)} BB вашего блайнда, колл дешевле.`,
       topicIn: 'blinds-defence',
       topicOut: 'defend-vs-raise',
+      reveal: reveal(code, [`3-bet из BB против ${opener}`, d.threebet], [`Call из BB против ${opener}`, d.call]),
     });
   },
 };
@@ -184,6 +191,7 @@ const vsOpen3 = {
         : `Против открытия с ${opener} 3-бетят верхние ${fmtPct(v.threebet)} рук, уравнивают до ${fmtPct(v.total)} в сумме. Остальное — Fold: открывший силён ранней позицией.`,
       topicIn: 'defend-vs-raise',
       topicOut: 'starting-hands',
+      reveal: reveal(code, [`3-bet с ${hero} против ${opener}`, d.threebet], [`Call с ${hero} против ${opener}`, d.call]),
     });
   },
 };
@@ -278,6 +286,7 @@ const vs3bet4 = {
       ctx: `Против 3-бета с ${hero} продолжают верхние ${fmtPct(t.total)} вашего диапазона: 4-бетят около ${fmtPct(t.fourbet)}, уравнивают остальное из этих рук.`,
       topicIn: 'defend-vs-raise',
       topicOut: 'range-by-position',
+      reveal: reveal(code, [`4-bet с ${hero}`, v.fourbet], [`Call 3-бета с ${hero}`, v.call]),
     });
   },
 };
@@ -300,6 +309,7 @@ const sb4 = {
       ctx: `В борьбе блайндов остаётся один соперник, и вы платите лишь ${fmtNum(0.5)} BB, чтобы войти. Поэтому диапазон широкий — около ${fmtPct(pct)}. Но позиции у вас не будет, потому стандартный размер 3 BB.`,
       topicIn: 'blinds-defence',
       topicOut: 'range-by-position',
+      reveal: reveal(code, ['Диапазон SB в борьбе блайндов', range]),
     });
   },
 };

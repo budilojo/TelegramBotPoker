@@ -15,6 +15,22 @@ import { cardEl } from './card-el.js';
 import { mount as mountBoard } from './board.js';
 import { mount as mountPot } from './pot.js';
 import { fmtNum } from '../poker-math.js';
+import { mount as mountGrid } from './range-grid.js';
+
+const POSITIONS = ['UTG', 'MP', 'CO', 'BTN', 'SB', 'BB'];
+
+/** Позиции за столом шестиместного стола: вы, открывший рейзом, дилер. Картинка к тексту задания. */
+function positionsEl({ hero, position, opener, openTo, you }) {
+  // `you` — вы сидите здесь, а `opener` — тот, на кого смотрим (его диапазон закрашивают): 3-бет, чтение диапазона.
+  const me = you || (typeof hero === 'string' ? hero : position);
+  const row = el('div.tm-positions', { role: 'group', 'aria-label': 'Позиции за столом' });
+  for (const p of POSITIONS) {
+    const mark = p === me ? 'вы' : p === opener ? (you ? '3-бет' : openTo ? `рейз ${fmtNum(openTo)}` : 'рейз') : p === 'BTN' ? 'дилер' : '';
+    const chip = el(`div.tm-pos-chip${p === me ? '.me' : ''}${p === opener ? '.op' : ''}`, { 'aria-label': `${p}${mark ? `, ${mark}` : ''}` }, el('b', p), mark ? el('small', mark) : null);
+    row.append(chip);
+  }
+  return row;
+}
 
 /** Одно место за столом. */
 export function seatEl(s) {
@@ -33,16 +49,29 @@ export function seatEl(s) {
   return root;
 }
 
-/** Сцена задания: места, борд, банк, ваши карты, история. Без выбора ответа. */
-export function sceneEl(setup = {}) {
+/**
+ * Сцена задания: места, борд, банк, ваши карты, история. Без выбора ответа.
+ * Понимает обе записи: `hero:[карты]` (математика) и `hole:[карты]` + `hero:'BTN'` (префлоп,
+ * стек и банк в BB). `grid` — показать готовую матрицу `setup.grid` (режим readonly).
+ */
+export function sceneEl(setup = {}, { grid = false } = {}) {
   const root = el('div.tm-scene');
+  const cards = Array.isArray(setup.hero) ? setup.hero : Array.isArray(setup.hole) ? setup.hole : null;
+  if (typeof setup.hero === 'string' || setup.position || setup.opener || setup.you) root.append(positionsEl(setup));
   if (setup.seats?.length) root.append(el('div.tm-seats', setup.seats.map(seatEl)));
   if (setup.board) root.append(mountBoard({ board: setup.board, street: setup.street, mark: setup.mark || [] }));
   const mid = el('div.tm-mid');
-  if (setup.pot != null) mid.append(mountPot({ pot: setup.pot, bet: setup.bet ?? null, stack: setup.stack ?? null }));
-  if (setup.hero?.length) mid.append(el('div.tm-hero', [el('span.tm-hero-k', 'Ваши карты'), el('div.tm-hero-cards', setup.hero.map((c) => cardEl(c)))]));
+  if (setup.stackBB != null && setup.pot != null) {
+    mid.append(el('div.tm-pot.bb', { role: 'group', 'aria-label': 'Банк в больших блайндах' },
+      el('span.tm-pot-main', el('span.tm-pot-k', 'Банк'), el('b', `${fmtNum(setup.pot)} BB`)),
+      setup.toCall ? el('span.tm-pot-bet', el('span.tm-pot-k', 'Доплатить'), el('b', `${fmtNum(setup.toCall)} BB`)) : null,
+      el('span.tm-pot-stack', el('span.tm-pot-k', 'Стек'), el('b', `${fmtNum(setup.stackBB)} BB`))));
+  } else if (setup.pot != null) mid.append(mountPot({ pot: setup.pot, bet: setup.bet ?? null, stack: setup.stack ?? null }));
+  if (cards?.length) mid.append(el('div.tm-hero', [el('span.tm-hero-k', 'Ваши карты'), el('div.tm-hero-cards', cards.map((c) => cardEl(c)))]));
   root.append(mid);
-  if (setup.history?.length) root.append(el('ol.tm-history', setup.history.map((t) => el('li', t))));
+  if (typeof setup.history === 'string') root.append(el('p.tm-hist', setup.history));
+  else if (setup.history?.length) root.append(el('ol.tm-history', setup.history.map((t) => el('li', t))));
+  if (grid && setup.grid?.mode === 'readonly') root.append(el('div.tm-grid', mountGrid({ setup: { grid: setup.grid }, value: null, disabled: true })));
   return root;
 }
 
