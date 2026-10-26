@@ -28,7 +28,8 @@ import * as cardsW from './widgets/cards.js';
 import * as sliderW from './widgets/odds-bar.js';
 import * as betW from './widgets/bet-slider.js';
 import * as tableW from './widgets/table-seat.js';
-export const ANSWER_WIDGETS = { pick: choice, cards: cardsW, slider: sliderW, bet: betW, table: tableW };
+import * as rangeGrid from './widgets/range-grid.js';
+export const ANSWER_WIDGETS = { pick: choice, cards: cardsW, slider: sliderW, bet: betW, table: tableW, range: rangeGrid };
 
 const EMPTY = { started: false, total: 0, skills: [], tracks: [], weak: [], due: [], mistakes: [], masteredTopics: [] };
 const M = {
@@ -66,6 +67,7 @@ const ask = (msg) => send({ t: 'train', ...msg }, { lock: false });
 
 export function render() {
   const r = activeRoute();
+  if (r.name !== 'train') M.placing = false;
   sections = [];
   if (!M.progress) ask({ op: 'get' });
   const screens = { train: home, 'train-track': trackScreen, 'train-ex': exerciseScreen, 'train-sum': summary, 'train-stats': stats, learn: learnScreen };
@@ -77,11 +79,11 @@ function section(build) {
   const el = h('div.tr-sec');
   const rec = { el, build };
   sections.push(rec);
-  el.replaceChildren(...[].concat(build()).filter(Boolean));
+  el.replaceChildren(...[].concat(build()).flat(Infinity).filter(Boolean));
   return el;
 }
 function patchSections() {
-  for (const rec of sections) rec.el.replaceChildren(...[].concat(rec.build()).filter(Boolean));
+  for (const rec of sections) rec.el.replaceChildren(...[].concat(rec.build()).flat(Infinity).filter(Boolean));
 }
 
 const back = (text, fn) => h('button.back-link', { type: 'button', onclick: () => { haptic.soft(); fn(); } }, text);
@@ -123,9 +125,11 @@ const recCard = (r) => h('button.k-btn.k-btn--secondary.tr-rec', { type: 'button
 
 function home() {
   // Первый запуск: определение уровня (агент Y) вместо списка направлений.
-  if (hooks.needsPlacement?.(P()) && hooks.placement) {
-    const box = h('div.lobby.hub.tr');
-    hooks.placement(box, { done: () => openRoute('train'), exit: () => openRoute('train') });
+  if ((M.placing || hooks.needsPlacement?.(P())) && hooks.placement) {
+    // Экран рисует себя сам, в своём корне (data-self: app.js не отдаёт его содержимое другому узлу).
+    const box = h('div.lobby.hub.tr', { 'data-self': 'placement' });
+    const leave = () => { M.placing = false; openRoute('train'); };
+    hooks.placement(box, { done: leave, exit: leave });
     return box;
   }
   const root = h('div.lobby.hub.tr',
@@ -144,7 +148,7 @@ function home() {
           h('div.tr-meta', hasTasks(t.id) ? levelText(levelOfTrack(t.id)) : 'Скоро')),
         hasTasks(t.id) ? dots(t.id) : null, h('span.gc-go', '›')))),
         h('button.k-btn.k-btn--secondary.k-btn--block', { type: 'button', 'data-go': 'stats', onclick: () => { haptic.soft(); openRoute('train-stats'); } }, 'Мой прогресс'),
-        hooks.placement ? h('button.k-btn.k-btn--ghost.k-btn--block', { type: 'button', 'data-go': 'placement', onclick: () => { haptic.soft(); const box = h('div.lobby.hub.tr'); $app.replaceChildren(box); hooks.placement(box, { done: () => openRoute('train'), exit: () => openRoute('train') }); } }, 'Определить уровень заново') : null,
+        hooks.placement ? h('button.k-btn.k-btn--ghost.k-btn--block', { type: 'button', 'data-go': 'placement', onclick: () => { haptic.soft(); M.placing = true; openRoute('train'); } }, 'Определить уровень заново') : null,
       ];
     }));
   return root;
@@ -258,12 +262,12 @@ function exerciseScreen() {
     const done = !!cur.review;
     const lastOne = run.i + 1 >= ROUND;
     const topic = cur.review?.mistakes[0]?.topic || exercise.topic;
-    foot.replaceChildren(
+    foot.replaceChildren(...[
       done ? h('button.k-btn.k-btn--primary.k-btn--block', { type: 'button', 'data-go': 'next', onclick: () => { haptic.tap(); run.i += 1; run.recent.push(exercise.id); nextTask(); } }, lastOne ? 'Итоги подхода' : 'Дальше')
         : h('button.k-btn.k-btn--primary.k-btn--block', { type: 'button', 'data-go': 'check', disabled: !ready() || !mod, onclick: check }, 'Проверить'),
       done ? h('div.tr-foot-row',
         h('button.k-btn.k-btn--secondary.k-btn--compact', { type: 'button', 'data-go': 'again', onclick: () => { haptic.soft(); loadTask(exercise, cur.seed); bus.render(); } }, 'Повторить это'),
-        !cur.review.ok && hooks.openLesson ? h('button.k-btn.k-btn--secondary.k-btn--compact', { type: 'button', 'data-go': 'lesson', onclick: () => { haptic.soft(); hooks.openLesson(topic, { returnTo: { exercise: exercise.id, seed: cur.seed } }); } }, 'Изучить тему') : null) : null);
+        !cur.review.ok && hooks.openLesson ? h('button.k-btn.k-btn--secondary.k-btn--compact', { type: 'button', 'data-go': 'lesson', onclick: () => { haptic.soft(); hooks.openLesson(topic, { returnTo: { exercise: exercise.id, seed: cur.seed } }); } }, 'Изучить тему') : null) : null].filter(Boolean)); // null в replaceChildren стал бы словом «null» на экране
   }
 
   function check() {

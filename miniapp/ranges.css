@@ -24,6 +24,9 @@
 .rg-tools .k-btn, .rg-presets .k-btn { min-width: var(--k-tap); padding: 0 var(--k-s8); }
 .rg-presets { display: flex; gap: var(--k-s8); flex-wrap: wrap; }
 
+/* Матрица меняет размер («Крупно» / «Обычно»): пусть браузер не выбирает опорным узлом её клетки —
+   иначе после переключения он сам уводит прокрутку страницы вниз на сотню пикселей (замер: tools/e2e-scroll-train.mjs). */
+.rg, .rg-wrap, .rg-board { overflow-anchor: none; }
 .rg-wrap { overflow: hidden; border-radius: var(--k-r-md); background: var(--k-surface); }
 .rg-wrap.zoom { overflow: auto; overscroll-behavior: contain; max-height: 72vh; touch-action: pan-x pan-y; }
 .rg-wrap.zoom.draw { touch-action: none; }

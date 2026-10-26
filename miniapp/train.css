@@ -9,6 +9,8 @@
 .tr .game-cards { display: flex; flex-direction: column; gap: var(--k-s8); }
 .tr .tr-meta { margin-top: var(--k-s4); font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); color: var(--text-secondary); }
 .tr .tr-track.soon { opacity: 0.6; }
+/* названия направлений длинные («Тренажёр диапазонов»): переносим, а не обрезаем многоточием */
+.tr .tr-track .gc-title { white-space: normal; }
 .tr-dots { display: inline-flex; gap: var(--k-s4); flex: none; }
 .tr-dots i { width: var(--k-s8); height: var(--k-s8); border-radius: var(--k-r-pill); border: 1px solid var(--text-secondary); }
 .tr-dots i.on { background: var(--color-success); border-color: var(--color-success); }

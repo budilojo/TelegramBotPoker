@@ -28,7 +28,7 @@ export function seatEl(s) {
       s.dealer ? el('span.tm-dealer', { 'aria-label': 'Дилер' }, 'D') : null,
     ]),
     el('div.tm-seat-stack', `Стек ${fmtNum(s.stack ?? 0)}`),
-    s.bet ? el('div.tm-seat-bet', `Ставка ${fmtNum(s.bet)}`) : null,
+    ...(s.bet ? [el('div.tm-seat-bet', `Ставка ${fmtNum(s.bet)}`)] : []),
   );
   return root;
 }
