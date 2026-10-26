@@ -17,6 +17,9 @@
  */
 import { h, haptic, REDUCED } from './ui.js';
 import { net, bus, send, serverNow } from './net.js';
+import { itemById } from './cosmetics/catalog.js';
+import { getLook } from './cosmetics/look.js';
+import { artSrc } from './cosmetics/art.js';
 
 export const REACTIONS = [
   { id: 'gg', label: 'Хорошая игра', emoji: '👍' },
@@ -92,6 +95,13 @@ function loadManifest() {
 
 /** Наборы для этой игры: [{ id, title, items: [{ id, label, file? , quick }] }]. */
 export function reactionSets(game) {
+  const base = baseSets(game);
+  // Реакции набора из примерки — отдельная вкладка; уходят только вам на экран, не на сервер.
+  const mine = getLook().reactions.map(itemById).filter(Boolean);
+  if (!mine.length) return base;
+  return [...base, { id: 'night-club', title: 'Ночной клуб', items: mine.map((x) => ({ id: x.id, label: x.title, quick: false })) }];
+}
+function baseSets(game) {
   loadManifest();
   if (!manifest) return [{ id: 'universal', title: 'Реакции', items: REACTIONS.map((r) => ({ id: r.id, label: r.label, quick: ['gg', 'haha', 'wow', 'sad', 'think'].includes(r.id) })) }];
   return manifest.sets
@@ -109,6 +119,7 @@ export function quickReactions(game) {
 
 /** Подпись реакции для чтения вслух и истории. */
 export const reactionLabel = (id) => {
+  if (itemById(id)) return itemById(id).title;
   for (const x of manifest?.sets || []) for (const i of x.items || []) if (i.id === id && i.label) return i.label;
   return BY_ID.get(id)?.label || '';
 };
@@ -125,6 +136,12 @@ function fileOf(id) {
 
 /** Картинка смайлика или запасной эмодзи, если файла нет. */
 export function face(id, cls) {
+  const cos = itemById(id);
+  if (cos) { // реакция набора: своя картинка, при ошибке — пустой кружок (запасного эмодзи у неё нет)
+    const img = h(`img.rx-face${cls ? '.' + cls : ''}`, { src: artSrc(cos) || '', alt: '', draggable: 'false' });
+    img.addEventListener('error', () => img.replaceWith(h(`span.rx-face.rx-emoji${cls ? '.' + cls : ''}`, { 'aria-hidden': 'true' }, '🎰')), { once: true });
+    return img;
+  }
   const r = BY_ID.get(id);
   const file = fileOf(id);
   const fallback = () => h(`span.rx-face.rx-emoji${cls ? '.' + cls : ''}`, { 'aria-hidden': 'true' }, r?.emoji || '🙂');
@@ -166,6 +183,7 @@ export const reactCooling = () => coolUntil > serverNow();
 
 /** Отправить реакцию. Возвращает true, если ушла. */
 export function sendReaction(id) {
+  if (itemById(id)) return tryReaction(id); // вещь набора: только у вас, на сервер не уходит
   const now = serverNow();
   const wait = localWait(now);
   if (wait > 0) {
@@ -261,6 +279,27 @@ function syncRoom() {
   for (const el of bubbles.values()) el.remove();
   bubbles.clear();
   shownAt = code;
+}
+
+/** Примерка реакции набора: пузырь с подписью «примерка» у вашего места (или у `anchor`). Ничего не отправляет. */
+export function tryReaction(id, anchor = null) {
+  const cos = itemById(id);
+  if (!cos || cos.kind !== 'reaction') return false;
+  const s = net.state;
+  const seat = s?.me?.seat ?? -1;
+  bubbles.get(seat)?.remove();
+  const el = h(`div.rx-bubble${REDUCED ? '.still' : ''}`, { 'data-rx-seat': seat, 'data-rx': id, 'data-rx-try': '1', role: 'img', 'aria-label': `${cos.title} (примерка)` },
+    face(id, 'big'), h('span.rx-try', 'примерка'));
+  layerEl().append(el);
+  const where = anchor || (s?.room ? anchorOf(seat, s) : null) || document.getElementById('app');
+  place(el, where);
+  bubbles.set(seat, el);
+  setTimeout(() => {
+    if (bubbles.get(seat) !== el) return;
+    bubbles.delete(seat);
+    el.remove();
+  }, SHOW_MS);
+  return true;
 }
 
 function showBubble({ seat, id }) {

@@ -17,8 +17,10 @@ import {
   tg, $app, h, clamp, cardImg, backImg, haptic, animateOnce, centerOf, offsetTo, onRelayout, watchBox, spawn, edgeGlow, celebrate,
   toast, ringSvg, showSheet, closeSheet, refreshSheet, avatar, REDUCED,
 } from '../ui.js';
+import { cardBackSrc, DEFAULT_BACK } from '../cosmetics/art.js';
 import { net, bus, send } from '../net.js';
 import { avatarEl } from '../profile.js';
+import { winFx, effectsMenuItem } from '../cosmetics/apply.js';
 import { chatMenuItem } from '../chat.js';
 
 /** Идентификатор запроса: повтор того же тапа сервер узнаёт и не плодит лобби. */
@@ -506,7 +508,7 @@ function motion(p, s, { myMoveStarted }) {
         spawn('img.card.fx-card.dk-fly', { x: at.x + (i - last.n / 2) * 8, y: at.y }, [
           { transform: `rotate(${(i - 3) * 6}deg)`, opacity: 1 },
           { transform: `translate(${b.x - at.x}px, ${b.y - at.y}px) rotate(${last.kind === 'beaten' ? 90 : 0}deg) scale(0.55)`, opacity: 0.2 },
-        ], { duration: 560, delay: i * 45, easing: 'cubic-bezier(0.5, 0, 0.3, 1)' }, { src: '/cards/back.svg', alt: '' });
+        ], { duration: 560, delay: i * 45, easing: 'cubic-bezier(0.5, 0, 0.3, 1)' }, { src: cardBackSrc() || DEFAULT_BACK, alt: '' });
       }
     }
   }
@@ -526,7 +528,7 @@ function motion(p, s, { myMoveStarted }) {
         spawn('img.card.fx-card', a, [
           { transform: 'scale(0.8)', opacity: 1 },
           { transform: `translate(${b.x - a.x}px, ${b.y - a.y}px) scale(0.4)`, opacity: 0.1 },
-        ], { duration: 480, delay: 200 + i * 60 }, { src: '/cards/back.svg', alt: '' });
+        ], { duration: 480, delay: 200 + i * 60 }, { src: cardBackSrc() || DEFAULT_BACK, alt: '' });
       }
     }
   }
@@ -534,6 +536,7 @@ function motion(p, s, { myMoveStarted }) {
   if (d.result && !pd.result && !d.result.aborted && d.result.foolSeat >= 0) {
     const el = d.result.foolSeat === s.me.seat ? document.querySelector('.dk-role') : document.querySelector(`.dk-seat[data-seat="${d.result.foolSeat}"] .av`);
     celebrate(el, { sparks: 10, delay: 200 });
+    if (d.result.foolSeat !== s.me.seat && s.me.inDeal) winFx({ delay: 400 }); // не дурак — победил; эффект из примерки
   }
 }
 
@@ -687,6 +690,7 @@ function openMenu() {
       item(s.hubLabel || '← Игры с ботами', 'партию можно будет продолжить', () => { closeSheet(); send({ t: 'hub' }, { lock: false }); });
       item('Правила', s.room.variantName, openRules);
       items.push(chatMenuItem(s));
+      items.push(effectsMenuItem(closeSheet));
       if (s.room.status !== 'lobby') item('Завершить игру', 'итоги — на экране', () => confirmFinish(), 'danger');
       return h('div', h('h3', 'Меню'), h('div.sub', `🃏 Дурак с ботами · ${s.room.variantName}`), h('div.menu-list', items));
     }
@@ -696,6 +700,7 @@ function openMenu() {
     if (!me.notify && s.bot) item('🔔 Напоминать о ходе', 'нажмите Start у бота', () => tg.openTelegramLink(`https://t.me/${s.bot}?start=notify`));
     item('Правила', s.room.variantName, openRules);
     items.push(chatMenuItem(s));
+    items.push(effectsMenuItem(closeSheet));
     if (me.isHost) {
       items.push(h('div.section-label', 'Хост'));
       item('Настройки', 'вариант, таймер хода', openSettings);

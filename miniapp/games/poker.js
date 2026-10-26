@@ -20,6 +20,8 @@ import { net, bus, send, serverNow } from '../net.js';
 import { chatMenuItem } from '../chat.js';
 import { markDone } from '../school.js';
 import { avatarEl } from '../profile.js';
+import { titleEl, winFx, effectsMenuItem } from '../cosmetics/apply.js';
+import { getLook } from '../cosmetics/look.js';
 
 /** Корона хоста поверх аватарки. */
 const withHost = (av, host) => {
@@ -145,6 +147,7 @@ function motionFor(p, s, { myTurnStarted }) {
       const lead = Math.max(planFor(s)?.pay ?? 120, chipsIn ? 520 : 120); // the last call lands in the pot first
       flyChips(potEl, target, { n: 6, delay: lead, stagger: 55 });
       celebrate(w.seat === s.me.seat ? target : target?.closest('.seat')?.querySelector('.av'), { sparks: w.seat === s.me.seat ? 14 : 0, delay: lead + 420 });
+      if (w.seat === s.me.seat) winFx({ delay: lead + 420 }); // эффект из примерки — только у вас
     }
   }
 }
@@ -781,6 +784,8 @@ function heroEl(s) {
       `yt:${turnId}`, [{ transform: 'scale(0.5)', opacity: 0, offset: 0 }, { transform: 'scale(1.12)', opacity: 1, offset: 0.6 }], { duration: 420 }));
   }
   info.append(h('div.hero-name', mine.name));
+  const title = titleEl();
+  if (title) info.append(title); // append(null) напечатал бы слово «null»
   // Your balance, and what the last pot added to it — rolling up as the chips arrive.
   const won = hd?.phase === 'complete' && !hd.revealing ? hd.result?.winners?.find((w) => w.seat === mine.seat) : null;
   info.append(h('div.hero-stack-row',
@@ -796,7 +801,9 @@ function heroEl(s) {
   const folded = mine.folded && hd?.phase !== 'complete';
   if (folded) animateOnce(cards, `fold:${hd.no}`, [{ transform: 'translateY(0)', opacity: 1, filter: 'none', offset: 0 }, { transform: 'translateY(-14px) rotate(-4deg)', opacity: 0.7, offset: 0.4 }], { duration: 480 });
   const cls = ['hero', myTurn && 'turn', folded && 'folded'].filter(Boolean).join('.');
-  return h(`div.${cls}`, cards, info);
+  // Рамка из примерки видна на вашем круге: у руки своего круга нет, поэтому он появляется, только когда рамка выбрана.
+  const face = getLook().frame ? avatarEl(mine, 'hero-av') : null;
+  return h(`div.${cls}`, cards, face, info);
 }
 
 function heroNote(s, mine) {
@@ -1194,6 +1201,7 @@ function openMenu() {
       if (s.room.status === 'paused') item('Продолжить игру', null, () => { closeSheet(); send({ t: 'resume' }); });
       if (s.room.status !== 'lobby' && s.room.status !== 'finished') item('Завершить игру', 'итоги — на экране', () => confirmFinish(), 'danger');
       items.push(chatMenuItem(s));
+      items.push(effectsMenuItem(closeSheet));
       return h('div', h('h3', 'Меню'), h('div.sub', 'Игра с ботами'), h('div.menu-list', items));
     }
     if (me.seated && !me.sittingOut && me.role === 'player' && s.room.status !== 'lobby') {
@@ -1204,6 +1212,7 @@ function openMenu() {
     if (!me.notify && s.bot) item('🔔 Напоминать о ходе', 'нажмите Start у бота', () => tg.openTelegramLink(`https://t.me/${s.bot}?start=notify`));
     if (s.hub) item(s.hubLabel || '← Все игры группы', 'стол останется, как есть', () => { closeSheet(); send({ t: 'hub' }, { lock: false }); });
     items.push(chatMenuItem(s));
+    items.push(effectsMenuItem(closeSheet));
 
     if (me.isHost) {
       items.push(h('div.section-label', 'Хост'));

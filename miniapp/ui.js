@@ -5,6 +5,7 @@
  * clocks. No game in here — the hub, the poker table and the durak table
  * all build on it.
  */
+import { cardBackSrc, DEFAULT_BACK } from './cosmetics/art.js';
 
 export const tg = window.Telegram?.WebApp || null;
 export const $app = document.getElementById('app');
@@ -50,7 +51,14 @@ export const fmt = (n) => {
 };
 export const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 export const cardImg = (code, cls = '') => h(`img.card${cls ? '.' + cls : ''}`, { src: `/cards/${code}.svg`, alt: code, draggable: 'false' });
-export const backImg = (cls = '') => cardImg('back', cls);
+/** Рубашка: по умолчанию `/cards/back.svg`; в режиме примерки — выбранная (miniapp/cosmetics), при ошибке загрузки — стандартная. */
+export const backImg = (cls = '') => {
+  const src = cardBackSrc();
+  if (!src) return cardImg('back', cls);
+  const img = h(`img.card.cos-back${cls ? '.' + cls : ''}`, { src, alt: 'back', draggable: 'false' });
+  img.addEventListener('error', () => { img.src = DEFAULT_BACK; }, { once: true });
+  return img;
+};
 export const initial = (name) => (String(name || '?').trim()[0] || '?').toUpperCase();
 export const STAGE = { preflop: 'Префлоп', flop: 'Флоп', turn: 'Тёрн', river: 'Ривер' };
 
@@ -205,7 +213,7 @@ export function muck(fromEl, toEl) {
     spawn('img.card.fx-card', { x: a.x + side * 6, y: a.y + 14 }, [
       { transform: `rotate(${side * 8}deg)`, opacity: 0.95 },
       { transform: `translate(${b.x - a.x}px, ${b.y - a.y}px) rotate(${side * 40 + 90}deg) scale(0.6)`, opacity: 0 },
-    ], { duration: 520, delay: i * 50, easing: 'cubic-bezier(0.5, 0, 0.75, 0)' }, { src: '/cards/back.svg', alt: '' });
+    ], { duration: 520, delay: i * 50, easing: 'cubic-bezier(0.5, 0, 0.75, 0)' }, { src: cardBackSrc() || DEFAULT_BACK, alt: '' });
   });
 }
 
