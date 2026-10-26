@@ -16,7 +16,7 @@
  * (отдаёт агент Y); пока его нет, кнопки «Потренироваться» просто нет.
  * `returnTo = { go() }` — куда вернуть после урока, открытого из ошибки упражнения.
  */
-import { h, haptic } from '../ui.js';
+import { h, haptic, closeSheet } from '../ui.js';
 import { schoolItems } from '../school.js';
 import { SECTIONS, allLessons, lessonFor, nextLesson } from './sections.js';
 import { readTopics, markRead, quizBest, saveQuiz } from './progress.js';
@@ -156,5 +156,5 @@ function showMentor(container, opts) {
   container.replaceChildren(h('div.learn.hub',
     h('button.back-link', { type: 'button', onclick: () => { view = { kind: 'course' }; renderLearn(container, opts); } }, '← К курсу'),
     h('div.hub-head', h('h1', 'Практика с наставником')),
-    ...schoolItems(opts.school, () => showMentor(container, opts))));
+    ...schoolItems(opts.school, () => { closeSheet(); showMentor(container, opts); })));
 }

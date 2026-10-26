@@ -94,7 +94,7 @@
 /* --------------------------------------------------- матрица 13×13 (схема) */
 .ln-matrix { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 1px; width: 100%; max-width: 360px; align-self: center; }
 .ln-mh { text-align: center; color: var(--text-secondary); font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); }
-.ln-cell { aspect-ratio: 1; background: var(--bg-main); border-radius: 2px; border: 1px solid var(--border-color); }
+.ln-cell { aspect-ratio: 1; background: var(--bg-main); border-radius: var(--k-r-sm); border: 1px solid var(--border-color); }
 .ln-cell.k-p { border-color: var(--text-secondary); }
 .ln-cell.on { background: var(--color-success); border-color: var(--on-felt-accent-line); }
 
@@ -103,7 +103,7 @@
 .ln-deck-row { display: grid; grid-template-columns: var(--k-s16) repeat(13, minmax(0, 1fr)); gap: 2px; align-items: center; }
 .ln-deck-suit { text-align: center; font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); color: var(--text-primary); }
 .ln-deck-suit.red { color: var(--color-danger); }
-.ln-deck-card { text-align: center; font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); border-radius: 2px; border: 1px solid var(--border-color); background: var(--bg-elevated); color: var(--text-primary); overflow: hidden; }
+.ln-deck-card { text-align: center; font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); border-radius: var(--k-r-sm); border: 1px solid var(--border-color); background: var(--bg-elevated); color: var(--text-primary); overflow: hidden; }
 .ln-deck-card.dead { background: var(--bg-main); color: var(--text-secondary); border-style: dashed; }
 .ln-deck-card.out { background: var(--color-success); color: var(--text-on-success); border-color: var(--on-felt-accent-line); }
 

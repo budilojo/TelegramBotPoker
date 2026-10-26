@@ -206,3 +206,6 @@ export function update(el, props)       // необязательно
 **Виджет:** `mount({ setup:{ grid:{ mode, steps, ref, presets, text, hint } }, value, disabled, onChange, result })`; режимы edit/readonly/diff/heat/flag; ответ — массив кодов или объект частот; в flag `result.solution` — неверные клетки. Матрица не пересобирается от нажатия.
 
 **Виды ответа:** range, slider (число), table ({ action, to }), pick (id) — экраны V/X должны подключить виджеты под эти виды.
+## Математика и постфлоп (агент X)
+
+`miniapp/train/poker-math.js` — оценщик, ауты, эквити, pot odds, EV, MDF, SPR (тест `bot/train.math.test.js`). Виджеты X: `cards` (ответ — массив карт 0…51), `slider` = `odds-bar` (число), `bet` = `bet-slider` (число), `table` = `table-seat` (id или массив id для раздач). Упражнения: 50 штук, `content/{outs,potodds,postflop,hands,advanced}.js` (+ `x-util.js`); тест `bot/train.math.exercises.test.js`. Допущения: диапазоны и доли фолдов названы в заданиях; «ориентир» — размер по текстуре, линия по SPR. Раздачи: 2–3 решения. Не проверено на устройстве.

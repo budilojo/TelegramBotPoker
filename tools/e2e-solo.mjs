@@ -119,8 +119,9 @@ try {
   const openMentor = async () => {
     await pokerForm();
     await page.locator('.sheet .seg.solo-mode button', { hasText: 'Обучение' }).click();
-    await page.waitForSelector('.learn h1:has-text("Обучение")');
-    await page.getByRole('button', { name: /Практика с наставником/ }).click();
+    // Курс помнит, где вы остановились: во второй раз откроется сразу «Практика с наставником».
+    await page.waitForSelector('.learn h1:has-text("Обучение"), .learn h1:has-text("Практика с наставником")');
+    if (await page.locator('.learn h1:has-text("Обучение")').count()) await page.getByRole('button', { name: /Практика с наставником/ }).click();
     await page.waitForSelector('.learn .menu-item:has-text("Азбука покера")');
   };
   await openMentor();

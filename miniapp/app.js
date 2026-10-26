@@ -107,6 +107,15 @@ function render() {
 function adoptLobby(stay) {
   const fresh = stay.nextElementSibling;
   if (!fresh || !fresh.matches('.lobby')) { stay.remove(); return; }
+  // Экран, который сам перерисовывает своё содержимое (курс «Обучение»: урок открывается
+  // прямо в корневом узле), держит этот узел в замыканиях. Если отдать содержимое старому
+  // `.lobby`, нажатия пойдут в отсоединённый узел и «ничего не происходит». Поэтому: тот же
+  // экран — оставляем живой старый узел (и прокрутку, и открытый урок), другой — ставим новый.
+  if (fresh.dataset.self) {
+    if (stay.dataset.self === fresh.dataset.self) fresh.remove();
+    else stay.replaceWith(fresh);
+    return;
+  }
   for (const a of [...stay.attributes]) if (!fresh.hasAttribute(a.name)) stay.removeAttribute(a.name);
   for (const a of fresh.attributes) stay.setAttribute(a.name, a.value);
   stay.replaceChildren(...fresh.childNodes);

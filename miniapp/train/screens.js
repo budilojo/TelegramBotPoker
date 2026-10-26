@@ -385,7 +385,7 @@ function confirmReset() {
 
 /** Экран «Обучение» рисует агент U (hooks.renderLearn); пока его нет — честная заглушка. */
 function learnScreen() {
-  const root = h('div.lobby.hub.tr', back('← К покеру', closeRoute));
+  const root = h('div.lobby.hub.tr', { 'data-self': 'learn' }, back('← К покеру', closeRoute));
   if (hooks.renderLearn) hooks.renderLearn(root, { close: closeRoute });
   else root.append(h('div.hub-head', h('h1', 'Обучение')), h('div.tr-note', 'Курс скоро появится.'));
   return root;

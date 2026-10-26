@@ -93,6 +93,9 @@ async function run(width, height) {
   const entries = await page.locator('.sheet .seg.solo-mode button').allTextContents();
   assert.deepEqual(entries, ['Партия', 'Обучение', 'Тренировка'], 'три входа рядом');
   await page.locator('.sheet .seg.solo-mode button', { hasText: 'Тренировка' }).click();
+  // Первый заход — выбор уровня (Y): «Начать с нуля» ведёт на главную Тренировки.
+  await page.waitForSelector('[data-pl=zero], h1:has-text("Тренировка")');
+  if (await page.locator('[data-pl=zero]').count()) await page.locator('[data-pl=zero]').click();
   await page.waitForSelector('h1:has-text("Тренировка")');
   assert.equal(await page.locator('.sheet').count(), 0, 'шторка закрыта');
   assert.equal(await page.locator('.tr-track').count(), 8, 'восемь направлений');
@@ -121,7 +124,12 @@ async function run(width, height) {
   await page.setViewportSize({ width, height });
   step(`${tag} px: уровень навыка меняется, прокрутка на месте (${before}), сервер получил`);
 
-  // Подход: «Назад» с набранным ответом спрашивает.
+  // Подход идём на «Префлоп-решениях»: на 1 уровне все задания — выбор варианта
+  // (у «Аутов» есть ползунки и карты — их проходит e2e-train-kinds).
+  await page.locator('.back-link', { hasText: 'Тренировка' }).click();
+  await page.waitForSelector('.tr-track[data-track="preflop"]');
+  await page.locator('.tr-track[data-track="preflop"]').click();
+  await page.waitForSelector('.tr-levels');
   await page.locator('[data-go="start"]').click();
   await page.waitForSelector('.tr-ex .tr-opt');
   assert.ok(await page.locator('[data-go="check"]').isDisabled(), '«Проверить» выключена, пока нет ответа');
