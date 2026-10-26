@@ -673,6 +673,11 @@ function boardCard(el, hd, i) {
     { duration: 560, delay: i < 3 ? i * 170 : 0 });
 }
 
+/** Подпись текущей ставки под бордом. До флопа это ещё не ставка игрока, а сам большой блайнд: «BB 50»; после рейза — «Raise 150». */
+const betLine = (hd, bigBlind) => (hd.street === 'preflop'
+  ? (hd.currentBet > bigBlind ? `Raise ${fmt(hd.currentBet)}` : `BB ${fmt(hd.currentBet)}`)
+  : `Bet ${fmt(hd.currentBet)}`);
+
 function centerEl(s) {
   const hd = s.hand;
   const board = h('div.board');
@@ -699,7 +704,7 @@ function centerEl(s) {
     line = animateOnce(resultLine(s), `result:${hd.no}`, [{ transform: 'translateY(8px) scale(0.9)', opacity: 0, offset: 0 }],
       { duration: 450, delay: Math.max(250, planFor(s)?.best ?? 0) });
   }
-  else if (hd?.currentBet) line = h('div.bet-line', `Bet ${fmt(hd.currentBet)}`);
+  else if (hd?.currentBet) line = h('div.bet-line', betLine(hd, s.room.settings.bigBlind));
   else line = h('div.bet-line', '');
 
   // Once the result is known the pot is pushed to the winners: it drains while their stacks fill.

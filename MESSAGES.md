@@ -1825,6 +1825,8 @@
 |---|---|
 | Кнопки: Fold, Check, Call N, Bet / Raise; «Fold anyway?» + «Check is free» (второй тап, когда Check бесплатный); «all-in» под Call, если колл — весь стек | `miniapp/games/poker.js` — `panelEl` |
 | Плашки у мест: Bet, Raise, Call, Check, Fold, All-in, SB, BB | `miniapp/games/poker.js` — `plateText` |
+| Подпись ставки под бордом: до флопа «BB 50» (это блайнд, а не ставка игрока), после рейза до флопа «Raise 150», на флопе и дальше «Bet N» | `miniapp/games/poker.js` — `betLine` |
+| Кнопки «+» и «−» в окне ставки: тап — один шаг, удержание — повтор (текста нет, подписи для чтения экрана «Больше», «Меньше») | `miniapp/games/poker.js` — `holdStep` |
 | Шторка ставки: Bet / Raise, «Raise to N», ½ Pot, ¾ Pot, Pot, All-in, «All-in — sure?» | `miniapp/games/poker.js` — `openRaise`, `SIZE_RU` |
 | Линия «Bet N» под бордом, «All-in» при открытии борда | `miniapp/games/poker.js` — `renderTable`, `stageLabel` |
 | Совет наставника: Raise, Bet, Call, Check, Fold; список действий в азбуке | `bot/games/poker/school.js` — `ACTION_RU`; `miniapp/school.js` — `STEPS` |

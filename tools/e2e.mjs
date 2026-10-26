@@ -167,6 +167,11 @@ await assertTurn();
 
 // Pre-flop, three-handed: the button (Иван) is first. He raises to POT.
 assert.equal(actorName(), 'Иван');
+// До первых действий под бордом — «BB 50» (блайнд), а не «Bet 50»; после рейза — «Raise N».
+for (const [id, page] of pages) {
+  await page.waitForFunction(() => /^BB \d/.test(document.querySelector('.bet-line')?.textContent || ''), null, { timeout: 3000 })
+    .catch(() => assert.fail(`до первых действий подпись под бордом должна быть «BB N» (у ${id})`));
+}
 await actorPage().getByRole('button', { name: 'Raise' }).click();
 await actorPage().waitForSelector('.sheet');
 const potBtn = () => actorPage().locator('.size-btn', { hasText: 'Pot' }).filter({ hasNotText: '½' }).filter({ hasNotText: '¾' }).first();
@@ -174,6 +179,10 @@ const potLabel = await potBtn().innerText();
 const potTotal = Number(potLabel.replace(/\D/g, ''));
 await potBtn().click();
 await until(() => room().hand.currentBet === potTotal, `рейз Ивана до ${potTotal}`);
+for (const [id, page] of pages) {
+  await page.waitForFunction(() => /^Raise \d/.test(document.querySelector('.bet-line')?.textContent || ''), null, { timeout: 3000 })
+    .catch(() => assert.fail(`после рейза под бордом должно быть «Raise N» (у ${id})`));
+}
 // Суммы — по сетке малого блайнда (25): ни одной «кривой».
 const sbNow = room().settings.smallBlind;
 for (const t of await actorPage().locator('.size-btn .num').allInnerTexts()) {
