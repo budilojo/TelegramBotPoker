@@ -14,6 +14,7 @@
 import { $app, h, haptic, tg } from './ui.js';
 import { bus, send } from './net.js';
 import { renderRanked, resetRanked } from './rating.js';
+import { openShop } from './shop/index.js';
 import { renderProfileSettings } from './profile.js';
 
 /** На каких состояниях сервера панель есть. */
@@ -100,6 +101,8 @@ function settings(s) {
     h('section.set-block',
       h('div.section-label', 'Профиль'),
       (renderProfileSettings(profileBox), profileBox)),
+
+    h('section.set-block', h('button.k-btn.k-btn--secondary', { onclick: openShop }, 'Магазин')),
 
     s.bot ? h('section.set-block',
       h('div.section-label', 'Уведомления бота'),

@@ -16,6 +16,7 @@ import * as down from './down.js';
 import { GAMES } from './games/index.js';
 import * as solo from './solo.js';
 import * as nav from './nav.js';
+import * as shop from './shop/index.js';
 import * as train from './train/screens.js';
 import './train/link-wire.js'; // крючки связки Обучение↔Тренировка и определения уровня (Y)
 import './learn/hook.js';
@@ -43,8 +44,10 @@ bus.onState = (wasConnected) => {
     closeSheet();
     resetRoute();
     nav.onMove();
+    shop.resetShop();
   }
   prevSame = moved ? null : net.prev;
+  if (!wasConnected) shop.reconnectShop();
   SCREENS[screenOf(s)].onState(s, prevSame, { wasConnected });
   backButton(s);
   if (!wasConnected) reportVisibility();
@@ -85,15 +88,17 @@ function render() {
   // Вкладки «Рейтинг» и «Настройки» рисует страница сама поверх экрана хаба;
   // панель внизу — только на экранах хаба, за столом её нет.
   // Тренировка и Обучение — полные экраны страницы (train/route.js): панели внизу нет.
-  const trainOn = !!activeRoute() && nav.showsBar(net.state);
-  const own = !trainOn && nav.renderView(net.state);
-  if (trainOn) train.render();
+  const shopOn = shop.isShopOpen() && nav.showsBar(net.state);
+  const trainOn = !shopOn && !!activeRoute() && nav.showsBar(net.state);
+  const own = !shopOn && !trainOn && nav.renderView(net.state);
+  if (shopOn) shop.renderShop();
+  else if (trainOn) train.render();
   else if (!own) SCREENS[screen].render();
-  const bar = !trainOn && nav.showsBar(net.state);
+  const bar = !shopOn && !trainOn && nav.showsBar(net.state);
   if (bar) $app.append(nav.bar(net.state));
   // Which state is on screen — for the browser checks (tools/e2e*.mjs) and for
   // the few common things a screen needs to move out of its own way.
-  document.body.dataset.screen = trainOn ? 'train' : own ? 'nav' : screen;
+  document.body.dataset.screen = shopOn ? 'shop' : trainOn ? 'train' : own ? 'nav' : screen;
   document.body.dataset.nav = bar ? '1' : '';
   document.body.dataset.seq = net.state.seq ?? '';
   if (stay) adoptLobby(stay);
@@ -130,10 +135,10 @@ function backButton(s) {
   const b = tg?.BackButton;
   if (!b) return;
   if (!backBound) {
-    b.onClick?.(() => send({ t: 'hub' }, { lock: false }));
+    b.onClick?.(() => { if (!shop.backShop()) send({ t: 'hub' }, { lock: false }); });
     backBound = true;
   }
-  if (s?.hub) b.show?.();
+  if (shop.isShopOpen() || s?.hub) b.show?.();
   else b.hide?.();
 }
 

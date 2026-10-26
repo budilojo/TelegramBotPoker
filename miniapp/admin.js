@@ -10,6 +10,7 @@
  * подтверждение: тап по экрану телефона слишком дешёвый для необратимого.
  */
 import { $app, h, fmt, haptic, toast, showSheet, closeSheet, refreshSheet } from './ui.js';
+import { demandReport } from './shop/index.js';
 import { bus, send, net } from './net.js';
 
 let state = null;
@@ -112,6 +113,7 @@ function statsTab(s) {
       tile('лобби собрано', week.created, 'за неделю'),
       tile('доиграно до итогов', week.finished, 'за неделю')),
 
+    demandReport(s.shop),
     byGameTable(week.byGame),
     chart(s.stats.days, 'rounds', 'Партии по дням', 'rounds'),
     chart(s.stats.days, 'people', 'Люди по дням', 'people'),

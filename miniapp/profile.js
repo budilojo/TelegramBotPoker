@@ -8,6 +8,7 @@
  *   renderProfileSettings(container) экран «Профиль» (его вызывает вкладка «Настройки»)
  */
 import { h, avatar, haptic, toast } from './ui.js';
+import { openShop } from './shop/index.js';
 import { bus, send } from './net.js';
 import { frameOn } from './cosmetics/apply.js';
 
@@ -123,6 +124,7 @@ export function renderProfileSettings(container) {
     h('h2.k-section', 'Профиль'),
     h('div.pf-prev', h('div.pf-prev-cap', 'Так вас увидят за столом'), h('div.pf-prev-row', previewAv, previewName)),
     wrap,
+    h('button.k-btn.k-btn--secondary', { onclick: openShop }, 'Посмотреть косметику'),
     h('div.pf-label', 'Аватар'),
     grid,
     h('div.k-caption.pf-note', 'Ник и аватар видят все игроки за столом и в группе. Они меняют только то, как вас показывают: кто вы и что вам можно, определяет Telegram.'));

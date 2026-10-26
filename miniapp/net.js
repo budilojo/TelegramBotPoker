@@ -41,6 +41,7 @@ export const bus = {
   onError: () => {},
   /** Свой профиль (miniapp/profile.js ставит свой): { profile } или { error: {code, text} }. */
   onProfile: () => {},
+  onShop: () => {},
   /** Личный прогресс «Тренировки» (miniapp/train/screens.js): { progress } или { error }. */
   onTrain: () => {},
 };
@@ -95,6 +96,8 @@ export function connect() {
       bus.onError(msg);
     } else if (msg.t === 'rtables') {
       bus.onRanked(msg);
+    } else if (msg.t === 'shop') {
+      bus.onShop(msg);
     } else if (msg.t === 'profile') {
       bus.onProfile(msg);
     } else if (msg.t === 'train') {
