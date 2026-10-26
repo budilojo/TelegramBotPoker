@@ -281,3 +281,59 @@ test('редактор: история — не меньше 20 шагов, пр
   assert.deepEqual(three.answer(), { AA: 0.5 });
   assert.equal(three.count(), 3);
 });
+
+/* ---------------------------------------------------------- упражнения */
+import { exercisesOf, instantiate, grade, reviewProblems } from '../miniapp/train/engine.js';
+import '../miniapp/train/content/index.js';
+import { isTopic } from '../miniapp/train/topics.js';
+
+const MINE = ['preflop', 'ranges', 'readrange'].flatMap((t) => exercisesOf({ track: t })).filter((e) => e.id.startsWith('w-'));
+const emptyAnswer = (k) => (k === 'range' ? [] : k === 'slider' ? NaN : k === 'table' ? {} : null);
+
+test('упражнения W: есть во всех трёх направлениях и на всех уровнях 1–5', () => {
+  for (const track of ['preflop', 'ranges', 'readrange']) {
+    const levels = new Set(MINE.filter((e) => e.track === track).map((e) => e.level));
+    for (let l = 1; l <= 5; l++) assert.ok(levels.has(l), `${track}: нет уровня ${l}`);
+  }
+});
+
+test('упражнения W: make(seed) детерминирован, solution проходит check, пустой ответ — нет, темы из реестра', () => {
+  for (const ex of MINE) {
+    for (let seed = 1; seed <= 25; seed++) {
+      const a = instantiate(ex.id, seed).task;
+      const b = instantiate(ex.id, seed).task;
+      assert.equal(JSON.stringify([a.prompt, a.setup, a.solution]), JSON.stringify([b.prompt, b.setup, b.solution]), `${ex.id} seed ${seed}: не детерминировано`);
+      const r = grade(a, a.solution);
+      assert.equal(r.ok, true, `${ex.id} seed ${seed}: решение не проходит (${r.score})`);
+      assert.deepEqual(reviewProblems(r), [], `${ex.id} seed ${seed}`);
+      assert.equal(grade(a, emptyAnswer(ex.kind)).ok, false, `${ex.id} seed ${seed}: пустой ответ засчитан`);
+      for (const m of grade(a, emptyAnswer(ex.kind)).mistakes) assert.ok(isTopic(m.topic), `${ex.id}: тема ${m.topic}`);
+    }
+    assert.ok(isTopic(ex.topic), ex.id);
+  }
+});
+
+test('упражнения W: не меньше 12 разных заданий на уровень каждого направления', () => {
+  for (const track of ['preflop', 'ranges', 'readrange']) {
+    for (let level = 1; level <= 5; level++) {
+      const seen = new Set();
+      for (const ex of MINE.filter((e) => e.track === track && e.level === level)) {
+        for (let seed = 1; seed <= 60; seed++) { const t = instantiate(ex.id, seed).task; seen.add(JSON.stringify([t.prompt, t.setup])); }
+      }
+      assert.ok(seen.size >= 12, `${track} ур. ${level}: всего ${seen.size}`);
+    }
+  }
+});
+
+test('упражнения W: неверный ответ даёт ошибку с темой и числами в разборе', () => {
+  const t = instantiate('w-ranges-open-3', 5).task;
+  const r = grade(t, ['72o', '32o']);
+  assert.equal(r.ok, false);
+  assert.ok(r.mistakes.length > 0);
+  assert.match(r.why, /эталон — \d/);
+  const full = grade(t, ALL_HANDS);
+  assert.equal(full.ok, false);
+  assert.ok(full.mistakes.some((m) => m.code === 'range-too-wide'));
+  const size = instantiate('w-preflop-size-3', 3).task;
+  assert.equal(grade(size, { action: 'call' }).ok, false);
+});

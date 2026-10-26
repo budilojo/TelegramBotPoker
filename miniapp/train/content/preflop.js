@@ -65,7 +65,7 @@ const open1 = {
     const pos = rng.pick(['UTG', 'CO', 'BTN']);
     const pct = OPEN_PCT[pos];
     const raise = rng.int(0, 1) === 0;
-    const pool = raise ? handsBetween(0, pct * 0.5) : handsBetween(pct * 2.4, 100);
+    const pool = raise ? handsBetween(0, pct * 0.5) : handsBetween(Math.min(pct * 2.4, 75), 100);
     const code = pickFrom(rng, pool);
     const range = openRange(pos);
     return actionPick(rng, {
@@ -197,7 +197,7 @@ const size3 = {
     const pos = rng.pick(['UTG', 'CO', 'BTN', 'SB']);
     const pct = OPEN_PCT[pos];
     const raise = rng.int(0, 3) > 0;
-    const code = pickFrom(rng, raise ? handsBetween(0, pct * 0.7) : handsBetween(pct * 2, 100));
+    const code = pickFrom(rng, raise ? handsBetween(0, pct * 0.7) : handsBetween(Math.min(pct * 2, 75), 100));
     const ideal = OPEN_SIZE[pos];
     const sol = openRange(pos).has(code) ? { action: 'raise', to: ideal } : { action: 'fold' };
     return {

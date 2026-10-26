@@ -10,6 +10,8 @@
  */
 import './starter.js';
 import './ranges.js'; // W: тренажёр диапазонов
+import './preflop.js'; // W: префлоп-решения
+import './readrange.js'; // W: чтение диапазонов
 // W:
 // X:
 import './outs.js';
