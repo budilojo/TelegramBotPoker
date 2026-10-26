@@ -3,6 +3,7 @@
 #
 #   cd ~/TelegramBotPoker && git pull origin redesign && bash tools/wave3-launch.sh
 #   bash tools/wave3-launch.sh Z V          # только выбранные буквы
+#   bash tools/wave3-launch.sh K            # проверяющий: сквозная проверка всей волны
 #
 # Для каждого агента: своя папка рядом с проектом (git worktree, ветка work-<буква>),
 # новое окно Терминала, `npm install`, запуск агента и первое слово «Начинай».
@@ -15,8 +16,8 @@ cd "$ROOT"
 
 git fetch origin redesign
 
-ALL="U:uroki V:trenirovka W:diapazony X:matematika Y:uroven Z:ekran"
-WANT="${*:-U V W X Y Z}"
+ALL="U:uroki V:trenirovka W:diapazony X:matematika Y:uroven Z:ekran K:proverka"
+WANT="${*:-U V W X Y Z}"   # K (проверяющий) — только по явной просьбе: bash tools/wave3-launch.sh K
 
 for pair in $ALL; do
   L="${pair%%:*}"
