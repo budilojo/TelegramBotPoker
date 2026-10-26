@@ -27,6 +27,7 @@ import { AUDIENCES, ERRORS as CAST_ERRORS } from './broadcast.js';
 import { PER_DAY, sign } from './rating.js';
 import { ym } from './fmt.js';
 import { rankedTables } from './ranked.js';
+import { Shop, shopSummary } from './shop.js';
 import { PROFILE_ERRORS } from './profile.js';
 import { ERRORS as REACT_ERRORS, ReactLimiter, react } from './reactions.js';
 import { ERRORS as CHAT_ERRORS, Chats, ChatLimiter, chat, sendUnread, sync as syncChat } from './chat.js';
@@ -89,6 +90,7 @@ export class Hub {
     /** Чат за столом: история (50 строк на стол) и счётчики «не чаще» — только в памяти (bot/chat.js). */
     this.chats = new Chats();
     this.chatLimiter = new ChatLimiter();
+    this.shop = new Shop(app);
   }
 
   /* -------------------------------------------------------------- sessions */
@@ -554,6 +556,9 @@ export class Hub {
     // рейтинг открыт. Пока закрыт — отказ словами, список не собирается.
     if (msg.t === 'rtables' && ['hub', 'home', 'solo', 'rating'].includes(session.kind)) return this.sendRanked(session, msg);
     if (msg.t === 'rjoin' && ['hub', 'home', 'solo', 'rating'].includes(session.kind)) return this.joinRanked(session, msg);
+    if (msg.t === 'shop' && session.kind !== 'admin') {
+      return void session.send(this.shop.handle(session.user, msg));
+    }
     // Свой профиль (ник, аватар): кто — только из подписанного initData, «чей» в теле нет.
     if (msg.t === 'profile' && session.kind !== 'admin') {
       const r = this.app.profiles.update(session.user, msg);
@@ -1085,6 +1090,7 @@ export function adminView(app) {
     me: null, // на этом экране даже своё имя ни к чему
     live: app.liveNow(),
     stats: app.store.stats(now),
+    shop: shopSummary(app.store),
     down: { on: app.down, text: app.maintenance.text || '', since: app.maintenance.since || null },
     sessions,
     casts: app.casts ? { list: app.casts.list(10), sizes: app.casts.sizes(), audiences: AUDIENCES, sending: app.casts.busy } : null,

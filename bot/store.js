@@ -164,6 +164,16 @@ CREATE UNIQUE INDEX IF NOT EXISTS rating_log_once ON rating_log (user_id, game, 
 -- Профиль игрока (ник и аватар для показа). Только отображение: личность и
 -- права определяет Telegram. Таблица ДОБАВЛЕНА без смены версии схемы —
 -- старый код открывает такую базу и просто не знает про эту таблицу.
+-- Спрос: уникальные зрители и «Хочу», без имён и платежей; схема остаётся 5.
+CREATE TABLE IF NOT EXISTS shop_interest (
+  user_id TEXT NOT NULL,
+  item TEXT NOT NULL,
+  variant TEXT NOT NULL CHECK (variant IN ('a', 'b')),
+  viewed_at INTEGER NOT NULL,
+  wanted_at INTEGER,
+  PRIMARY KEY (user_id, item)
+);
+
 CREATE TABLE IF NOT EXISTS profiles (
   user_id    TEXT PRIMARY KEY,
   nickname   TEXT,
@@ -464,6 +474,25 @@ export class Store {
     this.q.rekey.run(String(newChatId), String(oldChatId));
     this.q.delGroup.run(String(newChatId));
     this.q.rekeyGroup.run(String(newChatId), String(oldChatId));
+  }
+
+  // «Хочу» подразумевает просмотр; повторный просмотр/«Хочу» не раздувает доли.
+  shopInterest(userId, item, variant, action, at) {
+    this.db.prepare(`INSERT INTO shop_interest (user_id, item, variant, viewed_at, wanted_at)
+      VALUES (?, ?, ?, ?, ?) ON CONFLICT(user_id, item) DO UPDATE SET
+      wanted_at = COALESCE(shop_interest.wanted_at, excluded.wanted_at)`)
+      .run(String(userId), item, variant, at, action === 'want' ? at : null);
+  }
+  shopMine(userId) {
+    return this.db.prepare('SELECT item FROM shop_interest WHERE user_id = ? AND wanted_at IS NOT NULL ORDER BY item')
+      .all(String(userId)).map((r) => r.item);
+  }
+  shopReset(userId) {
+    this.db.prepare('DELETE FROM shop_interest WHERE user_id = ?').run(String(userId));
+  }
+  shopTotals() {
+    return this.db.prepare(`SELECT item, variant, COUNT(*) AS views, COUNT(wanted_at) AS wants
+      FROM shop_interest GROUP BY item, variant ORDER BY item, variant`).all();
   }
 
   /* ---------------------------------------------------------------- groups */
@@ -851,6 +880,7 @@ export class Store {
 export class NullStore {
   constructor() {
     this.dm = new Map();
+    this.shop = new Map();
     this.profiles = new Map();
     this.decisions = new Map();
     this.nextDecision = 1;
@@ -864,6 +894,29 @@ export class NullStore {
     this.rated = new Set();
     this.parties = new Map();
     this.train = new Map();
+  }
+  shopInterest(userId, item, variant, action, at) {
+    const key = `${userId}:${item}`;
+    const row = this.shop.get(key) || { userId: String(userId), item, variant, viewedAt: at, wantedAt: null };
+    if (action === 'want' && row.wantedAt === null) row.wantedAt = at;
+    this.shop.set(key, row);
+  }
+  shopMine(userId) {
+    return [...this.shop.values()].filter((r) => r.userId === String(userId) && r.wantedAt !== null).map((r) => r.item).sort();
+  }
+  shopReset(userId) {
+    for (const [key, row] of this.shop) if (row.userId === String(userId)) this.shop.delete(key);
+  }
+  shopTotals() {
+    const totals = new Map();
+    for (const r of this.shop.values()) {
+      const key = `${r.item}:${r.variant}`;
+      const t = totals.get(key) || { item: r.item, variant: r.variant, views: 0, wants: 0 };
+      t.views++;
+      if (r.wantedAt !== null) t.wants++;
+      totals.set(key, t);
+    }
+    return [...totals.values()];
   }
   // ---- «Тренировка» в памяти (тот же интерфейс, что у Store) ----
   trainBox(userId) {

@@ -48,7 +48,7 @@
 **Вещь каталога** (`miniapp/cosmetics/catalog.js`, владелец L; **L пушит первым** — M читает):
 
 ```js
-{ id: 'nc-back-1', set: 'night-casino', kind: 'cardback' | 'felt' | 'frame' | 'reaction' | 'effect' | 'title',
+{ id: 'nc-back-1', set: 'night-casino', kind: 'cardback' | 'felt' | 'frame' | 'reaction' | 'effect' | 'title' | 'bundle',
   title: 'Чёрный бархат', blurb: 'Тёмная рубашка с неоновой каймой',
   file: '/cosmetics/night-casino/back-1.png',   // нет файла — берётся заглушка из placeholder/
   tokens: { felt: '#4a0f1f' },                  // для felt: цвет заливки; для остальных не нужен
@@ -95,3 +95,15 @@
 Решение по ценам (по счётчикам «Хочу» за 2 недели), оплата Stars и права на вещи (`entitlements`) — отдельной волной
 и только после согласования владельцем остальных вопросов `docs/monetization.md` §7 (самозанятость, поддержка
 `/paysupport`, подарки).
+
+### Дополнение контракта L (2026-10-27, для M)
+
+- Каталог экспортирует `ITEMS`, `SETS`, `itemById(id)`, `itemsOfSet(set)`, `isItem(id)`.
+- Одиннадцатая вещь `nc-bundle`, `kind: 'bundle'`, `items` — id всех десяти вещей.
+  При примерке набора: первая рубашка и первая рамка, сукно, эффект, звание; реакции показываются в примерочной.
+- `placeholder` — готовый локальный SVG с пометкой TEMP. У звания и набора `file: null` (рисовать текст / состав).
+  У эффекта `file` указывает на `fx-chip.png`, как в запросах владельца; звезда — `fx-star.png`.
+- Пока картинки владельца не подключены, витрина использует `placeholder` без запросов отсутствующих PNG.
+- Цена набора A/B: 265/395 Stars (сумма 350/525, скидка около 25 %).
+- Ответ `shop`: `{t:'shop', variant, wanted:[id,…]}`; отказ `{t:'shop',error:{code,text}}`.
+  Сброс: `{t:'shop',op:'reset',confirm:true}`. Пульт: `state.shop`, только агрегаты.
