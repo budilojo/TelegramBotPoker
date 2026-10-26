@@ -68,7 +68,7 @@ const probe = await scrollProbe();
 
 /** Выполнить действие и проверить, что страница не подпрыгнула (позиция прокрутки та же). */
 async function noJump(page, what, action) {
-  if (probe?.assertNoJump) return probe.assertNoJump(page, {}, action);
+  if (probe?.assertNoJump) return probe.assertNoJump(page, { scroller: 'document', at: 'current', label: what }, action);
   const before = await page.evaluate(() => window.scrollY);
   await action();
   await page.waitForTimeout(60);

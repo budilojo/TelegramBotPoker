@@ -309,8 +309,8 @@ const sb4 = {
 const MIX_SCEN = [
   () => { const pos = 'BTN'; return { name: `BB против открытия с ${pos}`, layers: [{ action: 'threebet', upTo: BB_DEFEND[pos].threebet }, { action: 'call', upTo: BB_DEFEND[pos].total }], rest: 'fold', opts: ['fold', 'call', 'threebet'], ctx: { hero: 'BB', opener: pos, pot: 5.5, toCall: 1.5, openTo: 2.5 } }; },
   () => { const pos = 'CO'; return { name: `BB против открытия с ${pos}`, layers: [{ action: 'threebet', upTo: BB_DEFEND[pos].threebet }, { action: 'call', upTo: BB_DEFEND[pos].total }], rest: 'fold', opts: ['fold', 'call', 'threebet'], ctx: { hero: 'BB', opener: pos, pot: 5.5, toCall: 1.5, openTo: 2.5 } }; },
-  () => { const pos = 'BTN'; return { name: `открытие с ${pos}`, layers: [{ action: 'raise', upTo: OPEN_PCT[pos] }], rest: 'fold', opts: ['fold', 'raise'], ctx: { hero: pos, pot: 1.5, toCall: 1 } }; },
-  () => { const pos = 'CO'; return { name: `открытие с ${pos}`, layers: [{ action: 'raise', upTo: OPEN_PCT[pos] }], rest: 'fold', opts: ['fold', 'raise'], ctx: { hero: pos, pot: 1.5, toCall: 1 } }; },
+  () => { const pos = 'BTN'; return { name: `открытие с ${pos}`, layers: [{ action: 'raise', upTo: OPEN_PCT[pos] }], rest: 'fold', opts: ['fold', 'raise', 'call'], ctx: { hero: pos, pot: 1.5, toCall: 1 } }; },
+  () => { const pos = 'CO'; return { name: `открытие с ${pos}`, layers: [{ action: 'raise', upTo: OPEN_PCT[pos] }], rest: 'fold', opts: ['fold', 'raise', 'call'], ctx: { hero: pos, pot: 1.5, toCall: 1 } }; },
   () => { const pos = 'CO'; return { name: `ответ на 3-бет после открытия с ${pos}`, layers: [{ action: 'fourbet', upTo: VS_3BET[pos].fourbet }, { action: 'call', upTo: VS_3BET[pos].total }], rest: 'fold', opts: ['fold', 'call', 'fourbet'], ctx: { hero: pos, pot: 12.5, toCall: 5, openTo: 2.5, threeBetTo: 7.5 } }; },
 ];
 
@@ -327,10 +327,11 @@ const mixed5 = {
     const f = lf.get(code);
     const main = Object.entries(f).filter(([, v]) => v > 0).map(([k]) => k);
     const prompt = `Спорная рука у границы диапазона — ${sc.name}. Рука — ${handName(code)} (${code}). Выберите действие. (Эту руку учебный ориентир играет «иногда»: любое из двух действий зачтётся.)`;
-    const labels = Object.fromEntries(sc.opts.map((o) => [o, ACT[o]]));
+    const opts = [...sc.opts].sort((x, y) => ((f[x] ?? 0) > 0) - ((f[y] ?? 0) > 0)); // играемые варианты — в конце
+    const labels = Object.fromEntries(opts.map((o) => [o, ACT[o]]));
     return {
       prompt,
-      setup: seatSetup(rng, code, { ...sc.ctx, options: sc.opts.map((id) => ({ id, label: labels[id] })), history: sc.name }),
+      setup: seatSetup(rng, code, { ...sc.ctx, options: opts.map((id) => ({ id, label: labels[id] })), history: sc.name }),
       solution: main[0],
       check(answer) {
         const chosen = f[answer] ?? 0;
@@ -341,7 +342,7 @@ const mixed5 = {
           ok: okAns, score: Math.round(score * 100) / 100,
           mistakes: okAns ? [] : [{ code: 'pf-mixed', topic: 'gto-basics', text: `Для ${code} это действие не из частот ориентира (${main.map((m) => `${labels[m] || m} ${fmtNum(f[m] * 100)} %`).join(', ')}).` }],
           why: `${rankNote(code)}. Эта рука лежит у границы между действиями: в смешанной стратегии её играют «иногда ${main.map((m) => (labels[m] || 'Fold')).join(', иногда ')}» (по ${fmtNum(50)} %). Так соперник не может использовать ваш диапазон. Полоса «иногда» — ±${fmtNum(MIX_BAND)} п.п. вокруг границы; частоты — учебный ориентир, не солвер.`,
-          alternatives: Object.entries(f).map(([k, v]) => ({ label: labels[k] || 'Fold', verdict: `${fmtNum(v * 100)} %`, text: v > 0 ? 'входит в смесь' : 'не играется' })),
+          alternatives: opts.map((k) => ({ label: labels[k], verdict: (f[k] ?? 0) > 0 ? 'верно' : 'неверно', text: (f[k] ?? 0) > 0 ? `входит в смесь: ${fmtNum(f[k] * 100)} %` : 'эта рука так не играется' })),
           solution: main[0],
         };
       },
