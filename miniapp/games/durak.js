@@ -14,7 +14,7 @@
  *   are doing: ⚔ attacking, 🛡 defending, taking, «пас», out.
  */
 import {
-  tg, $app, h, clamp, cardImg, backImg, haptic, animateOnce, centerOf, offsetTo, onRelayout, spawn, edgeGlow, celebrate,
+  tg, $app, h, clamp, cardImg, backImg, haptic, animateOnce, centerOf, offsetTo, onRelayout, watchBox, spawn, edgeGlow, celebrate,
   toast, ringSvg, showSheet, closeSheet, refreshSheet, avatar, REDUCED,
 } from '../ui.js';
 import { net, bus, send } from '../net.js';
@@ -553,6 +553,7 @@ const ARC = { 1: [270], 2: [222, 318], 3: [198, 270, 342], 4: [192, 244, 296, 34
 function layoutDurak() {
   const f = $app.querySelector('.dk-felt');
   if (!f) return;
+  watchBox(f);
   const W = f.clientWidth;
   const H = f.clientHeight;
   const seats = [...f.querySelectorAll('.dk-seat')];

@@ -168,6 +168,11 @@ body[data-screen='poker'] .amount-row {
   margin-top: var(--k-s12);
 }
 body[data-screen='poker'] .amount-step {
+  /* Удержание повторяет шаг: без двойного тапа-зума, выделения и системного меню */
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
   border: 1px solid var(--k-divider);
   border-radius: var(--k-r-md);
   background: var(--k-elevated);

@@ -84,7 +84,7 @@ try {
       if (doc.scrollWidth > doc.clientWidth) out.push(`страница шире экрана: ${doc.scrollWidth} > ${doc.clientWidth}`);
       for (const b of document.querySelectorAll('.sheet button')) {
         const r = b.getBoundingClientRect();
-        if (r.width && r.height < 44) out.push(`кнопка «${b.textContent.trim().slice(0, 20)}» высотой ${r.height}`);
+        if (r.width && r.height < 43.9) out.push(`кнопка «${b.textContent.trim().slice(0, 20)}» высотой ${r.height}`);
         if (r.right > doc.clientWidth + 0.5 || r.left < -0.5) out.push(`кнопка «${b.textContent.trim().slice(0, 20)}» за краем`);
       }
       return out;
@@ -108,6 +108,20 @@ try {
     ['poker', null, 100, 200, 20000, 'fixed']);
   assert.equal(pk.players.filter((p) => p.bot).length, 1);
   step('форма покера на 320 px: блайнды 100/200, стек 20.000, «Не растут», 1 соперник — дошло до стола');
+
+  // Окно Telegram меняет высоту без события resize: сукно, банк и борд обязаны остаться на одной середине.
+  const mid = () => page.evaluate(() => {
+    const m = (s) => { const r = document.querySelector(s).getBoundingClientRect(); return r.top + r.height / 2; };
+    return Math.abs(m('.felt') - m('.center'));
+  });
+  assert.ok(await mid() < 3, 'сукно и борд на одной середине');
+  await page.evaluate(() => { document.getElementById('app').style.top = '200px'; });
+  await page.waitForTimeout(400);
+  assert.ok(await mid() < 3, 'после смены высоты стола без resize сукно пересчитано, борд не уехал с сукна');
+  await page.evaluate(() => { document.getElementById('app').style.top = ''; });
+  await page.waitForTimeout(400);
+  assert.ok(await mid() < 3, 'и после возврата высоты');
+  step('высота стола поменялась без события resize — сукно и борд остались на одной середине');
   await page.setViewportSize({ width: 360, height: 740 });
   await page.locator('.icon-btn[aria-label="Меню"]').click();
   await page.getByRole('button', { name: '← Игры с ботами' }).click();

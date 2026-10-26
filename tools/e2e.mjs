@@ -229,6 +229,60 @@ const shover = actorPage();
 const shoverName = actorName();
 await shover.getByRole('button', { name: 'Raise' }).click();
 await shover.waitForSelector('.sheet');
+
+// Кнопки «+» и «−»: тап — один шаг по сетке, удержание — повтор до упора, отпускание — стоп.
+{
+  const input = shover.locator('.amount-input');
+  const amount = async () => Number((await input.inputValue()).replace(/\D/g, ''));
+  const plus = shover.getByRole('button', { name: 'Больше' });
+  const minus = shover.getByRole('button', { name: 'Меньше' });
+  const sb = room().settings.smallBlind;
+  const confirmText = () => shover.locator('.sheet-confirm .btn').innerText();
+  const a0 = await amount();
+  await plus.click();
+  const a1 = await amount();
+  assert.ok(a1 > a0 && a1 - a0 <= sb, `тап по «+» — ровно один шаг (было ${a0}, стало ${a1})`);
+  await shover.waitForTimeout(700);
+  assert.equal(await amount(), a1, 'после тапа повтора нет');
+  // Мышь: держим — идёт повтор; отпустили — стоп.
+  const box = await plus.boundingBox();
+  await shover.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await shover.mouse.down();
+  await shover.waitForTimeout(1600);
+  const held = await amount();
+  await shover.mouse.up();
+  const stopped = await amount();
+  await shover.waitForTimeout(500);
+  assert.ok(held - a1 >= 4 * sb, `удержание «+» мышью повторяет шаг (${a1} → ${held})`);
+  assert.equal(await amount(), stopped, 'после отпускания мыши повтор стоит');
+  // Палец: те же события, что шлёт телефон (pointerType touch).
+  const touch = { pointerId: 7, pointerType: 'touch', isPrimary: true, button: 0, bubbles: true };
+  const before = await amount();
+  await minus.dispatchEvent('pointerdown', touch);
+  await shover.waitForTimeout(1500);
+  const down = await amount();
+  await minus.dispatchEvent('pointerup', touch);
+  await shover.waitForTimeout(500);
+  const afterUp = await amount();
+  await shover.waitForTimeout(500);
+  assert.ok(before - down >= 4 * sb, `удержание «−» пальцем повторяет шаг (${before} → ${down})`);
+  assert.equal(await amount(), afterUp, 'после отпускания пальца повтор стоит');
+  await minus.dispatchEvent('pointerdown', touch);
+  await shover.waitForTimeout(900);
+  await minus.dispatchEvent('pointercancel', touch);
+  const cancelled = await amount();
+  await shover.waitForTimeout(500);
+  assert.equal(await amount(), cancelled, 'сорванное нажатие (pointercancel) тоже останавливает повтор');
+  // До упора: держим «+», пока не дойдёт до всего стека, и повтор сам кончается.
+  await plus.dispatchEvent('pointerdown', { ...touch, pointerId: 8 });
+  await shover.waitForFunction(() => /^All-in/.test(document.querySelector('.sheet-confirm .btn')?.textContent || ''), null, { timeout: 15000 });
+  const top = await amount();
+  await shover.waitForTimeout(600);
+  assert.equal(await amount(), top, 'на максимуме повтор остановился сам');
+  await plus.dispatchEvent('pointerup', { ...touch, pointerId: 8 });
+  assert.match(await confirmText(), /^All-in/);
+  step(`«+» и «−»: тап — один шаг, удержание — повтор (мышь и палец), стоп при отпускании, срыве и упоре в стек (${top})`);
+}
 const allin = shover.locator('.size-btn', { hasText: 'All-in' });
 const before = room().hand.log.length;
 await allin.click();

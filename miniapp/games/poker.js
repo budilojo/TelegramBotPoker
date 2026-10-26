@@ -13,7 +13,7 @@
  * Moved here from app.js as it was; the shell (app.js) now picks the screen.
  */
 import {
-  tg, $app, h, fmt, clamp, cardImg, backImg, initial, STAGE, haptic, REDUCED, counter, animateOnce, offsetTo, onRelayout,
+  tg, $app, h, fmt, clamp, cardImg, backImg, initial, STAGE, haptic, REDUCED, counter, animateOnce, offsetTo, onRelayout, watchBox,
   flyChips, muck, celebrate, edgeGlow, toast, ringSvg, showSheet, closeSheet, refreshSheet, currentSheet,
 } from '../ui.js';
 import { net, bus, send, serverNow } from '../net.js';
@@ -574,6 +574,7 @@ function boardCardWidth(W, H, u, geo, lines, k = 1) {
 function layoutTable() {
   const t = $app.querySelector('.table');
   if (!t) return;
+  watchBox(t);
   const W = t.clientWidth;
   const H = t.clientHeight;
   const seats = [...t.querySelectorAll('.seat')];
@@ -1000,24 +1001,25 @@ function openRaise() {
     });
     const err = h('div.amount-err');
     const amountEl = h(`div.amount.num${value >= L.maxTotal ? '.max' : ''}`);
-    const bump = (d) => {
-      value = stepFrom(value, d);
+    /** Шаг по сетке `times` раз; false — упёрлись в край (повтор при удержании на этом кончается). */
+    const bump = (d, times = 1) => {
+      const was = value;
+      for (let i = 0; i < times; i++) value = stepFrom(value, d);
       typed = null;
       input.value = fmt(value);
       sync();
+      return value !== was;
     };
     const row = h('div.amount-row',
-      h('button.icon-btn.amount-step', {
+      holdStep(h('button.icon-btn.amount-step', {
         'aria-label': 'Меньше',
-        onclick: () => bump(-1),
         html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg>',
-      }),
+      }), (times) => bump(-1, times)),
       input,
-      h('button.icon-btn.amount-step', {
+      holdStep(h('button.icon-btn.amount-step', {
         'aria-label': 'Больше',
-        onclick: () => bump(1),
         html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
-      }));
+      }), (times) => bump(1, times)));
     /** Что набрано руками и ещё не легло в допустимые границы. */
     let typed = null;
     input.oninput = () => {
@@ -1084,6 +1086,49 @@ function openRaise() {
       h('div.sheet-confirm', confirm),
     );
   });
+}
+
+/**
+ * Кнопка шага суммы. Короткое нажатие — один шаг, как было. Держите — после короткой
+ * паузы шаги повторяются, а чем дольше держите, тем крупнее пачка шагов (иначе от 25 до
+ * стека в 10.000 идти минуту). Повтор кончается, когда палец или кнопка мыши отпущены,
+ * когда нажатие сорвано системой, когда кнопка ушла из шторки или когда шаг уже некуда
+ * делать — упёрлись в минимум или в весь стек. С клавиатуры (Enter, пробел) работает
+ * обычный щелчок: он приходит с `detail === 0`.
+ */
+const HOLD_DELAY = 380;
+const holdEvery = (n) => (n < 8 ? 130 : n < 20 ? 85 : 60);
+const holdBatch = (n) => (n < 14 ? 1 : n < 28 ? 4 : n < 44 ? 12 : 40);
+function holdStep(btn, step) {
+  let timer = null;
+  let pointer = null;
+  const stop = () => {
+    clearTimeout(timer);
+    timer = null;
+    if (pointer !== null) {
+      try { btn.releasePointerCapture(pointer); } catch { /* уже отпущен */ }
+      pointer = null;
+    }
+  };
+  const tick = (n) => {
+    if (!btn.isConnected || step(holdBatch(n)) === false) return stop();
+    timer = setTimeout(() => tick(n + 1), holdEvery(n));
+  };
+  btn.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    stop();
+    pointer = e.pointerId;
+    // Палец чуть съехал с кнопки — всё равно ждём его отпускания здесь, а не теряем.
+    try { btn.setPointerCapture(pointer); } catch { /* не страшно */ }
+    if (step(1) === false) return;
+    timer = setTimeout(() => tick(0), HOLD_DELAY);
+  });
+  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) btn.addEventListener(type, stop);
+  window.addEventListener('blur', stop);
+  // Долгое нажатие на телефоне не должно открывать системное меню поверх шторки.
+  btn.addEventListener('contextmenu', (e) => e.preventDefault());
+  btn.addEventListener('click', (e) => { if (e.detail === 0) step(1); });
+  return btn;
 }
 
 /* --- the dealer's "who won?" — pot by pot, then the engine's own split */

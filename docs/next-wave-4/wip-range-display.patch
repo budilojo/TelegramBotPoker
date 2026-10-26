@@ -1,0 +1,349 @@
+diff --git a/miniapp/ranges.css b/miniapp/ranges.css
+index 81facf7..dadd3f4 100644
+--- a/miniapp/ranges.css
++++ b/miniapp/ranges.css
+@@ -95,3 +95,5 @@
+ 
+ /* Одномастные (выше диагонали) чуть светлее разномастных: вторая подсказка к положению клетки. */
+ .rg-c.suited { background: var(--k-elevated); }
++/* Рука из задания на показанной матрице: толстая светлая рамка поверх закраски */
++.rg-c.mk { outline: 3px solid var(--k-text); outline-offset: -3px; z-index: 2; }
+diff --git a/miniapp/train.css b/miniapp/train.css
+index 3c196d6..9e9f3b9 100644
+--- a/miniapp/train.css
++++ b/miniapp/train.css
+@@ -74,3 +74,28 @@
+ .tr-explain .section-label { margin-bottom: var(--k-s4); }
+ .tr-explain .alts li.good b { text-decoration: underline; text-decoration-color: var(--color-success); text-decoration-thickness: 2px; }
+ .tr-reset { margin-top: var(--k-s8); }
++
++/* ------------------------------------------- ситуация задания над ответом */
++
++.tr-widget > .tm-scene { margin-bottom: var(--k-s12); }
++.tm-positions { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--k-s4); }
++.tm-pos-chip {
++  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
++  min-width: 0; min-height: 44px; padding: var(--k-s4);
++  background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--k-r-sm);
++  color: var(--text-secondary); text-align: center;
++}
++.tm-pos-chip b { font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); font-weight: var(--k-w-semibold); }
++.tm-pos-chip small { font-size: var(--k-fs-caption); line-height: var(--k-lh-caption); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
++.tm-pos-chip.me { border: 2px solid var(--text-primary); color: var(--text-primary); background: var(--bg-elevated); }
++.tm-pos-chip.op { border-style: dashed; border-color: var(--text-primary); color: var(--text-primary); }
++.tm-hist { margin: 0; font-size: var(--k-fs-secondary); line-height: var(--k-lh-secondary); color: var(--text-secondary); }
++.tm-pot.bb { display: flex; flex-wrap: wrap; gap: var(--k-s8) var(--k-s16); }
++.tm-grid { margin-top: var(--k-s4); }
++.tm-reveal { display: flex; flex-direction: column; gap: var(--k-s8); }
++.tm-reveal-item { border: 1px solid var(--border-color); border-radius: var(--k-r-md); padding: var(--k-s8); background: var(--bg-surface); }
++.tm-reveal-item > summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: var(--k-w-semibold); font-size: var(--k-fs-secondary); list-style: none; }
++.tm-reveal-item > summary::-webkit-details-marker { display: none; }
++.tm-reveal-item > summary::before { content: '▸'; margin-right: var(--k-s8); color: var(--text-secondary); }
++.tm-reveal-item[open] > summary::before { content: '▾'; }
++
+diff --git a/miniapp/train/content/preflop.js b/miniapp/train/content/preflop.js
+index 20c7030..5c879c0 100644
+--- a/miniapp/train/content/preflop.js
++++ b/miniapp/train/content/preflop.js
+@@ -17,6 +17,9 @@ import { reviewRange, answerForm, fmtNum, fmtPct, handsBetween, holeOf, rankNote
+ const ACT = { fold: 'Fold', call: 'Call', raise: 'Raise', threebet: '3-bet', fourbet: '4-bet', open: 'Raise (открыть)' };
+ const BLUFFS = ['A5s', 'A4s'];
+ 
++/** Что показать на матрице после ответа: диапазон(ы) по названию и рука задания, обведённая рамкой. */
++const reveal = (code, ...grids) => ({ grids: grids.map(([title, set]) => ({ title, ref: answerForm(set), mark: [code] })) });
++
+ /** Рука из пула с учётом того, что границы-«спорные» полосы обойдены. */
+ const pickFrom = (rng, pool) => rng.pick(pool);
+ 
+@@ -38,7 +41,7 @@ function whyAction(code, correct, ctx) {
+ }
+ 
+ /** Задание-выбор «действие»: options — список id. */
+-function actionPick(rng, { code, prompt, setup, options, correct, ctx, topicIn, topicOut, notes = {} }) {
++function actionPick(rng, { code, prompt, setup, options, correct, ctx, topicIn, topicOut, notes = {}, reveal = null }) {
+   const mistakeTopic = correct === 'fold' ? topicOut : topicIn;
+   return makePick(rng, {
+     prompt,
+@@ -50,6 +53,7 @@ function actionPick(rng, { code, prompt, setup, options, correct, ctx, topicIn,
+     })),
+     correct,
+     why: whyAction(code, correct, ctx),
++    reveal,
+     mistake: { code: correct === 'fold' ? 'pf-too-loose' : correct === 'call' ? 'pf-call-spot' : 'pf-too-tight', topic: mistakeTopic, text: undefined },
+   });
+ }
+@@ -77,6 +81,7 @@ const open1 = {
+       ctx: `С ${pos} в этом ориентире открываются верхние ${fmtPct(pct)} рук (${fmtNum(comboCount(range))} комбо из 1.326).`,
+       topicIn: 'open-raise',
+       topicOut: 'starting-hands',
++      reveal: reveal(code, [`Диапазон открытия с ${pos}`, range]),
+       notes: {
+         raise: range.has(code) ? 'Рука входит в диапазон открытия: рейзим, а не лимпим.' : 'Рука слишком слаба для этой позиции.',
+         fold: range.has(code) ? 'Сбросить такую руку — потерять выгодный рейз.' : 'Рука вне диапазона открытия — отдаём руку без потерь.',
+@@ -126,6 +131,7 @@ const open2 = {
+       ctx: `Граница открытия с ${pos} — верхние ${fmtPct(pct)} рук; эта рука лежит рядом с границей (${fmtPct(midPercent(code))}).`,
+       topicIn: 'open-raise',
+       topicOut: 'range-by-position',
++      reveal: reveal(code, [`Диапазон открытия с ${pos}`, range]),
+     });
+   },
+ };
+@@ -155,6 +161,7 @@ const bb2 = {
+       ctx: `Против ${opener} большой блайнд защищается около ${fmtPct(BB_DEFEND[opener].total)} рук, из них 3-бетит около ${fmtPct(BB_DEFEND[opener].threebet)} (плюс блеф-3-беты A5s и A4s). Так как в банке уже есть ${fmtNum(1)} BB вашего блайнда, колл дешевле.`,
+       topicIn: 'blinds-defence',
+       topicOut: 'defend-vs-raise',
++      reveal: reveal(code, [`3-bet из BB против ${opener}`, d.threebet], [`Call из BB против ${opener}`, d.call]),
+     });
+   },
+ };
+@@ -184,6 +191,7 @@ const vsOpen3 = {
+         : `Против открытия с ${opener} 3-бетят верхние ${fmtPct(v.threebet)} рук, уравнивают до ${fmtPct(v.total)} в сумме. Остальное — Fold: открывший силён ранней позицией.`,
+       topicIn: 'defend-vs-raise',
+       topicOut: 'starting-hands',
++      reveal: reveal(code, [`3-bet с ${hero} против ${opener}`, d.threebet], [`Call с ${hero} против ${opener}`, d.call]),
+     });
+   },
+ };
+@@ -278,6 +286,7 @@ const vs3bet4 = {
+       ctx: `Против 3-бета с ${hero} продолжают верхние ${fmtPct(t.total)} вашего диапазона: 4-бетят около ${fmtPct(t.fourbet)}, уравнивают остальное из этих рук.`,
+       topicIn: 'defend-vs-raise',
+       topicOut: 'range-by-position',
++      reveal: reveal(code, [`4-bet с ${hero}`, v.fourbet], [`Call 3-бета с ${hero}`, v.call]),
+     });
+   },
+ };
+@@ -300,6 +309,7 @@ const sb4 = {
+       ctx: `В борьбе блайндов остаётся один соперник, и вы платите лишь ${fmtNum(0.5)} BB, чтобы войти. Поэтому диапазон широкий — около ${fmtPct(pct)}. Но позиции у вас не будет, потому стандартный размер 3 BB.`,
+       topicIn: 'blinds-defence',
+       topicOut: 'range-by-position',
++      reveal: reveal(code, ['Диапазон SB в борьбе блайндов', range]),
+     });
+   },
+ };
+diff --git a/miniapp/train/content/readrange.js b/miniapp/train/content/readrange.js
+index 0da7389..3e5315c 100644
+--- a/miniapp/train/content/readrange.js
++++ b/miniapp/train/content/readrange.js
+@@ -49,6 +49,7 @@ const open1 = {
+       setup: { opener: pos },
+       options: [inR, ...out].map((c) => ({ id: c, label: `${c} — ${handName(c)}`, why: range.has(c) ? `${rankNote(c)}: входит в диапазон ${pos}.` : `${rankNote(c)}: вне диапазона ${pos} (верхние ${fmtPct(pct)}).` })),
+       correct: inR,
++      reveal: { grids: [{ title: `Диапазон открытия с ${pos}`, ref: answerForm(range), mark: [inR, ...out] }] },
+       why: `Диапазон открытия с ${pos} — верхние ${fmtPct(pct)} рук (${fmtNum(comboCount(range))} комбо из 1.326). ${rankNote(inR)} — внутри. Остальные варианты лежат далеко за границей. Учебный ориентир, не солвер.`,
+       mistake: { code: 'rr-open-hand', topic: 'range-reading' },
+     });
+diff --git a/miniapp/train/engine.js b/miniapp/train/engine.js
+index bbdf496..663374e 100644
+--- a/miniapp/train/engine.js
++++ b/miniapp/train/engine.js
+@@ -177,15 +177,17 @@ export function pickExercise({ track, level, topic = null, recent = [], rand = M
+  *     prompt, setup, options, correct: 'id',
+  *     why: 'почему верно (2–4 предложения)',
+  *     mistake: { code, topic },       // что записать в историю ошибок при промахе
+- *   })
++ *     reveal,                         // необязательно: диапазоны, которые показать на матрице ПОСЛЕ ответа
++ *   })                                // { grids: [{ title, ref (как answerForm), mark: ['AKs'] }] }
+  */
+-export function makePick(rng, { prompt, setup = {}, options, correct, why, mistake }) {
++export function makePick(rng, { prompt, setup = {}, options, correct, why, mistake, reveal = null }) {
+   if (!options.some((o) => o.id === correct)) throw new Error('makePick: верного варианта нет среди options');
+   const shown = rng.shuffle(options);
+   return {
+     prompt,
+     setup: { ...setup, options: shown.map(({ id, label }) => ({ id, label })) },
+     solution: correct,
++    reveal,
+     check(answer) {
+       const ok = answer === correct;
+       return {
+diff --git a/miniapp/train/screens.js b/miniapp/train/screens.js
+index f98c2c5..0405f12 100644
+--- a/miniapp/train/screens.js
++++ b/miniapp/train/screens.js
+@@ -29,8 +29,18 @@ import * as sliderW from './widgets/odds-bar.js';
+ import * as betW from './widgets/bet-slider.js';
+ import * as tableW from './widgets/table-seat.js';
+ import * as rangeGrid from './widgets/range-grid.js';
++import * as revealW from './widgets/reveal.js';
++import { sceneEl } from './widgets/table-seat.js';
+ export const ANSWER_WIDGETS = { pick: choice, cards: cardsW, slider: sliderW, bet: betW, table: tableW, range: rangeGrid };
+ 
++/**
++ * Виды заданий, чей виджет сам НЕ рисует ситуацию (карты, позиции, банк, показанную матрицу): для них
++ * картинку над ответом рисует сцена. Остальные (cards, table, bet…) показывают сцену внутри себя.
++ */
++const SCENE_KINDS = new Set(['pick', 'range']);
++const hasScene = (s = {}) => !!(s.hero || s.hole || s.board || s.opener || s.position || s.pot != null || s.seats || s.history || s.grid?.mode === 'readonly');
++const revealOf = (task) => (task.reveal ? revealW.mount(task.reveal) : null);
++
+ const EMPTY = { started: false, total: 0, skills: [], tracks: [], weak: [], due: [], mistakes: [], masteredTopics: [] };
+ const M = {
+   progress: null,
+@@ -249,11 +259,13 @@ function exerciseScreen() {
+   }
+   if (mod) {
+     wEl = mod.mount(props());
++    // Ситуация задания — картинкой: ваши карты, позиции, банк, борд, показанный диапазон.
++    if (SCENE_KINDS.has(exercise.kind) && hasScene(task.setup)) host.append(sceneEl(task.setup, { grid: true }));
+     host.append(wEl);
+   } else {
+     host.append(h('div.tr-note', 'Этот вид задания ещё не подключён.'));
+   }
+-  if (cur.review) reviewHost.append(explain.mount({ review: cur.review }));
++  if (cur.review) reviewHost.append(explain.mount({ review: cur.review, extra: revealOf(task) }));
+ 
+   /** Ответ готов к проверке: по умолчанию «что-то выбрано»; многошаговые задания говорят сами (task.isComplete). */
+   const ready = () => (cur.value != null && (typeof task.isComplete !== 'function' || !!task.isComplete(cur.value)));
+@@ -287,7 +299,7 @@ function exerciseScreen() {
+     const codes = [...new Set(review.mistakes.map((m) => m.code))].filter((c) => /^[a-z0-9][a-z0-9._-]{0,39}$/i.test(c)).slice(0, 8);
+     ask({ op: 'result', ex: exercise.id, track: run.track, topic: exercise.topic, level: exercise.level, score: review.score, ms: Math.min(3_600_000, Date.now() - cur.t0), mistakes: codes, seed: cur.seed });
+     if (wEl) mod.update?.(wEl, props());
+-    reviewHost.replaceChildren(explain.mount({ review }));
++    reviewHost.replaceChildren(explain.mount({ review, extra: revealOf(task) }));
+     drawFoot();
+     reviewHost.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+   }
+diff --git a/miniapp/train/widgets/explain.js b/miniapp/train/widgets/explain.js
+index 202e8b7..c87ed00 100644
+--- a/miniapp/train/widgets/explain.js
++++ b/miniapp/train/widgets/explain.js
+@@ -6,7 +6,7 @@
+ import { h } from '../../ui.js';
+ import { topicById } from '../topics.js';
+ 
+-export function mount({ review }) {
++export function mount({ review, extra = null }) {
+   const verdict = review.ok ? 'Верно' : review.score > 0 ? 'Частично верно' : 'Не верно';
+   return h(`section.tr-explain${review.ok ? '.ok' : '.bad'}`, { 'aria-live': 'polite' },
+     h('div.tr-verdict', verdict, review.score > 0 && review.score < 1 ? h('span.tr-score', ` · ${Math.round(review.score * 100)}%`) : null),
+@@ -14,6 +14,7 @@ export function mount({ review }) {
+       h('div.section-label', 'Что пошло не так'),
+       h('ul.tr-list', review.mistakes.map((m) => h('li', m.text || 'Ошибка', ' ', h('small', `Тема: ${topicById(m.topic)?.title || m.topic}`))))) : null,
+     h('div.tr-block', h('div.section-label', 'Почему так'), h('div.tr-why', review.why)),
++    extra ? h('div.tr-block', h('div.section-label', 'Диапазон на матрице'), extra) : null,
+     review.alternatives.length ? h('div.tr-block',
+       h('div.section-label', 'Другие варианты'),
+       h('ul.tr-list.alts', review.alternatives.map((a) => h(`li${a.verdict === 'верно' ? '.good' : ''}`,
+diff --git a/miniapp/train/widgets/range-grid.js b/miniapp/train/widgets/range-grid.js
+index afd6250..d244835 100644
+--- a/miniapp/train/widgets/range-grid.js
++++ b/miniapp/train/widgets/range-grid.js
+@@ -54,7 +54,7 @@ function el(tag, cls, attrs) {
+ 
+ export function mount(props) {
+   ensureCss();
+-  const st = { props, mode: 'edit', steps: 2, zoom: false, draw: false, focus: 'AA', ed: null, cells: new Map(), board: null, loupe: null, lp: [] };
++  const st = { props, mode: 'edit', marks: new Set(), steps: 2, zoom: false, draw: false, focus: 'AA', ed: null, cells: new Map(), board: null, loupe: null, lp: [] };
+   const root = el('div', 'rg');
+   root._rg = st;
+ 
+@@ -154,7 +154,11 @@ export function mount(props) {
+       }
+       return { f: ref, cls: ref ? (flagged ? 'off f' : 'f f1') : (flagged ? 'off' : ''), say: flagged ? 'отмечена как ошибка' : '' };
+     }
+-    if (mode === 'readonly' || mode === 'heat') return { f: freqOf(st.refMap, code) };
++    if (mode === 'readonly' || mode === 'heat') {
++      const f = freqOf(st.refMap, code);
++      // Обведённая рука задания: рамка, а не цвет (видно и тем, кто не различает зелёное и красное)
++      return st.marks.has(code) ? { f, cls: f > 0 ? 'f f1 mk' : 'mk', say: 'рука из задания' } : { f };
++    }
+     return { f: st.ed.get(code) };
+   }
+ 
+@@ -196,7 +200,8 @@ export function mount(props) {
+     const result = p.result || null;
+     let mode = g.mode || 'edit';
+     st.steps = g.steps === 3 ? 3 : 2;
+-    st.refMap = toMap(result && g.mode !== 'flag' ? result.solution : g.ref);
++    st.refMap = toMap(result && g.mode !== 'flag' && g.mode !== 'readonly' ? result.solution : g.ref);
++    st.marks = new Set(Array.isArray(g.mark) ? g.mark : []);
+     if (result && (mode === 'edit' || mode === 'diff' || mode === 'flag')) {
+       if (mode === 'flag') {
+         const wrong = new Set(Array.isArray(result.solution) ? result.solution : []);
+diff --git a/miniapp/train/widgets/reveal.js b/miniapp/train/widgets/reveal.js
+new file mode 100644
+index 0000000..18d31e7
+--- /dev/null
++++ b/miniapp/train/widgets/reveal.js
+@@ -0,0 +1,20 @@
++/**
++ * «Диапазон на матрице» в разборе: после ответа показывает диапазон(ы), о которых шла речь, а рука
++ * из задания обведена рамкой. `reveal` — `{ grids: [{ title, ref, mark? }] }`, где `ref` в форме
++ * ответа матрицы (массив рук или { рука: частота }). Первая матрица открыта, остальные свёрнуты.
++ * Матрица только для чтения; перерисовки при нажатиях нет (строится один раз).
++ */
++import { el } from './dom.js';
++import { mount as mountGrid } from './range-grid.js';
++
++export function mount(reveal) {
++  const grids = reveal?.grids?.filter((g) => g && g.ref) || [];
++  if (!grids.length) return null;
++  const root = el('div.tm-reveal');
++  grids.forEach((g, i) => {
++    const box = el('details.tm-reveal-item', { open: i === 0 ? '' : null }, el('summary', g.title || 'Диапазон'));
++    box.append(mountGrid({ setup: { grid: { mode: 'readonly', ref: g.ref, mark: g.mark || [] } }, value: null, disabled: true }));
++    root.append(box);
++  });
++  return root;
++}
+diff --git a/miniapp/train/widgets/table-seat.js b/miniapp/train/widgets/table-seat.js
+index 8481fb8..a4b01bd 100644
+--- a/miniapp/train/widgets/table-seat.js
++++ b/miniapp/train/widgets/table-seat.js
+@@ -15,6 +15,21 @@ import { cardEl } from './card-el.js';
+ import { mount as mountBoard } from './board.js';
+ import { mount as mountPot } from './pot.js';
+ import { fmtNum } from '../poker-math.js';
++import { mount as mountGrid } from './range-grid.js';
++
++const POSITIONS = ['UTG', 'MP', 'CO', 'BTN', 'SB', 'BB'];
++
++/** Позиции за столом шестиместного стола: вы, открывший рейзом, дилер. Картинка к тексту задания. */
++function positionsEl({ hero, position, opener, openTo }) {
++  const me = typeof hero === 'string' ? hero : position;
++  const row = el('div.tm-positions', { role: 'group', 'aria-label': 'Позиции за столом' });
++  for (const p of POSITIONS) {
++    const mark = p === me ? 'вы' : p === opener ? (openTo ? `рейз ${fmtNum(openTo)}` : 'рейз') : p === 'BTN' ? 'дилер' : '';
++    const chip = el(`div.tm-pos-chip${p === me ? '.me' : ''}${p === opener ? '.op' : ''}`, { 'aria-label': `${p}${mark ? `, ${mark}` : ''}` }, el('b', p), mark ? el('small', mark) : null);
++    row.append(chip);
++  }
++  return row;
++}
+ 
+ /** Одно место за столом. */
+ export function seatEl(s) {
+@@ -33,16 +48,29 @@ export function seatEl(s) {
+   return root;
+ }
+ 
+-/** Сцена задания: места, борд, банк, ваши карты, история. Без выбора ответа. */
+-export function sceneEl(setup = {}) {
++/**
++ * Сцена задания: места, борд, банк, ваши карты, история. Без выбора ответа.
++ * Понимает обе записи: `hero:[карты]` (математика) и `hole:[карты]` + `hero:'BTN'` (префлоп,
++ * стек и банк в BB). `grid` — показать готовую матрицу `setup.grid` (режим readonly).
++ */
++export function sceneEl(setup = {}, { grid = false } = {}) {
+   const root = el('div.tm-scene');
++  const cards = Array.isArray(setup.hero) ? setup.hero : Array.isArray(setup.hole) ? setup.hole : null;
++  if (typeof setup.hero === 'string' || setup.position || setup.opener) root.append(positionsEl(setup));
+   if (setup.seats?.length) root.append(el('div.tm-seats', setup.seats.map(seatEl)));
+   if (setup.board) root.append(mountBoard({ board: setup.board, street: setup.street, mark: setup.mark || [] }));
+   const mid = el('div.tm-mid');
+-  if (setup.pot != null) mid.append(mountPot({ pot: setup.pot, bet: setup.bet ?? null, stack: setup.stack ?? null }));
+-  if (setup.hero?.length) mid.append(el('div.tm-hero', [el('span.tm-hero-k', 'Ваши карты'), el('div.tm-hero-cards', setup.hero.map((c) => cardEl(c)))]));
++  if (setup.stackBB != null && setup.pot != null) {
++    mid.append(el('div.tm-pot.bb', { role: 'group', 'aria-label': 'Банк в больших блайндах' },
++      el('span.tm-pot-main', el('span.tm-pot-k', 'Банк'), el('b', `${fmtNum(setup.pot)} BB`)),
++      setup.toCall ? el('span.tm-pot-bet', el('span.tm-pot-k', 'Доплатить'), el('b', `${fmtNum(setup.toCall)} BB`)) : null,
++      el('span.tm-pot-stack', el('span.tm-pot-k', 'Стек'), el('b', `${fmtNum(setup.stackBB)} BB`))));
++  } else if (setup.pot != null) mid.append(mountPot({ pot: setup.pot, bet: setup.bet ?? null, stack: setup.stack ?? null }));
++  if (cards?.length) mid.append(el('div.tm-hero', [el('span.tm-hero-k', 'Ваши карты'), el('div.tm-hero-cards', cards.map((c) => cardEl(c)))]));
+   root.append(mid);
+-  if (setup.history?.length) root.append(el('ol.tm-history', setup.history.map((t) => el('li', t))));
++  if (typeof setup.history === 'string') root.append(el('p.tm-hist', setup.history));
++  else if (setup.history?.length) root.append(el('ol.tm-history', setup.history.map((t) => el('li', t))));
++  if (grid && setup.grid?.mode === 'readonly') root.append(el('div.tm-grid', mountGrid({ setup: { grid: setup.grid }, value: null, disabled: true })));
+   return root;
+ }
+ 

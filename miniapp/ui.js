@@ -376,6 +376,32 @@ export function onRelayout(fn) {
   relayouts.add(fn);
 }
 
+/**
+ * Раскладка зависит от размера самого стола, а не от события окна: в Telegram на
+ * iPhone окно раскрывается и меняется без resize (а viewportChanged приходит до того,
+ * как вёрстка применила новую высоту), и тогда сукно остаётся нарисованным по
+ * старой высоте, а борд и банк — по новой, внизу, мимо сукна. Поэтому экран стола
+ * просит следить за самой коробкой (`watchBox`): поменялся размер — пересчитать.
+ */
+let boxWatcher = null;
+let boxWatched = null;
+let boxSize = '';
+export function watchBox(el) {
+  if (!el || el === boxWatched || typeof ResizeObserver === 'undefined') return;
+  boxWatcher ??= new ResizeObserver(() => {
+    const r = boxWatched?.getBoundingClientRect();
+    const size = r ? `${Math.round(r.width)}x${Math.round(r.height)}` : '';
+    if (size === boxSize) return;
+    boxSize = size;
+    relayoutSoon();
+  });
+  if (boxWatched) boxWatcher.unobserve(boxWatched);
+  boxWatched = el;
+  const r = el.getBoundingClientRect();
+  boxSize = `${Math.round(r.width)}x${Math.round(r.height)}`;
+  boxWatcher.observe(el);
+}
+
 window.addEventListener('resize', relayoutSoon);
 tg?.onEvent?.('viewportChanged', relayoutSoon);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) relayoutSoon(); });
