@@ -117,8 +117,8 @@ try {
       await probe(page, S, tag, '.sheet', 'число соперников 5', press(page, '5'), { must: short });
       await probe(page, S, tag, '.sheet', 'уровень (сегмент «Уровень»)', page.locator('.sheet .seg.wide button').nth(1), { must: short });
       await probe(page, S, tag, '.sheet', 'характеры → «Выбрать самому»', press(page, 'Выбрать самому'), { must: short });
-      await probe(page, S, tag, '.sheet', 'вкладка «Обучение»', press(page, 'Обучение'), { at: 'top' });
-      await probe(page, S, tag, '.sheet', 'вкладка «Партия»', press(page, 'Партия'), { at: 'top' });
+      // «Обучение» и «Тренировка» теперь не вкладки шторки, а переход на свой экран
+      // (closeSheet + openRoute): там шторки нет. Их экраны проверит часть 3.
       await page.close();
     }
 

@@ -446,16 +446,18 @@ export function refreshSheet() {
  */
 export const AVATAR_ID = /^av\d{2}$/;
 /**
- * Лежат ли в `miniapp/avatars/` настоящие PNG (av01…av12.png). Пока нет — клиент
- * сразу берёт временные SVG и не стучится за несуществующими PNG (иначе 404 на
- * каждый аватар в консоли и в журнале сервера). Положили PNG — поставить `true`
+ * Настоящие PNG лежат в `miniapp/avatars/` (av01…av04, av06…av12; `av05` нет).
+ * `true` — клиент берёт PNG, при ошибке загрузки — временный SVG, потом инициал.
+ * Если файлов нет совсем, поставить `false`, иначе 404 на каждый аватар
  * (`docs/profile.md`, «подключить аватарки»).
  */
-export const AVATAR_PNG = false;
+export const AVATAR_PNG = true;
+/** Версия набора картинок: заменили файлы — поднять число, и кэш телефона обновится (`docs/profile.md`). */
+export const AVATAR_VER = 1;
 export function avatar(name, hue, cls = '', avatarId = null) {
   const el = h(`div.av${cls ? '.' + cls : ''}`, { style: { '--h': hue } }, initial(name));
   if (typeof avatarId === 'string' && AVATAR_ID.test(avatarId)) {
-    const img = h('img.av-img', { src: `/avatars/${avatarId}.${AVATAR_PNG ? 'png' : 'svg'}`, alt: '', draggable: 'false' });
+    const img = h('img.av-img', { src: `/avatars/${avatarId}.${AVATAR_PNG ? 'png?v=' + AVATAR_VER : 'svg'}`, alt: '', draggable: 'false' });
     let tried = AVATAR_PNG ? 'png' : 'svg';
     img.addEventListener('error', () => {
       if (tried === 'png') {

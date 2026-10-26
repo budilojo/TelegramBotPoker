@@ -9,8 +9,8 @@
  * Тот же сервер, сокет и страница, что в бою; Telegram — заглушка. Клавиатуру
  * телефона это не проверяет (видимая область сжимается только имитацией).
  *
- * Настоящих PNG аватарок пока нет: браузер пишет 404 на /avatars/*.png, клиент
- * берёт запасной .svg. Такие строки не считаются ошибкой, остальные — считаются.
+ * Аватарки — настоящие PNG (av01…av04, av06…av12). Любая ошибка в консоли, в том
+ * числе 404 на картинку, считается провалом.
  */
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -78,7 +78,6 @@ async function openPage(u, code, width = 360, height = 740) {
   page.on('pageerror', (e) => problems.push(`${u.first_name}: ${e.message}`));
   page.on('console', (m) => {
     if (m.type() !== 'error') return;
-    if (/Failed to load resource.*404/.test(m.text()) && /\/avatars\/av\d\d\.png/.test(m.location()?.url || '')) return;
     problems.push(`${u.first_name}: ${m.text()}`);
   });
   const initData = signInitData({ auth_date: Math.floor(Date.now() / 1000), user: u, start_param: code }, TOKEN);
@@ -130,8 +129,8 @@ for (const [w, h] of [[320, 568], [390, 844]]) {
   await pi.waitForSelector('.nav');
   await pi.getByRole('button', { name: 'Настройки' }).click();
   await pi.waitForSelector('.pf .pf-cell');
-  await pi.waitForFunction(() => document.querySelectorAll('.pf-cell').length === 13);
-  step(`${w}px: экран «Профиль» открыт, в сетке 13 клеток (без аватара + 12)`);
+  await pi.waitForFunction(() => document.querySelectorAll('.pf-cell').length === 12);
+  step(`${w}px: экран «Профиль» открыт, в сетке 12 клеток (без аватара + 11)`);
 
   // Размеры: клетки и кнопки ≥ 44, четыре колонки, ничего не шире экрана.
   for (const sel of ['.pf-cell', '.pf-save', '.pf-reset', '.pf-input']) {
@@ -165,7 +164,7 @@ for (const [w, h] of [[320, 568], [390, 844]]) {
   await pi.locator('.pf-cell').nth(3).click(); // av03
   assert.equal(await pi.locator('.pf-cell.on .pf-check').count(), 1, 'выбранный отмечен не только цветом');
   assert.equal((await pi.locator('.pf-prev-name').innerText()).trim(), nick);
-  await pi.waitForFunction(() => document.querySelector('.pf-prev-av img.av-img')?.src.endsWith('av03.svg'));
+  await pi.waitForFunction(() => /\/av03\.png\?v=\d+$/.test(document.querySelector('.pf-prev-av img.av-img')?.src || ''));
   assert.equal(await pi.locator('.pf-count').innerText(), `${nick.length} / 16`);
   await shot(pi, `draft-${w}`);
 
@@ -176,7 +175,7 @@ for (const [w, h] of [[320, 568], [390, 844]]) {
   const hostSeat = pm.locator('.lseat', { hasText: nick });
   await hostSeat.waitFor();
   await hostSeat.locator('img.av-img').waitFor();
-  await pm.waitForFunction(() => [...document.querySelectorAll('.lseat img.av-img')].some((i) => i.src.endsWith('av03.svg') && i.naturalWidth > 0));
+  await pm.waitForFunction(() => [...document.querySelectorAll('.lseat img.av-img')].some((i) => /\/av03\.png\?v=\d+$/.test(i.src) && i.naturalWidth === 128));
   assert.equal(await pm.locator('.lseat', { hasText: 'Иван' }).count(), 0, 'прежнего имени у Макса нет');
   assert.equal(await pm.locator('.lseat.me img.av-img').count(), 0, 'у Макса без аватара — инициал, не картинка');
   await noSideways(pm, `${w}px лобби у Макса`);

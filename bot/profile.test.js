@@ -81,10 +81,10 @@ test('ник: невидимые символы, @, ссылки, одни зн�
   for (const bad of ['..', '__', '-_-', '. .']) assert.equal(cleanNick(bad).code, 'NICK_EMPTY', bad);
 });
 
-test('набор аватарок: ровно av01…av12, чужое — null', () => {
-  assert.deepEqual(AVATARS, ['av01', 'av02', 'av03', 'av04', 'av05', 'av06', 'av07', 'av08', 'av09', 'av10', 'av11', 'av12']);
+test('набор аватарок: ровно av01…av12 без av05, чужое и старое av05 — null', () => {
+  assert.deepEqual(AVATARS, ['av01', 'av02', 'av03', 'av04', 'av06', 'av07', 'av08', 'av09', 'av10', 'av11', 'av12']);
   for (const a of AVATARS) assert.equal(avatarId(a), a);
-  for (const bad of ['av00', 'av13', '../av01', 'av01.png', '/avatars/av01', 'AV01', '', null, undefined, 5, {}, ['av01'], 'constructor', '__proto__']) {
+  for (const bad of ['av05', 'av00', 'av13', '../av01', 'av01.png', '/avatars/av01', 'AV01', '', null, undefined, 5, {}, ['av01'], 'constructor', '__proto__']) {
     assert.equal(avatarId(bad), null, JSON.stringify(bad));
   }
 });
@@ -220,7 +220,7 @@ test('двойник имени: если за столом уже есть та
 test('ники не раскрывают имя из Telegram: у соседей по столу его нет', async () => {
   const t = new Table({ store: new Store(':memory:') });
   // Ник задан до того, как Боб сел за стол (страницу стола он откроет позже).
-  assert.ok(t.app.profiles.update({ id: '2', name: 'Боб' }, { nickname: 'Шмель', avatar: 'av05' }).ok);
+  assert.ok(t.app.profiles.update({ id: '2', name: 'Боб' }, { nickname: 'Шмель', avatar: 'av06' }).ok);
   await t.begin({ ALICE, BOB, CAROL });
   const seen = t.received(ALICE) + t.received(CAROL);
   assert.ok(!seen.includes('Боб'), 'настоящее имя Боба не ушло соседям');
@@ -322,4 +322,33 @@ test('профиль переживает перезапуск бота: ник 
   assert.deepEqual(t.app.profiles.profileOf(CAROL.id, 'Катя'), { name: 'Катя', avatar: null });
   store.close();
   fs.rmSync(dir, { recursive: true, force: true });
+});
+
+/* ---------------------------------------------------- файлы аватарок */
+
+test('у каждой аватарки из набора есть PNG: 128×128, палитровый, ≤ 20 КБ; лишних файлов нет', () => {
+  const dir = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'miniapp', 'avatars');
+  for (const id of AVATARS) {
+    const f = path.join(dir, `${id}.png`);
+    assert.ok(fs.existsSync(f), `нет файла ${id}.png`);
+    const b = fs.readFileSync(f);
+    assert.equal(b.subarray(1, 4).toString('latin1'), 'PNG', `${id}: не PNG`);
+    assert.equal(b.readUInt32BE(16), 128, `${id}: ширина`);
+    assert.equal(b.readUInt32BE(20), 128, `${id}: высота`);
+    assert.ok(b.length <= 20 * 1024, `${id}: ${b.length} байт — больше 20 КБ`);
+  }
+  const extra = fs.readdirSync(dir).filter((n) => n.endsWith('.png') && !AVATARS.includes(n.slice(0, -4)));
+  assert.deepEqual(extra, [], 'PNG без id в списке сервера');
+});
+
+test('старый выбор av05 не ломается: читается как «без аватара», экран профиля и стол работают', async () => {
+  const store = new Store(':memory:');
+  store.putProfile(2, { nickname: 'Шмель', avatar: 'av05' }, 1);
+  const t = new Table({ store });
+  await t.begin({ ALICE, BOB, CAROL });
+  assert.equal(t.app.profiles.mine({ id: '2', name: 'Боб' }).avatar, null);
+  assert.ok(!t.received(ALICE).includes('av05'), 'av05 соседям не уходит');
+  assert.ok(t.received(ALICE).includes('Шмель'), 'ник остался');
+  await t.send(BOB, { t: 'profile' });
+  assert.ok(!t.received(BOB).includes('av05'));
 });

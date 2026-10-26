@@ -8,8 +8,12 @@
  */
 import { cleanName } from './fmt.js';
 
-/** Фиксированный набор аватарок (файлы miniapp/avatars/<id>.png|svg). */
-export const AVATARS = Object.freeze(Array.from({ length: 12 }, (_, i) => `av${String(i + 1).padStart(2, '0')}`));
+/**
+ * Фиксированный набор аватарок (файлы miniapp/avatars/<id>.png, запас — .svg).
+ * Одиннадцать штук: номера как в файлах владельца, `av05` пропущен — такого файла
+ * нет. Раньше сохранённый `av05` читается как «без аватара» (см. `avatarId`).
+ */
+export const AVATARS = Object.freeze(['av01', 'av02', 'av03', 'av04', 'av06', 'av07', 'av08', 'av09', 'av10', 'av11', 'av12']);
 const AVATAR_SET = new Set(AVATARS);
 
 /** Id аватара или null. Всё, чего нет в наборе, — null (в вид не попадает). */

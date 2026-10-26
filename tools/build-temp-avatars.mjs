@@ -35,12 +35,6 @@ const A = {
     <ellipse cx="64" cy="88" rx="22" ry="17" fill="${WHITE}"/>
     ${bigEye(47, 62, 10, 4, '#8BD19A')}${bigEye(81, 62, 10, 4, '#8BD19A')}
     <path d="M58 80 L70 80 L64 87Z" fill="#E8A9B4"/>`],
-  av05: ['#3A4A5C', 'волк', `
-    <path d="M24 64 L28 12 L56 40 L72 40 L100 12 L104 64 Q104 106 64 114 Q24 106 24 64Z" fill="#9AA5B1"/>
-    <path d="M32 24 L34 42 L48 38Z M96 24 L94 42 L80 38Z" fill="#4C5866"/>
-    <path d="M38 76 Q64 66 90 76 Q86 112 64 114 Q42 112 38 76Z" fill="#DCE4EA"/>
-    <path d="M40 58 L56 62 L54 66 L40 64Z M88 58 L72 62 L74 66 L88 64Z" fill="${DARK}"/>
-    ${eye(49, 64, 4)}${eye(79, 64, 4)}<ellipse cx="64" cy="88" rx="8" ry="6" fill="${DARK}"/>`],
   av06: ['#5C6B4A', 'енот', `
     <circle cx="34" cy="36" r="12" fill="#A9B0B4"/><circle cx="94" cy="36" r="12" fill="#A9B0B4"/>
     <circle cx="64" cy="68" r="40" fill="#C3C9CC"/>
