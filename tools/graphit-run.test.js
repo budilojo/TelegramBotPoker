@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  loadManifest, validateManifest, pathsOverlap, nextRunnable, simulate, isTerminal, parseAgentStatus, looksLikeLimit,
+  loadManifest, validateManifest, pathsOverlap, nextRunnable, simulate, isTerminal, parseAgentStatus, looksLikeLimit, snippet,
 } from './graphit-run.mjs';
 
 const real = loadManifest();
@@ -99,4 +99,10 @@ test('упор в лимит узнаётся по тексту', () => {
   assert.ok(looksLikeLimit('Usage limit reached · limit resets 4:40am'));
   assert.ok(looksLikeLimit('rate limit exceeded'));
   assert.ok(!looksLikeLimit('всё хорошо, тесты зелёные'));
+  assert.ok(looksLikeLimit("You've hit your limit · resets 8:20am"), 'формулировка «hit your limit»');
+  assert.ok(looksLikeLimit("You've hit your session limit · resets 7:50pm (Asia/Yekaterinburg)"), 'настоящая формулировка из журнала владельца');
+  assert.ok(looksLikeLimit('{"is_error":true,"result":"5-hour limit"}', true), 'при ошибке достаточно слова limit');
+  assert.ok(!looksLikeLimit('limit order book', false), 'без ошибки слово limit само по себе не лимит');
+  assert.equal(snippet('{"is_error":true,"result":"нет прав на папку"}'), 'нет прав на папку');
+  assert.ok(snippet('просто текст').includes('просто'));
 });

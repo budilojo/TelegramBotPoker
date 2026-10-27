@@ -161,9 +161,23 @@ export function parseAgentStatus(text, id) {
   return { ok: problems.length === 0, status, problems, raw: j };
 }
 
-/** Похоже ли на упор в лимит использования. */
-export function looksLikeLimit(text) {
-  return /usage limit|rate limit|limit reached|лимит использования|limit resets|try again at|quota/i.test(String(text || ''));
+/** Похоже ли на упор в лимит использования (`failed` — процесс завершился с ошибкой: тогда достаточно слова «limit»). */
+export function looksLikeLimit(text, failed = false) {
+  const t = String(text || '');
+  if (/usage limit|usage_limit_reached|session limit|rate limit|limit reached|hit your limit|reached your limit|лимит использования|limit resets|resets at|try again at|quota|too many requests|overloaded/i.test(t)) return true;
+  return failed && /limit|лимит/i.test(t);
+}
+
+/** Краткая причина из журнала агента: поле result/error последнего JSON или хвост текста. */
+export function snippet(text, n = 240) {
+  const t = String(text || '').trim();
+  if (!t) return '';
+  try {
+    const j = JSON.parse(t);
+    const m = j.result || j.error || j.message || (j.is_error ? JSON.stringify(j).slice(0, n) : '');
+    if (m) return String(m).replace(/\s+/g, ' ').slice(0, n);
+  } catch { /* не JSON */ }
+  return t.slice(-n).replace(/\s+/g, ' ');
 }
 
 /* ------------------------------------------------------------------ git и процессы */
@@ -540,17 +554,18 @@ async function main() {
     const tail = (f) => { try { return fs.readFileSync(f, 'utf8').slice(-4000); } catch { return ''; } };
     const outTail = tail(outFile);
     const errTail = tail(errFile);
-    if (looksLikeLimit(outTail) || looksLikeLimit(errTail)) {
+    const failedExit = code !== 0;
+    if (looksLikeLimit(outTail, failedExit) || looksLikeLimit(errTail, failedExit)) {
       limitHit = true;
       s.status = 'stopped';
-      s.note = 'упёрся в лимит использования — повторите команду позже';
+      s.note = `упёрся в лимит использования — повторите команду позже (${snippet(outTail) || snippet(errTail)})`;
       log(`✗ ${a.id}: ${s.note}`);
       return writeState(state);
     }
     const stFile = path.join(dir, `docs/graphit-launch/reports/${a.id}.status.json`);
     if (!fs.existsSync(stFile)) {
       s.status = code === 0 ? 'failed' : 'stopped';
-      s.note = `нет ${a.id}.status.json (код ${code ?? signal})`;
+      s.note = `нет ${a.id}.status.json (код ${code ?? signal}). Причина из журнала: ${snippet(outTail) || snippet(errTail) || 'журнал пуст'}`;
       log(`✗ ${a.id}: ${s.note}`);
       return writeState(state);
     }
