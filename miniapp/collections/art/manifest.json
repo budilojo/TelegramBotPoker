@@ -1,0 +1,516 @@
+{
+  "collection": "graphit",
+  "generator": "tools/build-graphit-art.mjs",
+  "colors": [
+    {
+      "id": "graphite",
+      "bg": "#20292E",
+      "ink": "#B6BEC2"
+    },
+    {
+      "id": "sapphire",
+      "bg": "#15263E",
+      "ink": "#A6B5C8"
+    },
+    {
+      "id": "bordeaux",
+      "bg": "#3B202B",
+      "ink": "#C2A8B2"
+    },
+    {
+      "id": "petrol",
+      "bg": "#153538",
+      "ink": "#9FBFC0"
+    }
+  ],
+  "budget": {
+    "detailBytes": 24576,
+    "smallBytes": 8192
+  },
+  "files": [
+    {
+      "file": "cardback-detail-graphite.svg",
+      "kind": "cardback-detail",
+      "color": "graphite",
+      "detail": true,
+      "viewBox": "0 0 200 280",
+      "width": 200,
+      "height": 280,
+      "bytes": 2201,
+      "sha256": "02a89fcbec7da88c79adb501a738882adbd2267c943bf6456eae1bd7c8b8d786"
+    },
+    {
+      "file": "cardback-detail-sapphire.svg",
+      "kind": "cardback-detail",
+      "color": "sapphire",
+      "detail": true,
+      "viewBox": "0 0 200 280",
+      "width": 200,
+      "height": 280,
+      "bytes": 2201,
+      "sha256": "83f9e489dabc83c81835f828f1c03956d3fc38814b9bc2ecce8302cb433089d6"
+    },
+    {
+      "file": "cardback-detail-bordeaux.svg",
+      "kind": "cardback-detail",
+      "color": "bordeaux",
+      "detail": true,
+      "viewBox": "0 0 200 280",
+      "width": 200,
+      "height": 280,
+      "bytes": 2201,
+      "sha256": "8ca706baf321093a85ed5f021b6d199e5b95b527a23919f0cd1675bb7cf5858d"
+    },
+    {
+      "file": "cardback-detail-petrol.svg",
+      "kind": "cardback-detail",
+      "color": "petrol",
+      "detail": true,
+      "viewBox": "0 0 200 280",
+      "width": 200,
+      "height": 280,
+      "bytes": 2201,
+      "sha256": "929bd3a971547b61cbaf92449cfffd79363324cf005f43fa099434bf837163f8"
+    },
+    {
+      "file": "cardback-small-graphite.svg",
+      "kind": "cardback-small",
+      "color": "graphite",
+      "detail": false,
+      "viewBox": "0 0 200 280",
+      "width": 200,
+      "height": 280,
+      "bytes": 1019,
+      "sha256": "5bc40f3fe70b72cfa0278c41974eb8008c71188c13356452b0b9925623939e2b"
+    },
+    {
+      "file": "cardback-small-sapphire.svg",
+      "kind": "cardback-small",
+      "color": "sapphire",
+      "detail": false,
+      "viewBox": "0 0 200 280",
+      "width": 200,
+      "height": 280,
+      "bytes": 1019,
+      "sha256": "4a05e816073b181418958b31c96e3a150346af147785bb34dc0a98a9ce59ec6e"
+    },
+    {
+      "file": "cardback-small-bordeaux.svg",
+      "kind": "cardback-small",
+      "color": "bordeaux",
+      "detail": false,
+      "viewBox": "0 0 200 280",
+      "width": 200,
+      "height": 280,
+      "bytes": 1019,
+      "sha256": "1980a18848aaa92dd2bf5c657e0f97de643849d5a074d32245bb8aaafea75bf5"
+    },
+    {
+      "file": "cardback-small-petrol.svg",
+      "kind": "cardback-small",
+      "color": "petrol",
+      "detail": false,
+      "viewBox": "0 0 200 280",
+      "width": 200,
+      "height": 280,
+      "bytes": 1019,
+      "sha256": "f16b67e25befd208a0e6db341a4bc7665ac0bdf4819000d5335a2eb2d278f843"
+    },
+    {
+      "file": "table-ornament-graphite.svg",
+      "kind": "table-ornament",
+      "color": "graphite",
+      "detail": true,
+      "viewBox": "0 0 320 400",
+      "width": 320,
+      "height": 400,
+      "bytes": 3243,
+      "sha256": "8366d0e95f02795ec732b236a9dd6f61c6ee23d5f91243991e9c05cfc4a1c859"
+    },
+    {
+      "file": "table-ornament-sapphire.svg",
+      "kind": "table-ornament",
+      "color": "sapphire",
+      "detail": true,
+      "viewBox": "0 0 320 400",
+      "width": 320,
+      "height": 400,
+      "bytes": 3243,
+      "sha256": "03e862352c64c39e490a2c63321429ac8e998ba5941761e0a6edce5c65456f5f"
+    },
+    {
+      "file": "table-ornament-bordeaux.svg",
+      "kind": "table-ornament",
+      "color": "bordeaux",
+      "detail": true,
+      "viewBox": "0 0 320 400",
+      "width": 320,
+      "height": 400,
+      "bytes": 3243,
+      "sha256": "ddb6efeb4f4f1f92c25be61c1d5d1cc5cbc20424cbc33b79d7bb27a9f9a32797"
+    },
+    {
+      "file": "table-ornament-petrol.svg",
+      "kind": "table-ornament",
+      "color": "petrol",
+      "detail": true,
+      "viewBox": "0 0 320 400",
+      "width": 320,
+      "height": 400,
+      "bytes": 3243,
+      "sha256": "67e82234fd15e904e52799517eff76c4ce526af95338b66b6a90fb191add0aff"
+    },
+    {
+      "file": "table-diamond-graphite.svg",
+      "kind": "table-diamond",
+      "color": "graphite",
+      "detail": false,
+      "viewBox": "0 0 48 48",
+      "width": 48,
+      "height": 48,
+      "bytes": 372,
+      "sha256": "f5f088c84ac20e8311d4c62207102e8b5d8532d00d56cddd28ef3b4127013504"
+    },
+    {
+      "file": "table-diamond-sapphire.svg",
+      "kind": "table-diamond",
+      "color": "sapphire",
+      "detail": false,
+      "viewBox": "0 0 48 48",
+      "width": 48,
+      "height": 48,
+      "bytes": 372,
+      "sha256": "05199474b027ec48b0d9a5acc0863718e8b042a63e5ac64a786ca15e0169dc8b"
+    },
+    {
+      "file": "table-diamond-bordeaux.svg",
+      "kind": "table-diamond",
+      "color": "bordeaux",
+      "detail": false,
+      "viewBox": "0 0 48 48",
+      "width": 48,
+      "height": 48,
+      "bytes": 372,
+      "sha256": "7cea0b911f20364deee313d865be012c812ae59014995416310b9535eae43477"
+    },
+    {
+      "file": "table-diamond-petrol.svg",
+      "kind": "table-diamond",
+      "color": "petrol",
+      "detail": false,
+      "viewBox": "0 0 48 48",
+      "width": 48,
+      "height": 48,
+      "bytes": 372,
+      "sha256": "d45ec33c44f1cfcfabe3f35399dd865d7fbcbd288edf691845508a3bef0bc061"
+    },
+    {
+      "file": "frame-detail-graphite.svg",
+      "kind": "frame-detail",
+      "color": "graphite",
+      "detail": true,
+      "viewBox": "0 0 120 120",
+      "width": 120,
+      "height": 120,
+      "bytes": 1870,
+      "sha256": "e2c057f396f4f6208f63091bc33cb1ac9c850058406bc5896cfb6c1053c4edbb"
+    },
+    {
+      "file": "frame-detail-sapphire.svg",
+      "kind": "frame-detail",
+      "color": "sapphire",
+      "detail": true,
+      "viewBox": "0 0 120 120",
+      "width": 120,
+      "height": 120,
+      "bytes": 1870,
+      "sha256": "3409c93a6962e91de07b0df72ecf1d3a876161b7e79ee804333fe597f6d111b7"
+    },
+    {
+      "file": "frame-detail-bordeaux.svg",
+      "kind": "frame-detail",
+      "color": "bordeaux",
+      "detail": true,
+      "viewBox": "0 0 120 120",
+      "width": 120,
+      "height": 120,
+      "bytes": 1870,
+      "sha256": "56b866140c33b8a1bc226f766ccf99b565398f1813f6006f32d8c9563b643f37"
+    },
+    {
+      "file": "frame-detail-petrol.svg",
+      "kind": "frame-detail",
+      "color": "petrol",
+      "detail": true,
+      "viewBox": "0 0 120 120",
+      "width": 120,
+      "height": 120,
+      "bytes": 1870,
+      "sha256": "41da690c5c2d0a0c9b4be44ed809d24fa86d31a7eedaf38e8a57e66ed6249f80"
+    },
+    {
+      "file": "frame-small-graphite.svg",
+      "kind": "frame-small",
+      "color": "graphite",
+      "detail": false,
+      "viewBox": "0 0 120 120",
+      "width": 120,
+      "height": 120,
+      "bytes": 904,
+      "sha256": "727c0b527fb1e232b13478d0e3bc594583b0f3cbacc27cd3f58d490b98a99817"
+    },
+    {
+      "file": "frame-small-sapphire.svg",
+      "kind": "frame-small",
+      "color": "sapphire",
+      "detail": false,
+      "viewBox": "0 0 120 120",
+      "width": 120,
+      "height": 120,
+      "bytes": 904,
+      "sha256": "3771f7e6a3ac05f64ca8c2d65dcf54f23b9087300ee650a3bf6ea4178a89f001"
+    },
+    {
+      "file": "frame-small-bordeaux.svg",
+      "kind": "frame-small",
+      "color": "bordeaux",
+      "detail": false,
+      "viewBox": "0 0 120 120",
+      "width": 120,
+      "height": 120,
+      "bytes": 904,
+      "sha256": "05f0394127f92a1535141b85f77559b6ec722f7b21d8f7d388a9ad900c718c7f"
+    },
+    {
+      "file": "frame-small-petrol.svg",
+      "kind": "frame-small",
+      "color": "petrol",
+      "detail": false,
+      "viewBox": "0 0 120 120",
+      "width": 120,
+      "height": 120,
+      "bytes": 904,
+      "sha256": "9ba272fe0442646d62c6212bac6c00d1c0ded92a304837f072d233c864bd2dc7"
+    },
+    {
+      "file": "mark-graphite.svg",
+      "kind": "mark",
+      "color": "graphite",
+      "detail": false,
+      "viewBox": "0 0 24 24",
+      "width": 24,
+      "height": 24,
+      "bytes": 326,
+      "sha256": "bf5de9a42031c17620f8044c89697e4ca58a069e5a0788fa736752007d864fc6"
+    },
+    {
+      "file": "mark-sapphire.svg",
+      "kind": "mark",
+      "color": "sapphire",
+      "detail": false,
+      "viewBox": "0 0 24 24",
+      "width": 24,
+      "height": 24,
+      "bytes": 326,
+      "sha256": "208c37f4d74c771eb2e64272895a28016d92ff7aaecaee0a4d04c7e5f0a071ef"
+    },
+    {
+      "file": "mark-bordeaux.svg",
+      "kind": "mark",
+      "color": "bordeaux",
+      "detail": false,
+      "viewBox": "0 0 24 24",
+      "width": 24,
+      "height": 24,
+      "bytes": 326,
+      "sha256": "b8e5adc890cad92983046c876d526fde14a0cf774236a18d9e9b1e95ae5eeb99"
+    },
+    {
+      "file": "mark-petrol.svg",
+      "kind": "mark",
+      "color": "petrol",
+      "detail": false,
+      "viewBox": "0 0 24 24",
+      "width": 24,
+      "height": 24,
+      "bytes": 326,
+      "sha256": "3c03a041d7f8487a145674823c243c4419969b87e3e1acb90c4dd3188006f2bb"
+    },
+    {
+      "file": "thumb-cardback-graphite.svg",
+      "kind": "thumb-cardback",
+      "color": "graphite",
+      "detail": false,
+      "viewBox": "0 0 96 96",
+      "width": 96,
+      "height": 96,
+      "bytes": 1061,
+      "sha256": "cd6cfcd6dac5393097fe4c678332280131e43b4d847836bcd137d9a40a267bb0"
+    },
+    {
+      "file": "thumb-cardback-sapphire.svg",
+      "kind": "thumb-cardback",
+      "color": "sapphire",
+      "detail": false,
+      "viewBox": "0 0 96 96",
+      "width": 96,
+      "height": 96,
+      "bytes": 1061,
+      "sha256": "a8848f8a958694041d71c2551a6b2adc65c65ec262c4274800316779a26ebc9c"
+    },
+    {
+      "file": "thumb-cardback-bordeaux.svg",
+      "kind": "thumb-cardback",
+      "color": "bordeaux",
+      "detail": false,
+      "viewBox": "0 0 96 96",
+      "width": 96,
+      "height": 96,
+      "bytes": 1061,
+      "sha256": "7ed671d3ae5d2bb129f4c9a0b66c1dff4b11bc13af28266fe39a5cb6109a0fb2"
+    },
+    {
+      "file": "thumb-cardback-petrol.svg",
+      "kind": "thumb-cardback",
+      "color": "petrol",
+      "detail": false,
+      "viewBox": "0 0 96 96",
+      "width": 96,
+      "height": 96,
+      "bytes": 1061,
+      "sha256": "fc8ef80f8a07f1c2464dc6b022d785fea42b69f400ab5176cf9c9006898a863d"
+    },
+    {
+      "file": "thumb-table-graphite.svg",
+      "kind": "thumb-table",
+      "color": "graphite",
+      "detail": false,
+      "viewBox": "0 0 96 96",
+      "width": 96,
+      "height": 96,
+      "bytes": 416,
+      "sha256": "d63783372b69dcfff317f1bfa8b36c0bdfbb303b126d6b4d39c3943560bfe943"
+    },
+    {
+      "file": "thumb-table-sapphire.svg",
+      "kind": "thumb-table",
+      "color": "sapphire",
+      "detail": false,
+      "viewBox": "0 0 96 96",
+      "width": 96,
+      "height": 96,
+      "bytes": 416,
+      "sha256": "24e0644748f7862c0c72bc8c3f278908b1d5c410d90f8947f60f7234adcd0e22"
+    },
+    {
+      "file": "thumb-table-bordeaux.svg",
+      "kind": "thumb-table",
+      "color": "bordeaux",
+      "detail": false,
+      "viewBox": "0 0 96 96",
+      "width": 96,
+      "height": 96,
+      "bytes": 416,
+      "sha256": "97d7df7fc92ecf8a7e6a4f820d114b20f3ad7eb72ae41a3d69cf03901d30d429"
+    },
+    {
+      "file": "thumb-table-petrol.svg",
+      "kind": "thumb-table",
+      "color": "petrol",
+      "detail": false,
+      "viewBox": "0 0 96 96",
+      "width": 96,
+      "height": 96,
+      "bytes": 416,
+      "sha256": "595871e43b70d6810a86ff98a2fdf70f10fba3ec768f2adcc02a907b11882533"
+    },
+    {
+      "file": "thumb-profile-graphite.svg",
+      "kind": "thumb-profile",
+      "color": "graphite",
+      "detail": false,
+      "viewBox": "0 0 96 96",
+      "width": 96,
+      "height": 96,
+      "bytes": 1191,
+      "sha256": "96007557f1c063352572a42af1a82edca266f9825848a05457df72de868c01bc"
+    },
+    {
+      "file": "thumb-profile-sapphire.svg",
+      "kind": "thumb-profile",
+      "color": "sapphire",
+      "detail": false,
+      "viewBox": "0 0 96 96",
+      "width": 96,
+      "height": 96,
+      "bytes": 1191,
+      "sha256": "03f5d8b162c529d2712a17892a1a2ae30c858acf8bf385103042da118384cfab"
+    },
+    {
+      "file": "thumb-profile-bordeaux.svg",
+      "kind": "thumb-profile",
+      "color": "bordeaux",
+      "detail": false,
+      "viewBox": "0 0 96 96",
+      "width": 96,
+      "height": 96,
+      "bytes": 1191,
+      "sha256": "20f1b1bc7e7c65298866df383f3d568fdc0d2e6e6502102f1cd10c98afa2214b"
+    },
+    {
+      "file": "thumb-profile-petrol.svg",
+      "kind": "thumb-profile",
+      "color": "petrol",
+      "detail": false,
+      "viewBox": "0 0 96 96",
+      "width": 96,
+      "height": 96,
+      "bytes": 1191,
+      "sha256": "a58d5550bbad048611f6d2fcfff66dd05f14dbb57b3923b49385df8b459ddea8"
+    },
+    {
+      "file": "bundle-graphite.svg",
+      "kind": "bundle",
+      "color": "graphite",
+      "detail": false,
+      "viewBox": "0 0 240 160",
+      "width": 240,
+      "height": 160,
+      "bytes": 4124,
+      "sha256": "67fe4e3f6cc2572422b5a8cea3be98634c3cd9f77a2179f6b4f60381dd8f65ec"
+    },
+    {
+      "file": "bundle-sapphire.svg",
+      "kind": "bundle",
+      "color": "sapphire",
+      "detail": false,
+      "viewBox": "0 0 240 160",
+      "width": 240,
+      "height": 160,
+      "bytes": 4124,
+      "sha256": "864baac082576da560cc4c2cb6094099061bad63e197481fd8e5a9ad7731c980"
+    },
+    {
+      "file": "bundle-bordeaux.svg",
+      "kind": "bundle",
+      "color": "bordeaux",
+      "detail": false,
+      "viewBox": "0 0 240 160",
+      "width": 240,
+      "height": 160,
+      "bytes": 4124,
+      "sha256": "b14bdaf460639c79cf03e5427d12cc53ba055c4239467917ebac0c82d43bbb46"
+    },
+    {
+      "file": "bundle-petrol.svg",
+      "kind": "bundle",
+      "color": "petrol",
+      "detail": false,
+      "viewBox": "0 0 240 160",
+      "width": 240,
+      "height": 160,
+      "bytes": 4124,
+      "sha256": "e7e933e1459037b08bc46a6c32afa8a34a0df64346f807007acdaf5597a03c5c"
+    }
+  ]
+}
