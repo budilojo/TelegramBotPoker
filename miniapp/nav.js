@@ -15,6 +15,7 @@ import { $app, h, haptic, tg } from './ui.js';
 import { bus, send } from './net.js';
 import { renderRanked, resetRanked } from './rating.js';
 import { renderProfileSettings } from './profile.js';
+import { settingsRows } from './settings-rows.js';
 
 /** На каких состояниях сервера панель есть. */
 const KINDS = new Set(['home', 'hub', 'solo', 'rating']);
@@ -108,6 +109,12 @@ function shopSoon() {
         h('div.set-sub', 'Мы готовим наборы для игры — например, «Ночной казино-клуб». Загляните позже.')))));
 }
 
+/** Блок строк из реестра `settings-rows.js`; пока строк нет — ничего, вид «Настроек» прежний. */
+function extraRows(s) {
+  const rows = settingsRows(s);
+  return rows.length ? [h('section.set-block.set-extra', rows)] : [];
+}
+
 /** Экран профиля живёт в одном и том же элементе: его перерисовывают на каждое состояние, а поле ввода терять нельзя. */
 const profileBox = h('div.pf-host');
 
@@ -131,7 +138,10 @@ function settings(s) {
       h('div.section-label', 'О приложении'),
       h('div.set-row', h('div.set-body',
         h('div.set-title', 'Фишки и очки — виртуальные'),
-        h('div.set-sub', 'Денег в играх нет. Играть можно только с участниками своей группы и с ботами.')))));
+        h('div.set-sub', 'Денег в играх нет. Играть можно только с участниками своей группы и с ботами.')))),
+
+    // Строки из реестра (коллекции, иконка на рабочий стол): после существующих блоков; пустые не рисуются.
+    ...extraRows(s));
 }
 
 /* ------------------------------------------------------------ клавиатура */
