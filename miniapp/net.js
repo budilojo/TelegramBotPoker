@@ -43,6 +43,8 @@ export const bus = {
   onProfile: () => {},
   /** Личный прогресс «Тренировки» (miniapp/train/screens.js): { progress } или { error }. */
   onTrain: () => {},
+  /** Коллекции (miniapp/collections/index.js): { t:'col', op, … } — ответы сервера на state/grant/apply/clear. */
+  onCollections: () => {},
 };
 
 let ws = null;
@@ -99,6 +101,8 @@ export function connect() {
       bus.onProfile(msg);
     } else if (msg.t === 'train') {
       bus.onTrain(msg);
+    } else if (msg.t === 'col') {
+      bus.onCollections(msg);
     } else if (msg.t === 'react') {
       bus.onReact(msg);
     } else if (msg.t === 'chat' || msg.t === 'chat-sync' || msg.t === 'chat-unread') {
