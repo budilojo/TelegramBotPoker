@@ -73,6 +73,11 @@ const MINIAPP = (process.env.MINIAPP || '').trim();
 const ADMINS = (process.env.ADMINS || '').split(',').map((x) => x.trim()).filter(Boolean);
 /** Друзья-тестеры косметики: Telegram-id через запятую (необязательно). */
 const COSMETICS_TESTERS = (process.env.COSMETICS_TESTERS || '').split(',').map((x) => x.trim()).filter(Boolean);
+/**
+ * collections: демонстрационная среда коллекции «Графит». Включается ТОЛЬКО значением ровно `1`
+ * (не `true`, не `yes`, не с пробелами) и только здесь, серверной настройкой процесса.
+ */
+const COLLECTIONS_DEMO = process.env.COLLECTIONS_DEMO === '1';
 /** Токен отдельного админ-бота (необязателен: без него админка живёт только экраном). */
 const ADMIN_TOKEN = (process.env.ADMIN_BOT_TOKEN || '').trim();
 
@@ -124,6 +129,7 @@ const app = new App({
   webappUrl: WEBAPP_URL,
   miniAppName: MINIAPP,
   admins: ADMINS,
+  collectionsDemo: COLLECTIONS_DEMO, // collections
 });
 app.cosmeticsTesters = new Set(COSMETICS_TESTERS);
 /**

@@ -28,6 +28,7 @@ import { NullStore } from './store.js';
 import { esc } from './fmt.js';
 import { Profiles } from './profile.js';
 import { Training } from './train.js';
+import { Collections } from './collections/index.js'; // collections
 import { GAMES, GAME_LIST, HIDDEN_DRAFTS, gameOf } from './games/index.js';
 import { apply as rateRound } from './rating.js';
 
@@ -192,7 +193,7 @@ export class App {
   constructor({
     api, store = new NullStore(), minIntervalMs = 1000, botUsername = '', onError = null, deck = null, durakDeck = null,
     clock = REAL_CLOCK, runoutStepMs = 1500, webappUrl = '', miniAppName = '', admins = [], ratingSoon = RATING_SOON,
-    botRng = Math.random,
+    botRng = Math.random, collectionsDemo = false,
   } = {}) {
     this.api = api;
     this.store = store;
@@ -238,6 +239,8 @@ export class App {
     this.profiles = new Profiles(this);
     /** Личный прогресс «Тренировки» в покере (bot/train.js): ни в вид стола, ни в рейтинг не идёт. */
     this.training = new Training(this);
+    // collections: коллекция «Графит». Демосреда — только строгое `true` из серверной настройки (bot/index.js).
+    this.collections = new Collections(this, { demo: collectionsDemo === true });
   }
 
   attachHub(hub) {
@@ -537,6 +540,7 @@ export class App {
    */
   draw(room, { immediate = false } = {}) {
     this.profiles.settleNames(room); // ники и аватарки игроков — до того, как строятся виды
+    this.collections.settle(room); // collections: снимок оформления (лобби — живой, раздача — заморожен)
     this.syncClocks(); // the view carries the turn deadline: set it first
     this.hub?.broadcast(room);
     // В базу — сразу, а не после ответа Telegram: не принял он карточку
@@ -765,6 +769,7 @@ export class App {
   async afterDeal(room, r) {
     if (r?.finished) return this.finishUp(room);
     this.note('round', room); // раздача в покере, партия в дураке
+    this.collections.freeze(room); // collections: снимок оформления этой раздачи, один раз
     // Blinds alone can put everybody all-in: then the board is turned over at
     // once, and that may even end the game on the spot.
     const revealing = gameOf(room).beginShow?.(this, room);

@@ -20,6 +20,7 @@ import {
 } from './rules.js';
 import { sortHand } from './cards.js';
 import { avatarId } from '../../profile.js';
+import { frameOf, lookView } from '../../collections/look.js'; // collections
 
 /** A stable colour for an avatar, without sending anybody's id (same as poker's). */
 function hueOf(id) {
@@ -76,6 +77,7 @@ export function durakView(room, viewerId, { now = Date.now(), botUsername = '' }
       fools: p.stats.fool,
       games: p.stats.games,
       lastFool: room.lastFool === p.id,
+      frame: frameOf(room, p.id), // collections
     };
   }).filter(Boolean);
 
@@ -113,6 +115,7 @@ export function durakView(room, viewerId, { now = Date.now(), botUsername = '' }
       cards: mine,
     },
     players,
+    look: lookView(room), // collections: снимок оформления партии (рубашек в дураке нет)
     deal: d
       ? {
           no: d.no,
@@ -140,7 +143,7 @@ export function durakView(room, viewerId, { now = Date.now(), botUsername = '' }
     legal,
     canStart: room.status === 'lobby' && isHost(room, uid) && !startBlocker(room),
     canNext: room.status === 'playing' && !!d && d.phase === 'over' && (isSeated(meP) || isHost(room, uid)) && !startBlocker(room),
-    score: score(room).map((r) => ({ name: r.name, fool: r.fool, games: r.games, isHost: r.isHost, kicked: r.kicked, left: r.left })),
+    score: score(room).map((r) => ({ frame: frameOf(room, r.id), name: r.name, fool: r.fool, games: r.games, isHost: r.isHost, kicked: r.kicked, left: r.left })),
     history: room.history.filter((h) => !h.aborted).length,
     draws: room.history.filter((h) => h.draw).length,
   };

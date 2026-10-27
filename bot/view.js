@@ -26,6 +26,7 @@ import { RANKS, rankOf, suitOf } from './deck.js';
 import { best5 } from './eval.js';
 import { hints } from './hints.js';
 import { avatarId } from './profile.js';
+import { frameOf, lookView } from './collections/look.js'; // collections
 
 const SUIT_CODE = ['S', 'H', 'D', 'C'];
 
@@ -241,6 +242,7 @@ export function tableView(room, viewerId, { now = Date.now(), botUsername = '' }
       isSB: !!h && p.id === h.sbId,
       isBB: !!h && p.id === h.bbId,
       ...plate,
+      frame: frameOf(room, p.id), // collections: рамка и знак — публичное оформление профиля
       // Somebody else's cards: present ONLY when the showdown requires them.
       cards: seen ? codes(seen.cards) : null,
       handName: seen?.name ?? null,
@@ -306,6 +308,7 @@ export function tableView(room, viewerId, { now = Date.now(), botUsername = '' }
       handName: hints.on ? myHandName(mine, board) : null, // имя своей руки — подсказка (bot/hints.js)
     },
     players,
+    look: lookView(room, { withBacks: true }), // collections: снимок оформления раздачи (без id людей)
     hand: h
       ? {
           no: h.no,
@@ -344,6 +347,7 @@ function resultsOf(room) {
       isHost: r.isHost,
       role: r.role,
       kicked: !!byId.get(r.id)?.kicked,
+      frame: frameOf(room, r.id), // collections: снимок рамки на момент итога
     }))
     .sort((a, b) => b.net - a.net || b.stack - a.stack);
 }
