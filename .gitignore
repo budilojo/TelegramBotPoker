@@ -28,3 +28,6 @@ backups/
 # готовые картинки владельца до подключения (README остаётся в git)
 assets-incoming/*
 !assets-incoming/README.md
+
+# состояние единого запуска «Графит» (tools/graphit-run.mjs): журналы, блокировка, состояние
+.graphit-run/

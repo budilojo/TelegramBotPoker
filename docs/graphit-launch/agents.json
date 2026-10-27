@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "baseBranch": "redesign",
+  "integrationBranch": "gr/integration",
+  "maxParallel": 3,
+  "maxAttempts": 3,
+  "agents": [
+    {
+      "id": "lead-contracts", "agent": "graphit-lead", "phase": "contracts", "task": "docs/graphit-launch/tasks/lead-contracts.md",
+      "deps": [], "decisions": [107, 109],
+      "owns": ["miniapp/collections/catalog.js", "miniapp/collections/protocol.js", "bot/collections.catalog.test.js", "miniapp/settings-rows.js", "miniapp/nav.js", "miniapp/index.html", "docs/graphit-launch/contracts.md"],
+      "stubs": ["miniapp/collections/settings-row.js", "miniapp/homescreen-row.js", "miniapp/collections.css", "miniapp/collections-look.css"]
+    },
+    {
+      "id": "server", "agent": "graphit-server", "phase": "work", "task": "docs/graphit-launch/tasks/server.md",
+      "deps": ["lead-contracts"], "decisions": [110, 113],
+      "owns": ["bot/collections/", "bot/collections.test.js", "bot/collections.privacy.test.js", "bot/collections.teeth.test.js", "tools/graphit-server-teeth.mjs", "bot/store.js", "bot/hub.js", "bot/app.js", "bot/index.js", "bot/room.js", "bot/view.js", "bot/games/poker/index.js", "bot/games/durak/index.js", "bot/games/durak/view.js", ".env.example"]
+    },
+    {
+      "id": "assets", "agent": "graphit-assets", "phase": "work", "task": "docs/graphit-launch/tasks/assets.md",
+      "deps": ["lead-contracts"], "decisions": [114, 116],
+      "owns": ["tools/build-graphit-art.mjs", "tools/graphit-art-teeth.mjs", "miniapp/collections/art/", "bot/collections.art.test.js"]
+    },
+    {
+      "id": "client", "agent": "graphit-client", "phase": "work", "task": "docs/graphit-launch/tasks/client.md",
+      "deps": ["lead-contracts"], "decisions": [117, 120],
+      "owns": ["miniapp/collections/index.js", "miniapp/collections/state.js", "miniapp/collections/art.js", "miniapp/collections/showcase.js", "miniapp/collections/item.js", "miniapp/collections/fitting.js", "miniapp/collections/inventory.js", "miniapp/collections/receive.js", "miniapp/collections/settings-row.js", "miniapp/collections.css", "miniapp/net.js", "miniapp/app.js", "tools/e2e-collections.mjs", "tools/graphit-client-teeth.mjs", "bot/collections.client.test.js"]
+    },
+    {
+      "id": "screens", "agent": "graphit-screens", "phase": "work", "task": "docs/graphit-launch/tasks/game-screens.md",
+      "deps": ["server", "assets"], "decisions": [121, 124],
+      "owns": ["miniapp/games/poker.js", "miniapp/games/durak.js", "miniapp/ui.js", "miniapp/profile.js", "miniapp/poker.css", "miniapp/durak.css", "miniapp/collections-look.css", "miniapp/collections/look-view.js", "tools/e2e-collections-look.mjs", "tools/graphit-screens-teeth.mjs", "bot/collections.screens.test.js"]
+    },
+    {
+      "id": "homescreen", "agent": "graphit-icon", "phase": "work", "task": "docs/graphit-launch/tasks/homescreen.md",
+      "deps": ["lead-contracts"], "decisions": [125, 127],
+      "owns": ["miniapp/homescreen.js", "miniapp/homescreen-row.js", "tools/e2e-homescreen.mjs", "tools/graphit-icon-teeth.mjs", "bot/homescreen.test.js", "docs/homescreen.md"]
+    },
+    {
+      "id": "research", "agent": "graphit-research", "phase": "work", "task": "docs/graphit-launch/tasks/research.md",
+      "deps": [], "decisions": [128, 129],
+      "owns": ["docs/research/stars-payout.md", "docs/research/external-site.md"]
+    },
+    {
+      "id": "lead-integration", "agent": "graphit-lead", "phase": "integration", "task": "docs/graphit-launch/tasks/lead-integration.md",
+      "deps": ["server", "assets", "client", "screens", "homescreen", "research"], "decisions": [130, 132],
+      "owns": ["MESSAGES.md", "docs/redesign.md", "docs/brain/", "package.json", "package-lock.json", "AGENTS.md", "bot/README.md", "docs/collections-demo.md", "docs/graphit-launch/reports/FINAL.md", "docs/graphit-launch/reports/FINAL.status.json", ".gitignore"]
+    }
+  ]
+}
