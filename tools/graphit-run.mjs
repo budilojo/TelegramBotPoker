@@ -272,8 +272,11 @@ export function preflight({ strict = true } = {}) {
   if (!fs.existsSync(path.join(ROOT, MANIFEST))) { errors.push(`нет ${MANIFEST}`); return { errors, notes }; }
   const branch = gitOut(ROOT, 'rev-parse', '--abbrev-ref', 'HEAD');
   if (branch !== 'redesign') errors.push(`текущая ветка «${branch}», нужна redesign (git checkout redesign)`);
-  const dirty = gitOut(ROOT, 'status', '--porcelain').split('\n').filter((l) => l && !l.includes('.graphit-run'));
-  if (dirty.length) errors.push(`в рабочей папке есть незакоммиченные изменения (не трогаю чужую работу):\n    ${dirty.slice(0, 8).join('\n    ')}`);
+  // Мешают только изменения отслеживаемых файлов: работа идёт в отдельных папках, ваши «чужие» файлы (картинки, посторонние папки) я не трогаю и не считаю помехой.
+  const dirty = gitOut(ROOT, 'status', '--porcelain', '--untracked-files=no').split('\n').filter((l) => l && !l.includes('.graphit-run'));
+  if (dirty.length) errors.push(`в рабочей папке есть незакоммиченные изменения отслеживаемых файлов (не трогаю чужую работу):\n    ${dirty.slice(0, 8).join('\n    ')}`);
+  const loose = gitOut(ROOT, 'status', '--porcelain', '--untracked-files=normal').split('\n').filter((l) => l.startsWith('??') && !l.includes('.graphit-run'));
+  if (loose.length) notes.push(`в папке есть ${loose.length} посторонних неотслеживаемых файла/папки (не мешают, не трогаю): ${loose.slice(0, 4).map((l) => l.slice(3)).join(', ')}`);
   if (strict) {
     const f = git(ROOT, 'fetch', 'origin', 'redesign');
     if (!ok(f)) errors.push(`не удалось обратиться к origin: ${(f.stderr || '').trim().split('\n')[0]}`);
