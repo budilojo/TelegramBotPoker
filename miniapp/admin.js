@@ -10,7 +10,6 @@
  * подтверждение: тап по экрану телефона слишком дешёвый для необратимого.
  */
 import { $app, h, fmt, haptic, toast, showSheet, closeSheet, refreshSheet } from './ui.js';
-import { demandReport } from './shop/index.js';
 import { bus, send, net } from './net.js';
 
 let state = null;
@@ -113,7 +112,11 @@ function statsTab(s) {
       tile('лобби собрано', week.created, 'за неделю'),
       tile('доиграно до итогов', week.finished, 'за неделю')),
 
-    demandReport(s.shop),
+    h('div.section-label', 'Вкладка «Магазин»'),
+    h('div.tiles',
+      tile('нажали', s.shopTab?.people ?? 0, 'человек'),
+      tile('всего нажатий', s.shopTab?.taps ?? 0, 'повтор чаще раза в 10 с не считается')),
+    chart(s.shopTab?.days, 'taps', 'Нажатия по дням', 'taps'),
     byGameTable(week.byGame),
     chart(s.stats.days, 'rounds', 'Партии по дням', 'rounds'),
     chart(s.stats.days, 'people', 'Люди по дням', 'people'),
@@ -385,7 +388,7 @@ function chart(days, key, title, cls) {
   const max = Math.max(1, ...vals);
   const peak = vals.lastIndexOf(max);
   const last = days.length - 1;
-  const word = key === 'rounds' ? ['партия', 'партии', 'партий'] : ['человек', 'человека', 'человек'];
+  const word = key === 'rounds' ? ['партия', 'партии', 'партий'] : key === 'taps' ? ['нажатие', 'нажатия', 'нажатий'] : ['человек', 'человека', 'человек'];
   const say = (d) => `${d.day}: ${fmt(d[key])} ${plural(d[key], ...word)}`;
 
   return h('div',

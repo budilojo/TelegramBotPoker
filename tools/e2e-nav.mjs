@@ -3,7 +3,7 @@
  *
  *   node tools/e2e-nav.mjs
  *
- * Панель «Игры · Рейтинг · Настройки» есть на «моих группах», хабе группы,
+ * Панель «Игры · Рейтинг · Магазин · Настройки» есть на «моих группах», хабе группы,
  * «Играх с ботами» и таблице рейтинга; нет за столом, в пульте владельца, под
  * шторкой и при открытой клавиатуре. Пока рейтинг закрыт, вкладка «Рейтинг»
  * честно говорит «скоро» и не запрашивает у сервера ни одного стола; когда
@@ -125,7 +125,7 @@ try {
     const tag = `${size[0]}px`;
     await page.waitForSelector('h1:has-text("Ваши группы")');
     assert.equal(await tab(page, 'games').getAttribute('aria-current'), 'page');
-    assert.equal(await page.locator('.nav-tab').count(), 3);
+    assert.equal(await page.locator('.nav-tab').count(), 4);
     assert.equal(await active(page), 'games');
     await fits(page, `мои группы, ${tag}`);
 

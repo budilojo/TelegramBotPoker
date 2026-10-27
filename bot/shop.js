@@ -2,6 +2,8 @@
 import { ITEMS, isItem } from '../miniapp/cosmetics/catalog.js';
 
 export const PER_MINUTE = 30;
+/** Вкладка «Магазин»: один человек засчитывается не чаще раза в это время. */
+export const TAB_GAP_MS = 10_000;
 export const SHOP_ERRORS = {
   SHOP_OP: 'Такого действия в магазине нет.',
   SHOP_ITEM: 'Такой вещи в магазине нет.',
@@ -15,7 +17,7 @@ export const SHOP_ERRORS = {
 export const variantFor = (uid) => Number(String(uid).slice(-1)) % 2 === 0 ? 'a' : 'b';
 
 export class Shop {
-  constructor(app) { this.app = app; this.limits = new Map(); }
+  constructor(app) { this.app = app; this.limits = new Map(); this.tabAt = new Map(); }
 
   handle(user, msg) {
     const uid = String(user.id);
@@ -23,6 +25,13 @@ export class Shop {
     const store = this.app.store;
     const fail = (code) => ({ t: 'shop', error: { code, text: SHOP_ERRORS[code] } });
     const mine = () => ({ t: 'shop', variant, wanted: store.shopMine(uid), unlocked: this.app.cosmeticsUnlocked(uid) });
+    // Вкладка «Магазин» (проверка спроса): личность только из сессии, тело сообщения ничего не значит.
+    if (msg.op === 'tab') {
+      const at = this.app.clock.now();
+      for (const [id, last] of this.tabAt) if (at - last >= TAB_GAP_MS) this.tabAt.delete(id);
+      if (!this.tabAt.has(uid)) { this.tabAt.set(uid, at); store.shopTabTap(uid, at); }
+      return { t: 'shop', op: 'tab', ok: true };
+    }
     // Лимит общий для всех вкладок человека, включая чтение, сброс и неверные запросы.
     const now = this.app.clock.now();
     for (const [id, times] of this.limits) if (!times.some((at) => now - at < 60_000)) this.limits.delete(id);
@@ -56,4 +65,10 @@ export function shopSummary(store) {
     const wants = row?.wants ?? 0;
     return { item: item.id, variant, views, wants, percent: views ? Math.round(1000 * wants / views) / 10 : 0 };
   }));
+}
+
+/** Для пульта: сколько людей и нажатий на вкладке «Магазин», по дням. Без имён. */
+export function shopTabSummary(store, now) {
+  const { people, taps, days } = store.shopTabTotals(now);
+  return { people, taps, days };
 }

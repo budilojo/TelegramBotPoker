@@ -20,6 +20,11 @@ const mutations = [
   ['разблокировка только по списку сервера', 'bot/app.js', 'return this.isAdmin(userId) || this.cosmeticsTesters.has(String(userId));', 'return true;'],
   ['тестеры из настроек, а не из тела', 'bot/shop.js', 'unlocked: this.app.cosmeticsUnlocked(uid)', 'unlocked: msg.unlocked === true || this.app.cosmeticsUnlocked(uid)'],
   ['тестеры не открыты по умолчанию', 'bot/app.js', 'this.cosmeticsTesters = new Set();', 'this.cosmeticsTesters = new Set([\'810001\']);'],
+  ['вкладка: личность из подписи', 'bot/shop.js', 'store.shopTabTap(uid, at)', 'store.shopTabTap(String(msg.user_id || uid), at)'],
+  ['вкладка: частота', 'bot/shop.js', 'if (!this.tabAt.has(uid))', 'if (true)'],
+  ['вкладка: уникальные люди и повторы', 'bot/store.js', 'ON CONFLICT(user_id) DO UPDATE SET taps = taps + 1', 'ON CONFLICT(user_id) DO UPDATE SET taps = 1'],
+  ['вкладка: события по дням', 'bot/store.js', "this.addEvent({ at, kind: 'shop-tab' });", ''],
+  ['вкладка: в пульте только суммы', 'bot/shop.js', 'return { people, taps, days };', "return { people, taps, days, user_id: '810001' };"],
   ['открытые вещи не искажают спрос', 'bot/shop.js', 'if (this.app.cosmeticsUnlocked(uid)) return mine();', ''],
 ];
 

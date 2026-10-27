@@ -27,7 +27,7 @@ import { AUDIENCES, ERRORS as CAST_ERRORS } from './broadcast.js';
 import { PER_DAY, sign } from './rating.js';
 import { ym } from './fmt.js';
 import { rankedTables } from './ranked.js';
-import { Shop, shopSummary } from './shop.js';
+import { Shop, shopTabSummary } from './shop.js';
 import { PROFILE_ERRORS } from './profile.js';
 import { ERRORS as REACT_ERRORS, ReactLimiter, react } from './reactions.js';
 import { ERRORS as CHAT_ERRORS, Chats, ChatLimiter, chat, sendUnread, sync as syncChat } from './chat.js';
@@ -1090,7 +1090,7 @@ export function adminView(app) {
     me: null, // на этом экране даже своё имя ни к чему
     live: app.liveNow(),
     stats: app.store.stats(now),
-    shop: shopSummary(app.store),
+    shopTab: shopTabSummary(app.store, now),
     down: { on: app.down, text: app.maintenance.text || '', since: app.maintenance.since || null },
     sessions,
     casts: app.casts ? { list: app.casts.list(10), sizes: app.casts.sizes(), audiences: AUDIENCES, sending: app.casts.busy } : null,

@@ -1,5 +1,5 @@
 /**
- * Нижняя навигация: Игры · Рейтинг · Настройки.
+ * Нижняя навигация: Игры · Рейтинг · Магазин · Настройки.
  *
  * Только на экранах хаба: «мои группы», игры группы, «Игры с ботами» и таблица
  * рейтинга. За столом (лобби, партия, итоги), в пульте владельца, под шторкой
@@ -14,13 +14,12 @@
 import { $app, h, haptic, tg } from './ui.js';
 import { bus, send } from './net.js';
 import { renderRanked, resetRanked } from './rating.js';
-import { openShop } from './shop/index.js';
 import { renderProfileSettings } from './profile.js';
 
 /** На каких состояниях сервера панель есть. */
 const KINDS = new Set(['home', 'hub', 'solo', 'rating']);
 
-/** Экран страницы поверх состояния сервера: null | 'ranked' | 'settings'. */
+/** Экран страницы поверх состояния сервера: null | 'ranked' | 'shop' | 'settings'. */
 let view = null;
 
 export const showsBar = (s) => !!s && KINDS.has(s.kind);
@@ -33,6 +32,7 @@ export function onMove() {
 
 export function activeTab(s) {
   if (view === 'settings') return 'settings';
+  if (view === 'shop') return 'shop';
   if (view === 'ranked' || s.kind === 'rating') return 'rating';
   return 'games';
 }
@@ -56,6 +56,12 @@ function go(tab, s) {
     view = s.kind === 'rating' ? null : 'ranked';
     return bus.render();
   }
+  if (tab === 'shop') {
+    view = 'shop';
+    // «Ложная дверь»: сервер считает людей, нажавших вкладку (не чаще раза в 10 с на человека).
+    send({ t: 'shop', op: 'tab' }, { lock: false });
+    return bus.render();
+  }
   view = 'settings';
   bus.render();
 }
@@ -66,9 +72,10 @@ const svg = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
 const ICONS = {
   games: svg('<rect x="3" y="7" width="12" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/>'),
   rating: svg('<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/>'),
+  shop: svg('<path d="M6 8h12l1 12H5L6 8z"/><path d="M9 8V7a3 3 0 0 1 6 0v1"/>'),
   settings: svg('<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>'),
 };
-const TABS = [['games', 'Игры'], ['rating', 'Рейтинг'], ['settings', 'Настройки']];
+const TABS = [['games', 'Игры'], ['rating', 'Рейтинг'], ['shop', 'Магазин'], ['settings', 'Настройки']];
 
 export function bar(s) {
   const active = activeTab(s);
@@ -87,8 +94,18 @@ export function bar(s) {
 /** Нарисовать свой экран вместо серверного, если он открыт. Вернёт true, если нарисовал. */
 export function renderView(s) {
   if (!view || !showsBar(s)) return false;
-  $app.append(view === 'settings' ? settings(s) : renderRanked(s));
+  $app.append(view === 'settings' ? settings(s) : view === 'shop' ? shopSoon() : renderRanked(s));
   return true;
+}
+
+/** Вкладка «Магазин»: пока только честное «скоро» — без цен, картинок и кнопок покупки. */
+function shopSoon() {
+  return h('div.lobby.hub.shop-soon',
+    h('div.hub-head', h('h1', 'Магазин')),
+    h('section.set-block',
+      h('div.set-row', h('div.set-body',
+        h('div.set-title', 'Магазин скоро откроется'),
+        h('div.set-sub', 'Мы готовим наборы для игры — например, «Ночной казино-клуб». Загляните позже.')))));
 }
 
 /** Экран профиля живёт в одном и том же элементе: его перерисовывают на каждое состояние, а поле ввода терять нельзя. */
@@ -101,8 +118,6 @@ function settings(s) {
     h('section.set-block',
       h('div.section-label', 'Профиль'),
       (renderProfileSettings(profileBox), profileBox)),
-
-    h('section.set-block', h('button.k-btn.k-btn--secondary', { onclick: openShop }, 'Магазин')),
 
     s.bot ? h('section.set-block',
       h('div.section-label', 'Уведомления бота'),

@@ -7,7 +7,7 @@ import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { Table, user } from './harness.js';
 import { Store, NullStore } from './store.js';
-import { Shop, variantFor, PER_MINUTE } from './shop.js';
+import { Shop, variantFor, shopSummary, PER_MINUTE, TAB_GAP_MS } from './shop.js';
 import { ITEMS, SETS, itemById, itemsOfSet, isItem } from '../miniapp/cosmetics/catalog.js';
 
 const alice = user(810001, 'Алиса'), bob = user(810002, 'Боб'), owner = user(810003, 'Владелец');
@@ -84,8 +84,7 @@ for (const Type of [Store, NullStore]) test(`${Type.name}: повторный п
   const table = setup(t, new Type());
   for (const action of ['view', 'view', 'want', 'want', 'view']) await mark(table, alice, 'nc-back-1', action);
   await mark(table, bob, 'nc-back-1'); await mark(table, alice, 'nc-title-1');
-  await table.send(owner, { t: 'refresh' });
-  const totals = table.state(owner).shop;
+  const totals = shopSummary(table.app.store);
   assert.deepEqual(totals.find((r) => r.item === 'nc-back-1' && r.variant === 'b'), { item: 'nc-back-1', variant: 'b', views: 1, wants: 1, percent: 100 });
   assert.equal(totals.reduce((n, r) => n + r.wants, 0), 3);
   assert.equal(totals.reduce((n, r) => n + r.views, 0), 3);
@@ -123,11 +122,9 @@ test('каждый телефон: только свои отметки; пул�
       assert.ok(!JSON.stringify(msg).includes(String(u === alice ? bob.id : alice.id)));
     }
   }
-  for (const msg of table.page(owner).inbox) {
-    assert.ok(!/user_id|userId|Алиса|Боб|810001|810002/.test(JSON.stringify(msg)));
-    for (const row of msg.state?.shop || []) assert.deepEqual(Object.keys(row).sort(), ['item', 'percent', 'variant', 'views', 'wants']);
-  }
-  const seenOnly = table.state(owner).shop.find((r) => r.item === 'nc-back-2' && r.variant === 'a');
+  for (const msg of table.page(owner).inbox) assert.ok(!/user_id|userId|Алиса|Боб|810001|810002/.test(JSON.stringify(msg)));
+  for (const row of shopSummary(table.app.store)) assert.deepEqual(Object.keys(row).sort(), ['item', 'percent', 'variant', 'views', 'wants']);
+  const seenOnly = shopSummary(table.app.store).find((r) => r.item === 'nc-back-2' && r.variant === 'a');
   assert.equal(seenOnly.views, 1); assert.equal(seenOnly.wants, 0); assert.equal(seenOnly.percent, 0);
 });
 
@@ -179,4 +176,60 @@ test('разблокировка: только администратор и т�
   assert.equal(table.app.store.shopTotals().length, 0);
   // По умолчанию тестеров нет: пустой список не открывает ничего.
   assert.equal(new Table({ store: new Store() }).app.cosmeticsTesters.size, 0);
+});
+
+/* ------------------------------------------------ вкладка «Магазин» (счётчик) */
+
+const tap = (table, u, extra = {}) => table.send(u, { t: 'shop', op: 'tab', ...extra });
+const adminTab = async (table) => { await table.send(owner, { t: 'refresh' }); return table.state(owner).shopTab; };
+
+for (const Type of [Store, NullStore]) test(`${Type.name}: вкладка «Магазин» — люди и нажатия считаются, повтор в окне не считается`, async (t) => {
+  const table = setup(t, new Type());
+  await tap(table, alice); await tap(table, alice);
+  assert.equal(last(table, alice).ok, true);
+  let tab = await adminTab(table);
+  assert.equal(tab.people, 1); assert.equal(tab.taps, 1, 'повтор в пределах окна не считается');
+  await table.clock.advance(TAB_GAP_MS);
+  await tap(table, alice); await tap(table, bob);
+  tab = await adminTab(table);
+  assert.equal(tab.people, 2, 'уникальные люди'); assert.equal(tab.taps, 3, 'всего нажатий');
+  assert.equal(tab.days.length, 14);
+  assert.equal(tab.days.at(-1).taps, 3, 'нажатия по дням');
+});
+
+test('вкладка «Магазин»: личность из initData, лишнее в теле игнорируется, вещи каталога не затронуты', async (t) => {
+  const table = setup(t);
+  await tap(table, bob, { user_id: alice.id, userId: alice.id, id: alice.id, user: alice, item: 'nc-back-1', action: 'want', variant: 'a', unlocked: true });
+  const rows = table.app.store.db.prepare('SELECT user_id, taps FROM shop_tab').all();
+  assert.deepEqual(rows.map((r) => [r.user_id, r.taps]), [[String(bob.id), 1]]);
+  assert.deepEqual(table.app.store.shopTotals(), [], 'в «Хочу» ничего не попало');
+  assert.equal(table.app.store.db.prepare("SELECT COUNT(*) AS n FROM events WHERE kind = 'shop-tab'").get().n, 1);
+});
+
+test('вкладка «Магазин»: в пульт уходят только суммы, без имён; другим людям пульт недоступен', async (t) => {
+  const table = setup(t);
+  await tap(table, alice); await tap(table, bob);
+  await table.send(owner, { t: 'refresh' });
+  for (const msg of table.page(owner).inbox) assert.ok(!/user_id|userId|Алиса|Боб|810001|810002/.test(JSON.stringify(msg)));
+  assert.deepEqual(Object.keys(table.state(owner).shopTab).sort(), ['days', 'people', 'taps']);
+  for (const d of table.state(owner).shopTab.days) assert.deepEqual(Object.keys(d).sort(), ['day', 'taps']);
+  assert.equal(table.state(alice).shopTab, undefined);
+});
+
+test('вкладка «Магазин»: таблица создаётся повторно, старый store.js 7afb285 открывает базу, схема 5', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'shop-tab-compat-'));
+  const file = path.join(dir, 'test.db');
+  let store;
+  try {
+    store = new Store(file); store.shopTabTap(alice.id, 123); store.close(); store = null;
+    const oldSource = execFileSync('git', ['show', '7afb285:bot/store.js'], { encoding: 'utf8' })
+      .replace("'./fmt.js'", JSON.stringify(new URL('./fmt.js', import.meta.url).href));
+    const oldFile = path.join(dir, 'old-store.mjs'); fs.writeFileSync(oldFile, oldSource);
+    const OldStore = (await import(pathToFileURL(oldFile).href)).Store;
+    store = new OldStore(file);
+    assert.equal(store.db.prepare("SELECT value FROM meta WHERE key = 'schema'").get().value, '5');
+    store.close(); store = new Store(file);
+    assert.equal(store.db.prepare('SELECT taps FROM shop_tab').get().taps, 1);
+    assert.equal(store.shopTabTotals(Date.now()).people, 1);
+  } finally { store?.close(); fs.rmSync(dir, { recursive: true, force: true }); }
 });

@@ -174,6 +174,15 @@ CREATE TABLE IF NOT EXISTS shop_interest (
   PRIMARY KEY (user_id, item)
 );
 
+-- Вкладка «Магазин»: кто хоть раз нажал и сколько раз. Без имён наружу;
+-- таблица ДОБАВЛЕНА без смены версии схемы (старый код её не замечает).
+CREATE TABLE IF NOT EXISTS shop_tab (
+  user_id  TEXT PRIMARY KEY,
+  first_at INTEGER NOT NULL,
+  last_at  INTEGER NOT NULL,
+  taps     INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS profiles (
   user_id    TEXT PRIMARY KEY,
   nickname   TEXT,
@@ -493,6 +502,23 @@ export class Store {
   shopTotals() {
     return this.db.prepare(`SELECT item, variant, COUNT(*) AS views, COUNT(wanted_at) AS wants
       FROM shop_interest GROUP BY item, variant ORDER BY item, variant`).all();
+  }
+
+  /** Нажатие на вкладку «Магазин»: строка человека + событие дня (без имени). */
+  shopTabTap(userId, at) {
+    this.db.prepare(`INSERT INTO shop_tab (user_id, first_at, last_at, taps) VALUES (?, ?, ?, 1)
+      ON CONFLICT(user_id) DO UPDATE SET taps = taps + 1, last_at = excluded.last_at`).run(String(userId), at, at);
+    this.addEvent({ at, kind: 'shop-tab' });
+  }
+  /** Только суммы: людей, нажатий и нажатия по дням за последние `days` дней. */
+  shopTabTotals(now, days = 14) {
+    const t = this.db.prepare('SELECT COUNT(*) AS people, COALESCE(SUM(taps), 0) AS taps FROM shop_tab').get();
+    const since = ymdBack(now, days - 1);
+    const perDay = new Map(this.db.prepare("SELECT day, COUNT(*) AS n FROM events WHERE kind = 'shop-tab' AND day >= ? GROUP BY day").all(since).map((r) => [r.day, r.n]));
+    return {
+      people: t.people, taps: t.taps,
+      days: Array.from({ length: days }, (_, i) => { const day = ymdBack(now, days - 1 - i); return { day, taps: perDay.get(day) || 0 }; }),
+    };
   }
 
   /* ---------------------------------------------------------------- groups */
@@ -881,6 +907,8 @@ export class NullStore {
   constructor() {
     this.dm = new Map();
     this.shop = new Map();
+    this.tab = new Map();
+    this.tabDays = new Map();
     this.profiles = new Map();
     this.decisions = new Map();
     this.nextDecision = 1;
@@ -900,6 +928,19 @@ export class NullStore {
     const row = this.shop.get(key) || { userId: String(userId), item, variant, viewedAt: at, wantedAt: null };
     if (action === 'want' && row.wantedAt === null) row.wantedAt = at;
     this.shop.set(key, row);
+  }
+  shopTabTap(userId, at) {
+    const row = this.tab.get(String(userId)) || { taps: 0 };
+    row.taps++;
+    this.tab.set(String(userId), row);
+    const day = ymd(at);
+    this.tabDays.set(day, (this.tabDays.get(day) || 0) + 1);
+  }
+  shopTabTotals(now, days = 14) {
+    return {
+      people: this.tab.size, taps: [...this.tab.values()].reduce((n, r) => n + r.taps, 0),
+      days: Array.from({ length: days }, (_, i) => { const day = ymdBack(now, days - 1 - i); return { day, taps: this.tabDays.get(day) || 0 }; }),
+    };
   }
   shopMine(userId) {
     return [...this.shop.values()].filter((r) => r.userId === String(userId) && r.wantedAt !== null).map((r) => r.item).sort();
