@@ -183,6 +183,31 @@ CREATE TABLE IF NOT EXISTS shop_tab (
   taps     INTEGER NOT NULL
 );
 
+-- collections: коллекция «Графит». Демо-права, выбранное оформление и недавние
+-- идентификаторы запросов. Таблицы ДОБАВЛЕНЫ без смены версии схемы (старый код
+-- их не замечает). Реальных прав здесь нет; демо-строки читаются только при
+-- включённой демосреде (COLLECTIONS_DEMO=1).
+CREATE TABLE IF NOT EXISTS collection_demo_grant (
+  user_id    TEXT NOT NULL,
+  item       TEXT NOT NULL,
+  granted_at INTEGER NOT NULL,
+  PRIMARY KEY (user_id, item)
+);
+CREATE TABLE IF NOT EXISTS collection_choice (
+  user_id    TEXT NOT NULL,
+  slot       TEXT NOT NULL,
+  item       TEXT NOT NULL,
+  color      TEXT NOT NULL,
+  updated_at INTEGER NOT NULL,
+  PRIMARY KEY (user_id, slot)
+);
+CREATE TABLE IF NOT EXISTS collection_req (
+  user_id TEXT NOT NULL,
+  req     TEXT NOT NULL,
+  at      INTEGER NOT NULL,
+  PRIMARY KEY (user_id, req)
+);
+
 CREATE TABLE IF NOT EXISTS profiles (
   user_id    TEXT PRIMARY KEY,
   nickname   TEXT,
@@ -519,6 +544,37 @@ export class Store {
       people: t.people, taps: t.taps,
       days: Array.from({ length: days }, (_, i) => { const day = ymdBack(now, days - 1 - i); return { day, taps: perDay.get(day) || 0 }; }),
     };
+  }
+
+  // collections: демо-права, выбор оформления и идемпотентность запросов
+  collDemoGrant(userId, item, at) {
+    this.db.prepare('INSERT OR IGNORE INTO collection_demo_grant (user_id, item, granted_at) VALUES (?, ?, ?)')
+      .run(String(userId), String(item), at);
+  }
+  collDemoItems(userId) {
+    return this.db.prepare('SELECT item FROM collection_demo_grant WHERE user_id = ? ORDER BY granted_at, item')
+      .all(String(userId)).map((r) => r.item);
+  }
+  collChoices(userId) {
+    return this.db.prepare('SELECT slot, item, color FROM collection_choice WHERE user_id = ?').all(String(userId))
+      .map((r) => ({ slot: r.slot, item: r.item, color: r.color }));
+  }
+  collChoiceSet(userId, slot, item, color, at) {
+    this.db.prepare(`INSERT INTO collection_choice (user_id, slot, item, color, updated_at) VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(user_id, slot) DO UPDATE SET item = excluded.item, color = excluded.color, updated_at = excluded.updated_at`)
+      .run(String(userId), String(slot), String(item), String(color), at);
+  }
+  collChoiceClear(userId, slot) {
+    this.db.prepare('DELETE FROM collection_choice WHERE user_id = ? AND slot = ?').run(String(userId), String(slot));
+  }
+  collReqSeen(userId, req) {
+    return !!this.db.prepare('SELECT 1 FROM collection_req WHERE user_id = ? AND req = ?').get(String(userId), String(req));
+  }
+  collReqAdd(userId, req, at, keep = 50) {
+    const u = String(userId);
+    this.db.prepare('INSERT OR IGNORE INTO collection_req (user_id, req, at) VALUES (?, ?, ?)').run(u, String(req), at);
+    this.db.prepare(`DELETE FROM collection_req WHERE user_id = ? AND rowid NOT IN
+      (SELECT rowid FROM collection_req WHERE user_id = ? ORDER BY at DESC, rowid DESC LIMIT ?)`).run(u, u, keep);
   }
 
   /* ---------------------------------------------------------------- groups */
@@ -910,6 +966,10 @@ export class NullStore {
     this.tab = new Map();
     this.tabDays = new Map();
     this.profiles = new Map();
+    // collections: то же, что в Store, но в памяти
+    this.collGrants = new Map();
+    this.collPicks = new Map();
+    this.collReqs = new Map();
     this.decisions = new Map();
     this.nextDecision = 1;
     this.ads = new Map();
@@ -1087,6 +1147,33 @@ export class NullStore {
   }
   putProfile(userId, { nickname = null, avatar = null } = {}) {
     this.profiles.set(String(userId), { nickname, avatar });
+  }
+  collDemoGrant(userId, item, at) {
+    const m = this.collGrants.get(String(userId)) ?? new Map();
+    if (!m.has(String(item))) m.set(String(item), at);
+    this.collGrants.set(String(userId), m);
+  }
+  collDemoItems(userId) {
+    return [...(this.collGrants.get(String(userId)) ?? new Map())].sort((a, b) => a[1] - b[1] || a[0].localeCompare(b[0])).map(([i]) => i);
+  }
+  collChoices(userId) {
+    return [...(this.collPicks.get(String(userId)) ?? new Map())].map(([slot, v]) => ({ slot, item: v.item, color: v.color }));
+  }
+  collChoiceSet(userId, slot, item, color, at) {
+    const m = this.collPicks.get(String(userId)) ?? new Map();
+    m.set(String(slot), { item: String(item), color: String(color), at });
+    this.collPicks.set(String(userId), m);
+  }
+  collChoiceClear(userId, slot) {
+    this.collPicks.get(String(userId))?.delete(String(slot));
+  }
+  collReqSeen(userId, req) {
+    return (this.collReqs.get(String(userId)) ?? []).some((r) => r.req === String(req));
+  }
+  collReqAdd(userId, req, at, keep = 50) {
+    const list = this.collReqs.get(String(userId)) ?? [];
+    if (!list.some((r) => r.req === String(req))) list.push({ req: String(req), at });
+    this.collReqs.set(String(userId), list.slice(-keep));
   }
   addDecision(userId, row, keep = 300) {
     const u = String(userId);

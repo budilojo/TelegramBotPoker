@@ -99,7 +99,16 @@ export class Hub {
    * A page says hello with its initData and what it wants to look at.
    * @returns {{session}|{error, text}}
    */
-  open({ initData, room: wanted, back, visible } = {}, send) {
+  open(args = {}, send) {
+    const r = this.openInner(args, send);
+    // collections: при подключении и переподключении — своё состояние, но только когда модуль включён.
+    if (r.session && r.session.kind !== 'admin' && this.app.collections.enabled) {
+      try { r.session.send(this.app.collections.stateOf(r.session.user.id)); } catch (err) { this.app.log(err); }
+    }
+    return r;
+  }
+
+  openInner({ initData, room: wanted, back, visible } = {}, send) {
     const opts = { now: this.app.clock.now(), maxAgeSec: this.maxAgeSec };
     let auth = checkInitData(initData, this.botToken, opts);
     // Подпись админ-бота — вторая дверь, и ведёт она только в админку.
@@ -558,6 +567,11 @@ export class Hub {
     if (msg.t === 'rjoin' && ['hub', 'home', 'solo', 'rating'].includes(session.kind)) return this.joinRanked(session, msg);
     if (msg.t === 'shop' && session.kind !== 'admin') {
       return void session.send(this.shop.handle(session.user, msg));
+    }
+    // collections: «Графит». Кто — только из session.user; админская страница не игрок и получает отказ.
+    if (msg.t === 'col') {
+      if (session.kind === 'admin') return void session.send(this.app.collections.fail('state', 'COL_OP'));
+      return void session.send(this.app.collections.handle(session.user, msg));
     }
     // Свой профиль (ник, аватар): кто — только из подписанного initData, «чей» в теле нет.
     if (msg.t === 'profile' && session.kind !== 'admin') {
