@@ -20,6 +20,7 @@ import * as train from './train/screens.js';
 import './train/link-wire.js'; // крючки связки Обучение↔Тренировка и определения уровня (Y)
 import './learn/hook.js';
 import { activeRoute, resetRoute } from './train/route.js';
+import * as collections from './collections/index.js'; // слой «Коллекции» (только демо; вход — строка «Настроек»)
 
 const SCREENS = { hub, rating, admin, down, solo, ...GAMES };
 
@@ -43,6 +44,7 @@ bus.onState = (wasConnected) => {
     closeSheet();
     resetRoute();
     nav.onMove();
+    collections.onMove();
   }
   prevSame = moved ? null : net.prev;
   SCREENS[screenOf(s)].onState(s, prevSame, { wasConnected });
@@ -99,6 +101,7 @@ function render() {
   if (stay) adoptLobby(stay);
   drawnKey = key;
   if (!net.connected) $app.append(h('div.conn', 'Нет связи — переподключаемся…'));
+  collections.sync(); // связь и первый запрос состояния коллекций
   tickClocks(serverNow());
   flushAnimations({ still: !prevSame });
 }
