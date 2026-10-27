@@ -164,7 +164,7 @@ export function parseAgentStatus(text, id) {
 /** Похоже ли на упор в лимит использования (`failed` — процесс завершился с ошибкой: тогда достаточно слова «limit»). */
 export function looksLikeLimit(text, failed = false) {
   const t = String(text || '');
-  if (/usage limit|rate limit|limit reached|hit your limit|reached your limit|лимит использования|limit resets|resets at|try again at|quota|too many requests|overloaded/i.test(t)) return true;
+  if (/usage limit|usage_limit_reached|session limit|rate limit|limit reached|hit your limit|reached your limit|лимит использования|limit resets|resets at|try again at|quota|too many requests|overloaded/i.test(t)) return true;
   return failed && /limit|лимит/i.test(t);
 }
 

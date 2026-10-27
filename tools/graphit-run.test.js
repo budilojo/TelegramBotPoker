@@ -100,6 +100,7 @@ test('упор в лимит узнаётся по тексту', () => {
   assert.ok(looksLikeLimit('rate limit exceeded'));
   assert.ok(!looksLikeLimit('всё хорошо, тесты зелёные'));
   assert.ok(looksLikeLimit("You've hit your limit · resets 8:20am"), 'формулировка «hit your limit»');
+  assert.ok(looksLikeLimit("You've hit your session limit · resets 7:50pm (Asia/Yekaterinburg)"), 'настоящая формулировка из журнала владельца');
   assert.ok(looksLikeLimit('{"is_error":true,"result":"5-hour limit"}', true), 'при ошибке достаточно слова limit');
   assert.ok(!looksLikeLimit('limit order book', false), 'без ошибки слово limit само по себе не лимит');
   assert.equal(snippet('{"is_error":true,"result":"нет прав на папку"}'), 'нет прав на папку');
