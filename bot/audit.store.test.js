@@ -41,7 +41,7 @@ for (const game of ['poker', 'durak', 'colors', 'chess', 'checkers', 'nardy', 'b
     assert.ok([...app.handles.keys()].some((k) => k.endsWith(good.code)), 'у здорового стола заведены часы');
     assert.ok(hub.open({ initData: initDataFor(user(1, 'А'), { startParam: good.code, clock }) }, () => {}).session, 'и он открывается');
     assert.ok(errors.length >= BROKEN.length - 1, 'про каждую испорченную строку — запись в лог');
-    assert.equal(store.db.prepare("SELECT COUNT(*) AS n FROM rooms WHERE code LIKE 'bad%'").get().n, BROKEN.length, 'испорченные строки не стёрты');
+    assert.equal(store.db.prepare("SELECT COUNT(*) AS n FROM rooms WHERE code GLOB 'bad[0-9]'").get().n, BROKEN.length, 'испорченные строки не стёрты');
   });
 }
 
