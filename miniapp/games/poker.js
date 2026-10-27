@@ -22,6 +22,13 @@ import { markDone } from '../school.js';
 import { avatarEl } from '../profile.js';
 import { titleEl, winFx, effectsMenuItem } from '../cosmetics/apply.js';
 import { getLook } from '../cosmetics/look.js';
+import { makeHolder, dressTable, placeDiamond, POKER_AVOID, backImgFor, frameAvatar, nameWithMark, frameOf as frameLook } from '../collections/look-view.js';
+
+/* Оформление «Графит»: вид держим на раздачу — посреди неё он не меняется (docs/graphit-launch/contracts.md, п. 5, 9). */
+const lookHolder = makeHolder();
+let look = null;
+/** Рубашка этого места из вида раздачи или обычная. */
+const backFor = (seat, cls = '') => backImgFor(look, seat, cls) ?? backImg(cls);
 
 /** Корона хоста поверх аватарки. */
 const withHost = (av, host) => {
@@ -45,6 +52,7 @@ let prev = null;
 export function onState(s, p, { wasConnected }) {
   state = s;
   prev = p;
+  look = lookHolder.hold(s.room.code, s.room.status, s.look);
   handleState(wasConnected);
 }
 
@@ -190,7 +198,7 @@ function renderLobby() {
     slots.push(
       p
         ? animateOnce(
-          h(`div.lseat${p.isMe ? '.me' : ''}`, withHost(avatarEl(p), p.isHost), h('div.nm', p.name)),
+          h(`div.lseat${p.isMe ? '.me' : ''}`, frameAvatar(withHost(avatarEl(p), p.isHost), p.frame), h('div.nm', nameWithMark(p.name, p.frame) ?? p.name)),
           `lseat:${p.name}`, [{ transform: 'scale(0.4)', opacity: 0, offset: 0 }], { duration: 450, delay: i * 45 })
         : h('div.lseat.empty', h('div.av', '+'), h('div.nm', 'свободно'))
     );
@@ -365,7 +373,7 @@ function seatEl(p, s) {
       return best.judged ? judge(img, !!best.bySeat.get(p.seat)?.has(c), `${h0.no}:s${p.seat}:${c}`, plan) : img;
     }));
   } else if (p.inHand && !p.folded && !(h0?.phase === 'complete' && p.mucked)) {
-    minis = h('div.minis', [0, 1].map((k) => dealIn(backImg(), h0, p.seat, k)));
+    minis = h('div.minis', [0, 1].map((k) => dealIn(backFor(p.seat), h0, p.seat, k)));
   }
 
   // At the end of a hand the plate says how it ended for this player: the
@@ -405,6 +413,13 @@ function stageLabel(s) {
   return [STAGE[hd.street] || hd.street, ''];
 }
 
+/** Овал стола; оформление стола хоста — слоями внутри него (под сиденьями, картами и банком). */
+function dressedFelt() {
+  const felt = h('div.felt');
+  dressTable(felt, look);
+  return felt;
+}
+
 function renderTable() {
   const s = state;
   const hd = s.hand;
@@ -434,7 +449,7 @@ function renderTable() {
 
   const r = hd?.phase === 'complete' && !hd.revealing ? hd.result : null;
   const table = h('div.table', { 'data-hero': heroAtTable ? '1' : '0', 'data-lines': r?.kind === 'showdown' ? Math.max(1, resultRows(r).length) : 1 },
-    h('div.felt'),
+    dressedFelt(),
     centerEl(s),
     others.map((p) => seatEl(p, s)),
   );
@@ -442,6 +457,7 @@ function renderTable() {
   // Пустое место — не «null»: append() печатает null словом, поэтому пустое отсеиваем.
   $app.append(...[top, table, coachEl(s), heroEl(s), panelEl(s)].filter(Boolean));
   layoutTable();
+  settleDiamond();
 }
 
 /* ------------------------------------------------------ школа: наставник */
@@ -668,6 +684,12 @@ function crowded(t) {
 
 // Окно поменялось, приложение вернулось из фона — заново, и ещё раз, когда доиграют анимации (ui.js).
 onRelayout(layoutTable);
+/** Ромб стола не должен лежать под банком, картами и сиденьями (см. placeDiamond). */
+const settleDiamond = () => {
+  const t = $app.querySelector('.table');
+  if (t) placeDiamond(t.querySelector('.felt'), t, POKER_AVOID);
+};
+onRelayout(settleDiamond);
 
 /** A board card lands: dealt from above and turned face up. The flop comes one card after another. */
 function boardCard(el, hd, i) {
@@ -765,7 +787,7 @@ function heroEl(s) {
   const myTurn = hd && hd.actorSeat === me.seat;
   let cards;
   if (hd && hd.live && mine.inHand) {
-    cards = h('div.hero-cards', [0, 1].map((k) => dealIn(backImg(), hd, me.seat, k)));
+    cards = h('div.hero-cards', [0, 1].map((k) => dealIn(backFor(me.seat), hd, me.seat, k)));
   } else if (me.cards?.length) {
     const best = bestOf(s);
     const plan = planFor(s);
@@ -924,10 +946,17 @@ function panelEl(s) {
 
 function renderResults() {
   const rows = state.results || [];
+  // Рамка и знак — только если у кого-то из игроков они есть; иначе строки такие же, как раньше.
+  const dressed = rows.some((r) => frameLook(r.frame));
+  const person = (r) => {
+    const q = state.players.find((x) => x.name === r.name);
+    return frameAvatar(avatarEl({ name: r.name, hue: q?.hue ?? 0, avatar: q?.avatar ?? null }, 'gr-res-av'), r.frame);
+  };
   const box = h('div.lobby',
     h('div', h('h1', '🏁 Итоги'), h('div.sub', `Раздач сыграно: ${state.room.handNo}`)),
-    h('div.box', rows.map((r) => h('div.res-row',
-      h('span.n', r.name, r.isHost ? ' 👑' : '', r.role === 'dealer' ? ' · дилер' : '', r.kicked ? ' · удалён' : ''),
+    h('div.box', rows.map((r) => h(`div.res-row${dressed ? '.gr' : ''}`,
+      dressed ? h('span.gr-res-who', person(r)) : null,
+      h('span.n', { 'aria-label': dressed ? r.name : null, title: dressed ? r.name : null }, nameWithMark(r.name, r.frame) ?? (dressed ? h('span.gr-nm-t', r.name) : r.name), r.isHost ? ' 👑' : '', r.role === 'dealer' ? ' · дилер' : '', r.kicked ? ' · удалён' : ''),
       h('span.s.num', fmt(r.stack)),
       h(`span.pl.num.${r.net > 0 ? 'up' : r.net < 0 ? 'down' : ''}`, r.net > 0 ? `+${fmt(r.net)}` : r.net < 0 ? `−${fmt(-r.net)}` : '0'),
     ))),
