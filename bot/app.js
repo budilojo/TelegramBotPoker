@@ -212,6 +212,8 @@ export class App {
      * тот, кто запускает бота, и подделать это сообщением нельзя.
      */
     this.admins = new Set([...admins].map((x) => String(x).trim()).filter(Boolean));
+    /** Друзья-тестеры косметики (`COSMETICS_TESTERS` в `.env`): вещи разблокированы, как у админов. По умолчанию пусто. */
+    this.cosmeticsTesters = new Set();
     /**
      * Режим обслуживания. Лежит в базе, а не в памяти: перезапуск не должен
      * снимать его сам — иначе он кончится в самый неподходящий момент.
@@ -297,6 +299,11 @@ export class App {
 
   isAdmin(userId) {
     return this.admins.has(String(userId));
+  }
+
+  /** Разблокирована ли косметика без покупки: администраторы и список тестеров. Решает только сервер. */
+  cosmeticsUnlocked(userId) {
+    return this.isAdmin(userId) || this.cosmeticsTesters.has(String(userId));
   }
 
   /* ---------------------------------------------------------- обслуживание */

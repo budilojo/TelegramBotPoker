@@ -118,7 +118,7 @@ test('каждый телефон: только свои отметки; пул�
   await table.send(owner, { t: 'refresh' });
   for (const [u, allowed] of [[alice, ['nc-title-1']], [bob, ['nc-back-1']]]) {
     for (const msg of table.page(u).inbox.filter((m) => m.t === 'shop')) {
-      assert.deepEqual(Object.keys(msg).sort(), ['t', 'variant', 'wanted']);
+      assert.deepEqual(Object.keys(msg).sort(), ['t', 'unlocked', 'variant', 'wanted']);
       assert.ok(msg.wanted.every((id) => allowed.includes(id)));
       assert.ok(!JSON.stringify(msg).includes(String(u === alice ? bob.id : alice.id)));
     }
@@ -159,4 +159,24 @@ test('база: повторное создание и открытие стар
     assert.deepEqual(store.shopMine(alice.id), ['nc-back-1']);
     assert.equal(store.db.prepare('SELECT COUNT(*) AS n FROM shop_interest').get().n, 1);
   } finally { store?.close(); fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+const tester = user(810004, 'Друг');
+test('разблокировка: только администратор и тестер из настроек сервера; тело сообщения и чужой id ничего не дают', async (t) => {
+  const table = setup(t);
+  table.app.cosmeticsTesters = new Set([String(tester.id)]);
+  table.openSolo(tester);
+  const ask = async (u, extra = {}) => { await table.send(u, { t: 'shop', op: 'mine', ...extra }); return last(table, u).unlocked; };
+  assert.equal(await ask(alice), false);
+  assert.equal(await ask(alice, { unlocked: true }), false, 'unlocked в теле не действует');
+  assert.equal(await ask(alice, { user_id: owner.id, userId: owner.id, admin: true, isAdmin: true }), false, 'чужой id не действует');
+  table.openSolo(owner);
+  assert.equal(await ask(owner), true, 'администратор');
+  assert.equal(await ask(tester), true, 'тестер из COSMETICS_TESTERS');
+  // «Хочу» разблокированного не искажает спрос.
+  await mark(table, owner); await mark(table, tester, 'nc-back-1', 'view');
+  assert.deepEqual(table.app.store.shopMine(owner.id), []);
+  assert.equal(table.app.store.shopTotals().length, 0);
+  // По умолчанию тестеров нет: пустой список не открывает ничего.
+  assert.equal(new Table({ store: new Store() }).app.cosmeticsTesters.size, 0);
 });

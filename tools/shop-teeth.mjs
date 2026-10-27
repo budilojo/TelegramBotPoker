@@ -17,6 +17,10 @@ const mutations = [
   ['только свой сброс', 'bot/store.js', "DELETE FROM shop_interest WHERE user_id = ?", "DELETE FROM shop_interest WHERE ? IS NOT NULL"],
   ['пульт только владельцу', 'bot/hub.js', 'if (!this.app.isAdmin(auth.user.id))', 'if (false)'],
   ['в пульте только суммы', 'bot/shop.js', 'return { item: item.id, variant, views, wants, percent:', "return { user_id: '810001', item: item.id, variant, views, wants, percent:"],
+  ['разблокировка только по списку сервера', 'bot/app.js', 'return this.isAdmin(userId) || this.cosmeticsTesters.has(String(userId));', 'return true;'],
+  ['тестеры из настроек, а не из тела', 'bot/shop.js', 'unlocked: this.app.cosmeticsUnlocked(uid)', 'unlocked: msg.unlocked === true || this.app.cosmeticsUnlocked(uid)'],
+  ['тестеры не открыты по умолчанию', 'bot/app.js', 'this.cosmeticsTesters = new Set();', 'this.cosmeticsTesters = new Set([\'810001\']);'],
+  ['открытые вещи не искажают спрос', 'bot/shop.js', 'if (this.app.cosmeticsUnlocked(uid)) return mine();', ''],
 ];
 
 const run = () => spawnSync(process.execPath, ['--disable-warning=ExperimentalWarning', '--test', 'bot/shop.test.js'], { encoding: 'utf8' });

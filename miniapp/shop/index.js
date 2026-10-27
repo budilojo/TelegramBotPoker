@@ -2,12 +2,11 @@
 import { h, $app, fmt, showSheet, closeSheet, currentSheet, toast, tg } from '../ui.js';
 import { bus, send } from '../net.js';
 import { ITEMS, SETS, itemById, itemsOfSet } from '../cosmetics/catalog.js';
+import { getLook, setLook, onLook } from '../cosmetics/look.js';
 
-// TEMP(L): включить после появления и проверки look.js + fitting.js агента M в git.
-export const FITTING_READY = false;
 const HONEST = 'Оплаты пока нет — мы проверяем, что вам интересно. Нажав «Хочу», вы ничего не покупаете.';
 const KINDS = { cardback: 'Рубашка карт', felt: 'Сукно', frame: 'Рамка аватара', reaction: 'Реакция', effect: 'Эффект победы', title: 'Звание', bundle: 'Набор · 10 вещей' };
-let opened = false, variant = null, wanted = new Set(), error = '', pendingView = null;
+let opened = false, variant = null, wanted = new Set(), unlocked = false, error = '', pendingView = null, offLook = null;
 let grid = null, detail = null, fitting = null, current = null, selected = null, cleanupFitting = null;
 
 export const isShopOpen = () => opened;
@@ -16,11 +15,11 @@ export const reconnectShop = () => { if (opened) request({ op: 'mine' }); };
 
 bus.onShop = (msg) => {
   error = msg.error?.text || '';
-  if (!msg.error) { variant = msg.variant; wanted = new Set(msg.wanted); }
+  if (!msg.error) { variant = msg.variant; wanted = new Set(msg.wanted); unlocked = msg.unlocked === true; }
   patch();
   if (!msg.error && pendingView) {
     const id = pendingView; pendingView = null;
-    request({ op: 'interest', item: id, action: 'view', variant });
+    if (!unlocked) request({ op: 'interest', item: id, action: 'view', variant });
   }
 };
 
@@ -28,12 +27,13 @@ export function openShop() {
   opened = true; variant = null; error = ''; pendingView = null;
   grid = buildGrid(); detail = null; selected = null; current = grid;
   request({ op: 'mine' });
+  offLook?.(); offLook = onLook(patch);
   bus.render();
   tg?.BackButton?.show?.();
 }
 
 export function resetShop() {
-  cleanupFitting?.(); cleanupFitting = null;
+  cleanupFitting?.(); cleanupFitting = null; offLook?.(); offLook = null;
   opened = false; grid = detail = fitting = current = selected = null; pendingView = null;
 }
 
@@ -61,7 +61,28 @@ function header(title, back = '← Назад') {
 }
 function note() { return h('p.shop-note', HONEST); }
 function errorBox() { return h('div.shop-error', { role: 'alert' }, error); }
-function price(item) { return h('div.shop-price.num', { 'data-price': item.id }, variant ? `${fmt(item.stars[variant])} Stars` : 'Цена загружается…'); }
+const priceText = (item) => unlocked ? 'Открыто для вас' : variant ? `${fmt(item.stars[variant])} Stars` : 'Цена загружается…';
+function price(item) { return h('div.shop-price.num', { 'data-price': item.id }, priceText(item)); }
+
+/** Надето ли сейчас (вид хранится на этом телефоне). Набор — когда надето всё, что можно надеть. */
+function isWorn(item) {
+  const look = getLook();
+  if (item.kind === 'reaction') return look.reactions.includes(item.id);
+  if (item.kind !== 'bundle') return look[item.kind] === item.id;
+  const first = new Set();
+  return item.items.map(itemById).every((x) => {
+    if (x.kind === 'reaction') return look.reactions.includes(x.id);
+    if (first.has(x.kind)) return true; // для набора берётся первая рубашка и первая рамка
+    first.add(x.kind);
+    return look[x.kind] === x.id;
+  });
+}
+function wear(item) {
+  if (!isWorn(item)) return void setLook({ [item.kind === 'reaction' ? 'reaction' : item.kind]: item.id });
+  if (item.kind === 'bundle') return void setLook({ cardback: null, felt: null, frame: null, effect: null, title: null, reactions: [] });
+  if (item.kind === 'reaction') return void setLook({ reactions: getLook().reactions.filter((id) => id !== item.id) });
+  setLook({ [item.kind]: null });
+}
 
 // TEMP: до подключения картинок владельца берём готовые SVG без запросов отсутствующих PNG.
 function art(item, large = false) {
@@ -70,6 +91,10 @@ function art(item, large = false) {
 }
 
 function wantButton(item) {
+  if (unlocked) {
+    return h('button.k-btn.k-btn--primary.shop-want', { 'data-wear': item.id, 'data-worn': isWorn(item) ? '1' : '0', onclick: () => wear(item) },
+      isWorn(item) ? 'Снять' : 'Надеть');
+  }
   return h('button.k-btn.k-btn--primary.shop-want', {
     'data-want': item.id, 'data-wanted': wanted.has(item.id) ? '1' : '0', disabled: !variant || wanted.has(item.id),
     onclick: () => request({ op: 'interest', item: item.id, action: 'want', variant }),
@@ -81,8 +106,15 @@ function patch() {
     if (!root) continue;
     for (const el of root.querySelectorAll('[data-price]')) {
       const item = itemById(el.dataset.price);
-      el.textContent = variant ? `${fmt(item.stars[variant])} Stars` : 'Цена загружается…';
+      el.textContent = priceText(item);
     }
+    for (const el of root.querySelectorAll('[data-wear]')) {
+      const worn = isWorn(itemById(el.dataset.wear));
+      el.dataset.worn = worn ? '1' : '0';
+      el.textContent = worn ? 'Снять' : 'Надеть';
+    }
+    // Права пришли позже, чем нарисована кнопка: меняем её на месте, не пересоздавая экран.
+    for (const el of root.querySelectorAll(unlocked ? '[data-want]' : '[data-wear]')) el.replaceWith(wantButton(itemById(el.dataset.want || el.dataset.wear)));
     for (const el of root.querySelectorAll('[data-want]')) {
       el.disabled = !variant || wanted.has(el.dataset.want);
       el.dataset.wanted = wanted.has(el.dataset.want) ? '1' : '0';
@@ -101,24 +133,20 @@ function openItem(item) {
     h('div.shop-kind', KINDS[item.kind]), h('p', item.blurb),
     item.kind === 'bundle' ? h('ul.shop-contents', item.items.map((id) => h('li', itemById(id).title))) : null,
     price(item),
-    h('div.shop-actions', h('button.k-btn.k-btn--secondary', { onclick: () => tryOn(item), disabled: !FITTING_READY }, 'Примерить'), wantButton(item)),
-    !FITTING_READY ? h('p.shop-note', 'Примерочная готовится — скоро можно будет посмотреть вещь за столом.') : null,
-    note(), h('p.shop-note', 'Примерку видите только вы, на этом телефоне. Она не меняет правила игры.'));
+    h('div.shop-actions', h('button.k-btn.k-btn--secondary', { 'data-try': item.id, onclick: () => tryOn(item) }, 'Примерить'), wantButton(item)),
+    unlocked ? h('p.shop-note', 'Эта вещь открыта для вас. Надетое видно только вам, на этом телефоне: за столом и в играх с ботами.') : note(), h('p.shop-note', 'Примерку видите только вы, на этом телефоне. Она не меняет правила игры.'));
   current = detail;
-  if (variant) request({ op: 'interest', item: item.id, action: 'view', variant });
+  if (variant) { if (!unlocked) request({ op: 'interest', item: item.id, action: 'view', variant }); }
   else pendingView = item.id;
   bus.render();
 }
 
 async function tryOn(item) {
   try {
-    const [look, sample] = await Promise.all([import('../cosmetics/look.js'), import('../cosmetics/fitting.js')]);
+    const sample = await import('../cosmetics/fitting.js');
     if (!opened || selected !== item) return;
-    const patchLook = {};
-    for (const piece of item.kind === 'bundle' ? item.items.map(itemById) : [item]) {
-      if (piece.kind !== 'reaction' && !patchLook[piece.kind]) patchLook[piece.kind] = piece.id;
-    }
-    look.setLook(patchLook);
+    // Набор раскладывает по ячейкам сам look.js; реакция только на 10 секунд (previewFor ниже).
+    if (item.kind !== 'reaction') setLook({ [item.kind]: item.id });
     const host = h('div.shop-fitting-host');
     fitting = h('div.lobby.shop.shop-fitting', { 'data-self': 'shop-fitting' },
       header('Примерочная', '← К вещи'),
@@ -126,7 +154,7 @@ async function tryOn(item) {
     current = fitting; bus.render();
     const result = sample.renderFitting(host, { onBack: backShop, item });
     cleanupFitting = typeof result === 'function' ? result : null;
-    if (item.kind === 'reaction') look.previewFor(item);
+    if (item.kind === 'reaction') (await import('../cosmetics/look.js')).previewFor(item);
   } catch {
     toast('Примерочная пока недоступна. Попробуйте позже.');
   }

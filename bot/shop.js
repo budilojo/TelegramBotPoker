@@ -22,7 +22,7 @@ export class Shop {
     const variant = variantFor(uid);
     const store = this.app.store;
     const fail = (code) => ({ t: 'shop', error: { code, text: SHOP_ERRORS[code] } });
-    const mine = () => ({ t: 'shop', variant, wanted: store.shopMine(uid) });
+    const mine = () => ({ t: 'shop', variant, wanted: store.shopMine(uid), unlocked: this.app.cosmeticsUnlocked(uid) });
     // Лимит общий для всех вкладок человека, включая чтение, сброс и неверные запросы.
     const now = this.app.clock.now();
     for (const [id, times] of this.limits) if (!times.some((at) => now - at < 60_000)) this.limits.delete(id);
@@ -40,6 +40,8 @@ export class Shop {
     if (!isItem(msg.item)) return fail('SHOP_ITEM');
     if (!['view', 'want'].includes(msg.action)) return fail('SHOP_ACTION');
     if (!['a', 'b'].includes(msg.variant) || msg.variant !== variant) return fail('SHOP_VARIANT');
+    // Администраторы и тестеры уже владеют вещами: их нажатия не должны искажать спрос.
+    if (this.app.cosmeticsUnlocked(uid)) return mine();
     store.shopInterest(uid, msg.item, variant, msg.action, now);
     return mine();
   }

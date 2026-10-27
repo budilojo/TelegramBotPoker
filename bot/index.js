@@ -71,6 +71,8 @@ const WEBAPP_URL = (process.env.WEBAPP_URL || '').replace(/\/+$/, '');
 const MINIAPP = (process.env.MINIAPP || '').trim();
 /** Кто видит админку: список Telegram-id через запятую. */
 const ADMINS = (process.env.ADMINS || '').split(',').map((x) => x.trim()).filter(Boolean);
+/** Друзья-тестеры косметики: Telegram-id через запятую (необязательно). */
+const COSMETICS_TESTERS = (process.env.COSMETICS_TESTERS || '').split(',').map((x) => x.trim()).filter(Boolean);
 /** Токен отдельного админ-бота (необязателен: без него админка живёт только экраном). */
 const ADMIN_TOKEN = (process.env.ADMIN_BOT_TOKEN || '').trim();
 
@@ -123,6 +125,7 @@ const app = new App({
   miniAppName: MINIAPP,
   admins: ADMINS,
 });
+app.cosmeticsTesters = new Set(COSMETICS_TESTERS);
 /**
  * Второй бот — админский. Живёт в том же процессе: ему нужны и цифры из
  * базы, и то, что происходит прямо сейчас в памяти. Отвечает только тем, чей
