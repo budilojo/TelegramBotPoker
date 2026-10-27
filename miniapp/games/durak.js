@@ -18,6 +18,11 @@ import {
   toast, ringSvg, showSheet, closeSheet, refreshSheet, avatar, REDUCED,
 } from '../ui.js';
 import { cardBackSrc, DEFAULT_BACK } from '../cosmetics/art.js';
+import { makeHolder, dressTable, placeDiamond, DURAK_AVOID, frameAvatar, nameWithMark, frameOf as frameLook } from '../collections/look-view.js';
+
+/* Оформление «Графит»: стол хоста — на всю партию; рамка и знак — только лобби и итоги. Рубашек у дурака нет. */
+const lookHolder = makeHolder();
+let look = null;
 import { net, bus, send } from '../net.js';
 import { avatarEl } from '../profile.js';
 import { winFx, effectsMenuItem } from '../cosmetics/apply.js';
@@ -45,6 +50,7 @@ const TIMERS = [[0, 'Выкл'], [30, '30 с'], [60, '60 с'], [90, '90 с']];
 export function onState(s, p) {
   state = s;
   prev = p;
+  look = lookHolder.hold(s.room.code, s.room.status, s.look);
   const me = s.me;
   if (picked && !me.cards.includes(picked)) picked = null;
 
@@ -93,7 +99,7 @@ function renderLobby() {
   for (let i = 0; i < s.room.maxSeats; i++) {
     const p = seated[i];
     slots.push(p
-      ? animateOnce(h(`div.lseat${p.isMe ? '.me' : ''}`, withMark(avatarEl(p), p.isHost), h('div.nm', p.name)),
+      ? animateOnce(h(`div.lseat${p.isMe ? '.me' : ''}`, frameAvatar(withMark(avatarEl(p), p.isHost), p.frame), h('div.nm', nameWithMark(p.name, p.frame) ?? p.name)),
         `dklseat:${p.name}`, [{ transform: 'scale(0.4)', opacity: 0, offset: 0 }], { duration: 450, delay: i * 45 })
       : h('div.lseat.empty', h('div.av', '+'), h('div.nm', 'свободно')));
   }
@@ -180,6 +186,13 @@ function stage(s) {
   return [`ПАРТИЯ ${d.no}`, ''];
 }
 
+/** Сукно; оформление стола хоста — слоями внутри него (под сиденьями и картами). */
+function dressedCloth() {
+  const cloth = h('div.dk-cloth');
+  dressTable(cloth, look);
+  return cloth;
+}
+
 function renderTable() {
   const s = state;
   const d = s.deal;
@@ -200,13 +213,14 @@ function renderTable() {
   const others = meIdx >= 0 ? [...ring.slice(meIdx + 1), ...ring.slice(0, meIdx)] : ring;
 
   const felt = h('div.dk-felt', { 'data-n': others.length },
-    h('div.dk-cloth'),
+    dressedCloth(),
     middleEl(s),
     others.map((p) => seatEl(p, s)),
   );
   $app.append(top, felt, heroEl(s), panelEl(s));
   layoutHand();
   layoutDurak();
+  settleDiamond();
 }
 
 /* ---------------------------------------------------------- the middle */
@@ -644,20 +658,32 @@ function crowded(f) {
 const relayout = () => {
   layoutHand();
   layoutDurak();
+  settleDiamond();
 };
 // Окно поменялось, приложение вернулось из фона — заново, и ещё раз, когда доиграют анимации (ui.js).
 onRelayout(relayout);
+/** Ромб стола не должен лежать под картами, ставкой и сиденьями (см. placeDiamond). */
+const settleDiamond = () => {
+  const f = $app.querySelector('.dk-felt');
+  if (f) placeDiamond(f.querySelector('.dk-cloth'), f, DURAK_AVOID);
+};
 
 /* ------------------------------------------------------------- results */
 
 function renderResults() {
   const s = state;
   const rows = s.score.filter((r) => r.games > 0);
+  const dressed = rows.some((r) => frameLook(r.frame));
+  const person = (r) => {
+    const q = s.players.find((x) => x.name === r.name);
+    return frameAvatar(avatarEl({ name: r.name, hue: q?.hue ?? 0, avatar: q?.avatar ?? null }, 'gr-res-av'), r.frame);
+  };
   const box = h('div.lobby',
     h('div', h('h1', '🏁 Итоги'), h('div.sub', `Дурак · партий сыграно: ${s.history}${s.draws ? `, ничьих: ${s.draws}` : ''}`)),
     h('div.box', rows.length
-      ? rows.map((r, i) => h('div.res-row',
-          h('span.n', i === 0 ? '🏆 ' : '', r.name, r.isHost ? ' 👑' : '', r.kicked ? ' · удалён' : r.left ? ' · вышел' : ''),
+      ? rows.map((r, i) => h(`div.res-row${dressed ? '.gr' : ''}`,
+          dressed ? h('span.gr-res-who', person(r)) : null,
+          h('span.n', { 'aria-label': dressed ? r.name : null, title: dressed ? r.name : null }, i === 0 ? '🏆 ' : '', nameWithMark(r.name, r.frame) ?? (dressed ? h('span.gr-nm-t', r.name) : r.name), r.isHost ? ' 👑' : '', r.kicked ? ' · удалён' : r.left ? ' · вышел' : ''),
           h('span.s.num', `${r.games} ${r.games === 1 ? 'партия' : r.games < 5 ? 'партии' : 'партий'}`),
           h(`span.pl.num.${r.fool ? 'down' : 'up'}`, `дурак ${r.fool}`)))
       : h('div.hint', 'Ни одной партии не сыграно.')),

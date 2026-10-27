@@ -1,1 +1,90 @@
-/* Коллекции: вид стола, рубашки, рамки в играх. Заготовка; наполняет агент screens. */
+/*
+ * Коллекции: оформление «Графит» на игровых экранах (покер, дурак).
+ * Всё здесь — только вид; раскладку (layoutTable, watchBox, layoutDurak) не трогаем:
+ * слои стола абсолютные и не ловят нажатия, рамка не меняет размеров строки.
+ * Цвет предмета живёт в самих SVG (miniapp/collections/art/); интерфейс им не красим:
+ * «Ваш ход», кнопки и подписи остаются зелёными/светлыми по токенам.
+ * Контракт: docs/graphit-launch/contracts.md, разделы 7 и 9; файлы — art/README.md.
+ */
+
+/* ---------------------------------------------------------------- стол */
+
+/* Слой орнамента растянут на весь овал и лежит под сиденьями, картами, банком. */
+.gr-table { overflow: hidden; }
+.gr-table .gr-orn {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  user-select: none;
+}
+/* Центральный ромб — маленький знак ниже общих карт, под банком; центр остаётся свободным. */
+.gr-table .gr-dia {
+  position: absolute;
+  left: 50%;
+  top: 78%;
+  width: 28px;
+  height: 28px;
+  translate: -50% -50%;
+  pointer-events: none;
+  user-select: none;
+}
+/* Своя линия-разметка покерного овала мешала бы орнаменту. */
+.felt.gr-table::after { display: none; }
+
+/* ------------------------------------------------------- рубашка места */
+
+/* Тот же размер, что у обычной рубашки (.minis img, .hero-cards img): картинка — только другая. */
+img.card.gr-back { aspect-ratio: 200 / 280; object-fit: contain; }
+
+/* ----------------------------------------------------- рамка и знак */
+
+/* Обёртка равна аватару; рамка шире него на 18,2 % с каждой стороны и лежит поверх, центр прозрачный. */
+.gr-ava {
+  --gr-s: 44px;
+  position: relative;
+  display: inline-grid;
+  flex: none;
+  width: var(--gr-s);
+  height: var(--gr-s);
+  margin: 4px;
+}
+.lseat .gr-ava { --gr-s: 50px; }
+.gr-res-who .gr-ava { margin: 0; }
+.gr-ava > .av { width: 100%; height: 100%; z-index: 1; }
+.gr-ava .gr-frame {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--gr-s) * 1.364);
+  height: calc(var(--gr-s) * 1.364);
+  translate: -50% -50%;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0; /* под аватаром: корона хоста и кольцо хода остаются сверху */
+}
+
+/* Знак слева от имени; имя сокращается многоточием, строка не растёт. */
+.gr-nm { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 0; max-width: 100%; vertical-align: middle; }
+.gr-mark { width: 14px; height: 14px; flex: none; pointer-events: none; user-select: none; }
+.gr-nm-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lseat .nm .gr-nm { display: flex; }
+
+/* Итоги: слева маленький аватар (с рамкой у тех, у кого она есть), остальное как было. */
+.res-row.gr { grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 8px; }
+.gr-res-who { display: grid; padding: 5px; }
+.gr-res-who .gr-ava { --gr-s: 28px; }
+.gr-res-who .av { width: 28px; height: 28px; font-size: var(--k-fs-caption); }
+.res-row.gr .s, .res-row.gr .pl { white-space: nowrap; }
+/* Сводка мельче: иначе имени в строке остаётся меньше пальца. */
+.res-row.gr .s { font-size: var(--k-fs-caption); }
+.res-row.gr .pl { font-size: var(--k-fs-secondary); }
+/* train/placement.css задаёт общему `.pl` display:flex — цифра и точка оказывались в разных строках. */
+.res-row.gr .pl { display: block; min-width: 0; }
+.res-row.gr .n { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.res-row.gr .n > .gr-nm, .res-row.gr .n > .gr-nm-t { flex: 0 1 auto; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gr-table *, .gr-ava *, .gr-nm * { animation: none !important; transition: none !important; }
+}
