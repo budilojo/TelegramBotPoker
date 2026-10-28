@@ -31,3 +31,6 @@ assets-incoming/*
 
 # состояние единого запуска «Графит» (tools/graphit-run.mjs): журналы, блокировка, состояние
 .graphit-run/
+
+# состояние запуска подготовки релиза (tools/release-run.mjs)
+.release-run/

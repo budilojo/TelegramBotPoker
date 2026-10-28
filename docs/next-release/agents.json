@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "baseBranch": "redesign",
+  "runBranch": "release/run",
+  "maxAttempts": 3,
+  "common": ["docs/next-release/01-common.md", "docs/next-release/00-plan.md"],
+  "steps": [
+    { "id": "law", "letter": "A", "agent": "release-law", "task": "docs/next-release/02-law.md", "decisions": [133, 136] },
+    { "id": "payments", "letter": "B", "agent": "release-payments", "task": "docs/next-release/03-payments.md", "decisions": [137, 145] },
+    { "id": "navigation", "letter": "C", "agent": "release-navigation", "task": "docs/next-release/04-navigation.md", "decisions": [146, 152] },
+    { "id": "rating", "letter": "D", "agent": "release-rating", "task": "docs/next-release/05-rating.md", "decisions": [153, 156] },
+    { "id": "check", "letter": "E", "agent": "release-check", "task": "docs/next-release/06-release-check.md", "decisions": [157, 160] }
+  ]
+}
