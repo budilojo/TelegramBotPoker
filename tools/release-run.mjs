@@ -205,9 +205,10 @@ function gate(dir) {
   log('  прогоняю npm test в рабочей копии (несколько минут)…');
   const r = sh('npm', ['test'], { cwd: dir, maxBuffer: 1 << 28 });
   const text = `${r.stdout || ''}${r.stderr || ''}`;
-  const pass = /# pass (\d+)/.exec(text)?.[1];
-  const fail = /# fail (\d+)/.exec(text)?.[1];
-  return { ok: ok(r) && fail === '0', pass, fail, tail: text.slice(-600) };
+  // Итог — по коду выхода (0 = всё прошло). Числа — только для показа: у node:test строка то «# pass N», то «ℹ pass N».
+  const pass = /^\W*pass (\d+)/m.exec(text)?.[1] ?? '?';
+  const fail = /^\W*fail (\d+)/m.exec(text)?.[1] ?? '?';
+  return { ok: ok(r), pass, fail, tail: text.slice(-600) };
 }
 
 function publish(m, dir, opts) {
@@ -298,56 +299,68 @@ async function main() {
       const s = nx.step;
       const index = m.steps.findIndex((x) => x.id === s.id);
       const rec = (state.steps[s.id] ||= { status: 'pending', attempts: 0 });
-      if (rec.attempts >= m.maxAttempts) { log(`\n«${s.id}»: исчерпаны попытки (${m.maxAttempts}). Смотрите журналы .release-run/logs/.`); exit = EXIT.FAIL; break; }
-      rec.attempts += 1;
-      rec.base = gitOut(dir, 'rev-parse', 'HEAD');
-      rec.startedAt = now();
-      writeState(state);
-      log(`\n▶ ${s.letter} · ${s.id} (попытка ${rec.attempts}) — агент ${s.agent}`);
-
-      const child = runAgent(m, s, dir, o, state, index);
-      const res = await waitFor(child, o.timeoutMin);
-      const f = logFiles(s.id, rec.attempts);
-      const outText = fs.existsSync(f.out) ? fs.readFileSync(f.out, 'utf8') : '';
-      const errText = fs.existsSync(f.err) ? fs.readFileSync(f.err, 'utf8') : '';
-
-      if (res.timeout || res.code !== 0) {
-        const why = res.timeout ? `не уложился в ${o.timeoutMin} мин` : res.error ? `не запустился: ${res.error}` : `завершился с кодом ${res.code}`;
-        const limit = looksLikeLimit(`${outText}\n${errText}`, true);
-        rec.status = limit ? 'limit' : 'failed';
-        rec.note = limit ? 'упёрся в лимит использования' : why;
-        if (limit) rec.attempts -= 1; // ожидание сброса лимита не тратит попытки
-        writeState(state);
-        log(`  ✗ ${why}${limit ? ' — похоже на лимит использования; подождите сброса и запустите ту же команду' : ''}`);
-        const sn = snippet(outText) || snippet(errText);
-        if (sn) log(`    причина: ${sn}`);
-        exit = limit ? EXIT.LIMIT : EXIT.FAIL;
-        break;
+      // красный npm test после успешной работы агента: при повторном запуске агента не гоняем, проверяем заново то, что он сделал
+      let ps;
+      let recheck = false;
+      if (rec.status === 'gate-failed' || rec.status === 'publish-failed') {
+        const sp0 = path.join(dir, statusPath(s.id));
+        const p0 = fs.existsSync(sp0) ? parseAgentStatus(fs.readFileSync(sp0, 'utf8'), s.id) : { ok: false };
+        if (p0.ok && !gitOut(dir, 'status', '--porcelain')) { recheck = true; ps = p0; }
       }
+      if (!recheck && rec.attempts >= m.maxAttempts) { log(`\n«${s.id}»: исчерпаны попытки (${m.maxAttempts}). Смотрите журналы .release-run/logs/.`); exit = EXIT.FAIL; break; }
+      if (recheck) {
+        log(`\n▶ ${s.letter} · ${s.id}: агент уже отработал, повторяю только проверку тестов`);
+      } else {
+        rec.attempts += 1;
+        rec.base = gitOut(dir, 'rev-parse', 'HEAD');
+        rec.startedAt = now();
+        writeState(state);
+        log(`\n▶ ${s.letter} · ${s.id} (попытка ${rec.attempts}) — агент ${s.agent}`);
 
-      const sp = path.join(dir, statusPath(s.id));
-      if (!fs.existsSync(sp) || !changedSince(dir, rec.base, statusPath(s.id))) {
-        rec.status = 'failed'; rec.note = 'исполнитель не записал свежий статус-файл';
-        writeState(state);
-        log(`  ✗ ${rec.note} (${statusPath(s.id)})`);
-        exit = EXIT.FAIL; break;
-      }
-      const ps = parseAgentStatus(fs.readFileSync(sp, 'utf8'), s.id);
-      if (!ps.ok) {
-        rec.status = 'failed'; rec.note = `статус-файл неверный: ${ps.problems.join('; ')}`;
-        writeState(state);
-        log(`  ✗ ${rec.note}`);
-        exit = EXIT.FAIL; break;
-      }
-      if (gitOut(dir, 'status', '--porcelain')) {
-        rec.status = 'failed'; rec.note = 'после работы в рабочей копии остались незакоммиченные изменения';
-        writeState(state);
-        log(`  ✗ ${rec.note}`);
-        exit = EXIT.FAIL; break;
+        const child = runAgent(m, s, dir, o, state, index);
+        const res = await waitFor(child, o.timeoutMin);
+        const f = logFiles(s.id, rec.attempts);
+        const outText = fs.existsSync(f.out) ? fs.readFileSync(f.out, 'utf8') : '';
+        const errText = fs.existsSync(f.err) ? fs.readFileSync(f.err, 'utf8') : '';
+
+        if (res.timeout || res.code !== 0) {
+          const why = res.timeout ? `не уложился в ${o.timeoutMin} мин` : res.error ? `не запустился: ${res.error}` : `завершился с кодом ${res.code}`;
+          const limit = looksLikeLimit(`${outText}\n${errText}`, true);
+          rec.status = limit ? 'limit' : 'failed';
+          rec.note = limit ? 'упёрся в лимит использования' : why;
+          if (limit) rec.attempts -= 1; // ожидание сброса лимита не тратит попытки
+          writeState(state);
+          log(`  ✗ ${why}${limit ? ' — похоже на лимит использования; подождите сброса и запустите ту же команду' : ''}`);
+          const sn = snippet(outText) || snippet(errText);
+          if (sn) log(`    причина: ${sn}`);
+          exit = limit ? EXIT.LIMIT : EXIT.FAIL;
+          break;
+        }
+
+        const sp = path.join(dir, statusPath(s.id));
+        if (!fs.existsSync(sp) || !changedSince(dir, rec.base, statusPath(s.id))) {
+          rec.status = 'failed'; rec.note = 'исполнитель не записал свежий статус-файл';
+          writeState(state);
+          log(`  ✗ ${rec.note} (${statusPath(s.id)})`);
+          exit = EXIT.FAIL; break;
+        }
+        ps = parseAgentStatus(fs.readFileSync(sp, 'utf8'), s.id);
+        if (!ps.ok) {
+          rec.status = 'failed'; rec.note = `статус-файл неверный: ${ps.problems.join('; ')}`;
+          writeState(state);
+          log(`  ✗ ${rec.note}`);
+          exit = EXIT.FAIL; break;
+        }
+        if (gitOut(dir, 'status', '--porcelain')) {
+          rec.status = 'failed'; rec.note = 'после работы в рабочей копии остались незакоммиченные изменения';
+          writeState(state);
+          log(`  ✗ ${rec.note}`);
+          exit = EXIT.FAIL; break;
+        }
       }
 
       rec.status = ps.status; rec.note = String(ps.raw.summary).slice(0, 160);
-      log(`  статус исполнителя: ${ps.status} — ${rec.note}`);
+            log(`  статус исполнителя: ${ps.status} — ${rec.note}`);
       const g = gate(dir);
       rec.tests = g.ok ? `npm test зелёный (${g.pass})` : `npm test КРАСНЫЙ (pass ${g.pass}, fail ${g.fail})`;
       if (!g.ok) {
@@ -361,10 +374,15 @@ async function main() {
       rec.published = pub.pushed;
       if (!pub.pushed) log(`  не опубликовано: ${pub.why}`);
       else log(`  опубликовано в ${m.baseBranch}`);
+      if (!pub.pushed && !o.noPush) {
+        rec.status = 'publish-failed'; rec.note = `не опубликовано: ${pub.why}`;
+        writeState(state);
+        log('\nПубликация не удалась — остановка, чтобы следующие шаги не строились на неопубликованном. Повторная команда проверит и опубликует заново, не запуская агента.');
+        exit = EXIT.FAIL; break;
+      }
       writeState(state);
       if (ps.status === 'blocked') { log(`\nШаг «${s.id}» заблокирован — дальше не иду. Причина — в docs/next-release/reports/${s.id}.md`); exit = EXIT.FAIL; break; }
       if (ps.status === 'partial' && !o.continuePartial) { log(`\nШаг «${s.id}» выполнен частично — остановка. Прочитайте отчёт; продолжить можно командой с --continue-partial.`); exit = EXIT.FAIL; break; }
-      if (!pub.pushed && !o.noPush) { log('\nПубликация не удалась — остановка, чтобы следующие шаги не строились на неопубликованном.'); exit = EXIT.FAIL; break; }
     }
   } catch (e) {
     console.error(e.message || e);

@@ -35,7 +35,7 @@ test('очередь: строго по порядку, следующий ша�
 });
 
 test('очередь: частично, заблокировано и красные тесты останавливают; --continue-partial пропускает только partial', () => {
-  for (const bad of ['partial', 'blocked', 'failed', 'gate-failed', 'limit']) {
+  for (const bad of ['partial', 'blocked', 'failed', 'gate-failed', 'publish-failed', 'limit']) {
     const r = nextStep(real, st({ law: bad }));
     // сам шаг повторяется, но следующие за ним не стартуют
     assert.equal(r.step.id, 'law', bad);
