@@ -219,3 +219,16 @@
 /* Узко: четыре цвета в столбик, чтобы подписи не рвались по буквам. */
 @media (max-width: 339px) { .col-swatches { grid-template-columns: 1fr; } }
 @media (max-width: 439px) { .col-inv .col-swatches { grid-template-columns: 1fr; } }
+
+/* payments: покупка на карточке, «Мои покупки», документы. Только токены шкалы. */
+.col-buy { padding: var(--k-s16); background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--k-r-md); }
+.col-terms { margin: 0; padding-left: var(--k-s16); display: flex; flex-direction: column; gap: var(--k-s4); font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font); color: var(--text-primary); }
+.col-price-line { margin: 0; display: flex; align-items: center; gap: var(--k-s12); flex-wrap: wrap; }
+.col-price-big { font: var(--k-w-semibold) var(--k-fs-section)/var(--k-lh-section) var(--k-font); color: var(--text-primary); }
+.col-doc-links { display: flex; flex-wrap: wrap; gap: var(--k-s8); }
+.col-doc-links .col-btn { width: auto; }
+.col-pay-status { display: flex; flex-direction: column; gap: var(--k-s8); padding: var(--k-s12) var(--k-s16); background: var(--bg-elevated); border: 1px solid var(--border-color); border-radius: var(--k-r-md); font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font); color: var(--text-primary); }
+.col-pay-status.failed, .col-pay-status.error { border-color: var(--color-danger); }
+.col-order { display: flex; flex-direction: column; gap: var(--k-s4); padding: var(--k-s12) var(--k-s16); background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--k-r-md); min-width: 0; }
+.col-order-meta { font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font); color: var(--text-secondary); overflow-wrap: anywhere; }
+.col-doc-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font); color: var(--text-primary); }

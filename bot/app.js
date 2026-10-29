@@ -29,6 +29,9 @@ import { esc } from './fmt.js';
 import { Profiles } from './profile.js';
 import { Training } from './train.js';
 import { Collections } from './collections/index.js'; // collections
+import { Payments, PAY_ADMIN_COMMANDS } from './payments/index.js'; // payments
+import { salesConfig } from './payments/config.js';
+import { PAY_IN_DM } from './payments/texts.js';
 import { GAMES, GAME_LIST, HIDDEN_DRAFTS, gameOf } from './games/index.js';
 import { apply as rateRound } from './rating.js';
 
@@ -193,7 +196,7 @@ export class App {
   constructor({
     api, store = new NullStore(), minIntervalMs = 1000, botUsername = '', onError = null, deck = null, durakDeck = null,
     clock = REAL_CLOCK, runoutStepMs = 1500, webappUrl = '', miniAppName = '', admins = [], ratingSoon = RATING_SOON,
-    botRng = Math.random, collectionsDemo = false,
+    botRng = Math.random, collectionsDemo = false, sales = null,
   } = {}) {
     this.api = api;
     this.store = store;
@@ -241,6 +244,8 @@ export class App {
     this.training = new Training(this);
     // collections: коллекция «Графит». Демосреда — только строгое `true` из серверной настройки (bot/index.js).
     this.collections = new Collections(this, { demo: collectionsDemo === true });
+    // payments: покупки за Stars. Режим — только из настроек процесса (bot/index.js); по умолчанию продажи закрыты.
+    this.payments = new Payments(this, sales || salesConfig({}));
   }
 
   attachHub(hub) {
@@ -786,6 +791,11 @@ export class App {
 
   async handleUpdate(update) {
     try {
+      // payments: раньше всего остального — pre_checkout ждёт ответа не дольше 10 секунд, а оплата и возврат
+      // обрабатываются всегда: и при закрытых продажах, и во время обслуживания.
+      if (update.pre_checkout_query) return await this.payments.onPreCheckout(update.pre_checkout_query);
+      if (update.message?.successful_payment) return await this.payments.onSuccessfulPayment(update.message);
+      if (update.message?.refunded_payment) return await this.payments.onRefundedPayment(update.message);
       if (update.callback_query) return await this.onCallback(update.callback_query);
       if (update.message) return await this.onMessage(update.message);
       if (update.my_chat_member) return await this.onMyChatMember(update.my_chat_member);
@@ -1083,6 +1093,13 @@ export class App {
       return void (await this.outbox.post(user.tgId, WELCOME_DM));
     }
     if (cmd?.cmd === 'admin' && this.isAdmin(user.id)) return this.sendAdmin(user);
+    // payments: поддержка покупок и условия — всегда, даже при закрытых продажах и во время обслуживания (О-12).
+    if (cmd?.cmd === 'paysupport') return void (await this.outbox.post(user.tgId, this.payments.supportText(user.id)));
+    if (cmd?.cmd === 'terms') return void (await this.outbox.post(user.tgId, this.payments.termsText()));
+    if (PAY_ADMIN_COMMANDS.includes(cmd?.cmd) && this.isAdmin(user.id)) {
+      const text = await this.payments.adminCommand(user, cmd.cmd, cmd.rest);
+      if (text) return void (await this.outbox.post(user.tgId, text));
+    }
     // Владельцу обслуживание не мешает: ему как раз и надо его снять.
     if (this.down && !this.isAdmin(user.id)) {
       return void (await this.outbox.post(user.tgId, `⏸ <b>Идёт обслуживание</b>\n${esc(this.downText)}`));
@@ -1166,6 +1183,8 @@ export class App {
       }
     }
     if (cmd.cmd === 'start' || cmd.cmd === 'help') return void (await this.reply(chatId, HELP));
+    // payments: в группе о покупках не говорим (это личное) — отправляем в личку.
+    if (cmd.cmd === 'paysupport' || cmd.cmd === 'terms') return void (await this.reply(chatId, PAY_IN_DM(this.botUsername), msg));
     if (!who.ok) return void (await this.reply(chatId, who.text, msg));
 
     const user = who.user;

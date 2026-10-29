@@ -14,7 +14,7 @@ const CASES = [
   { name: 'доверие полю demo из тела сообщения', file: 'bot/collections/index.js',
     from: "    const uid = String(user.id);\n    const op =", to: "    const uid = String(user.id);\n    if (msg?.demo === true) this.demo = true;\n    const op =" },
   { name: 'демо-строки базы читаются при выключенной демосреде', file: 'bot/collections/index.js',
-    from: "  ownedItems(uid) {\n    if (!this.demo) return [];", to: '  ownedItems(uid) {' },
+    from: "    if (this.demo) for (const i of this.app.store.collDemoItems", to: "    if (true) for (const i of this.app.store.collDemoItems" },
   { name: 'снимок не замораживается (пересборка при каждой отправке)', file: 'bot/collections/index.js',
     from: "    if (room.status === 'lobby') {\n      room.look = this.build(room, 0);", to: "    if (true) {\n      room.look = this.build(room, 0);" },
   { name: 'стол берётся у не-хоста', file: 'bot/collections/index.js',

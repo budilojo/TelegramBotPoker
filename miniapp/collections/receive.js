@@ -4,7 +4,8 @@
  * переключатели стоят в положении сервера и меняются только его ответом.
  */
 import { itemById, itemsOfBundle } from './catalog.js';
-import { DEMO_NOTE, itemTitle, thumb, WHEN, colorTitle, btn } from './item.js';
+import { itemTitle, thumb, WHEN, colorTitle, btn } from './item.js';
+import { noteOf } from './state.js';
 
 export function renderReceive(ctx) {
   const { h, store, snap } = ctx;
@@ -31,10 +32,10 @@ export function renderReceive(ctx) {
   });
   return h('div.col-recv',
     h('div.col-intro',
-      h('div.col-eyebrow', 'Добавлено в коллекцию'),
+      h('div.col-eyebrow', ctx.route.bought ? 'Куплено — уже в вашей коллекции' : 'Добавлено в коллекцию'),
       h('h2.col-big', ids.length > 1 ? 'Коллекция «Графит»' : itemTitle(ids[0])),
-      h('span.col-demo', DEMO_NOTE),
-      h('p.col-sub', 'Получение само ничего не включает. Включите переключатель, если хотите применить предмет.')),
+      noteOf(snap) ? h('span.col-demo', noteOf(snap)) : null,
+      h('p.col-sub', ctx.route.bought ? 'Наденьте вещь переключателем — или позже в «Моя коллекция».' : 'Получение само ничего не включает. Включите переключатель, если хотите применить предмет.')),
     h('section.col-block', h('h3.col-cap', 'Состав'), h('ul.col-list.recv', rows)),
     h('div.col-actions',
       btn(h, { text: 'Перейти в инвентарь', cls: 'primary', onClick: () => ctx.replace({ name: 'inventory', tab: itemById(ids[0]).slot }) }),

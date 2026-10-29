@@ -45,6 +45,8 @@ export const bus = {
   onTrain: () => {},
   /** Коллекции (miniapp/collections/index.js): { t:'col', op, … } — ответы сервера на state/grant/apply/clear. */
   onCollections: () => {},
+  /** Покупки (miniapp/collections/index.js): { t:'pay', op, … } — счёт, история, условия, поддержка. */
+  onPay: () => {},
 };
 
 let ws = null;
@@ -103,6 +105,8 @@ export function connect() {
       bus.onTrain(msg);
     } else if (msg.t === 'col') {
       bus.onCollections(msg);
+    } else if (msg.t === 'pay') {
+      bus.onPay(msg);
     } else if (msg.t === 'react') {
       bus.onReact(msg);
     } else if (msg.t === 'chat' || msg.t === 'chat-sync' || msg.t === 'chat-unread') {

@@ -67,7 +67,7 @@ export function renderInventory(ctx) {
     own.map((it) => (store.own(it.id) ? ownedCard(ctx, it) : lockedCard(ctx, it))),
     none ? h('div.col-empty',
       h('p', 'Пока у вас только базовое оформление — оно всегда доступно.'),
-      h('p.col-note', 'Предметы коллекции можно получить для демонстрации на витрине.'),
+      h('p.col-note', snap.demo ? 'Предметы коллекции можно получить для демонстрации на витрине.' : 'Предметы коллекции — на витрине: примерьте и, если покупки открыты, купите.'),
       h('button.col-btn.primary', { type: 'button', onclick: () => ctx.replace({ name: 'showcase' }) }, 'Открыть коллекции')) : null);
   void itemById; void itemTitle;
   return h('div.col-inventory', tabs, panel,

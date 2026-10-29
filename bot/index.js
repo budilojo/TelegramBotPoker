@@ -29,6 +29,7 @@ import { Hub } from './hub.js';
 import { AdminBot } from './admin-bot.js';
 import { Broadcaster, castReport } from './broadcast.js';
 import { startServer } from './server.js';
+import { salesConfig, gate } from './payments/config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -81,7 +82,15 @@ const COLLECTIONS_DEMO = process.env.COLLECTIONS_DEMO === '1';
 /** Токен отдельного админ-бота (необязателен: без него админка живёт только экраном). */
 const ADMIN_TOKEN = (process.env.ADMIN_BOT_TOKEN || '').trim();
 
-const bot = new Bot(TOKEN);
+/**
+ * payments: продажи за Stars. По умолчанию закрыты. SALES_MODE=test — только вместе с TG_TEST_ENV=1 (тестовая
+ * среда Telegram, звёзды ненастоящие); SALES_MODE=live — настоящие, открываются только при всех проверках
+ * (docs/next-release/payment-design.md, раздел 2). Значения читаются один раз при запуске.
+ */
+const SALES = salesConfig(process.env);
+const TEST_ENV = SALES.testEnv;
+
+const bot = new Bot(TOKEN, TEST_ENV ? { client: { environment: 'test' } } : undefined);
 const store = new Store(DB_PATH);
 
 /**
@@ -130,6 +139,7 @@ const app = new App({
   miniAppName: MINIAPP,
   admins: ADMINS,
   collectionsDemo: COLLECTIONS_DEMO, // collections
+  sales: SALES, // payments
 });
 app.cosmeticsTesters = new Set(COSMETICS_TESTERS);
 /**
@@ -160,6 +170,9 @@ if (ADMIN_TOKEN) {
 if (adminApi) {
   adminBot = new AdminBot({ api: adminApi.api, app, webappUrl: WEBAPP_URL, botUsername: adminMe.username, onError: (e) => console.error('[админ]', e?.description || e?.message || e) });
 }
+
+// payments: письма владельцу о спорных оплатах — через админ-бота, если он есть.
+if (adminBot) app.notifyAdmins = (text) => adminBot.notify(text);
 
 const hub = new Hub(app, { botToken: TOKEN, adminToken: ADMIN_TOKEN || null });
 app.attachHub(hub);
@@ -269,12 +282,27 @@ await bot.start({
   // Commands, replies to its own messages and callback queries arrive anyway,
   // and that is everything this design needs. `my_chat_member` also covers
   // private chats: it is how the bot learns that somebody blocked it.
-  allowed_updates: ['message', 'callback_query', 'my_chat_member'],
+  // pre_checkout_query — подтверждение оплаты Stars (ответ за 10 секунд); без него оплата не пройдёт.
+  allowed_updates: ['message', 'callback_query', 'my_chat_member', 'pre_checkout_query'],
   onStart: async () => {
     console.log('[bot] long polling запущен');
     // Redraw every live table: the game must continue from exactly where it
     // stopped — same hand, same cards, same player on the clock.
     await app.resume();
+    // payments: сверка с Telegram — подобрать оплаты, пропущенные, пока бот лежал или был откачен.
+    {
+      const g = gate(SALES, { stopped: store.pay.stopped(), down: app.down });
+      console.log(`[bot] продажи: ${g.open ? 'открыты' : 'закрыты'} · режим ${SALES.mode}${TEST_ENV ? ' · тестовая среда' : ''}`);
+      if (SALES.mode !== 'off' || store.pay.anyOrders()) try {
+        const r = await app.payments.reconcile();
+        if (r.recovered || r.refunds) {
+          console.log(`[bot] сверка оплат: восстановлено ${r.recovered}, возвратов ${r.refunds}`);
+          await adminBot?.notify(`🔎 Сверка при запуске: восстановлено оплат ${r.recovered}, засчитано возвратов ${r.refunds}.`);
+        }
+      } catch (err) {
+        console.error('[bot] сверка оплат не удалась:', err?.description ?? err?.message ?? err);
+      }
+    }
     // Что накопилось, пока бот лежал: свежее уходит, скисшее отменяется.
     const casts = app.casts.resume();
     if (casts.sending || casts.stale) console.log(`[bot] рассылки: к отправке ${casts.sending}, отменено просроченных ${casts.stale}`);

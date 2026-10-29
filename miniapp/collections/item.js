@@ -8,6 +8,7 @@
 import { COLORS, COLLECTION, BASE, itemById, itemsOfBundle } from './catalog.js';
 import { artImg } from './art.js';
 import { DEMO_NOTE } from './state.js';
+import { buyBlock } from './purchase.js';
 export { DEMO_NOTE };
 export const SLOT_TABS = [['cardback', 'Карты'], ['table', 'Столы'], ['profile', 'Профиль']];
 
@@ -37,17 +38,19 @@ export const priceNote = (it) => `${it.price} Stars · цена демонстр
 export function stateOf(store, snap, id) {
   const it = itemById(id);
   if (!it) return { key: 'none', text: '' };
+  const free = () => (snap.demo || !snap.shop ? { key: 'free', text: 'Доступно' }
+    : snap.shop.open && snap.shop.offers?.[id]?.price ? { key: 'free', text: `${snap.shop.offers[id].price} ⭐` } : { key: 'free', text: 'Можно примерить' });
   if (it.kind === 'bundle') {
     const have = itemsOfBundle(id).filter((x) => snap.owned.includes(x)).length;
     const all = itemsOfBundle(id).length;
     if (have === all) return { key: 'owned', text: 'В вашей коллекции' };
-    if (have > 0) return { key: 'partial', text: `Получено ${have} из ${all}` };
-    return { key: 'free', text: 'Доступно' };
+    if (have > 0) return { key: 'partial', text: `${snap.demo ? 'Получено' : 'Есть'} ${have} из ${all}` };
+    return free();
   }
   const c = snap.choice[it.slot];
   if (c?.item === id) return snap.pending[it.slot] ? { key: 'pending', text: WHEN[it.slot] } : { key: 'applied', text: 'Применено' };
   if (snap.owned.includes(id)) return { key: 'owned', text: 'В вашей коллекции' };
-  return { key: 'free', text: 'Доступно' };
+  return free();
 }
 
 /** Плашка-отметка. Значок в тексте — чтобы состояние не держалось на цвете. */
@@ -158,6 +161,9 @@ export function renderItem(ctx) {
   if (own) {
     actions.push(h('div.col-owned', { role: 'status' }, '✓ Уже в вашей коллекции'));
     actions.push(btn(h, { text: 'Открыть в инвентаре', cls: 'secondary', onClick: () => ctx.go({ name: 'inventory', tab: bundle ? 'cardback' : it.slot }) }));
+  } else if (!snap.demo) {
+    // Магазин: состав, цена сервера и условия до кнопки покупки (purchase.js); без цены — без кнопки.
+    actions.push(...buyBlock(ctx, it));
   } else if (partial) {
     const miss = store.missing(id).map(itemTitle).join(', ');
     actions.push(h('p.col-note', { role: 'status' }, `Уже есть: ${itemsOfBundle(id).filter((x) => snap.owned.includes(x)).map(itemTitle).join(', ')}. Не хватает: ${miss}.`));

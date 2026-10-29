@@ -91,6 +91,8 @@ export class Hub {
     this.chats = new Chats();
     this.chatLimiter = new ChatLimiter();
     this.shop = new Shop(app);
+    /** payments: все открытые страницы игроков — дослать состояние коллекций после оплаты или возврата. */
+    this.pages = new Set();
   }
 
   /* -------------------------------------------------------------- sessions */
@@ -101,8 +103,9 @@ export class Hub {
    */
   open(args = {}, send) {
     const r = this.openInner(args, send);
+    if (r.session && r.session.kind !== 'admin') this.pages.add(r.session);
     // collections: при подключении и переподключении — своё состояние, но только когда модуль включён.
-    if (r.session && r.session.kind !== 'admin' && this.app.collections.enabled) {
+    if (r.session && r.session.kind !== 'admin' && this.app.collections.visibleFor(r.session.user.id)) {
       try { r.session.send(this.app.collections.stateOf(r.session.user.id)); } catch (err) { this.app.log(err); }
     }
     return r;
@@ -226,7 +229,18 @@ export class Hub {
   }
 
   close(session) {
+    this.pages.delete(session);
     this.detach(session);
+  }
+
+  /** payments: дослать человеку на все его страницы (`make()` — свежее сообщение на каждую). */
+  sendToUser(uid, make) {
+    for (const s of this.pages) if (s.user.id === String(uid)) { try { s.send(make()); } catch (err) { this.app.log(err); } }
+  }
+
+  /** payments: всем открытым страницам — каждому своё (`make(uid)`). */
+  sendToAll(make) {
+    for (const s of this.pages) { try { s.send(make(s.user.id)); } catch (err) { this.app.log(err); } }
   }
 
   detach(session) {
@@ -554,6 +568,12 @@ export class Hub {
         if (room) this.app.noteLive(room);
       }
       return;
+    }
+    // payments: покупки. Кто — только из session.user. История и условия доступны и во время обслуживания;
+    // новый счёт во время обслуживания сервер не выставит сам (PAY_DOWN).
+    if (msg.t === 'pay') {
+      if (session.kind === 'admin') return void session.send(this.app.payments.fail('buy', 'PAY_OP'));
+      return void session.send(await this.app.payments.handle(session.user, msg));
     }
     if (this.app.down && session.kind !== 'admin') {
       // Пока идёт обслуживание, ни одного хода не принимается — ни за столом,

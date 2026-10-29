@@ -17,9 +17,19 @@ import { renderItem, itemTitle, btn } from './item.js';
 import { renderFitting } from './fitting.js';
 import { renderInventory } from './inventory.js';
 import { renderReceive } from './receive.js';
+import { pay } from './pay.js';
+import { renderPurchases, renderDoc, docTitle } from './purchase.js';
 
 store.attach({ send: (m) => send(m, { lock: false }) });
 bus.onCollections = (msg) => store.handle(msg);
+/** Окно оплаты — только встроенное окно Telegram; нет метода — честный отказ, ничего не списано. */
+const openInvoice = (url, cb) => {
+  const wa = window.Telegram?.WebApp;
+  if (typeof wa?.openInvoice !== 'function') return false;
+  try { wa.openInvoice(url, cb); return true; } catch { return false; }
+};
+pay.attach({ send: (m) => send(m, { lock: false }), openInvoice });
+bus.onPay = (msg) => pay.handle(msg);
 
 let root = null; // { el, title, back, scroll, foot }
 let stack = [];
@@ -28,7 +38,7 @@ let awaiting = null; // id, выдачу которого ждём: после �
 let lastKey = '';
 let wasVisible = false;
 
-const TITLES = { showcase: 'Коллекции', item: 'Карточка', fit: 'Примерка', inventory: 'Моя коллекция', receive: 'Получено' };
+const TITLES = { showcase: 'Коллекции', item: 'Карточка', fit: 'Примерка', inventory: 'Моя коллекция', receive: 'Получено', purchases: 'Мои покупки' };
 
 export const isOpen = () => !!root;
 
@@ -41,8 +51,13 @@ function colorOf(id) {
 }
 
 const ctx = () => ({
-  h, store, snap: store.snapshot(), route: stack[stack.length - 1],
-  go: (r) => { awaiting = null; haptic.soft?.(); stack.push(r); draw(true); },
+  h, store, pay, snap: store.snapshot(), route: stack[stack.length - 1],
+  go: (r) => {
+    awaiting = null; haptic.soft?.(); stack.push(r);
+    if (r.name === 'purchases') pay.loadHistory();
+    if (r.name === 'doc') pay.loadTerms();
+    draw(true);
+  },
   replace: (r) => { awaiting = null; stack[stack.length - 1] = r; draw(true); },
   back,
   color: colorOf,
@@ -73,6 +88,8 @@ function screenOf(c) {
     case 'fit': return renderFitting(c);
     case 'inventory': return renderInventory(c);
     case 'receive': return renderReceive(c);
+    case 'purchases': return renderPurchases(c);
+    case 'doc': return renderDoc(c);
     default: return renderShowcase(c);
   }
 }
@@ -104,7 +121,8 @@ function draw(routeChanged) {
   const snap = store.snapshot();
   const c = ctx();
   const r = c.route;
-  root.title.textContent = r.name === 'item' || r.name === 'fit' ? itemTitle(r.id) : TITLES[r.name] || 'Коллекции';
+  root.title.textContent = r.name === 'item' || r.name === 'fit' ? itemTitle(r.id) : r.name === 'doc' ? docTitle(r.id)
+    : r.name === 'receive' && r.bought ? 'Куплено' : TITLES[r.name] || 'Коллекции';
   let body;
   if (!snap.loaded) {
     body = snap.link === 'offline'
@@ -123,6 +141,8 @@ function draw(routeChanged) {
 /** Реакция на новое состояние: «Получено» после ответа сервера, закрытие при выключенном демо. */
 function onStore() {
   const snap = store.snapshot();
+  // Покупка подтверждается только состоянием сервера: вещь пришла в «owned» — тогда «Куплено».
+  pay.sawOwned(snap.owned);
   if (wasVisible && !snap.visible) { close(); wasVisible = snap.visible; bus.render(); return; }
   if (wasVisible !== snap.visible) { wasVisible = snap.visible; bus.render(); }
   if (!root) return;
@@ -141,6 +161,21 @@ function onStore() {
 }
 store.subscribe(onStore);
 
+/** Покупка: «Куплено» — после подтверждения сервера; остальное — перерисовать карточку. */
+function onPay() {
+  if (!root) return;
+  const ph = pay.phase;
+  if (ph.name === 'done') {
+    const ids = itemsOfBundle(ph.item).length ? itemsOfBundle(ph.item) : [ph.item];
+    pay.reset();
+    stack = [{ name: 'showcase' }, { name: 'receive', ids, bought: true }];
+    draw(true);
+    return;
+  }
+  draw(false);
+}
+pay.subscribe(onPay);
+
 /** Открыть витрину. Не откроется, если сервер не сказал «демо». */
 export function open() {
   if (!store.visible || root) return false;
@@ -148,6 +183,7 @@ export function open() {
   colors = {};
   awaiting = null;
   lastKey = '';
+  pay.reset();
   build();
   draw(true);
   root.back.focus({ preventScroll: true });

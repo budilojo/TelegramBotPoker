@@ -1,9 +1,9 @@
 /**
  * Строка «Коллекции» в «Настройках» (реестр miniapp/settings-rows.js).
- * Показывается ТОЛЬКО когда сервер прислал enabled && demo; иначе — null: никакой точки входа.
+ * Показывается ТОЛЬКО когда сервер прислал enabled && (demo || shop); иначе — null: никакой точки входа.
  * Модуль не тянет DOM и экраны при загрузке (реестр проверяется в Node): экраны подгружаются по нажатию.
  */
-import { store, DEMO_NOTE } from './state.js';
+import { store, noteOf } from './state.js';
 
 export default function collectionsRow(/* state */) {
   if (!store.visible) return null;
@@ -17,7 +17,7 @@ export default function collectionsRow(/* state */) {
   row.type = 'button';
   row.dataset.entry = 'collections';
   const body = mk('div', 'set-body');
-  body.append(mk('div', 'set-title', 'Коллекции'), mk('div', 'set-sub', DEMO_NOTE));
+  body.append(mk('div', 'set-title', 'Коллекции'), mk('div', 'set-sub', noteOf(store.snapshot())));
   const arrow = mk('span', 'col-entry-go', '›');
   arrow.setAttribute('aria-hidden', 'true');
   row.append(body, arrow);

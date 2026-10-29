@@ -1,0 +1,11 @@
+{
+  "_": "Предложения магазина: что продаётся и почём (Stars). Цены утверждает владелец. Пока approved=false или цена null — настоящая продажа не откроется. Подробности — docs/next-release/payment-design.md, раздел 2.",
+  "approved": false,
+  "terms": "0.1-проект",
+  "items": {
+    "graphit-cardback": null,
+    "graphit-table": null,
+    "graphit-profile": null,
+    "graphit-bundle": null
+  }
+}

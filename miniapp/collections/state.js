@@ -19,7 +19,26 @@ export const DEMO_NOTE = 'Демонстрация · Без оплаты';
 export const ANSWER_MS = 8000;
 
 const NONE = () => ({ cardback: null, table: null, profile: null });
-const empty = () => ({ enabled: false, demo: false, owned: [], choice: NONE(), pending: NONE() });
+const empty = () => ({ enabled: false, demo: false, owned: [], choice: NONE(), pending: NONE(), shop: null });
+
+/** Подпись режима: демо, тестовая среда, продажи, закрыто. Для строки «Настроек» и витрины. */
+export const SHOP_NOTE = {
+  test: 'Тестовая среда · звёзды ненастоящие',
+  open: 'Оформление за Stars · без игровых преимуществ',
+  closed: 'Ваши вещи · покупки пока закрыты',
+};
+export const noteOf = (snap) => (snap.demo ? DEMO_NOTE : !snap.shop ? '' : snap.shop.test ? SHOP_NOTE.test : snap.shop.open ? SHOP_NOTE.open : SHOP_NOTE.closed);
+
+/** Магазин из `state` (только без демо): открыт ли, цены — числа сервера; всё прочее отбрасывается. */
+function normalizeShop(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const offers = {};
+  for (const it of ITEMS) {
+    const p = raw.offers?.[it.id]?.price;
+    offers[it.id] = { price: Number.isInteger(p) && p > 0 ? p : null };
+  }
+  return { open: raw.open === true, test: raw.open === true && raw.test === true, terms: typeof raw.terms === 'string' ? raw.terms.slice(0, 40) : '', support: raw.support === true, offers };
+}
 
 /** Привести пришедшее `state` к безопасной форме; лишнее и неверное отбрасывается. */
 export function normalizeState(msg) {
@@ -31,9 +50,13 @@ export function normalizeState(msg) {
     for (const o of msg.owned) {
       const id = typeof o === 'string' ? o : o?.item;
       const it = itemById(id);
-      if (it && it.kind === 'item' && !out.owned.some((x) => x.item === id)) out.owned.push({ item: id, demo: o?.demo !== false });
+      if (it && it.kind === 'item' && !out.owned.some((x) => x.item === id)) {
+        const source = Array.isArray(o?.source) ? o.source.filter((x) => ['purchase', 'staff', 'demo'].includes(x)) : [];
+        out.owned.push({ item: id, demo: o?.demo !== false, source });
+      }
     }
   }
+  if (out.enabled && !out.demo) out.shop = normalizeShop(msg.shop);
   for (const slot of SLOTS) {
     const c = msg.choice?.[slot];
     if (c && typeof c === 'object' && itemById(c.item)?.slot === slot && isColor(c.color)) out.choice[slot] = { item: c.item, color: c.color };
@@ -76,7 +99,8 @@ export function createStore(deps = {}) {
   const subs = new Set();
   const emit = () => subs.forEach((f) => { try { f(); } catch { /* подписчик не ломает ход */ } });
 
-  const visible = () => !!server && server.enabled && server.demo;
+  // Вход: демосреда или магазин (сервер прислал `shop`). Ничего другого не открывает коллекции.
+  const visible = () => !!server && server.enabled && (server.demo || !!server.shop);
 
   function done(err) {
     if (wait) d.clearTimer(wait.timer);
@@ -128,8 +152,10 @@ export function createStore(deps = {}) {
         loaded: !!server,
         enabled: s.enabled,
         demo: s.demo,
+        shop: s.shop,
         visible: visible(),
         owned: s.owned.map((o) => o.item),
+        sources: Object.fromEntries(s.owned.map((o) => [o.item, o.source || []])),
         choice: s.choice,
         pending: s.pending,
         when: { ...lastWhen },
@@ -186,7 +212,7 @@ export function createStore(deps = {}) {
 
     /** Демо-получение. Не уйдёт: вне демо, при ожидании, если уже есть, и для неполного комплекта. */
     grant(item) {
-      if (!visible() || wait || !connected) return false;
+      if (!visible() || !server.demo || wait || !connected) return false;
       const it = itemById(item);
       if (!it || api.own(item)) return false;
       if (it.kind === 'bundle' && api.ownedSome(item)) return false; // правило цены дополнения не утверждено
@@ -239,7 +265,7 @@ export function createStore(deps = {}) {
       const snap = normalizeState(msg);
       server = snap;
       if (msg.op === 'apply' && wait?.op === 'apply' && (msg.when === 'now' || msg.when === 'next-deal')) lastWhen[wait.slot] = msg.when;
-      if (!snap.enabled || !snap.demo) lastWhen = {};
+      if (!snap.enabled || (!snap.demo && !snap.shop)) lastWhen = {};
       if (wait && wait.op !== 'state') {
         // Ответ на наш запрос: либо тот же op, либо `state`, в котором виден результат.
         if (msg.op === wait.op || satisfied(snap, wait)) return done(null);

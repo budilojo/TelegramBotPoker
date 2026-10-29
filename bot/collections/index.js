@@ -10,7 +10,7 @@
  *  - оформление не меняет ходы, часы, рейтинг, шансы: оно только лежит в `room.look` и в виде.
  */
 import { ERRORS, OPS, PER_MINUTE, isReq, REQ_KEEP } from '../../miniapp/collections/protocol.js';
-import { SLOTS, isColor, itemById, itemsOfBundle, slotOf } from '../../miniapp/collections/catalog.js';
+import { ITEMS, SLOTS, isColor, itemById, itemsOfBundle, slotOf } from '../../miniapp/collections/catalog.js';
 
 const GAMES = new Set(['poker', 'durak']);
 const MINUTE = 60_000;
@@ -31,26 +31,52 @@ export class Collections {
     this.limits = new Map();
   }
 
+  /** Есть ли хоть что-то от коллекций в этом процессе (демо или магазин). Кому видно — `visibleFor`. */
   get enabled() {
-    return this.demo;
+    return this.demo || (this.app.payments?.cfg.mode ?? 'off') !== 'off';
+  }
+
+  get pay() {
+    return this.app.payments ?? null;
+  }
+
+  /** Видит ли человек коллекции: демо — всем; без демо — магазин (открыт, тестер при включённом режиме, есть покупки). */
+  visibleFor(uid) {
+    if (this.demo) return true;
+    return !!this.pay?.shopVisibleFor(String(uid));
   }
 
   /* ------------------------------------------------------------- права */
 
-  /** Какие предметы есть у человека. Демо-строки — только в демосреде. */
+  /**
+   * Какие предметы есть у человека — объединение независимых источников:
+   *  покупка (pay_entitlement, всегда), доступ тестера/админа (только при включённом режиме продаж), демо (только в демосреде).
+   */
+  sourcesOf(uid) {
+    const u = String(uid);
+    const out = new Map();
+    const add = (item, src) => {
+      if (itemById(item)?.kind !== 'item') return;
+      if (!out.has(item)) out.set(item, new Set());
+      out.get(item).add(src);
+    };
+    for (const i of this.app.store.pay?.ownedItems(u) ?? []) add(i, 'purchase');
+    if (this.pay?.staffOwns(u)) for (const it of ITEMS) add(it.id, 'staff');
+    if (this.demo) for (const i of this.app.store.collDemoItems?.(u) ?? []) add(i, 'demo');
+    return out;
+  }
+
   ownedItems(uid) {
-    if (!this.demo) return [];
-    return this.app.store.collDemoItems?.(String(uid)).filter((i) => itemById(i)?.kind === 'item') ?? [];
+    return [...this.sourcesOf(uid).keys()];
   }
 
   owns(uid, item) {
-    return this.ownedItems(uid).includes(item);
+    return this.sourcesOf(uid).has(item);
   }
 
   /** Выбор человека по слотам с проверкой права: нет права — null (база). */
   choiceOf(uid) {
     const out = emptySlots();
-    if (!this.demo) return out;
     const owned = new Set(this.ownedItems(uid));
     for (const r of this.app.store.collChoices?.(String(uid)) ?? []) {
       const it = itemById(r.item);
@@ -59,6 +85,24 @@ export class Collections {
       out[r.slot] = { item: r.item, color: r.color };
     }
     return out;
+  }
+
+  /** После возврата: снять выбор вещей, которых больше нет ни из одного источника. */
+  dropUnowned(uid) {
+    const owned = new Set(this.ownedItems(uid));
+    for (const r of this.app.store.collChoices?.(String(uid)) ?? []) {
+      if (!owned.has(r.item)) this.app.store.collChoiceClear(String(uid), r.slot);
+    }
+  }
+
+  /** Новое состояние — на все открытые страницы человека (после оплаты/возврата). */
+  pushState(uid) {
+    try { this.app.hub?.sendToUser?.(String(uid), () => this.stateOf(uid)); } catch (err) { this.app.log(err); }
+  }
+
+  /** Выключатель продаж сменился — всем открытым страницам их состояние. */
+  pushAll() {
+    try { this.app.hub?.sendToAll?.((uid) => this.stateOf(uid)); } catch (err) { this.app.log(err); }
   }
 
   /* --------------------------------------------------------- снимок */
@@ -110,7 +154,7 @@ export class Collections {
   /** Что у человека «применится со следующей раздачи»: выбор расходится со снимком идущей раздачи. */
   pendingOf(uid) {
     const out = emptySlots();
-    if (!this.demo) return out;
+    if (!this.visibleFor(uid)) return out;
     const mine = this.choiceOf(uid);
     const same = (a, b) => (a?.item ?? null) === (b?.item ?? null) && (a?.color ?? null) === (b?.color ?? null);
     for (const room of this.app.rooms.values()) {
@@ -127,15 +171,22 @@ export class Collections {
   /* --------------------------------------------------------- протокол */
 
   stateOf(uid) {
-    if (!this.demo) {
+    if (!this.visibleFor(uid)) {
       return { t: 'col', op: 'state', v: 1, enabled: false, demo: false, owned: [], choice: emptySlots(), pending: emptySlots() };
     }
-    return {
-      t: 'col', op: 'state', v: 1, enabled: true, demo: true,
-      owned: this.ownedItems(uid).map((item) => ({ item, demo: true })),
+    const src = this.sourcesOf(uid);
+    const s = {
+      t: 'col', op: 'state', v: 1, enabled: true, demo: this.demo,
+      // Демосреда — прежний контракт `{ item, demo }`; магазин — плюс источники права (покупка / тестер).
+      owned: [...src].map(([item, from]) => (this.demo
+        ? { item, demo: from.size === 1 && from.has('demo') }
+        : { item, demo: false, source: [...from].sort() })),
       choice: this.choiceOf(uid),
       pending: this.pendingOf(uid),
     };
+    // Магазин (без демо): цены и открытость — только сервера.
+    if (!this.demo && this.pay) s.shop = this.pay.shopState(String(uid));
+    return s;
   }
 
   fail(op, code) {
@@ -165,7 +216,7 @@ export class Collections {
     if (!OPS.includes(op)) return fail('COL_OP');
     if (op === 'state') return this.stateOf(uid);
     if (op === 'grant' && !this.demo) return fail('COL_DEMO_OFF');
-    if (!this.demo) return fail('COL_OFF');
+    if (!this.visibleFor(uid)) return fail('COL_OFF');
     if (!isReq(msg.req)) return fail('COL_OP');
     const store = this.app.store;
     const now = this.app.clock.now();

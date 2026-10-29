@@ -124,6 +124,47 @@ export class TelegramStub {
     return { message_id: messageId };
   }
 
+  /* -------------------------------------------- payments: Stars (только в тестах) */
+
+  /**
+   * Заглушка оплаты Stars. Реальных денег здесь нет: счёт — запись, оплата — то, что тест сам «нажал».
+   * Строго как у Telegram: XTR — пустой provider_token и ровно одна цена; повторный возврат — 400.
+   */
+  async createInvoiceLink(title, description, payload, providerToken, currency, prices) {
+    this.#record('createInvoiceLink', { title, description, payload, currency, prices });
+    if (currency !== 'XTR' || providerToken !== '' || !Array.isArray(prices) || prices.length !== 1) throw new TelegramError('Bad Request: STARS_INVOICE_INVALID');
+    if (Buffer.byteLength(payload, 'utf8') > 128 || !payload) throw new TelegramError('Bad Request: INVOICE_PAYLOAD_INVALID');
+    if (String(title).length > 32 || String(description).length > 255) throw new TelegramError('Bad Request: INVOICE_TEXT_INVALID');
+    this.invoices ??= [];
+    const inv = { slug: `inv${this.invoices.length + 1}`, title, payload, amount: prices[0].amount };
+    this.invoices.push(inv);
+    return `https://t.me/$${inv.slug}`;
+  }
+
+  async answerPreCheckoutQuery(id, ok, opts = {}) {
+    this.#record('answerPreCheckoutQuery', { id, ok, error: opts.error_message ?? null });
+    this.preAnswers ??= [];
+    this.preAnswers.push({ id, ok, error: opts.error_message ?? null });
+    return true;
+  }
+
+  async refundStarPayment(userId, chargeId) {
+    this.#record('refundStarPayment', { userId, chargeId });
+    if (typeof userId !== 'number') throw new TelegramError('Bad Request: USER_ID_INVALID');
+    this.stars ??= [];
+    const paid = this.stars.find((t) => t.id === chargeId && t.source);
+    if (!paid || String(paid.source.user.id) !== String(userId)) throw new TelegramError('Bad Request: CHARGE_NOT_FOUND');
+    if (this.stars.some((t) => t.id === chargeId && t.receiver)) throw new TelegramError('Bad Request: CHARGE_ALREADY_REFUNDED');
+    this.stars.push({ id: chargeId, amount: paid.amount, date: 0, receiver: { type: 'user', user: paid.source.user } });
+    return true;
+  }
+
+  async getStarTransactions({ offset = 0, limit = 100 } = {}) {
+    this.#record('getStarTransactions', { offset, limit });
+    // Как у Telegram: свежие первыми.
+    return { transactions: [...(this.stars ?? [])].reverse().slice(offset, offset + limit) };
+  }
+
   async answerCallbackQuery(id, opts = {}) {
     this.#record('answerCallbackQuery', { id });
     this.answered.push({ id, text: opts.text ?? '', show_alert: !!opts.show_alert, url: opts.url ?? null });

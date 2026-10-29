@@ -3,7 +3,8 @@
  * Без оплаты: кнопок «купить» здесь нет, цены — демонстрационные и с пометкой.
  */
 import { COLLECTION, ITEMS } from './catalog.js';
-import { DEMO_NOTE, badge, stateOf, thumb, priceNote, slotTitle } from './item.js';
+import { badge, stateOf, thumb, priceNote, slotTitle } from './item.js';
+import { noteOf } from './state.js';
 
 export function renderShowcase(ctx) {
   const { h, store, snap } = ctx;
@@ -24,8 +25,10 @@ export function renderShowcase(ctx) {
       h('div.col-eyebrow', 'Коллекция'),
       h('h2.col-big', COLLECTION.title),
       h('p.col-sub', 'Четыре цвета в каждом предмете. Выбирайте и меняйте в любой момент.'),
-      h('span.col-demo', DEMO_NOTE)),
+      noteOf(snap) ? h('span.col-demo', noteOf(snap)) : null),
     h('div.col-grid', items.map(card)),
     bundle ? card(bundle) : null,
-    h('div.col-actions', h('button.col-btn.secondary', { type: 'button', onclick: () => ctx.go({ name: 'inventory', tab: 'cardback' }) }, 'Моя коллекция')));
+    h('div.col-actions',
+      h('button.col-btn.secondary', { type: 'button', onclick: () => ctx.go({ name: 'inventory', tab: 'cardback' }) }, 'Моя коллекция'),
+      snap.demo ? null : h('button.col-btn.secondary', { type: 'button', 'data-act': 'purchases', onclick: () => ctx.go({ name: 'purchases' }) }, 'Мои покупки и поддержка')));
 }

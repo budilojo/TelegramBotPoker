@@ -22,6 +22,7 @@ import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { ym, ymd, ymdBack } from './fmt.js';
+import { PayStore } from './payments/store.js';
 
 // A row without a code (only a hand-written INSERT can make one) still gets a
 // unique key, so it can never collide with — or overwrite — a real table.
@@ -319,6 +320,8 @@ export class Store {
     this.db.exec(ROOMS);
     this.db.prepare('INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
       .run('schema', SCHEMA_VERSION);
+    // payments: покупки — в той же базе, свои таблицы (bot/payments/store.js).
+    this.pay = new PayStore(this.db);
     this.q = {
       put: this.db.prepare(
         'INSERT INTO rooms (code, chat_id, game, data, status, updated_at) VALUES (?, ?, ?, ?, ?, ?) ' +
@@ -982,6 +985,8 @@ export class NullStore {
     this.rated = new Set();
     this.parties = new Map();
     this.train = new Map();
+    // payments: настоящая SQLite в памяти — у покупок важны транзакции и уникальность, их не подделываем.
+    this.pay = new PayStore(new DatabaseSync(':memory:'));
   }
   shopInterest(userId, item, variant, action, at) {
     const key = `${userId}:${item}`;

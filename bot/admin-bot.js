@@ -36,6 +36,10 @@ const HELP = [
   '/stopall да — завершить ВСЕ игры с итогами в группы',
   '/health — как себя чувствует бот',
   '',
+  '/sales — продажи: открыты ли и почему',
+  '/salesstop · /salesresume — остановить / снова пустить новые продажи',
+  '/pays — последние заказы · /refund &lt;заказ&gt; — возврат · /reconcile — сверка с Telegram',
+  '',
   'Кнопка под /stats открывает пульт экраном: сессии, рассылки, обслуживание.',
 ].join('\n');
 
@@ -132,6 +136,11 @@ export class AdminBot {
           return void (await this.stopAll(who.user, cmd.rest));
         case 'health':
           return void (await this.send(who.user.tgId, this.healthText()));
+        case 'sales': case 'salesstop': case 'salesresume': case 'pays': case 'refund': case 'reconcile': {
+          // payments: те же команды, что в личке игрового бота; возврат идёт через игрового бота (платёж его).
+          const text = await this.app.payments.adminCommand(who.user, cmd.cmd, cmd.rest);
+          return void (await this.send(who.user.tgId, text || HELP));
+        }
         default:
           return void (await this.send(who.user.tgId, HELP));
       }
