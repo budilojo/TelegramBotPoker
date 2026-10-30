@@ -32,6 +32,7 @@ import { Collections } from './collections/index.js'; // collections
 import { Payments, PAY_ADMIN_COMMANDS } from './payments/index.js'; // payments
 import { salesConfig } from './payments/config.js';
 import { PAY_IN_DM } from './payments/texts.js';
+import { Support, OPEN_KB } from './support.js';
 import { GAMES, GAME_LIST, HIDDEN_DRAFTS, gameOf } from './games/index.js';
 import { apply as rateRound } from './rating.js';
 
@@ -246,6 +247,8 @@ export class App {
     this.collections = new Collections(this, { demo: collectionsDemo === true });
     // payments: покупки за Stars. Режим — только из настроек процесса (bot/index.js); по умолчанию продажи закрыты.
     this.payments = new Payments(this, sales || salesConfig({}));
+    // поддержка: игрок пишет боту, владелец отвечает от имени бота (bot/support.js).
+    this.support = new Support(this);
   }
 
   attachHub(hub) {
@@ -1097,6 +1100,7 @@ export class App {
       }
       // Кнопка «🤖 Играть с ботом» под карточкой группы, когда у бота нет зарегистрированного Mini App.
       if (cmd.rest === SOLO_CODE) return this.sendSolo(user);
+      if (cmd.rest === 'support') return this.support.enter(user); // ссылка «Написать в поддержку» из приложения
       if (!cmd.rest) return this.sendMyGames(user, `${WELCOME_DM}\n\n${HELP_DM}`);
       const gm = /^g_([a-z0-9]{4,32})$/.exec(cmd.rest);
       const group = gm ? this.groupByCode(gm[1]) : null;
@@ -1111,8 +1115,16 @@ export class App {
     }
     if (cmd?.cmd === 'admin' && this.isAdmin(user.id)) return this.sendAdmin(user);
     // payments: поддержка покупок и условия — всегда, даже при закрытых продажах и во время обслуживания (О-12).
-    if (cmd?.cmd === 'paysupport') return void (await this.outbox.post(user.tgId, this.payments.supportText(user.id)));
-    if (cmd?.cmd === 'terms') return void (await this.outbox.post(user.tgId, this.payments.termsText()));
+    if (cmd?.cmd === 'paysupport') return void (await this.outbox.post(user.tgId, this.payments.supportText(user.id), OPEN_KB));
+    if (cmd?.cmd === 'terms') return void (await this.outbox.post(user.tgId, this.payments.termsText(), OPEN_KB));
+    // поддержка: владелец отвечает и управляет (бот без отдельного админ-бота); посторонним эти команды неизвестны.
+    if (this.isAdmin(user.id)) {
+      const res = await this.support.ownerInput(user, msg, cmd);
+      if (res !== null) return void (res && (await this.outbox.post(user.tgId, res)));
+    }
+    if (cmd?.cmd === 'support') return this.support.enter(user);
+    // поддержка: не команда в личке при открытом режиме обращения (или открытом обращении) — это обращение.
+    if (!cmd && this.support.enabled && this.support.inMode(user.id) && await this.support.intake(user, msg)) return;
     if (PAY_ADMIN_COMMANDS.includes(cmd?.cmd) && this.isAdmin(user.id)) {
       const text = await this.payments.adminCommand(user, cmd.cmd, cmd.rest);
       if (text) return void (await this.outbox.post(user.tgId, text));
@@ -1400,11 +1412,24 @@ export class App {
       this.store.setAds(who.user.id, 'off');
       return this.outbox.answer(cq.id, 'Больше не пришлю. Сообщения про вашу игру останутся.', { alert: true });
     }
+    // поддержка: работает и во время обслуживания; закрыть можно только своё обращение (личность — cq.from).
+    if (typeof cq.data === 'string' && cq.data.startsWith('sup:')) return this.onSupportCallback(cq, who.user);
     if (this.down) return this.outbox.answer(cq.id, `⏸ Идёт обслуживание. ${this.downText}`, { alert: true });
     const room = this.room(cq.message?.chat?.id ?? '');
     const link = room ? this.tableLink(room) : null;
     if (link && this.miniAppName) return this.outbox.answer(cq.id, '', { url: link });
     return this.outbox.answer(cq.id, 'Игра теперь идёт в мини-приложении — нажмите «Открыть стол».', { alert: true });
+  }
+
+  async onSupportCallback(cq, user) {
+    if (cq.data === 'sup:open') {
+      await this.outbox.answer(cq.id, '');
+      return this.support.enter(user);
+    }
+    const m = /^sup:c:(\d{1,12})$/.exec(cq.data);
+    if (!m) return this.outbox.answer(cq.id, '');
+    const r = await this.support.closeByPlayer(user, Number(m[1]));
+    return this.outbox.answer(cq.id, r.text, { alert: !r.ok });
   }
 
   /* ----------------------------------------------------- chat membership */

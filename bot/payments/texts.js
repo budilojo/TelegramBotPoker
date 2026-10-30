@@ -15,7 +15,8 @@ export const DM = {
 /** Ответ на /paysupport. Контакт задаёт владелец (PAY_SUPPORT); без него — честно, что продажи не открыты. */
 export function supportText({ contact, orders, esc }) {
   const lines = ['🛟 <b>Поддержка покупок</b>'];
-  if (contact) lines.push(`Напишите: ${esc(contact)}`, 'Назовите номер заказа — он ниже.');
+  if (contact === 'bot') lines.push('Напишите прямо сюда, в этот чат: нажмите кнопку ниже или отправьте /support. Назовите номер заказа — он ниже.');
+  else if (contact) lines.push(`Напишите: ${esc(contact)}`, 'Назовите номер заказа — он ниже.');
   else lines.push('Продажи ещё не открыты, контакт поддержки появится к их открытию.');
   if (orders.length) {
     lines.push('', '<b>Ваши покупки:</b>');

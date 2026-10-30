@@ -71,7 +71,8 @@ export function renderPurchases(ctx) {
       h('h3.col-cap', 'Поддержка'),
       h('p.col-note', 'Если вещь не появилась, списалось дважды или нужен возврат — нажмите кнопку: бот пришлёт в личку контакт поддержки и номера ваших заказов. То же — командой /paysupport.'),
       h('button.col-btn.secondary', { type: 'button', 'data-act': 'support', disabled: ctx.snap.link !== 'ok' ? true : null, onclick: () => pay.askSupport() }, 'Написать в поддержку'),
-      sup ? h('p.col-note', { role: 'status' }, sup.text) : null),
+      sup ? h('p.col-note', { role: 'status' }, sup.text) : null,
+      pay.bot ? h('button.col-btn.secondary', { type: 'button', 'data-act': 'support-chat', onclick: () => window.Telegram?.WebApp?.openTelegramLink?.(`https://t.me/${pay.bot}?start=support`) }, 'Написать в поддержку — чат с ботом') : null),
     h('section.col-block', h('h3.col-cap', 'Документы'),
       h('div.col-doc-links', DOCS.map(([id, title]) => h('button.col-btn.ghost', { type: 'button', 'data-doc': id, onclick: () => ctx.go({ name: 'doc', id }) }, title)))));
 }

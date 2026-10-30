@@ -17,6 +17,7 @@ import { itemById } from '../../miniapp/collections/catalog.js';
 import { PAY_ERRORS, PRECHECKOUT, ORDER_TTL_MS, PAY_OPS } from '../../miniapp/collections/pay-protocol.js';
 import { isReq } from '../../miniapp/collections/protocol.js';
 import { gate, priceOf, itemsOf, SELLABLE } from './config.js';
+import { OPEN_KB } from '../support.js';
 import { DM, STATE_TEXT, supportText, termsText } from './texts.js';
 
 export const PAYLOAD_PREFIX = 'g1:';
@@ -139,12 +140,12 @@ export class Payments {
     const op = PAY_OPS.includes(msg?.op) ? msg.op : null;
     if (!op) return this.fail('buy', 'PAY_OP');
     if (this.tooFast(uid)) return this.fail(op, 'PAY_FAST');
-    if (op === 'history') return { t: 'pay', op, orders: this.history(uid), support: !!this.cfg.support };
+    if (op === 'history') return { t: 'pay', op, orders: this.history(uid), support: !!this.cfg.support, bot: this.app.botUsername || '' };
     if (op === 'terms') return { t: 'pay', op, terms: this.cfg.terms, docs: this.publicDocs() };
     // Кнопка «Поддержка»: тот же ответ, что на /paysupport, — в личку (номера заказов не светим на экране группы).
     if (op === 'support') {
       try {
-        await this.app.outbox.post(uid, this.supportText(uid));
+        await this.app.outbox.post(uid, this.supportText(uid), OPEN_KB);
         return { t: 'pay', op, ok: true };
       } catch (err) {
         if (err?.error_code !== 403) this.app.log(err);

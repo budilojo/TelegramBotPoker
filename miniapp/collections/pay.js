@@ -42,6 +42,7 @@ export function createPay(deps = {}) {
   let phase = { name: 'idle' };
   let timer = null;
   let history = null; // null — не загружали
+  let bot = ''; // имя бота — для ссылки «Написать в поддержку» (?start=support)
   let terms = null;
   let support = null; // { ok, text }
   let owned = new Set();
@@ -81,6 +82,7 @@ export function createPay(deps = {}) {
     attach(over) { Object.assign(d, over); },
     get phase() { return { ...phase }; },
     get history() { return history; },
+    get bot() { return bot; },
     get terms() { return terms; },
     get support() { return support; },
     busy,
@@ -119,6 +121,7 @@ export function createPay(deps = {}) {
     handle(msg) {
       if (!msg || msg.t !== 'pay' || !PAY_OPS.includes(msg.op)) return;
       if (msg.op === 'history') {
+        if (typeof msg.bot === 'string' && /^[A-Za-z0-9_]{3,64}$/.test(msg.bot)) bot = msg.bot;
         if (Array.isArray(msg.orders)) history = msg.orders.filter((o) => o && typeof o.id === 'string').slice(0, 50);
         emit();
         return;

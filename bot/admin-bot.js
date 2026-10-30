@@ -40,6 +40,9 @@ const HELP = [
   '/salesstop · /salesresume — остановить / снова пустить новые продажи',
   '/pays — последние заказы · /refund &lt;заказ&gt; — возврат · /reconcile — сверка с Telegram',
   '',
+  '/tickets — обращения игроков · ответ: reply на обращение или /reply &lt;№&gt; текст',
+  '/close &lt;№&gt; — закрыть обращение · /support_block &lt;id&gt; · /support_unblock &lt;id&gt; — спам',
+  '',
   'Кнопка под /stats открывает пульт экраном: сессии, рассылки, обслуживание.',
 ].join('\n');
 
@@ -119,6 +122,9 @@ export class AdminBot {
       }
 
       const cmd = parseCommand(msg.text, this.botUsername);
+      // поддержка: ответ (reply) на обращение, /reply, /tickets, /close, /support_block, /support_unblock.
+      const sup = await this.app.support.ownerInput(who.user, msg, cmd);
+      if (sup !== null) return void (sup && (await this.send(who.user.tgId, sup)));
       switch (cmd?.cmd) {
         case 'stats':
         case 'admin':

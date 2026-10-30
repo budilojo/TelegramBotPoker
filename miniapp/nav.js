@@ -142,6 +142,14 @@ function settings(s) {
           h('div.set-sub', 'Бот напишет в личку, когда подошла ваша очередь, а приложение закрыто. Если не приходит — откройте бота и нажмите Start.')),
         h('button.btn.sm', { onclick: () => { haptic.tap(); tg?.openTelegramLink?.(`https://t.me/${s.bot}?start=notify`); } }, 'Открыть бота'))) : null,
 
+    s.bot ? h('section.set-block',
+      h('div.section-label', 'Поддержка'),
+      h('div.set-row.col',
+        h('div.set-body',
+          h('div.set-title', 'Написать в поддержку'),
+          h('div.set-sub', 'Вопрос или проблема — напишите боту, ответ придёт туда же. Пароли и коды не присылайте.')),
+        h('button.btn.sm', { 'data-act': 'support', onclick: () => { haptic.tap(); tg?.openTelegramLink?.(`https://t.me/${s.bot}?start=support`); } }, 'Написать'))) : null,
+
     h('section.set-block',
       h('div.section-label', 'О приложении'),
       h('div.set-row', h('div.set-body',
