@@ -1,0 +1,104 @@
+diff --git a/bot/payments.test.js b/bot/payments.test.js
+index 028c893..8ab6223 100644
+--- a/bot/payments.test.js
++++ b/bot/payments.test.js
+@@ -75,6 +75,23 @@ test('live открывается только при всех условиях;
+   for (const v of ['LIVE', ' live', '1', 'true', 'yes']) assert.equal(salesConfig({ SALES_MODE: v }).mode, 'off', v);
+ });
+ 
++test('PAY_SUPPORT=bot без ADMINS: «напишите сюда» некому прочитать — live не открывается, счёта нет (проверка I)', async () => {
++  // С владельцем в ADMINS и всем остальным заполненным — открыто: причина только в пустом ADMINS.
++  const ok = shop({ mode: 'live', support: 'bot' });
++  assert.equal(ok.app.payments.gate().open, true, 'поддержка в боте есть кому читать — открыто');
++  ok.app.store.close();
++
++  const t = shop({ mode: 'live', support: 'bot' }, { admins: [] });
++  const g = t.app.payments.gate();
++  assert.equal(g.open, false);
++  assert.ok(g.reasons.some((r) => /ADMINS пуст/.test(r)), g.reasons.join(' | '));
++  assert.equal((await buy(t, ALICE, 'graphit-table')).error?.code, 'PAY_CLOSED', 'счёт не выставляется');
++  assert.equal(calls(t, 'createInvoiceLink').length, 0);
++  // Обычный контакт (@ник) от ADMINS не зависит.
++  assert.equal(gate(cfgOf({ mode: 'live', support: '@help' }), { botSupport: false }).open, true);
++  t.app.store.close();
++});
++
+ test('продаётся только «Графит»: «Ночной казино-клуб» и выдуманные id в предложения не попадают', () => {
+   const o = normalizeOffers({ approved: true, items: { 'night-cardback': 10, 'graphit-table': 5, 'chips-1000': 1, __proto__: 1 } });
+   assert.deepEqual(Object.keys(o.items).sort(), [...SELLABLE].sort());
+diff --git a/bot/payments/config.js b/bot/payments/config.js
+index b188a20..ff11a18 100644
+--- a/bot/payments/config.js
++++ b/bot/payments/config.js
+@@ -72,9 +72,10 @@ export function salesConfig(env = {}, { offers = readOffers(), legalDir = LEGAL_
+ 
+ /**
+  * Можно ли выставлять новые счета: `{ open, mode, reasons[] }`. Причины — по-русски, для владельца.
+- * `stopped` — владелец остановил новые продажи (`/salesstop`), `down` — идёт обслуживание.
++ * `stopped` — владелец остановил новые продажи (`/salesstop`), `down` — идёт обслуживание,
++ * `botSupport` — работает ли поддержка в боте (есть ли кому отвечать: непустой ADMINS).
+  */
+-export function gate(cfg, { stopped = false, down = false } = {}) {
++export function gate(cfg, { stopped = false, down = false, botSupport = true } = {}) {
+   const reasons = [];
+   if (cfg.mode === 'off') reasons.push('Режим продаж выключен (SALES_MODE не задан).');
+   if (cfg.mode === 'test' && !cfg.testEnv) reasons.push('Тестовый режим разрешён только в тестовой среде Telegram (TG_TEST_ENV=1).');
+@@ -84,6 +85,8 @@ export function gate(cfg, { stopped = false, down = false } = {}) {
+     // Вещь без цены просто не продаётся (скрыта); закрыто всё — только если цены нет ни у одной.
+     if (![...SELLABLE].some((id) => isPrice(cfg.offers.items[id]) && !isHidden(cfg, id))) reasons.push('Нет ни одной цены (или все вещи скрыты).');
+     if (!cfg.support) reasons.push('Не задан публичный контакт поддержки (PAY_SUPPORT).');
++    // PAY_SUPPORT=bot обещает игроку «напишите прямо сюда» — без ADMINS обращение некому прочитать (проверка I).
++    else if (cfg.support === 'bot' && !botSupport) reasons.push('PAY_SUPPORT=bot, но поддержке в боте некому отвечать (ADMINS пуст).');
+     for (const [f, d] of Object.entries(cfg.docs)) {
+       if (d.missing) reasons.push(`Нет документа ${f}.`);
+       else if (!d.ok) reasons.push(`Документ ${f} не готов: ${d.blanks ? `${d.blanks} незаполненных полей` : `статус «${d.status || 'нет'}»`}.`);
+diff --git a/bot/payments/index.js b/bot/payments/index.js
+index d8fb585..70300d8 100644
+--- a/bot/payments/index.js
++++ b/bot/payments/index.js
+@@ -95,7 +95,11 @@ export class Payments {
+ 
+   /** Можно ли сейчас выставлять новые счета. */
+   gate() {
+-    return gate(this.eff(), { stopped: this.db.stopped(), down: this.app.down });
++    return gate(this.eff(), this.gateOpts());
++  }
++  /** Состояние процесса для gate(): остановка, обслуживание, есть ли кому отвечать в поддержке в боте. */
++  gateOpts() {
++    return { stopped: this.db.stopped(), down: this.app.down, botSupport: (this.app.admins?.size ?? 0) > 0 };
+   }
+   get open() { return this.gate().open; }
+ 
+@@ -279,7 +283,7 @@ export class Payments {
+     if (!['created', 'approved'].includes(o.state)) return { ok: false, why: 'state', o };
+     if (o.expiresAt <= now) return { ok: false, why: 'expired', o };
+     const eff = this.eff();
+-    const g = gate({ ...eff, mode: o.mode === this.cfg.mode ? this.cfg.mode : 'off' }, { stopped: this.db.stopped(), down: this.app.down });
++    const g = gate({ ...eff, mode: o.mode === this.cfg.mode ? this.cfg.mode : 'off' }, this.gateOpts());
+     if (!g.open) return { ok: false, why: 'closed', o };
+     // Цену сменили или вещь скрыли после выставления счёта — старый счёт не оплатить (B-3).
+     if (priceOf(eff, o.item) !== o.price || this.cfg.terms !== o.terms) return { ok: false, why: 'changed', o };
+diff --git a/tools/payments-teeth.mjs b/tools/payments-teeth.mjs
+index e5f1494..7e67cec 100644
+--- a/tools/payments-teeth.mjs
++++ b/tools/payments-teeth.mjs
+@@ -24,7 +24,7 @@ const CASES = [
+   { name: 'pre_checkout не видит смены цены', file: PAY,
+     from: "if (priceOf(eff, o.item) !== o.price || this.cfg.terms !== o.terms) return", to: 'if (false) return' },
+   { name: 'pre_checkout не видит остановки продаж', file: PAY,
+-    from: "{ stopped: this.db.stopped(), down: this.app.down });\n    if (!g.open) return { ok: false, why: 'closed', o };", to: "{ stopped: false, down: false });\n    if (!g.open) return { ok: false, why: 'closed', o };" },
++    from: "this.gateOpts());\n    if (!g.open) return { ok: false, why: 'closed', o };", to: "{ stopped: false, down: false, botSupport: true });\n    if (!g.open) return { ok: false, why: 'closed', o };" },
+   { name: 'выдача без сверки суммы/покупателя', file: PAY,
+     from: "else if (o.userId !== String(payerId) || sp.currency !== 'XTR' || sp.total_amount !== o.price) kind = 'mismatch';", to: '' },
+   { name: 'повторная оплата заказа выдаёт снова', file: PAY,
+@@ -75,6 +75,10 @@ const CASES = [
+     from: "      else if (!d.ok) reasons.push", to: '      else if (false) reasons.push' },
+   { name: 'live открывается без контакта поддержки', file: 'bot/payments/config.js',
+     from: "    if (!cfg.support) reasons.push", to: '    if (false) reasons.push' },
++  { name: 'live открывается с PAY_SUPPORT=bot при пустом ADMINS (проверка I)', file: 'bot/payments/config.js',
++    from: "else if (cfg.support === 'bot' && !botSupport) reasons.push", to: 'else if (false) reasons.push' },
++  { name: 'выключатель не знает, есть ли кому отвечать в поддержке (проверка I)', file: PAY,
++    from: 'botSupport: (this.app.admins?.size ?? 0) > 0', to: 'botSupport: true' },
+   { name: '«Ночной казино-клуб» попадает в продаваемое', file: 'bot/payments/config.js',
+     from: 'export const SELLABLE = new Set(ITEMS.map((x) => x.id));', to: "export const SELLABLE = new Set([...ITEMS.map((x) => x.id), 'night-cardback']);" },
+   { name: 'клиент считает вещь купленной по статусу окна оплаты', file: 'miniapp/collections/pay.js',

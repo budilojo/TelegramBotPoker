@@ -1,0 +1,14 @@
+{
+  "source": "~/TelegramBotPoker-release2",
+  "branch": "release2/run",
+  "base": "46dd8d63ea18a6cd4130e6042241fc9885613f18",
+  "files": [
+    "bot/payments.test.js",
+    "bot/payments/config.js",
+    "bot/payments/index.js",
+    "tools/payments-teeth.mjs"
+  ],
+  "sha256": "dec9adce304010ac02edf2a16f95dcbaf34ce675755074e426a1e2436db588e6",
+  "applied": false,
+  "state": "Пакет 2 F/G/H завершены и опубликованы; I остановлен лимитом. Пакет 3 J пытался стартовать, остановлен лимитом без законченного результата."
+}
