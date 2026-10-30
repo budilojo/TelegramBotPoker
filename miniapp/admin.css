@@ -106,7 +106,7 @@
    лишние линии на экран, где и так много чисел. */
 .tabs {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 2px;
   background: var(--panel);
   border: 1px solid var(--line);
@@ -240,10 +240,30 @@
 
 .tool-head { font-weight: 900; margin-bottom: 6px; }
 .tool-line { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; font-size: var(--k-fs-secondary); color: var(--muted); }
-.tool-line b { color: var(--text); }
+.tool-line b { color: var(--text); white-space: nowrap; }
 /* Кнопка внутри коробки — во всю её ширину: `.btn.wide` рассчитан на сетку
    панели, а тут её нет. */
 .admin .box .btn, .down-banner .btn { margin-top: 10px; width: 100%; box-sizing: border-box; }
+
+/* ------------------------------------------------- вкладка «Магазин» */
+
+/* Строка действия: поле во всю оставшуюся ширину, кнопки — по содержимому, но не ниже 44 px. */
+.ashop-row { display: flex; gap: var(--k-s8); align-items: center; flex-wrap: wrap; margin-top: var(--k-s8); }
+.ashop-row .inp { flex: 1 1 140px; min-width: 0; }
+.admin .box .ashop-row .btn { width: auto; margin-top: 0; flex: 0 0 auto; min-height: 44px; padding: 0 var(--k-s16); }
+.ashop-price { max-width: 120px; }
+.ashop-item + .ashop-item, .ashop-give + .ashop-give, .ashop-order + .ashop-order {
+  margin-top: var(--k-s12); padding-top: var(--k-s12); border-top: 1px solid var(--line);
+}
+.ashop-meta { font-size: var(--k-fs-caption); color: var(--muted); font-weight: 600; margin-top: var(--k-s4); overflow-wrap: anywhere; }
+.ashop-state { font-size: var(--k-fs-caption); font-weight: 800; color: var(--text-2); flex: 1 1 auto; }
+.ashop-reasons { margin: var(--k-s8) 0 0; padding-left: var(--k-s16); display: grid; gap: var(--k-s4); font-size: var(--k-fs-secondary); color: var(--text-2); }
+.ashop-found { display: grid; gap: var(--k-s8); margin-top: var(--k-s8); }
+.admin .box .ashop-found .btn { margin-top: 0; min-height: 44px; }
+.ashop-user { margin-top: var(--k-s12); padding-top: var(--k-s12); border-top: 1px solid var(--line); }
+.ashop-log { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px var(--k-s8); font-size: var(--k-fs-caption); color: var(--text-2); }
+.ashop-log .ashop-meta { grid-column: 2; margin-top: 0; }
+.ashop-log + .ashop-log { margin-top: var(--k-s8); }
 
 /* ------------------------------------------- экран обслуживания у игрока */
 
@@ -256,5 +276,7 @@
 
 @media (max-width: 359px) {
   .chips { grid-template-columns: 1fr; }
+  /* Пять вкладок в 320 px не помещаются подписями («Рассылка» налезала на «Магазин») — в два ряда: 3 + 2. */
+  .tabs { grid-template-columns: repeat(3, 1fr); }
   .tab span:not(.tab-i) { font-size: var(--k-fs-caption); }
 }

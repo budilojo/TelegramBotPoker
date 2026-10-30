@@ -1,5 +1,5 @@
 /**
- * Пульт владельца: цифры, живые сессии, рассылка, обслуживание.
+ * Пульт владельца: цифры, живые сессии, рассылка, магазин (miniapp/admin-shop.js), обслуживание.
  *
  * Открывается только тем, чей id стоит в `.env`, — проверяет это сервер, не
  * страница. Здесь нет ни одного имени игрока и ни одной карты: обещание
@@ -11,6 +11,7 @@
  */
 import { $app, h, fmt, haptic, toast, showSheet, closeSheet, refreshSheet } from './ui.js';
 import { bus, send, net } from './net.js';
+import { shopTab } from './admin-shop.js';
 
 let state = null;
 /** Какая вкладка открыта. Живёт между перерисовками — иначе вкладка «слетала» бы. */
@@ -47,6 +48,7 @@ const TABS = [
   ['stats', '📊', 'Цифры'],
   ['now', '▶️', 'Сейчас'],
   ['cast', '📣', 'Рассылка'],
+  ['shop', '🛒', 'Магазин'],
   ['tools', '🛠', 'Пульт'],
 ];
 
@@ -62,7 +64,7 @@ export function render() {
     h('div.tabs', TABS.map(([id, icon, name]) => h(`button.tab${tab === id ? '.on' : ''}`, {
       onclick: () => { haptic.tap(); tab = id; bus.render(); },
     }, h('span.tab-i', icon), h('span', name)))),
-    tab === 'stats' ? statsTab(s) : tab === 'now' ? nowTab(s) : tab === 'cast' ? castTab(s) : toolsTab(s),
+    tab === 'stats' ? statsTab(s) : tab === 'now' ? nowTab(s) : tab === 'cast' ? castTab(s) : tab === 'shop' ? shopTab(s) : toolsTab(s),
   );
 
   const panel = h('div.panel',

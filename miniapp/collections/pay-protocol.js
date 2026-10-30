@@ -45,4 +45,5 @@ export const ORDER_STATE = {
   refunded: 'Возвращено',
   refund_pending: 'Возврат в обработке',
   review: 'На проверке',
+  gift: 'Подарок от администратора',
 };

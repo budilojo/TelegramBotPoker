@@ -51,7 +51,7 @@ export function normalizeState(msg) {
       const id = typeof o === 'string' ? o : o?.item;
       const it = itemById(id);
       if (it && it.kind === 'item' && !out.owned.some((x) => x.item === id)) {
-        const source = Array.isArray(o?.source) ? o.source.filter((x) => ['purchase', 'staff', 'demo'].includes(x)) : [];
+        const source = Array.isArray(o?.source) ? o.source.filter((x) => ['purchase', 'admin', 'staff', 'demo'].includes(x)) : [];
         out.owned.push({ item: id, demo: o?.demo !== false, source });
       }
     }

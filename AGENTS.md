@@ -175,7 +175,7 @@ Node ≥ 22.5. `npm install` один раз. Потом:
 | `docs/collections-demo.md` | демонстрационная среда коллекции «Графит»: как включить (`COLLECTIONS_DEMO=1`), чем отличается от рабочего режима, как убедиться, что выключена |
 | `docs/redesign.md` | дизайн-система, контрасты, что убрано |
 | `docs/rating.md`, `docs/ranked.md` | рейтинг сейчас и рейтинговые группы (замысел) |
-| `docs/admin.md` | пульт владельца, обслуживание, рассылки |
+| `docs/admin.md` | пульт владельца, обслуживание, рассылки, вкладка «Магазин» (цены, выдача, заказы, возвраты) |
 | `docs/next-deploy-prompt.md` | **выкатка в прод по шагам** |
 | `docs/hosting.md`, `docs/prod.md` | сервер и выход в прод |
 | `MESSAGES.md` | все тексты бота и Mini App с местами в коде |
@@ -202,3 +202,6 @@ Node ≥ 22.5. `npm install` один раз. Потом:
   `successful_payment` после сверки (`bot/payments/`); статус окна оплаты у страницы ничего не доказывает.
   Платёжный API — только заглушка в тестах. Тесты — `bot/payments*.test.js`, «на зубы» —
   `node tools/payments-teeth.mjs`, контракт и откат — `docs/next-release/payment-design.md`.
+- **Магазин в админке:** выдача владельцем — отдельный источник права `admin` (не покупка, без платежа); цены — `offers.json`
+  по умолчанию поверх смен в базе (`Payments.offers()`), цену читают только через `eff()`. Тесты — `bot/admin.shop.test.js`,
+  «на зубы» — `node tools/adminshop-teeth.mjs`, раздел 14 `payment-design.md`.

@@ -60,11 +60,17 @@ export function renderPurchases(ctx) {
   const sup = pay.support;
   const rows = list == null ? h('div.col-skel', { 'aria-busy': 'true', 'aria-label': 'Загрузка' }, h('div.col-skel-block'), h('div.col-skel-block'))
     : list.length === 0 ? h('div.col-empty', h('p', 'Покупок пока нет.'))
-      : h('ul.col-list', list.map((o) => h('li.col-order', { 'data-order': o.id },
-        h('span.col-row-title', itemById(o.item)?.title || o.item),
-        h('span.col-order-meta', `${stars(o.price)} · ${new Date(o.at).toLocaleDateString('ru-RU')}${o.test ? ' · тест' : ''}`),
-        h('span.col-order-meta', `Заказ ${o.id}`),
-        h('span.col-badge.' + (o.state === 'paid' ? 'owned' : 'partial'), ORDER_STATE[o.state] || o.state))));
+      : h('ul.col-list', list.map((o) => (o.state === 'gift'
+        // Выдано владельцем: не покупка — ни цены, ни номера заказа, только пометка.
+        ? h('li.col-order', { 'data-gift': o.id },
+          h('span.col-row-title', itemById(o.item)?.title || o.item),
+          h('span.col-order-meta', new Date(o.at).toLocaleDateString('ru-RU')),
+          h('span.col-badge.owned', ORDER_STATE.gift))
+        : h('li.col-order', { 'data-order': o.id },
+          h('span.col-row-title', itemById(o.item)?.title || o.item),
+          h('span.col-order-meta', `${stars(o.price)} · ${new Date(o.at).toLocaleDateString('ru-RU')}${o.test ? ' · тест' : ''}`),
+          h('span.col-order-meta', `Заказ ${o.id}`),
+          h('span.col-badge.' + (o.state === 'paid' ? 'owned' : 'partial'), ORDER_STATE[o.state] || o.state)))));
   return h('div.col-purchases',
     h('section.col-block', h('h3.col-cap', 'Мои покупки'), rows),
     h('section.col-block',

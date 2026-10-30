@@ -19,6 +19,7 @@ import { isReq } from '../../miniapp/collections/protocol.js';
 import { gate, priceOf, itemsOf, SELLABLE } from './config.js';
 import { OPEN_KB } from '../support.js';
 import { DM, STATE_TEXT, supportText, termsText } from './texts.js';
+import { AdminShop } from './admin.js';
 
 export const PAYLOAD_PREFIX = 'g1:';
 export const PER_MINUTE = 10;
@@ -60,23 +61,52 @@ export class Payments {
     this.netMs = NET_MS;
     this.newId = () => crypto.randomBytes(8).toString('hex');
     this.newCode = () => crypto.randomBytes(3).toString('hex');
+    /** Вкладка «Магазин» в админке: те же функции, что команды владельца, плюс цены и выдача. */
+    this.admin = new AdminShop(this);
   }
 
   get db() { return this.app.store.pay; }
   get api() { return this.app.api; }
   now() { return this.app.clock.now(); }
 
+  /**
+   * Действующие предложения: offers.json (по умолчанию) + смены владельца в админке (цена, скрыто, утверждение).
+   * Сервер — единственный источник цены; страница цену не задаёт.
+   */
+  offers() {
+    const base = this.cfg.offers;
+    const over = this.db.offerOverrides();
+    const items = { ...base.items };
+    const hidden = new Set(base.hidden ?? []);
+    for (const id of SELLABLE) {
+      const o = over[id];
+      if (!o) continue;
+      if (o.price != null) items[id] = o.price;
+      if (o.hidden) hidden.add(id); else hidden.delete(id);
+    }
+    const approved = this.db.approvedOverride();
+    return { ...base, approved: approved ?? base.approved, items, hidden: [...hidden] };
+  }
+
+  /** Настройки продаж с действующими предложениями — их и только их читают gate() и priceOf(). */
+  eff() {
+    return { ...this.cfg, offers: this.offers() };
+  }
+
   /** Можно ли сейчас выставлять новые счета. */
   gate() {
-    return gate(this.cfg, { stopped: this.db.stopped(), down: this.app.down });
+    return gate(this.eff(), { stopped: this.db.stopped(), down: this.app.down });
   }
   get open() { return this.gate().open; }
 
-  /** Видит ли человек магазин (без демо): продажи открыты, или он тестер при включённом режиме, или у него есть покупки. */
+  /**
+   * Видит ли человек магазин (без демо): продажи открыты, или он тестер при включённом режиме, или у него есть покупки,
+   * или владелец выдал ему вещь в админке (подарок виден и при выключенных продажах — иначе его не надеть).
+   */
   shopVisibleFor(uid) {
     if (this.open) return true;
     if (this.cfg.mode !== 'off' && this.app.cosmeticsUnlocked(uid)) return true;
-    return this.db.hasAnyOrder(uid);
+    return this.db.hasAnyOrder(uid) || this.db.hasAdminGrant(uid);
   }
 
   /** Доступ тестера/админа к «Графиту» — отдельно от покупки; при выключенном режиме его нет (прод без изменений). */
@@ -87,8 +117,9 @@ export class Payments {
   /** Что видит страница в состоянии коллекций (поле `shop`). Цены — только сервера. */
   shopState(uid) {
     const g = this.gate();
+    const eff = this.eff();
     const offers = {};
-    for (const id of SELLABLE) offers[id] = { price: g.open ? priceOf(this.cfg, id) : null };
+    for (const id of SELLABLE) offers[id] = { price: g.open ? priceOf(eff, id) : null };
     return {
       open: g.open,
       test: this.cfg.mode === 'test' && g.open,
@@ -195,7 +226,7 @@ export class Payments {
     if (this.app.down) return this.fail(op, 'PAY_DOWN');
     if (!this.open) return this.fail(op, 'PAY_CLOSED');
     const it = itemById(id);
-    const price = it ? priceOf(this.cfg, it.id) : null;
+    const price = it ? priceOf(this.eff(), it.id) : null;
     if (!it || !SELLABLE.has(it.id) || !price) return this.fail(op, 'PAY_ITEM');
     // Тот же товар уже в живом заказе с тем же предложением — тот же счёт, второй не плодим.
     const live = this.db.liveOrders(uid, now).find((o) => o.item === it.id && o.price === price && o.terms === this.cfg.terms && o.link);
@@ -247,9 +278,11 @@ export class Payments {
     if (q.currency !== 'XTR' || q.total_amount !== o.price) return { ok: false, why: 'amount', o };
     if (!['created', 'approved'].includes(o.state)) return { ok: false, why: 'state', o };
     if (o.expiresAt <= now) return { ok: false, why: 'expired', o };
-    const g = gate({ ...this.cfg, mode: o.mode === this.cfg.mode ? this.cfg.mode : 'off' }, { stopped: this.db.stopped(), down: this.app.down });
+    const eff = this.eff();
+    const g = gate({ ...eff, mode: o.mode === this.cfg.mode ? this.cfg.mode : 'off' }, { stopped: this.db.stopped(), down: this.app.down });
     if (!g.open) return { ok: false, why: 'closed', o };
-    if (priceOf(this.cfg, o.item) !== o.price || this.cfg.terms !== o.terms) return { ok: false, why: 'changed', o };
+    // Цену сменили или вещь скрыли после выставления счёта — старый счёт не оплатить (B-3).
+    if (priceOf(eff, o.item) !== o.price || this.cfg.terms !== o.terms) return { ok: false, why: 'changed', o };
     const why = this.whyNot(o.userId, o.item, { now, except: o.id, approvedOnly: true });
     if (why === 'PAY_OWNED' || why === 'PAY_PARTIAL') return { ok: false, why: 'owned', o };
     if (why === 'PAY_PENDING') return { ok: false, why: 'busy', o };
@@ -288,7 +321,7 @@ export class Payments {
       // и у покупателя её ещё нет. Иначе — «orphan», владельцу на проверку.
       if (!o && parsed?.item && !this.ownedAll(payerId).has(parsed.item)) {
         const items = itemsOf(parsed.item);
-        const price = priceOf(this.cfg, parsed.item);
+        const price = priceOf(this.eff(), parsed.item);
         if (items.length && price && sp.currency === 'XTR' && sp.total_amount === price && !items.some((x) => this.ownedAll(payerId).has(x))) {
           this.db.addOrder({ id: parsed.id, userId: payerId, item: parsed.item, items, price, terms: this.cfg.terms, mode: this.cfg.mode === 'test' ? 'test' : 'live', req: null, at: now, expiresAt: now });
           this.db.log(now, 'order-restored', { orderId: parsed.id, userId: payerId, amount: price, note: parsed.item });
@@ -385,23 +418,34 @@ export class Payments {
     await this.afterRefund(this.closeRefund(chargeId, 'telegram', 'refunded_payment'));
   }
 
-  /** Шаг 1: показать, что именно возвращаем, и выдать код подтверждения. */
-  refundPreview(admin, orderId) {
+  /**
+   * Шаг 1 возврата — общий для /refund и админки: что именно возвращаем и код подтверждения (10 минут, один раз).
+   * @returns {{ error: string } | { order, userId, title, amount, chargeTail, kind, attempts, code }}  null — не владелец
+   */
+  refundPrepare(admin, orderId) {
     if (!this.app.isAdmin(admin)) return null;
     const o = this.db.order(orderId);
-    if (!o) return 'Такого заказа нет. Номера — /pays.';
+    if (!o) return { error: 'Такого заказа нет. Номера — /pays.' };
     const p = this.db.paymentsOfOrder(o.id).find((x) => x.kind === 'order') ?? this.db.paymentsOfOrder(o.id)[0];
-    if (!p) return `Заказ <code>${esc(o.id)}</code> не оплачен — возвращать нечего.`;
+    if (!p) return { error: `Заказ <code>${esc(o.id)}</code> не оплачен — возвращать нечего.` };
     const ref = this.db.refund(p.chargeId);
-    if (ref?.state === 'done') return `По заказу <code>${esc(o.id)}</code> возврат уже выполнен.`;
+    if (ref?.state === 'done') return { error: `По заказу <code>${esc(o.id)}</code> возврат уже выполнен.` };
     const code = this.newCode();
     this.confirms.set(`${admin}:${o.id}`, { code, until: this.now() + CONFIRM_MS, chargeId: p.chargeId });
+    return { order: o.id, userId: p.userId, item: o.item, title: itemById(o.item)?.title ?? o.item, amount: p.amount, chargeTail: tail(p.chargeId), kind: p.kind, attempts: ref ? ref.attempts : null, code };
+  }
+
+  /** Шаг 1 для бота: то же текстом. */
+  refundPreview(admin, orderId) {
+    const r = this.refundPrepare(admin, orderId);
+    if (!r) return null;
+    if (r.error) return r.error;
     return [
-      `↩️ <b>Возврат по заказу</b> <code>${esc(o.id)}</code>`,
-      `Покупатель: <code>${esc(p.userId)}</code> · вещь: ${esc(itemById(o.item)?.title ?? o.item)}`,
-      `Сумма: ${p.amount} ⭐ (полностью) · платёж …${esc(tail(p.chargeId))} · ${p.kind}`,
-      ref ? `Возврат начат раньше, попыток: ${ref.attempts}. Повтор сначала проверит сверкой.` : '',
-      `Права на вещь будут сняты. Подтвердить (10 минут): <code>/refund ${esc(o.id)} ${code}</code>`,
+      `↩️ <b>Возврат по заказу</b> <code>${esc(r.order)}</code>`,
+      `Покупатель: <code>${esc(r.userId)}</code> · вещь: ${esc(r.title)}`,
+      `Сумма: ${r.amount} ⭐ (полностью) · платёж …${esc(r.chargeTail)} · ${r.kind}`,
+      r.attempts != null ? `Возврат начат раньше, попыток: ${r.attempts}. Повтор сначала проверит сверкой.` : '',
+      `Права на вещь будут сняты. Подтвердить (10 минут): <code>/refund ${esc(r.order)} ${r.code}</code>`,
     ].filter(Boolean).join('\n');
   }
 
@@ -494,15 +538,29 @@ export class Payments {
     return 'paid';
   }
 
-  /** Покупки человека (без незавершённых счетов). Только его собственные. */
+  /**
+   * Покупки человека (без незавершённых счетов). Только его собственные. Выданное владельцем — отдельными строками
+   * `state: 'gift'` без цены и номера заказа: это не покупка, платежа за ним нет.
+   */
   history(uid) {
-    return this.db.ordersOf(uid).map((o) => ({ o, state: this.stateOfOrder(o) })).filter((x) => x.state)
+    const bought = this.db.ordersOf(uid).map((o) => ({ o, state: this.stateOfOrder(o) })).filter((x) => x.state)
       .map(({ o, state }) => ({ id: o.id, item: o.item, title: itemById(o.item)?.title ?? o.item, price: o.price, at: o.createdAt, state, test: o.mode === 'test' }));
+    const gifts = this.db.adminGrantsOf(uid)
+      .map((g) => ({ id: `gift-${g.id}`, item: g.item, title: itemById(g.item)?.title ?? g.item, price: 0, at: g.at, state: 'gift', test: false }));
+    return [...bought, ...gifts].sort((a, b) => b.at - a.at);
   }
 
-  /** /paysupport — работает всегда, даже при закрытых продажах (О-12). */
+  /** Остановить или возобновить новые продажи (/salesstop, /salesresume и кнопка в админке — одно и то же). */
+  setStopped(by, on) {
+    this.db.setStopped(on);
+    this.log(on ? 'sales-stop' : 'sales-resume', { userId: by });
+    this.app.collections.pushAll();
+    this.app.hub?.pushAdmins?.();
+  }
+
+  /** /paysupport — работает всегда, даже при закрытых продажах (О-12). Подарки — не покупки, их тут нет. */
   supportText(uid) {
-    const orders = this.history(uid).map((o) => ({ ...o, stateText: STATE_TEXT[o.state] ?? o.state }));
+    const orders = this.history(uid).filter((o) => o.state !== 'gift').map((o) => ({ ...o, stateText: STATE_TEXT[o.state] ?? o.state }));
     return supportText({ contact: this.cfg.support, orders, esc });
   }
 
@@ -539,8 +597,8 @@ export class Payments {
     const args = String(rest || '').trim().split(/\s+/).filter(Boolean);
     switch (cmd) {
       case 'sales': return this.salesText();
-      case 'salesstop': this.db.setStopped(true); this.log('sales-stop', { userId: user.id }); this.app.collections.pushAll(); return '⏹ Новые продажи остановлены. Уже оплаченное выдаётся, возвраты и сверка работают.\n\n' + this.salesText();
-      case 'salesresume': this.db.setStopped(false); this.log('sales-resume', { userId: user.id }); this.app.collections.pushAll(); return '▶️ Остановка снята.\n\n' + this.salesText();
+      case 'salesstop': this.setStopped(user.id, true); return '⏹ Новые продажи остановлены. Уже оплаченное выдаётся, возвраты и сверка работают.\n\n' + this.salesText();
+      case 'salesresume': this.setStopped(user.id, false); return '▶️ Остановка снята.\n\n' + this.salesText();
       case 'pays': return this.paysText();
       case 'refund':
         if (!args[0]) return 'Нужен номер заказа: <code>/refund abcd…</code>. Номера — /pays.';

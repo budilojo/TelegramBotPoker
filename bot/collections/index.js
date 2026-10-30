@@ -50,7 +50,7 @@ export class Collections {
 
   /**
    * Какие предметы есть у человека — объединение независимых источников:
-   *  покупка (pay_entitlement, всегда), доступ тестера/админа (только при включённом режиме продаж), демо (только в демосреде).
+   *  покупка (pay_entitlement, всегда), выдача владельцем (shop_grant, всегда), доступ тестера/админа (только при включённом режиме продаж), демо (только в демосреде).
    */
   sourcesOf(uid) {
     const u = String(uid);
@@ -61,6 +61,8 @@ export class Collections {
       out.get(item).add(src);
     };
     for (const i of this.app.store.pay?.ownedItems(u) ?? []) add(i, 'purchase');
+    // Выдано владельцем в админке — отдельный источник: не покупка и не доступ тестера, действует в любом режиме.
+    for (const i of this.app.store.pay?.adminItems(u) ?? []) add(i, 'admin');
     if (this.pay?.staffOwns(u)) for (const it of ITEMS) add(it.id, 'staff');
     if (this.demo) for (const i of this.app.store.collDemoItems?.(u) ?? []) add(i, 'demo');
     return out;

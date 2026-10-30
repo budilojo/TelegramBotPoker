@@ -845,6 +845,15 @@ export class Store {
     this.q.putProfile.run(String(userId), nickname, avatar, at);
   }
 
+  /** Админка, «Магазин»: найти людей по нику из профиля (часть ника, без учёта регистра). Только id и ник. */
+  findProfiles(q, limit = 10) {
+    const needle = String(q ?? '').trim().toLocaleLowerCase('ru');
+    if (!needle) return [];
+    return this.db.prepare('SELECT user_id, nickname FROM profiles WHERE nickname IS NOT NULL').all()
+      .filter((r) => String(r.nickname).toLocaleLowerCase('ru').includes(needle)).slice(0, limit)
+      .map((r) => ({ id: String(r.user_id), nick: r.nickname }));
+  }
+
   /** Строка одного человека: его очки, место и сколько всего в списке. */
   ratingOf(userId, game, { month = null, chatId = null } = {}) {
     const id = String(userId);
@@ -1156,6 +1165,12 @@ export class NullStore {
   }
   putProfile(userId, { nickname = null, avatar = null } = {}) {
     this.profiles.set(String(userId), { nickname, avatar });
+  }
+  findProfiles(q, limit = 10) {
+    const needle = String(q ?? '').trim().toLocaleLowerCase('ru');
+    if (!needle) return [];
+    return [...this.profiles].filter(([, p]) => p.nickname && p.nickname.toLocaleLowerCase('ru').includes(needle)).slice(0, limit)
+      .map(([id, p]) => ({ id, nick: p.nickname }));
   }
   collDemoGrant(userId, item, at) {
     const m = this.collGrants.get(String(userId)) ?? new Map();

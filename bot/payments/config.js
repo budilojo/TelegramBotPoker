@@ -36,11 +36,13 @@ export function readOffers(file = OFFERS_FILE) {
 
 /** Только известные id каталога; цена — число или null. Ничего лишнего. */
 export function normalizeOffers(raw) {
-  const out = { approved: raw?.approved === true, terms: typeof raw?.terms === 'string' ? raw.terms : '', items: {} };
+  const out = { approved: raw?.approved === true, terms: typeof raw?.terms === 'string' ? raw.terms : '', items: {}, hidden: [] };
   for (const id of SELLABLE) {
     const v = raw?.items?.[id];
     out.items[id] = isPrice(v) ? v : null;
   }
+  // Скрытые владельцем в админке вещи (поверх файла, из базы): не продаются ни в каком режиме.
+  if (Array.isArray(raw?.hidden)) out.hidden = raw.hidden.filter((id) => SELLABLE.has(id));
   return out;
 }
 
@@ -80,7 +82,7 @@ export function gate(cfg, { stopped = false, down = false } = {}) {
     if (cfg.testEnv) reasons.push('Настоящие продажи нельзя открыть в тестовой среде Telegram.');
     if (!cfg.offers.approved) reasons.push('Цены не утверждены владельцем (offers.json: approved=false).');
     // Вещь без цены просто не продаётся (скрыта); закрыто всё — только если цены нет ни у одной.
-    if (![...SELLABLE].some((id) => isPrice(cfg.offers.items[id]))) reasons.push('Нет ни одной цены в offers.json.');
+    if (![...SELLABLE].some((id) => isPrice(cfg.offers.items[id]) && !isHidden(cfg, id))) reasons.push('Нет ни одной цены (или все вещи скрыты).');
     if (!cfg.support) reasons.push('Не задан публичный контакт поддержки (PAY_SUPPORT).');
     for (const [f, d] of Object.entries(cfg.docs)) {
       if (d.missing) reasons.push(`Нет документа ${f}.`);
@@ -93,9 +95,12 @@ export function gate(cfg, { stopped = false, down = false } = {}) {
   return { open: reasons.length === 0, mode: cfg.mode, reasons };
 }
 
+/** Скрыл ли владелец вещь в админке. */
+export const isHidden = (cfg, id) => !!cfg.offers.hidden?.includes(id);
+
 /** Цена вещи для нового заказа в текущем режиме или null (не продаётся). */
 export function priceOf(cfg, id) {
-  if (!SELLABLE.has(id)) return null;
+  if (!SELLABLE.has(id) || isHidden(cfg, id)) return null;
   const p = cfg.offers.items[id];
   if (cfg.mode === 'test') return isPrice(p) ? p : TEST_PRICE;
   if (cfg.mode === 'live') return cfg.offers.approved && isPrice(p) ? p : null;

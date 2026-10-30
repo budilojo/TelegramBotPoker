@@ -61,6 +61,40 @@ CREATE TABLE IF NOT EXISTS pay_refund (
   done_at    INTEGER,
   note       TEXT
 );
+-- Магазин в админке (шаг H): цена и видимость поверх offers.json, выдача админом, журнал, повторы нажатий.
+CREATE TABLE IF NOT EXISTS shop_offer (
+  item       TEXT PRIMARY KEY,
+  price      INTEGER CHECK (price IS NULL OR (price >= 1 AND price <= 10000)),
+  hidden     INTEGER NOT NULL DEFAULT 0,
+  by         TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS shop_grant (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id    TEXT NOT NULL,
+  item       TEXT NOT NULL,
+  by         TEXT NOT NULL,
+  granted_at INTEGER NOT NULL,
+  revoked_at INTEGER,
+  revoked_by TEXT
+);
+CREATE INDEX IF NOT EXISTS shop_grant_by_user ON shop_grant (user_id);
+CREATE TABLE IF NOT EXISTS shop_admin_log (
+  id      INTEGER PRIMARY KEY AUTOINCREMENT,
+  at      INTEGER NOT NULL,
+  by      TEXT NOT NULL,
+  event   TEXT NOT NULL,
+  user_id TEXT,
+  item    TEXT,
+  before  TEXT,
+  after   TEXT
+);
+CREATE TABLE IF NOT EXISTS shop_admin_req (
+  admin TEXT NOT NULL,
+  req   TEXT NOT NULL,
+  at    INTEGER NOT NULL,
+  PRIMARY KEY (admin, req)
+);
 CREATE TABLE IF NOT EXISTS pay_log (
   id       INTEGER PRIMARY KEY AUTOINCREMENT,
   at       INTEGER NOT NULL,
@@ -215,6 +249,78 @@ export class PayStore {
   /** Были ли вообще заказы — без них сверку при запуске не делаем (бот без продаж ведёт себя как раньше). */
   anyOrders() {
     return !!this.db.prepare('SELECT 1 FROM pay_order LIMIT 1').get();
+  }
+
+  /* ------------------------------------------------- магазин в админке (H) */
+
+  /** Переопределения владельца: item → { price|null, hidden }. */
+  offerOverrides() {
+    const out = {};
+    for (const r of this.db.prepare('SELECT * FROM shop_offer').all()) out[r.item] = { price: r.price, hidden: r.hidden === 1, by: r.by, at: r.updated_at };
+    return out;
+  }
+  setOfferPrice(item, price, by, at) {
+    this.db.prepare(`INSERT INTO shop_offer (item, price, hidden, by, updated_at) VALUES (?, ?, 0, ?, ?)
+      ON CONFLICT(item) DO UPDATE SET price = excluded.price, by = excluded.by, updated_at = excluded.updated_at`).run(item, price, String(by), at);
+  }
+  setOfferHidden(item, hidden, by, at) {
+    this.db.prepare(`INSERT INTO shop_offer (item, price, hidden, by, updated_at) VALUES (?, NULL, ?, ?, ?)
+      ON CONFLICT(item) DO UPDATE SET hidden = excluded.hidden, by = excluded.by, updated_at = excluded.updated_at`).run(item, hidden ? 1 : 0, String(by), at);
+  }
+  /** Утверждение цен владельцем в админке: true / false / null (не трогали — как в offers.json). */
+  approvedOverride() {
+    const v = this.db.prepare("SELECT value FROM meta WHERE key = 'offers_approved'").get()?.value;
+    return v === '1' ? true : v === '0' ? false : null;
+  }
+  setApproved(on) {
+    this.db.prepare("INSERT INTO meta (key, value) VALUES ('offers_approved', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(on ? '1' : '0');
+  }
+
+  /** Выдать админом (если уже выдано и не забрано — ничего). Вернуть, выдано ли сейчас. */
+  adminGrant(userId, item, by, at) {
+    if (this.db.prepare('SELECT 1 FROM shop_grant WHERE user_id = ? AND item = ? AND revoked_at IS NULL').get(String(userId), item)) return false;
+    this.db.prepare('INSERT INTO shop_grant (user_id, item, by, granted_at) VALUES (?, ?, ?, ?)').run(String(userId), item, String(by), at);
+    return true;
+  }
+  /** Забрать выданное админом. Купленное не трогает. Вернуть, было ли что забирать. */
+  adminRevoke(userId, item, by, at) {
+    return this.db.prepare('UPDATE shop_grant SET revoked_at = ?, revoked_by = ? WHERE user_id = ? AND item = ? AND revoked_at IS NULL')
+      .run(at, String(by), String(userId), item).changes > 0;
+  }
+  /** Выданные админом и не забранные вещи человека. */
+  adminItems(userId) {
+    return this.db.prepare('SELECT DISTINCT item FROM shop_grant WHERE user_id = ? AND revoked_at IS NULL ORDER BY item').all(String(userId)).map((r) => r.item);
+  }
+  adminGrantsOf(userId) {
+    return this.db.prepare('SELECT * FROM shop_grant WHERE user_id = ? AND revoked_at IS NULL ORDER BY granted_at DESC').all(String(userId))
+      .map((r) => ({ id: r.id, item: r.item, by: r.by, at: r.granted_at }));
+  }
+  hasAdminGrant(userId) {
+    return !!this.db.prepare('SELECT 1 FROM shop_grant WHERE user_id = ? AND revoked_at IS NULL LIMIT 1').get(String(userId));
+  }
+  adminLog(at, by, event, { userId = null, item = null, before = null, after = null } = {}) {
+    const s = (x) => (x == null ? null : String(x).slice(0, 120));
+    this.db.prepare('INSERT INTO shop_admin_log (at, by, event, user_id, item, before, after) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(at, String(by), event, userId == null ? null : String(userId), item, s(before), s(after));
+  }
+  adminLogs(limit = 30) {
+    return this.db.prepare('SELECT * FROM shop_admin_log ORDER BY id DESC LIMIT ?').all(limit)
+      .map((r) => ({ at: r.at, by: r.by, event: r.event, userId: r.user_id, item: r.item, before: r.before, after: r.after }));
+  }
+  /** Запомнить нажатие; false — такое уже было (повтор). Старше суток — забываем. */
+  adminReq(admin, req, at) {
+    this.db.prepare('DELETE FROM shop_admin_req WHERE at < ?').run(at - 86_400_000);
+    return this.db.prepare('INSERT OR IGNORE INTO shop_admin_req (admin, req, at) VALUES (?, ?, ?)').run(String(admin), String(req), at).changes === 1;
+  }
+  /** Поиск заказов: по id игрока или по началу номера заказа. */
+  findOrders(q, limit = 30) {
+    const s = String(q || '').trim();
+    if (!s) return this.recentOrders(limit);
+    const asUser = /^\d{1,20}$/.test(s) ? s : null;
+    const asOrder = /^[0-9a-f]{3,16}$/.test(s) ? `${s}%` : null;
+    if (!asUser && !asOrder) return [];
+    return this.db.prepare('SELECT * FROM pay_order WHERE user_id = ? OR id LIKE ? ORDER BY created_at DESC LIMIT ?')
+      .all(asUser ?? '', asOrder ?? '\u0000', limit).map(orderRow);
   }
 
   /* -------------------------------------------------------------- выключатель */

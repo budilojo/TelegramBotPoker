@@ -321,6 +321,7 @@ function playOut(room) {
   app.store.patchBroadcast(sent.id, { status: 'done', sent: 113, failed: 3, done_at: now - 2 * day });
   scene('23-admin-now', r, 101, { start: 'admin', height: 900, tab: 'Сейчас' });
   scene('24-admin-cast', r, 101, { start: 'admin', height: 900, tab: 'Рассылка' });
+  scene('24s-admin-shop', r, 101, { start: 'admin', height: 900, tab: 'Магазин' });
   scene('25-admin-tools', r, 101, { start: 'admin', height: 900, tab: 'Пульт' });
   // Последним: обслуживание включается перед самим снимком и на другие не попадает.
   scene('26-maintenance', r, 102, { before: () => app.setMaintenance(true, 'Обновляемся. Вернёмся через пять минут.') });

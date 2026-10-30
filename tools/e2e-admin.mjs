@@ -127,8 +127,8 @@ await until(() => room.players.length === 2, 'Макс сел');
 
 const pa = await openPage(ivan, 'admin');
 await pa.waitForSelector('h1:has-text("Пульт")');
-assert.equal(await pa.locator('.tab').count(), 4, 'четыре вкладки');
-step('Иван открыл пульт: Цифры · Сейчас · Рассылка · Пульт');
+assert.equal(await pa.locator('.tab').count(), 5, 'пять вкладок');
+step('Иван открыл пульт: Цифры · Сейчас · Рассылка · Магазин · Пульт');
 
 /* ------------------------------------------------------ вкладка «Сейчас» */
 

@@ -45,10 +45,11 @@ test('по умолчанию продажи закрыты: режим off, с�
   assert.equal(t.page(OWNER).inbox.some((m) => m.t === 'col'), false, 'страница не получает состояния коллекций');
 });
 
-test('offers.json в репозитории: цены не утверждены — настоящие продажи не откроются', () => {
+test('offers.json в репозитории: стартовые цены (выбраны по поручению владельца 30.10), но не утверждены — настоящие продажи не откроются', () => {
   const offers = readOffers();
   assert.equal(offers.approved, false);
-  for (const id of SELLABLE) assert.equal(offers.items[id], null, `цена ${id} не задана`);
+  assert.deepEqual(offers.items, { 'graphit-cardback': 75, 'graphit-table': 100, 'graphit-profile': 50, 'graphit-bundle': 175 });
+  assert.deepEqual(offers.hidden, [], 'в файле ничего не скрыто');
   const g = gate(salesConfig({ SALES_MODE: 'live', PAY_SUPPORT: '@x' }));
   assert.equal(g.open, false);
   assert.ok(g.reasons.some((r) => /не утверждены/.test(r)));

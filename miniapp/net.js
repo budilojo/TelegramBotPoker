@@ -47,6 +47,8 @@ export const bus = {
   onCollections: () => {},
   /** Покупки (miniapp/collections/index.js): { t:'pay', op, … } — счёт, история, условия, поддержка. */
   onPay: () => {},
+  /** Магазин в админке (miniapp/admin-shop.js): { t:'ashop', op, … }. */
+  onAdminShop: () => {},
 };
 
 let ws = null;
@@ -107,6 +109,11 @@ export function connect() {
       bus.onCollections(msg);
     } else if (msg.t === 'pay') {
       bus.onPay(msg);
+    } else if (msg.t === 'ashop') {
+      // Магазин в админке: ответ на просьбу (вопрос «подтвердить?», найденное, готово или отказ).
+      setBusy(false);
+      if (msg.error) haptic.err();
+      bus.onAdminShop(msg);
     } else if (msg.t === 'react') {
       bus.onReact(msg);
     } else if (msg.t === 'chat' || msg.t === 'chat-sync' || msg.t === 'chat-unread') {

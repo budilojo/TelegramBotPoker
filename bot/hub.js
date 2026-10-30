@@ -571,6 +571,16 @@ export class Hub {
     }
     // payments: покупки. Кто — только из session.user. История и условия доступны и во время обслуживания;
     // новый счёт во время обслуживания сервер не выставит сам (PAY_DOWN).
+    // Магазин в админке: только админская страница (её kind ставится при входе по ADMINS), и каждое действие
+    // ещё раз сверяется с ADMINS в AdminShop. Остальным — тот же отказ, что на любой непонятный запрос.
+    if (msg.t === 'ashop') {
+      const r = session.kind === 'admin' ? await this.app.payments.admin.handle(session.user, msg) : null;
+      if (!r) return this.refuse(session, 'BAD_REQUEST');
+      const { changed, ...out } = r;
+      session.send(out);
+      if (changed) this.pushAdmins();
+      return;
+    }
     if (msg.t === 'pay') {
       if (session.kind === 'admin') return void session.send(this.app.payments.fail('buy', 'PAY_OP'));
       return void session.send(await this.app.payments.handle(session.user, msg));
@@ -1135,5 +1145,7 @@ export function adminView(app) {
     down: { on: app.down, text: app.maintenance.text || '', since: app.maintenance.since || null },
     sessions,
     casts: app.casts ? { list: app.casts.list(10), sizes: app.casts.sizes(), audiences: AUDIENCES, sending: app.casts.busy } : null,
+    // Вкладка «Магазин»: цены, готовность к продаже, заказы, журнал. Только id и суммы, без имён и игр.
+    shop: app.payments?.admin ? app.payments.admin.view() : null,
   };
 }
