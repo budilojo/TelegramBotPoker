@@ -231,8 +231,8 @@ async function vsBot(t, settings) {
   return t.app.soloOf('101');
 }
 
-async function until(t, cond, what, tries = 80) {
-  for (let i = 0; i < tries && !cond(); i++) await t.advance(1_000);
+async function until(t, cond, what, tries = 80, step = 1_000) {
+  for (let i = 0; i < tries && !cond(); i++) await t.advance(step);
   assert.ok(cond(), `не дождались: ${what}`);
 }
 
@@ -304,8 +304,13 @@ test('«Бот» стреляет первым сам; человек не ст�
     assert.equal(room.settings.first, 'guest');
     await t.send(IVAN, { t: 'random' });
     await t.send(IVAN, { t: 'ready' });
-    await until(t, () => room.match.phase === 'battle', 'бой');
+    // Шаг 100 мс: бой начинается, когда бот запер флот, а стреляет он не раньше
+    // чем через 700 мс. С шагом в секунду бот успевал выстрелить внутри того же
+    // шага, промахнуться — и ход честно переходил к человеку (падение
+    // «expected bot1, actual 101», разбор — docs/next-release/reports/check.md).
+    await until(t, () => room.match.phase === 'battle', 'бой', 800, 100);
     const bs = room.match.ids.findIndex((id) => id !== '101');
+    assert.equal(room.match.first, bs, 'первым стреляет бот');
     assert.equal(room.match.turn, bs, 'первым стреляет бот');
     // Человек пытается выстрелить за бота, назвавшись им, — отказ.
     await t.send(IVAN, { t: 'fire', cell: 0, uid: room.match.ids[bs], id: room.match.ids[bs], side: bs });
@@ -319,8 +324,11 @@ test('«Бот» стреляет первым сам; человек не ст�
     assert.deepEqual(room.match.fleets.filter(Boolean), [], 'флоты в новую партию не переходят');
     await t.send(IVAN, { t: 'random' });
     await t.send(IVAN, { t: 'ready' });
-    await until(t, () => room.match.phase === 'battle', 'бой второй партии');
-    assert.equal(room.match.ids[room.match.turn], room.players.find((p) => p.bot).id, 'и во второй — первым бот');
+    await until(t, () => room.match.phase === 'battle', 'бой второй партии', 800, 100);
+    const bot2 = room.players.find((p) => p.bot).id;
+    assert.equal(room.match.ids[room.match.first], bot2, 'и во второй — первым бот');
+    assert.equal(room.match.log.length, 0, 'бой только начался — выстрелов ещё нет');
+    assert.equal(room.match.ids[room.match.turn], bot2, 'и во второй — первым бот');
     // «Сыграть ещё» с итогов — новый стол с тем же уровнем, часами и очерёдностью.
     await t.send(IVAN, { t: 'finish' });
     await t.send(IVAN, { t: 'again' });
