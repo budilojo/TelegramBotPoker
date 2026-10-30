@@ -110,7 +110,8 @@ try {
     await page.getByRole('button', { name: 'Назад к карточке' }).click();
     await page.waitForSelector('.col-buy');
     const card = await page.locator('.col-buy').innerText();
-    for (const want of ['Навсегда', 'не влияет', 'Возврат полностью', '50 ⭐', 'Условия покупки', 'Правила возврата']) assert.ok(card.includes(want), `на карточке до покупки: «${want}»`);
+    assert.ok(!card.includes('Навсегда'), 'обещания «навсегда» в условиях покупки нет');
+    for (const want of ['Пока работает приложение', 'не влияет', 'Возврат полностью', '50 ⭐', 'Условия покупки', 'Правила возврата']) assert.ok(card.includes(want), `на карточке до покупки: «${want}»`);
     await layoutOk(page, `${size[0]}: карточка`);
     await shot(page, `pay-card-${size[0]}.png`);
     step(`${size[0]} px: карточка — состав, цена 50 ⭐, условия и возврат видны до «Купить»`);

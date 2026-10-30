@@ -83,13 +83,16 @@ const gameIcon = (id) => h(`div.gc-icon.g-${id}`,
 const CHEVRON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
   + 'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>';
 
+/** «2 игрока» у дуэлей, «2–8 игроков» у остальных — не «2–2 игроков». */
+export const playersRu = (min, max) => (min === max ? `${max} ${max >= 2 && max <= 4 ? 'игрока' : 'игроков'}` : `${min}–${max} игроков`);
+
 function gameRow(g, live) {
   return h(`button.game-card.g-${g.id}`, { onclick: () => openCreate(g) },
     gameIcon(g.id),
     h('div.gc-body',
       h('div.gc-title', g.title),
       h('div.gc-blurb', g.blurb),
-      h('div.gc-players', live ? `сейчас открыто: ${live}` : `${g.min}–${g.max} игроков`)),
+      h('div.gc-players', live ? `сейчас открыто: ${live}` : playersRu(g.min, g.max))),
     // Шеврон, а не кнопка: нажимается вся строка, и зелёный не тратится на
     // то, что и так очевидно. Три одинаково ярких кнопки в столбик не задают
     // приоритета — глазу не за что зацепиться.

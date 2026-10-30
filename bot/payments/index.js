@@ -213,7 +213,7 @@ export class Payments {
     try {
       link = await this.net(() => this.api.createInvoiceLink(
         `${test ? 'ТЕСТ · ' : ''}${it.title}`.slice(0, 32),
-        `Оформление для игр: ${it.title}. Навсегда, все 4 цвета. Без игровых преимуществ. Условия ${order.terms}.`.slice(0, 255),
+        `Оформление для игр: ${it.title}. Пока работает приложение, все 4 цвета. Без игровых преимуществ. Условия ${order.terms}.`.slice(0, 255),
         payloadOf(order), '', 'XTR', [{ label: it.title.slice(0, 32), amount: price }],
       ));
     } catch (err) {

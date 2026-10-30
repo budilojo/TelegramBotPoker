@@ -68,6 +68,7 @@ const info = (page) => page.evaluate(() => {
   return {
     pages, cur, cards: document.querySelectorAll('.game-card').length, label: document.querySelector('.gc-pagelabel')?.textContent || '',
     dots: document.querySelectorAll('.gc-dot').length, nav: document.querySelectorAll('.gc-nav').length, wide: doc.scrollWidth > doc.clientWidth,
+    same: [...document.querySelectorAll('.gc-players')].map((e) => e.textContent).filter((s) => /(\d)–\1 /.test(s)),
     small: [...document.querySelectorAll('.gc-nav, .gc-dot, .game-card')].filter((e) => { const r = e.getBoundingClientRect(); return r.width && (r.height < 44 || r.width < 44); }).length,
   };
 });
@@ -85,6 +86,7 @@ try {
     assert.equal(i.nav, 2);
     assert.equal(i.cur, 0);
     assert.match(i.label, /^Страница 1 из \d+$/);
+    assert.deepEqual(i.same, [], 'у дуэлей «2 игрока», а не «2–2 игроков»');
     assert.equal(i.small, 0, 'кнопки листания, точки и карточки не меньше 44 px');
     assert.equal(i.wide, false, 'горизонтального скролла у страницы нет');
     assert.equal(await page.locator('.gc-prev').isDisabled(), true, 'на первой странице «назад» выключена');

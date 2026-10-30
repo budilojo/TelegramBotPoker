@@ -251,7 +251,8 @@ try {
     assert.equal(await page.locator('.col-sw').count(), 4, 'четыре цвета');
     for (const t of ['Графит', 'Сапфир', 'Бордо', 'Петроль']) assert.ok((await text(page, '.col-swatches')).includes(t), `цвет «${t}» подписан`);
     const bodyText = await text(page, '.col-item');
-    assert.match(bodyText, /Навсегда/);
+    assert.match(bodyText, /Пока работает приложение/, 'срок — как в условиях покупки, п. 3.3');
+    assert.doesNotMatch(bodyText, /Навсегда/, 'обещания «навсегда» в условиях нет');
     assert.match(bodyText, /Все 4 цвета включены/);
     assert.match(bodyText, /Stars · цена демонстрационная/, 'цена с пометкой');
     assert.match(bodyText, /Применится со следующей раздачи|закрытых карт/);

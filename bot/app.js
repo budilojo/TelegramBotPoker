@@ -1354,7 +1354,7 @@ export class App {
     if (old) await this.outbox.dropKeyboard(group.chatId, old);
     const link = this.hubLink(group);
     const lines = ['🎮 <b>Во что играем?</b>', ''];
-    for (const g of GAME_LIST) lines.push(`${g.icon} <b>${g.title}</b> — ${esc(g.blurb)}, ${g.minPlayers}–${g.maxPlayers} игроков`);
+    for (const g of GAME_LIST) lines.push(`${g.icon} <b>${g.title}</b> — ${esc(g.blurb)}, ${g.minPlayers === g.maxPlayers ? `${g.maxPlayers} ${g.maxPlayers >= 2 && g.maxPlayers <= 4 ? 'игрока' : 'игроков'}` : `${g.minPlayers}–${g.maxPlayers} игроков`}`);
     lines.push('', '<i>Откройте приложение, выберите игру и создайте лобби — друзья присоединятся по его карточке. А если друзей рядом нет — можно сыграть с ботом.</i>');
     // Играть с ботом — личная партия: подпись Telegram даёт ей личность того, кто нажал, а не группы.
     const solo = this.soloLink();

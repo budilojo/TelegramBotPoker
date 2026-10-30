@@ -129,7 +129,7 @@ export function facts(h, id) {
   return h('div.col-facts',
     h('p.col-purpose', PURPOSE[slot]),
     h('div.col-tags',
-      h('span.col-tag', 'Навсегда'),
+      h('span.col-tag', 'Пока работает приложение'),
       it.kind === 'item' ? h('span.col-tag', WHERE[it.slot]) : null,
       h('span.col-tag', 'Все 4 цвета включены')));
 }

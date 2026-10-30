@@ -98,6 +98,9 @@ test('успех: вещь → счёт → pre_checkout → оплата → в
   assert.equal(inv.currency, 'XTR');
   assert.equal(inv.prices.length, 1);
   assert.match(inv.title, /^ТЕСТ · /, 'в тестовом режиме счёт помечен');
+  // Срок — как в условиях покупки (п. 3.3): «пока работает приложение», не «навсегда» (E, 2026-10-30).
+  assert.match(inv.description, /Пока работает приложение/);
+  assert.doesNotMatch(inv.description, /[Нн]авсегда/);
   assert.match(t.lastDm(ALICE), /Куплено: Стол «Графит»/);
   // Страница получила новое состояние сама — без «обновить».
   const st = lastCol(t, ALICE);
@@ -532,6 +535,9 @@ test('/paysupport при закрытых продажах и без конта�
   await t.dm(ALICE, '/paysupport');
   assert.match(t.lastDm(ALICE), /Продажи ещё не открыты/);
   assert.match(t.lastDm(ALICE), /Покупок у вас нет/);
+  // Обещано в docs/next-release/legal/support-guide.md: ссылка на правила возврата и напоминание про пароли и коды.
+  assert.match(t.lastDm(ALICE), /Правила возврата и условия — \/terms/);
+  assert.match(t.lastDm(ALICE), /никогда не просим пароли, коды из СМС/);
   await t.dm(ALICE, '/terms');
   assert.match(t.lastDm(ALICE), /проект, ещё не действует/);
   await t.cmd(ALICE, '/paysupport');

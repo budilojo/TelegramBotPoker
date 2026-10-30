@@ -695,13 +695,21 @@ if (serve) {
     await page.route('https://telegram.org/**', (route) =>
       route.fulfill({ contentType: 'text/javascript', body: sdkStub(s.initData) }));
     await page.goto(`http://localhost:${PORT}/`);
-    await page.waitForSelector('.top, .lobby, .fatal, .ch', { timeout: 5000 });
+    try {
+      await page.waitForSelector('.top, .lobby, .fatal, .ch', { timeout: 5000 });
+    } catch (err) {
+      console.log(`[${s.name}] экран не открылся. На экране:\n${(await page.evaluate(() => document.body.innerText)).slice(0, 400)}`);
+      throw err;
+    }
     if (s.tab) {
       await page.locator('.tab', { hasText: s.tab }).click();
       await page.waitForTimeout(80);
     }
     if (s.click) {
-      await page.getByRole('button', { name: s.click, exact: false }).first().click();
+      // В хабе — карточка игры из каталога, а не «Вернуться к столу · <игра>» (она стоит выше и называется так же).
+      const card = page.locator('.game-card', { has: page.locator('.gc-title', { hasText: new RegExp(`^${s.click}$`) }) });
+      if (await card.count()) await card.first().click();
+      else await page.getByRole('button', { name: s.click, exact: false }).first().click();
       await page.waitForSelector('.sheet');
     }
     // `press` — нажать и остаться: экран сменится, шторки не будет.

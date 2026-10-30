@@ -33,6 +33,9 @@ test('/play posts «Во что играем?» with a button that opens the Min
   assert.match(card.text, /Во что играем\?/);
   assert.match(card.text, /Покер/);
   assert.match(card.text, /Дурак/);
+  // Дуэли — «2 игрока», а не «2–2 игроков» (E, 2026-10-30).
+  assert.match(card.text, /Шахматы<\/b> — [^\n]*, 2 игрока$/m);
+  assert.doesNotMatch(card.text, /(\d)–\1 игроков/);
   const [btn] = card.markup.inline_keyboard.flat();
   assert.equal(btn.url, `https://t.me/All_InPoker_bot/table?startapp=g_${t.group.code}`);
   assert.match(t.group.code, /^[a-z0-9]{10}$/, 'a random code…');

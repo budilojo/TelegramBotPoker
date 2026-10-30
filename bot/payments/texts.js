@@ -21,7 +21,8 @@ export function supportText({ contact, orders, esc }) {
     lines.push('', '<b>Ваши покупки:</b>');
     for (const o of orders.slice(0, 10)) lines.push(`• <code>${o.id}</code> — ${esc(o.title)}, ${o.price} ⭐, ${o.stateText}`);
   } else lines.push('', 'Покупок у вас нет.');
-  lines.push('', 'Возврат при ошибке, двойной оплате или если вещь не появилась — полностью, звёздами.');
+  lines.push('', 'Возврат при ошибке, двойной оплате или если вещь не появилась — полностью, звёздами. Правила возврата и условия — /terms.');
+  lines.push('Мы никогда не просим пароли, коды из СМС, данные карты или перевод звёзд «для возврата».');
   return lines.join('\n');
 }
 
