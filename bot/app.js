@@ -62,9 +62,9 @@ const HELP = [
   '<b>/game</b> — во что играем. Бот пришлёт карточку с кнопкой: выберите игру',
   'в приложении и создайте лобби; друзья присоединятся по его карточке.',
   '',
-  '/table — показать карточки игр внизу чата',
-  '/finish — завершить свою игру и показать итоги (хост)',
-  '/cancel — удалить свою игру (хост)',
+  'Всё остальное — кнопками в приложении: завершить игру или удалить её — в «Меню» стола (хост),',
+  'партия с ботом — кнопка «Играть с ботом», покупки и «Мои покупки» — «Настройки» → «Коллекции».',
+  'Старые команды (/table, /finish, /cancel, /newgame…) ещё работают, но нужны уже не будут.',
   '',
   'Чтобы бот мог напомнить, что ваш ход, — один раз нажмите Start у него в личке.',
 ].join('\n');
@@ -76,7 +76,7 @@ const HELP_DM = [
   'Сама игра — в группе: напишите там /game и выберите игру.',
   'Или /game здесь — откроются игры ваших групп.',
   '',
-  '🤖 Не с кем играть? /bot — партия с ботами прямо здесь, без группы.',
+  '🤖 Не с кем играть? Кнопка «Играть с ботом» ниже — партия с ботами прямо здесь, без группы.',
 ].join('\n');
 
 /** callback_data кнопки «не присылать такое» под каждой рассылкой. */
@@ -1106,7 +1106,8 @@ export class App {
     }
     if (['game', 'play', 'games', 'newgame'].includes(cmd?.cmd)) return this.sendMyGames(user);
     if (['bot', 'solo', ...Object.keys(QUICK_GAMES), 'poker'].includes(cmd?.cmd)) return this.sendSolo(user);
-    return void (await this.outbox.post(user.tgId, HELP_DM));
+    // Любое другое слово в личке — не тупик: справка и те же кнопки, что под /start.
+    return this.sendMyGames(user, HELP_DM);
   }
 
   /**
@@ -1242,7 +1243,7 @@ export class App {
 
       case 'finish': {
         const room = this.hostTarget(chatId, user.id, { finished: true, code: cmd.rest });
-        if (room?.ambiguous) return void (await this.reply(chatId, this.whichGame(room.ambiguous, 'finish'), msg));
+        if (room?.ambiguous) return void (await this.reply(chatId, this.whichGame(room.ambiguous, 'finish'), msg, this.openGamesRows(chatId)));
         if (!room) {
           const any = this.liveRooms(chatId).at(-1) || this.room(chatId);
           return void (await this.reply(chatId, any ? this.hostOnly(any) : 'Стола нет.', msg));
@@ -1257,7 +1258,7 @@ export class App {
 
       case 'cancel': {
         const room = this.hostTarget(chatId, user.id, { finished: true, code: cmd.rest });
-        if (room?.ambiguous) return void (await this.reply(chatId, this.whichGame(room.ambiguous, 'cancel'), msg));
+        if (room?.ambiguous) return void (await this.reply(chatId, this.whichGame(room.ambiguous, 'cancel'), msg, this.openGamesRows(chatId)));
         if (!room) {
           const any = this.liveRooms(chatId).at(-1) || this.room(chatId);
           if (any) await this.reply(chatId, this.hostOnly(any), msg);
@@ -1332,7 +1333,19 @@ export class App {
       const detail = g.summary(r)?.detail || '';
       return `${g.icon} ${g.title}${detail ? ` · ${detail}` : ''} — /${cmd} ${r.code}`;
     });
-    return ['У вас несколько игр — какая именно?', ...lines].join('\n');
+    return [
+      'У вас несколько игр — какая именно?',
+      ...lines,
+      '',
+      'Проще кнопками: откройте игру → «Меню» → «Завершить игру» или «Удалить игру».',
+    ].join('\n');
+  }
+
+  /** Кнопка «Выбрать игру» под ответами на старые команды: путь к тем же действиям кнопками. */
+  openGamesRows(chatId) {
+    const group = this.groups.get(String(chatId));
+    const link = group ? this.hubLink(group) : null;
+    return link ? [[{ text: '🎮 Выбрать игру', url: link }]] : null;
   }
 
   /** «🎮 Во что играем?» — the card that opens the Mini App for this group. */
@@ -1491,9 +1504,9 @@ export class App {
   /* ---------------------------------------------------------------- utils */
 
   /** A message in the group; as a reply when it answers somebody's command. */
-  async reply(chatId, text, toMsg = null) {
+  async reply(chatId, text, toMsg = null, rows = null) {
     try {
-      const m = await this.outbox.post(chatId, text, null, toMsg ? { reply_parameters: replyTo(toMsg) } : {});
+      const m = await this.outbox.post(chatId, text, rows, toMsg ? { reply_parameters: replyTo(toMsg) } : {});
       this.seenInChat(chatId, m?.message_id);
       return m;
     } catch (err) {

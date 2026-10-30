@@ -21,6 +21,7 @@
 import {
   tg, $app, h, haptic, toast, showSheet, closeSheet, refreshSheet, avatar, animateOnce, REDUCED,
 } from '../ui.js';
+import { dropItem } from '../drop.js';
 import { net, bus, send } from '../net.js';
 import { avatarEl } from '../profile.js';
 import { chatMenuItem } from '../chat.js';
@@ -496,6 +497,7 @@ function openMenu() {
       item('Передать права хоста', null, () => openPlayers('host'));
       item('Удалить игрока', live ? 'партия отменится' : null, () => openPlayers('kick'));
       if (s.room.status !== 'lobby') item('Завершить игру', 'итоги — всем и в группу', confirmFinish, 'danger');
+      dropItem(item);
     }
     return h('div', h('h3', 'Меню'), h('div.sub', `🎲 Нарды · ${s.room.control}`), h('div.menu-list', items));
   });

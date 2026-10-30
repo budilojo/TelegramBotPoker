@@ -446,8 +446,16 @@ export function showSheet(name, build, opts = {}) {
     const body = build();
     if (!body) return closeSheet();
     if (shell && shell.sheet.isConnected) {
+      // Шторку пересобирают на каждое обновление стола. Человек в это время мог
+      // печатать в поле (настройки стола): без этого поле теряло фокус, клавиатура
+      // закрывалась и курсор прыгал в начало. Запоминаем, какое поле в фокусе,
+      // и возвращаем фокус и курсор в то же поле новой копии.
+      const keep = focusMemo(shell.content);
+      const scroll = shell.sheet.scrollTop;
       shell.content.replaceWith(body);
       shell.content = body;
+      restoreFocus(body, keep);
+      shell.sheet.scrollTop = scroll;
       return;
     }
     const sheet = h('div.sheet', h('div.grab'), body);
@@ -455,6 +463,34 @@ export function showSheet(name, build, opts = {}) {
     $sheets.replaceChildren(h('div.backdrop', { onclick: () => closeSheet(true) }), sheet);
   };
   sheetRenderers[name]();
+}
+
+const FIELDS = 'input, textarea, select';
+
+/** Какое поле шторки сейчас в фокусе (порядковый номер) и где в нём курсор. */
+export function focusMemo(root) {
+  const a = document.activeElement;
+  if (!a || !root.contains(a) || !a.matches?.(FIELDS)) return null;
+  const idx = [...root.querySelectorAll(FIELDS)].indexOf(a);
+  if (idx < 0) return null;
+  let start = null; let end = null;
+  try { start = a.selectionStart; end = a.selectionEnd; } catch { /* number: курсора нет */ }
+  return { idx, start, end };
+}
+
+/** Вернуть фокус полю с тем же номером в пересобранной шторке; недоступное поле — не трогаем. */
+export function restoreFocus(root, memo) {
+  if (!memo) return;
+  const el = root.querySelectorAll(FIELDS)[memo.idx];
+  if (!el || el.disabled) return;
+  el.focus({ preventScroll: true });
+  if (memo.start != null) {
+    try { el.setSelectionRange(memo.start, memo.end); } catch { /* number */ }
+  } else {
+    // У числового поля курсора для чтения нет, а новая копия ставит его в начало:
+    // человек печатает в конец, так что переписанное значение уводит курсор в конец.
+    const v = el.value; el.value = ''; el.value = v;
+  }
 }
 
 /** @param byUser  swiped or tapped away (then `onDismiss` is told) */

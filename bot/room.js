@@ -1001,7 +1001,12 @@ export function updateSettings(room, userId, patch = {}) {
     ? intIn(patch.startingStack, bb, 100_000_000, cur.startingStack)
     : cur.startingStack;
 
-  const blindsMoved = sb !== cur.smallBlind || bb !== cur.bigBlind;
+  // Посреди партии сравниваем с тем, что уже ждёт следующей раздачи: повторное
+  // «Сохранить» тех же блайндов (двойное нажатие, повтор после обрыва связи) —
+  // не изменение и не новая запись в «отмену».
+  const baseSb = !inLobby && room.pendingBlinds ? room.pendingBlinds.sb : cur.smallBlind;
+  const baseBb = !inLobby && room.pendingBlinds ? room.pendingBlinds.bb : cur.bigBlind;
+  const blindsMoved = sb !== baseSb || bb !== baseBb;
   const timerMoved = turnSeconds !== (cur.turnSeconds || 0);
   const cards = patch.cards === 'live' || patch.cards === 'virtual' ? patch.cards : cur.cards || 'virtual';
   const cardsMoved = cards !== (cur.cards || 'virtual');

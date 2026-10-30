@@ -16,6 +16,7 @@ import {
   tg, $app, h, fmt, clamp, cardImg, backImg, initial, STAGE, haptic, REDUCED, counter, animateOnce, offsetTo, onRelayout, watchBox,
   flyChips, muck, celebrate, edgeGlow, toast, ringSvg, showSheet, closeSheet, refreshSheet, currentSheet,
 } from '../ui.js';
+import { dropItem } from '../drop.js';
 import { net, bus, send, serverNow } from '../net.js';
 import { chatMenuItem } from '../chat.js';
 import { markDone } from '../school.js';
@@ -1254,6 +1255,7 @@ function openMenu() {
       if (s.room.status === 'paused') item('Продолжить игру', null, () => { closeSheet(); send({ t: 'resume' }); });
       item('Отменить последнее действие хоста', 'ставки и карты не отменяются', () => { closeSheet(); send({ t: 'undo' }); });
       if (s.room.status !== 'lobby') item('Завершить игру', 'итоги — всем и в группу', () => confirmFinish(), 'danger');
+      dropItem(item);
     }
     return h('div', h('h3', 'Меню'), h('div.sub', s.room.title || 'Покерная комната'), h('div.menu-list', items));
   });
@@ -1302,22 +1304,61 @@ function openRoles() {
 }
 
 function openSettings() {
-  const s0 = state;
-  const st = { ...s0.room.settings, cards: s0.room.cards };
-  const inLobby = s0.room.status === 'lobby';
-  const midHand = s0.hand && s0.hand.phase !== 'complete';
+  const st = { ...state.room.settings, cards: state.room.cards };
+  let sent = false;
+  // Форма живёт, пока идёт игра: раздача может начаться или закончиться, пока хост
+  // печатает. Поэтому «лобби» и «посреди раздачи» берутся из свежего состояния при
+  // каждой отрисовке и при нажатии, а не запоминаются при открытии (иначе после
+  // начала раздачи ушла бы смена карт, и сервер отклонил бы весь набор).
+  const moment = () => ({
+    inLobby: state.room.status === 'lobby',
+    midHand: !!(state.hand && state.hand.phase !== 'complete'),
+  });
+  const bad = (inLobby) => {
+    const ok = (v) => Number.isFinite(v) && v >= 1 && Number.isInteger(v);
+    if (!ok(st.smallBlind)) return 'Малый блайнд — целое число, не меньше 1.';
+    if (!ok(st.bigBlind)) return 'Большой блайнд — целое число, не меньше 1.';
+    if (st.bigBlind < st.smallBlind) return 'Большой блайнд не может быть меньше малого.';
+    if (inLobby && !ok(st.startingStack)) return 'Стартовый стек — целое число, не меньше 1.';
+    if (inLobby && st.startingStack < st.bigBlind) return 'Стек не может быть меньше большого блайнда.';
+    return null;
+  };
   showSheet('settings', () => {
+    const { inLobby, midHand } = moment();
+    const problem = bad(inLobby);
     const numField = (label, key, disabled) => h('div.field', h('label', label),
-      h('input.num', { type: 'number', inputmode: 'numeric', value: st[key], disabled, oninput: (e) => (st[key] = Number(e.target.value)) }));
+      h('input.num', {
+        type: 'number', inputmode: 'numeric', value: Number.isFinite(st[key]) ? st[key] : '', disabled,
+        oninput: (e) => { st[key] = e.target.value === '' ? NaN : Number(e.target.value); refreshSave(); },
+      }));
     const seg = (options, key) => h('div.seg', options.map(([v, label]) => h(`button${st[key] === v ? '.on' : ''}`, {
       onclick: () => { st[key] = v; refreshSheet(); },
     }, label)));
+    const err = h('div.hint.field-err', { role: 'alert', style: { color: 'var(--color-danger)' } }, problem || '');
+    const save = h('button.btn.primary.wide.lg', { style: { marginTop: '16px', width: '100%' }, disabled: !!problem, onclick: () => {
+      if (sent) return; // повторное нажатие: уходит один набор
+      const now = moment();
+      if (bad(now.inLobby)) return;
+      sent = true;
+      const patch = { t: 'settings', smallBlind: st.smallBlind, bigBlind: st.bigBlind, turnSeconds: st.turnSeconds, blindMode: st.blindMode, levelMinutes: st.levelMinutes };
+      if (now.inLobby) patch.startingStack = st.startingStack;
+      if (!now.midHand) patch.cards = st.cards;
+      send(patch);
+      closeSheet();
+    } }, 'Сохранить');
+    // Ввод не пересобирает форму (иначе клавиатура закрывается): меняем только подсказку и кнопку.
+    function refreshSave() {
+      const p = bad(moment().inLobby);
+      err.textContent = p || '';
+      save.disabled = !!p;
+    }
     return h('div',
       h('h3', 'Настройки стола'),
       h('div.sub', inLobby ? 'До старта можно менять всё.' : 'Блайнды — со следующей раздачи. Стек после старта не меняется.'),
       numField('Стартовый стек', 'startingStack', !inLobby),
       numField('Малый блайнд', 'smallBlind'),
       numField('Большой блайнд', 'bigBlind'),
+      err,
       h('div.section-label', 'Рост блайндов'),
       seg([['levels', 'Растут'], ['fixed', 'Не растут']], 'blindMode'),
       st.blindMode === 'levels'
@@ -1328,16 +1369,10 @@ function openSettings() {
         : null,
       h('div.section-label', 'Таймер хода'),
       seg([[0, 'Выкл'], [30, '30 с'], [60, '60 с'], [90, '90 с'], [120, '2 мин']], 'turnSeconds'),
-      h('div.hint', { style: { marginTop: '6px' } }, 'Не успел — чек, если можно, иначе фолд. С таймером раздачи идут сами.'),
+      h('div.hint', { style: { marginTop: '6px' } }, 'Не успел — чек, если можно, иначе фолд. С таймером раздачи идут сами. Применяется сразу; включили посреди хода — у ходящего отсчёт начнётся заново.'),
       h('div.section-label', 'Карты'),
       midHand ? h('div.hint', 'Режим карт меняется между раздачами.') : seg([['virtual', '🤖 Раздаёт бот'], ['live', '🃏 Настоящие']], 'cards'),
-      h('button.btn.primary.wide.lg', { style: { marginTop: '16px', width: '100%' }, onclick: () => {
-        const patch = { t: 'settings', smallBlind: st.smallBlind, bigBlind: st.bigBlind, turnSeconds: st.turnSeconds, blindMode: st.blindMode, levelMinutes: st.levelMinutes };
-        if (inLobby) patch.startingStack = st.startingStack;
-        if (!midHand) patch.cards = st.cards;
-        send(patch);
-        closeSheet();
-      } }, 'Сохранить'),
+      save,
     );
   });
 }

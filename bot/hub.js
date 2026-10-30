@@ -678,6 +678,13 @@ export class Hub {
       if (!group) return this.refuse(session, 'NOT_FROM_HUB');
       return this.againHere(session, group, { from: room.code, reqId: msg.reqId });
     }
+    // «Удалить игру» кнопкой (раньше — только команда /cancel): только хост, как и команда.
+    // Всех, кто за столом, forget() сам уводит в хаб группы; рейтинг за неоконченную партию не идёт.
+    if (msg.t === 'drop') {
+      if (room.solo) return this.refuse(session, 'BAD_REQUEST');
+      if (String(room.hostId) !== String(session.user.id)) return this.refuse(session, 'NOT_HOST');
+      return void (await app.dropGame(room));
+    }
     // «Поделиться итогом»: заготовка сообщения, которое человек сам отправит от своего имени.
     if (msg.t === 'share') return this.shareResult(session, room);
 

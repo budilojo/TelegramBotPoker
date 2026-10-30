@@ -33,8 +33,23 @@ test('быстрые команды собираются из модулей: п
 test('меню «/» в группе: у каждой команды описание, скрытый псевдоним /colors в меню не попадает', () => {
   assert.deepEqual(QUICK_MENU.map(([c]) => c), ['durak', 'unoq', 'chess', 'checkers', 'nardy', 'battleship']);
   for (const [cmd, about] of QUICK_MENU) assert.ok(about && about.length <= 256, `/${cmd}: описание`);
-  // Меню бота берёт команды отсюда, а не держит свой список.
-  assert.match(read('bot/index.js'), /\.\.\.QUICK_MENU/);
+  // Решение релиза «кнопки вместо команд» (docs/next-release/navigation-map.md): быстрые команды работают,
+  // но из меню «/» убраны — лобби создаётся кнопкой в приложении. Меню — только /game и /help.
+  assert.doesNotMatch(read('bot/index.js'), /\.\.\.QUICK_MENU/);
+});
+
+test('меню «/»: в группе и в личке только /game и /help; служебные /paysupport и /terms остаются рабочими', async () => {
+  const src = read('bot/index.js');
+  const group = src.match(/const GROUP_COMMANDS = \[([\s\S]*?)\n\];/)[1];
+  const dm = src.match(/const PRIVATE_COMMANDS = \[(.*)\];/)[1];
+  const names = (text) => [...text.matchAll(/\['(\w+)'/g)].map((m) => m[1]);
+  assert.deepEqual(names(group), ['game', 'help']);
+  assert.deepEqual(names(dm), ['game', 'help']);
+  // Старые команды не стали тупиком: рабочие обработчики на месте.
+  const t = new Table();
+  const ivan = user(101, 'Иван');
+  await t.cmd(ivan, '/chess');
+  assert.ok(t.chess, '/chess по-прежнему создаёт лобби');
 });
 
 test('/unoq и /colors в группе открывают лобби UNOQ, /chess — шахмат, /durak — дурака', async () => {

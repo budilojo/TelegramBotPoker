@@ -23,7 +23,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Bot } from 'grammy';
-import { App, QUICK_MENU } from './app.js';
+import { App } from './app.js';
 import { Store } from './store.js';
 import { Hub } from './hub.js';
 import { AdminBot } from './admin-bot.js';
@@ -222,12 +222,10 @@ web.server.on('error', (err) => {
 /** The "/" menu: the games are played in the Mini App, the chat only needs these. */
 const GROUP_COMMANDS = [
   ['game', 'во что играем — выбрать игру и создать стол'],
-  ...QUICK_MENU, // лобби одной командой — их объявляют сами игры
-  ['table', 'показать игры внизу чата'],
-  ['finish', 'завершить свою игру (хост)'],
   ['help', 'как играть'],
 ];
-const PRIVATE_COMMANDS = [['bot', 'играть с ботами'], ['game', 'игры моих групп'], ['help', 'как играть']];
+// Остальное — кнопками в приложении (docs/next-release/navigation-map.md); старые команды работают, но из меню убраны.
+const PRIVATE_COMMANDS = [['game', 'игры моих групп'], ['help', 'как играть']];
 const asCommands = (list) => list.map(([command, description]) => ({ command, description }));
 try {
   await bot.api.setMyCommands(asCommands(GROUP_COMMANDS), { scope: { type: 'all_group_chats' } });

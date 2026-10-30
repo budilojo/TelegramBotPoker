@@ -17,6 +17,7 @@ import {
   tg, $app, h, clamp, cardImg, backImg, haptic, animateOnce, centerOf, offsetTo, onRelayout, watchBox, spawn, edgeGlow, celebrate,
   toast, ringSvg, showSheet, closeSheet, refreshSheet, avatar, REDUCED,
 } from '../ui.js';
+import { dropItem } from '../drop.js';
 import { cardBackSrc, DEFAULT_BACK } from '../cosmetics/art.js';
 import { makeHolder, dressTable, placeDiamond, DURAK_AVOID, frameAvatar, nameWithMark, frameOf as frameLook } from '../collections/look-view.js';
 
@@ -734,6 +735,7 @@ function openMenu() {
       item('Передать права хоста', null, () => openPlayers('host'));
       item('Удалить игрока', live ? 'партия прервётся' : null, () => openPlayers('kick'));
       if (s.room.status !== 'lobby') item('Завершить игру', 'итоги — всем и в группу', () => confirmFinish(), 'danger');
+      dropItem(item);
     }
     return h('div', h('h3', 'Меню'), h('div.sub', `🃏 Дурак · ${s.room.variantName}`), h('div.menu-list', items));
   });
@@ -755,8 +757,12 @@ function openRules() {
 
 function openSettings() {
   const st = { ...state.room.settings };
-  const live = state.deal?.phase === 'play';
+  // «Идёт партия» берём свежим при отрисовке и при нажатии: пока хост листал форму,
+  // партия могла начаться, и тогда вариант уходить не должен (сервер отклонил бы весь набор).
+  const isLive = () => state.deal?.phase === 'play';
+  let sent = false;
   showSheet('settings', () => {
+    const live = isLive();
     const seg = (options, key, disabled) => h('div.seg', options.map(([v, text]) => h(`button${st[key] === v ? '.on' : ''}`, {
       disabled, onclick: () => { st[key] = v; refreshSheet(); },
     }, text)));
@@ -768,7 +774,9 @@ function openSettings() {
       seg(TIMERS, 'turnSeconds'),
       h('div.hint', { style: { marginTop: '6px' } }, 'Не успел: отбивающийся берёт, подкидывающие пасуют; начать отбой — бот ходит младшей некозырной.'),
       h('button.btn.primary.wide.lg', { style: { marginTop: '16px', width: '100%' }, onclick: () => {
-        send({ t: 'settings', turnSeconds: st.turnSeconds, ...(live ? {} : { variant: st.variant }) });
+        if (sent) return;
+        sent = true;
+        send({ t: 'settings', turnSeconds: st.turnSeconds, ...(isLive() ? {} : { variant: st.variant }) });
         closeSheet();
       } }, 'Сохранить'),
     );

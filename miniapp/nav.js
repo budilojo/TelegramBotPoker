@@ -16,6 +16,7 @@ import { bus, send } from './net.js';
 import { renderRanked, resetRanked } from './rating.js';
 import { renderProfileSettings } from './profile.js';
 import { settingsRows } from './settings-rows.js';
+import { store as collectionsStore } from './collections/state.js';
 
 /** На каких состояниях сервера панель есть. */
 const KINDS = new Set(['home', 'hub', 'solo', 'rating']);
@@ -58,6 +59,13 @@ function go(tab, s) {
     return bus.render();
   }
   if (tab === 'shop') {
+    // Магазин готов (сервер прислал «коллекции видны»): вкладка открывает его витрину,
+    // а не экран «скоро». Витрина лежит слоем поверх страницы, «Назад» возвращает на то же место.
+    if (collectionsStore.visible) {
+      haptic.soft();
+      import('./collections/index.js').then((m) => m.open());
+      return;
+    }
     view = 'shop';
     // «Ложная дверь»: сервер считает людей, нажавших вкладку (не чаще раза в 10 с на человека).
     send({ t: 'shop', op: 'tab' }, { lock: false });

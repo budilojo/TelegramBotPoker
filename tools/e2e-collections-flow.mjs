@@ -87,6 +87,14 @@ try {
       await page.locator('[data-entry="collections"]').scrollIntoViewIfNeeded();
       await page.screenshot({ path: path.join(ROOT, 'preview', `flow-settings-${size[0]}.png`) });
     }
+    // Вкладка «Магазин» при готовом магазине ведёт в витрину, а не на «скоро» поверх неё.
+    await page.locator('.nav-tab[data-tab="games"]').click();
+    await page.locator('.nav-tab[data-tab="shop"]').click();
+    await page.waitForSelector('.col-show');
+    assert.equal(await page.locator('.shop-soon').count(), 0, 'экрана «скоро» нет поверх готового магазина');
+    await page.getByRole('button', { name: 'Назад' }).click();
+    await page.waitForSelector('.nav-tab[data-tab="settings"]');
+    await goSettings(page);
     await page.locator('[data-entry="collections"]').click();
     await page.waitForSelector('.col-show');
     await page.locator('.col-card[data-item="graphit-cardback"]').click();

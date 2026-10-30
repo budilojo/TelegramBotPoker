@@ -25,6 +25,7 @@ import {
   tg, $app, h, clamp, haptic, animateOnce, offsetTo, ringSvg, showSheet, closeSheet,
   refreshSheet, avatar, toast, REDUCED,
 } from '../ui.js';
+import { confirmDrop } from '../drop.js';
 import { net, bus, send } from '../net.js';
 import { avatarEl } from '../profile.js';
 import { chatMenuItem } from '../chat.js';
@@ -665,6 +666,7 @@ function openMenu() {
       me.isHost && !s.solo && s.deal?.phase === 'play'
         ? h('button.menu-item.danger', { onclick: confirmAbort }, 'Прервать партию', h('small', 'она не засчитается')) : null,
       me.isHost ? h('button.menu-item.danger', { onclick: confirmFinish }, 'Завершить игру', h('small', s.solo ? 'итоги — на экране' : 'итоги в группу')) : null,
+      me.isHost && !s.solo ? h('button.menu-item.danger', { onclick: confirmDrop }, 'Удалить игру', h('small', 'без итогов и рейтинга')) : null,
       h('button.btn', { onclick: () => closeSheet(true) }, 'Закрыть'));
   });
 }

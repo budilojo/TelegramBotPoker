@@ -8,6 +8,7 @@
 import { $app, h, haptic, showSheet, closeSheet, refreshSheet } from './ui.js';
 import { bus, send } from './net.js';
 import { GAMES } from './games/index.js';
+import { gameCatalog } from './catalog.js';
 
 /** Форма «новое лобби» у каждой игры своя — хаб берёт её у игры. */
 const LOBBY = Object.fromEntries(Object.entries(GAMES).map(([id, g]) => [id, g.lobby]));
@@ -36,7 +37,11 @@ export function render() {
       h('h1', 'Выберите игру', h('span.hh-2', 'из группы')),
       h('div.sub', s.group.title ? `Играйте с участниками «${s.group.title}»` : 'Играйте с участниками группы')),
 
-    h('div.game-cards', s.games.map((g) => gameRow(g, live(g.id)))),
+    // Человек вышел из партии посмотреть другой раздел, а место за столом осталось его: путь назад — первая
+    // кнопка экрана, а не строка в списке ниже. Сервер отдаёт `inside` только про самого человека.
+    ...backToTable(s),
+
+    gameCatalog({ games: s.games, key: `hub:${s.group?.code || ''}`, card: (g) => gameRow(g, live(g.id)), empty: 'Игр пока нет.' }),
 
     // Пока рейтинг не открыт, кнопка остаётся на месте и честно говорит, чего
     // ждать: убрать её совсем — значит сделать вид, что рейтинга не будет.
@@ -60,6 +65,14 @@ export function render() {
     h('div.hub-foot', 'Играть можно только с участниками группы'),
   );
   $app.append(box);
+}
+
+/** «Вернуться к столу»: каждый стол группы, за которым человек сидит. */
+function backToTable(s) {
+  const mine = s.lobbies.filter((l) => l.inside);
+  return mine.slice(0, 3).map((l) => h('button.k-btn.k-btn--primary.k-btn--block.back-to-table', {
+    onclick: () => { haptic.tap(); send({ t: 'join', code: l.code }); },
+  }, `↩ Вернуться к столу · ${l.title}`, h('small.btt-sub', l.status === 'playing' ? 'партия идёт — ваше место за вами' : l.status === 'paused' ? 'пауза — ваше место за вами' : 'вы в лобби')));
 }
 
 /** Две карты веером — значок игры. Берём из той же колоды, что и за столом. */

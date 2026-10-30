@@ -450,3 +450,35 @@
 .abc-option.right { border-color: var(--k-green); }
 .abc-option.wrong { border-color: var(--color-danger); }
 .abc-option:disabled { opacity: 1; }
+
+/* ------------------------------------------------------ каталог игр: страницы */
+.hub .gc-pager { display: flex; flex-direction: column; gap: var(--k-s8); min-width: 0; }
+.hub .gc-track {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  outline: none;
+}
+.hub .gc-track::-webkit-scrollbar { display: none; }
+.hub .gc-page { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; scroll-snap-stop: always; display: flex; flex-direction: column; gap: var(--k-s8); }
+.hub .gc-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--k-s8); }
+.hub .gc-nav {
+  width: var(--k-tap); height: var(--k-tap); flex: none; display: grid; place-items: center;
+  background: var(--k-surface); color: var(--k-text); border: 1px solid transparent; border-radius: var(--k-r-md); cursor: pointer;
+}
+.hub .gc-nav svg { width: var(--k-icon); height: var(--k-icon); display: block; }
+.hub .gc-nav:disabled { color: var(--k-text-2); opacity: .45; cursor: default; }
+.hub .gc-nav:focus-visible, .hub .gc-dot:focus-visible { outline: 2px solid var(--k-green); outline-offset: 2px; }
+.hub .gc-dots { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; }
+/* Точка — 8 px на глаз, нажимаемая зона — 44 px (подложка без видимого фона). */
+.hub .gc-dot { position: relative; width: var(--k-tap); height: var(--k-tap); background: none; border: 0; padding: 0; cursor: pointer; }
+.hub .gc-dot::after { content: ''; position: absolute; left: 50%; top: 50%; width: var(--k-s8); height: var(--k-s8); margin: calc(var(--k-s4) * -1); border-radius: 999px; background: var(--k-text-2); opacity: .5; }
+.hub .gc-dot.on::after { background: var(--k-green); opacity: 1; width: var(--k-s12); height: var(--k-s8); margin-left: calc(var(--k-s4) * -1.5); border-radius: 999px; }
+.hub .gc-pagelabel { text-align: center; font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font); color: var(--k-text-2); }
+.hub .gc-empty { text-align: center; }
+
+/* «Вернуться к столу»: первая кнопка экрана, пока человек сидит за столом группы. */
+.hub .back-to-table { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; min-height: var(--k-tap); height: auto; padding-top: var(--k-s8); padding-bottom: var(--k-s8); margin-bottom: var(--k-s8); white-space: normal; text-align: center; }
+.hub .btt-sub { font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font); color: var(--k-on-green); }
