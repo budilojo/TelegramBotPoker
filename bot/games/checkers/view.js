@@ -143,7 +143,7 @@ export function checkersView(room, viewerId, { now = Date.now(), botUsername = '
     canAnswerTakeback: player && !!m.takeback && m.takeback.by !== uid,
     canStart: room.status === 'lobby' && isHost(room, uid) && !startBlocker(room),
     canNext: room.status === 'playing' && !!m && !!m.over && (isSeated(meP) || isHost(room, uid)) && !startBlocker(room),
-    score: score(room),
+    score: score(room).map(({ id, ...row }) => row),
     history: room.history.filter((h) => !h.aborted).length,
   };
 }

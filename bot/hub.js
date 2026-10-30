@@ -698,9 +698,18 @@ export class Hub {
     // «Поделиться итогом»: заготовка сообщения, которое человек сам отправит от своего имени.
     if (msg.t === 'share') return this.shareResult(session, room);
 
+    const game = gameOf(room);
+    // ply/turn/shot начинаются заново в следующей партии дуэли. Версия
+    // стола монотонна: задержавшийся пакет старой партии не ходит в новой.
+    if (game.maxPlayers === 2 && (
+      (Number.isInteger(msg.matchNo) && msg.matchNo !== room.match?.no) ||
+      (game.positionActions?.includes(msg.t) && Number.isInteger(msg.seq) && msg.seq !== room.seq)
+    )) {
+      this.refuse(session, 'STALE');
+      return this.push(session, room);
+    }
     // Что бы страница ни просила у стола — за ним кто-то есть.
     this.app.noteLive(room);
-    const game = gameOf(room);
     return game.handle({
       app,
       hub: this,

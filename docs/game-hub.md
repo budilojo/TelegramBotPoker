@@ -506,6 +506,7 @@ miniapp/
 | `id`, `title`, `icon`, `blurb`, `minPlayers`, `maxPlayers` | для хаба и карточек |
 | `create({chatId, title, host, settings})` | новая комната (`room.game = id`) |
 | `handle(app, session, room, msg)` | действия из приложения — со своими проверками |
+| `positionActions` (необязательно) | типы атомарных действий дуэли, которым хаб сверяет seq; номер matchNo сверяется для всех действий. Связанные place→ready и два согласия next могут исходить из одной позиции одной партии |
 | `view(room, viewerId)` | что видит один человек; кроме своего — ничего |
 | `card(room, {link})`, `results(room)` | карточка в группе, итоги |
 | `waiting(room)`, `pingText(room, player)` | кого ждём — для «ваш ход» в личку |

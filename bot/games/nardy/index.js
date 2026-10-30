@@ -66,6 +66,8 @@ export default {
   blurb: 'Длинные нарды на двоих, с часами',
   minPlayers: N.MIN_PLAYERS,
   maxPlayers: N.MAX_SEATS,
+  // Атомарные действия: общая защита версии позиции в хабе.
+  positionActions: ['move', 'roll', 'end', 'undo'],
   errors: ERRORS,
   commands: [['nardy', 'нарды — новое лобби одной командой']],
   /** Соперник-бот для одиночной партии (bot.js). */

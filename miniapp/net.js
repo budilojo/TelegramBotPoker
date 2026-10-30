@@ -146,7 +146,11 @@ export function send(msg, { lock = true } = {}) {
     toast('Нет связи — переподключаемся…');
     return false;
   }
-  ws.send(JSON.stringify(msg));
+  // Версия стола дополняет счётчик хода, который обнуляется между партиями.
+  // Явная версия у карточного действия остаётся версией его исходного вида.
+  const packet = net.state?.game && Number.isInteger(net.state.seq)
+    ? { seq: net.state.seq, ...(net.state.match ? { matchNo: net.state.match.no } : {}), ...msg } : msg;
+  ws.send(JSON.stringify(packet));
   if (lock) setBusy(true);
   return true;
 }

@@ -197,6 +197,7 @@ assert.equal(await pi.getByRole('button', { name: 'Я готов' }).isDisabled(
 assert.equal(room.match.fleets[0], null, 'черновик на странице, серверу ещё ничего не ушло');
 step('тап по лотку → тап по клетке — тоже ставит; «Я готов» ждёт, пока на поле все десять');
 
+const beforeRandomSeq = room.seq;
 // «Расставить случайно»: нажимать можно снова — каждый раз новый флот, и каждый раз правильный.
 {
   const seen = new Set();
@@ -216,7 +217,9 @@ await pi.getByRole('button', { name: 'Расставить случайно' }).
 await until(() => !!room.match.fleets[0], 'сервер расставил Ивану флот');
 await pi.waitForFunction(() => document.querySelectorAll('.bs-grid:not(.mini) .bs-ship').length === 10);
 const randomMsg = await pi.evaluate(() => window.__sent.filter((m) => m.t === 'random'));
-assert.deepEqual(Object.keys(randomMsg[0]), ['t'], '«Случайно» — просьба без чисел');
+assert.deepEqual(Object.keys(randomMsg[0]).sort(), ['matchNo', 'seq', 't'], '«Случайно» — только тип и версии, без флота и кубиков');
+assert.equal(randomMsg[0].seq, beforeRandomSeq, 'версия исходной позиции перед случайной расстановкой');
+assert.equal(randomMsg[0].matchNo, room.match.no, 'версия партии перед расстановкой');
 await pi.getByRole('button', { name: 'Я готов' }).click();
 await until(() => room.match.ready[0], 'Иван готов');
 const sentPlace = await pi.evaluate(() => window.__sent.filter((m) => m.t === 'place').at(-1));

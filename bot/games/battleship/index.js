@@ -80,6 +80,8 @@ export default {
   blurb: 'Морской бой на двоих, с часами',
   minPlayers: B.MIN_PLAYERS,
   maxPlayers: B.MAX_SEATS,
+  // Атомарные действия: общая защита версии позиции в хабе.
+  positionActions: ['fire'],
   errors: ERRORS,
   commands: [['battleship', 'морской бой — новое лобби одной командой']],
   /** Соперник-бот для партии из «Игр с ботами» (bot.js). */

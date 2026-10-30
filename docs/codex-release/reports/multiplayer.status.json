@@ -1,0 +1,74 @@
+{
+  "id": "multiplayer",
+  "attemptId": "56413729-015d-45d7-9c20-d1568b003f98",
+  "status": "partial",
+  "summary": "Вся локальная задача J выполнена: матрица семи игр, 48 новых сценариев через хаб, четыре независимых контекста на игру и две ширины. Исправлены старые пакеты дуэлей и Telegram id в публичном счёте; регрессия place→ready устранена. Полный npm test 1565/1565, весь e2e 31 файл, проверки интерфейса и 7/7 поломок зелёные. Остался только внешний Telegram/телефоны; реальная оплата не проверена. Продажи/рейтинг закрыты, push не делался.",
+  "tests": [
+    {
+      "command": "git fetch origin redesign; git rev-list --left-right --count origin/redesign...HEAD",
+      "result": "Исходный 6c732ea07e837d658b65022a2a649072436d9bf2, 0/0, дерево чистое при старте; push не выполнялся",
+      "environment": "Локальный Git, redesign, 31.10.2026"
+    },
+    {
+      "command": "node --test --disable-warning=ExperimentalWarning bot/multiplayer.test.js",
+      "result": "48/48, fail/cancelled/skipped=0, exit 0; до защиты четыре теста старого пакета и четыре теста id были красные; регрессия place→ready отдельно воспроизведена красным тестом",
+      "environment": "31.10.2026, macOS 26.6.2 / Darwin 25.6.0 arm64, Node 24.12.0; память/временная SQLite и TelegramStub"
+    },
+    {
+      "command": "node --disable-warning=ExperimentalWarning tools/fuzz-privacy.mjs all 10",
+      "result": "exit 0, по 10 проходов каждой скрытой игры; 4863 перерисовки (1410/979/1085/1389)",
+      "environment": "31.10.2026, macOS 26.6.2 / Darwin 25.6.0 arm64, Node 24.12.0; память/временная SQLite и TelegramStub"
+    },
+    {
+      "command": "node tools/multiplayer-teeth.mjs",
+      "result": "exit 0, 7/7 поломок пойманы; после восстановления 48 тестов и контрольный браузер зелёные; финальный запуск после переноса positionActions в модули",
+      "environment": "31.10.2026, macOS 26.6.2 / Darwin 25.6.0 arm64, Node 24.12.0; память/временная SQLite и TelegramStub; Playwright 1.63.0 Chromium, localhost, не телефоны"
+    },
+    {
+      "command": "npm test",
+      "result": "Финальный перед коммитом: exit 0, 1565/1565, fail/cancelled/skipped=0, 36.60 с. Ранний полный проход: тоже 1565/1565, 54.38 с",
+      "environment": "31.10.2026, macOS 26.6.2 / Darwin 25.6.0 arm64, Node 24.12.0; память/временная SQLite и TelegramStub; разрешены localhost-сокеты тестов"
+    },
+    {
+      "command": "npm run e2e",
+      "result": "exit 0, все 31 файл, включая 14 multiplayer-сценариев; два ранних падения морского боя разобраны в отчёте (ожидание запроса, затем регрессия ready)",
+      "environment": "31.10.2026, macOS 26.6.2 / Darwin 25.6.0 arm64, Node 24.12.0; память/временная SQLite и TelegramStub; Playwright 1.63.0 Chromium, localhost, не телефоны"
+    },
+    {
+      "command": "E2E_PORT=8244 node --disable-warning=ExperimentalWarning tools/e2e-chess.mjs && E2E_PORT=8244 node --disable-warning=ExperimentalWarning tools/e2e-checkers.mjs && E2E_PORT=8244 node --disable-warning=ExperimentalWarning tools/e2e-nardy.mjs && E2E_PORT=8244 node --disable-warning=ExperimentalWarning tools/e2e-battleship.mjs && E2E_PORT=8244 SHOTS=1 node --disable-warning=ExperimentalWarning tools/e2e-multiplayer.mjs",
+      "result": "exit 0; все четыре затронутые дуэли и семь игр × две ширины на окончательной структуре модулей; четыре независимых контекста, две страницы одной личности, весь входящий поток и автоматический reconnect; 14 снимков",
+      "environment": "31.10.2026, macOS 26.6.2 / Darwin 25.6.0 arm64, Node 24.12.0; память/временная SQLite и TelegramStub; Playwright 1.63.0 Chromium, localhost, не телефоны"
+    },
+    {
+      "command": "npm run layout",
+      "result": "exit 0, no overlaps, финальный повтор",
+      "environment": "31.10.2026, macOS 26.6.2 / Darwin 25.6.0 arm64, Node 24.12.0; память/временная SQLite и TelegramStub; Playwright 1.63.0 Chromium, localhost, не телефоны"
+    },
+    {
+      "command": "npm run kit; npm run contrast",
+      "result": "exit 0 у обеих команд, финальные повторы, прежние документированные исключения",
+      "environment": "31.10.2026, macOS 26.6.2 / Darwin 25.6.0 arm64, Node 24.12.0; память/временная SQLite и TelegramStub; Playwright 1.63.0 Chromium, localhost, не телефоны"
+    },
+    {
+      "command": "npm run colors",
+      "result": "exit 0, экран UNOQ живой",
+      "environment": "31.10.2026, macOS 26.6.2 / Darwin 25.6.0 arm64, Node 24.12.0; память/временная SQLite и TelegramStub; Playwright 1.63.0 Chromium, localhost, не телефоны"
+    },
+    {
+      "command": "PREVIEW_PORT=8190 npm run preview",
+      "result": "exit 0, 105 свежих снимков, все просмотрены на шести листах; ошибок JS и служебных слов нет",
+      "environment": "31.10.2026, macOS 26.6.2 / Darwin 25.6.0 arm64, Node 24.12.0; память/временная SQLite и TelegramStub; Playwright 1.63.0 Chromium, localhost, не телефоны"
+    },
+    {
+      "command": "git diff --check; git diff --name-only -- server public deploy .env tools/codex-release-run.mjs bot/payments bot/rating.js",
+      "result": "Ошибок пробелов нет; список запрещённых изменений пуст",
+      "environment": "Локальное дерево redesign"
+    }
+  ],
+  "blockers": [
+    {
+      "scope": "external",
+      "reason": "Нет доказательств работы на живых iOS/Android и Telegram: две личности, второе устройство одного аккаунта, зритель, фон/возврат, системный Back/клавиатура/жесты/доставка/шеринг/мобильная сеть и смешанные версии. После разрешённой выкатки нужен п. 10 единого owner-inputs.md. Сервер по заданию не опрашивался; официальная тестовая и реальная оплата/возврат не проверены."
+    }
+  ]
+}

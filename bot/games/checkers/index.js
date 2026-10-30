@@ -62,6 +62,8 @@ export default {
   blurb: 'Русские шашки на двоих, с часами',
   minPlayers: C.MIN_PLAYERS,
   maxPlayers: C.MAX_SEATS,
+  // Атомарные действия: общая защита версии позиции в хабе.
+  positionActions: ['move'],
   errors: ERRORS,
   /** Лобби одной командой в группе: `[команда, описание в меню]`. */
   commands: [['checkers', 'шашки — новое лобби одной командой']],
