@@ -72,9 +72,10 @@ export function salesConfig(env = {}, { offers = readOffers(), legalDir = LEGAL_
 
 /**
  * Можно ли выставлять новые счета: `{ open, mode, reasons[] }`. Причины — по-русски, для владельца.
- * `stopped` — владелец остановил новые продажи (`/salesstop`), `down` — идёт обслуживание.
+ * `stopped` — владелец остановил новые продажи (`/salesstop`), `down` — идёт обслуживание,
+ * `botSupport` — есть ли отвечающий администратор для PAY_SUPPORT=bot.
  */
-export function gate(cfg, { stopped = false, down = false } = {}) {
+export function gate(cfg, { stopped = false, down = false, botSupport = false } = {}) {
   const reasons = [];
   if (cfg.mode === 'off') reasons.push('Режим продаж выключен (SALES_MODE не задан).');
   if (cfg.mode === 'test' && !cfg.testEnv) reasons.push('Тестовый режим разрешён только в тестовой среде Telegram (TG_TEST_ENV=1).');
@@ -84,6 +85,7 @@ export function gate(cfg, { stopped = false, down = false } = {}) {
     // Вещь без цены просто не продаётся (скрыта); закрыто всё — только если цены нет ни у одной.
     if (![...SELLABLE].some((id) => isPrice(cfg.offers.items[id]) && !isHidden(cfg, id))) reasons.push('Нет ни одной цены (или все вещи скрыты).');
     if (!cfg.support) reasons.push('Не задан публичный контакт поддержки (PAY_SUPPORT).');
+    else if (cfg.support === 'bot' && !botSupport) reasons.push('PAY_SUPPORT=bot, но поддержке в боте некому отвечать (ADMINS пуст).');
     for (const [f, d] of Object.entries(cfg.docs)) {
       if (d.missing) reasons.push(`Нет документа ${f}.`);
       else if (!d.ok) reasons.push(`Документ ${f} не готов: ${d.blanks ? `${d.blanks} незаполненных полей` : `статус «${d.status || 'нет'}»`}.`);

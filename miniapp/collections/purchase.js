@@ -38,6 +38,7 @@ export function buyBlock(ctx, it) {
       h('li', 'Возврат полностью звёздами при ошибке, двойной оплате или если вещь не появилась')),
     h('p.col-price-line', h('span.col-price-big', stars(price)), shop.test ? h('span.col-tag', 'Тестовая среда') : null),
     h('div.col-doc-links', DOCS.slice(0, 2).map(([id, title]) => h('button.col-btn.ghost', { type: 'button', 'data-doc': id, onclick: () => ctx.go({ name: 'doc', id }) }, title))),
+    h('p.col-note', `Нажимая «Купить», вы подтверждаете, что прочитали и принимаете Условия покупки версии ${shop.terms || '—'}.`),
     h('button.col-btn.primary', {
       type: 'button', 'data-act': 'buy', disabled: busy || snap.link !== 'ok' ? true : null, 'aria-busy': mine && busy ? 'true' : null,
       onclick: () => pay.buy(it.id),

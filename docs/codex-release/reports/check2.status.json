@@ -1,0 +1,34 @@
+{
+  "id": "check2",
+  "attemptId": "0bca6e19-64fc-4e75-baff-e8b7f4d99a11",
+  "status": "partial",
+  "summary": "Локальная задача I выполнена: карта A–I и исходные замеры, проверка всех фрагментов patch Claude, защита поддержки, подтверждение цен без изменения сумм, принятие условий и согласование проектов документов. Все текущие проверки пройдены. Продажи и рейтинг закрыты; остаются только внешние проверки и данные/решения владельца. Реальная оплата и телефон не проверены.",
+  "tests": [
+    {"command":"git fetch origin redesign; git rev-list --left-right --count HEAD...origin/redesign","result":"Исходный 8ab9c33, 0/0, дерево чистое при старте; push не выполнялся","environment":"Локальный Git, redesign, 31.10.2026"},
+    {"command":"npm test (исходный без разрешения localhost)","result":"exit 1, 1466 pass / 11 fail из 1477, listen EPERM; ограничение среды устранено повторным разрешённым запуском","environment":"macOS sandbox, Node 24.12.0, только тестовые базы и заглушки"},
+    {"command":"npm test (исходный с localhost)","result":"exit 0, 1516/1516, fail/cancelled/skipped=0, 42.46 с","environment":"macOS 25.6.0 arm64, Node 24.12.0, разрешён localhost, TelegramStub"},
+    {"command":"npm test (финальный перед коммитом)","result":"exit 0, 1517/1517, fail/cancelled/skipped=0, 35.91 с","environment":"macOS 25.6.0 arm64, Node 24.12.0, разрешён localhost, временные базы и TelegramStub"},
+    {"command":"npm run e2e","result":"exit 0, все 30 файлов; затронутый платёжный путь дополнительно повторён отдельно после правок","environment":"Локальные серверы, Chromium Playwright 1.63.0, TelegramStub"},
+    {"command":"E2E_PORT=8231 SHOTS=1 node --disable-warning=ExperimentalWarning tools/e2e-payments.mjs","result":"exit 0, 320/390 px: условия, окно заглушки, выдача, отмена, история, комплект, обе ссылки поддержки, off; снимки просмотрены","environment":"Chromium, localhost, платёжный API и Telegram SDK — заглушки, реальных платежей нет"},
+    {"command":"npm run layout","result":"exit 0, no overlaps","environment":"Локальный Chromium, TelegramStub, все размеры инструмента"},
+    {"command":"npm run kit","result":"Первый sandbox запуск: MachPort Permission denied; разрешённый повтор и финальный запуск exit 0","environment":"Локальный Chromium macOS, без внешних приложений"},
+    {"command":"npm run contrast","result":"exit 0, повторён после текста интерфейса, прежние документированные исключения","environment":"Локальный Chromium, токены проекта"},
+    {"command":"PREVIEW_PORT=8190 npm run preview","result":"exit 0, 105 свежих снимков, все просмотрены; ошибок JS и служебных слов нет; исторический таймаут не повторился","environment":"Chromium/localhost, TelegramStub, не телефон"},
+    {"command":"node --test --disable-warning=ExperimentalWarning bot/payments.test.js bot/payments.client.test.js bot/support.test.js bot/admin.shop.test.js bot/chess.test.js bot/rating.review.test.js bot/audit.privacy.test.js bot/decisions.privacy.test.js","result":"exit 0, 160/160","environment":"Локальный Node, временные базы, полный поток каждого телефона в harness, TelegramStub"},
+    {"command":"node --test --disable-warning=ExperimentalWarning bot/payments.test.js bot/payments.client.test.js","result":"exit 0, 52/52; новый тест до защиты упал true !== false","environment":"Локальный Node, временные документы/базы и TelegramStub"},
+    {"command":"node --test --disable-warning=ExperimentalWarning --test-name-pattern='короткая сдача|короткая партия|Сыграть ещё|концы партии' bot/chess.test.js bot/checkers.test.js bot/nardy.test.js bot/battleship.test.js","result":"exit 0, 6/6","environment":"Локальный Node, harness, TelegramStub"},
+    {"command":"node tools/payments-teeth.mjs","result":"exit 0, 39/39 поломок пойманы, восстановленный код зелёный","environment":"Локальные временные поломки с восстановлением, TelegramStub"},
+    {"command":"node tools/support-teeth.mjs","result":"exit 0, 18/18, восстановленный код зелёный","environment":"Локальный harness и TelegramStub"},
+    {"command":"node tools/adminshop-teeth.mjs","result":"exit 0, 28/28, восстановленный код зелёный","environment":"Локальный harness, платёжный API — заглушка"},
+    {"command":"Временное удаление строки принятия условий; E2E_PORT=8231 node --disable-warning=ExperimentalWarning tools/e2e-payments.mjs","result":"Нужный assert упал; файл восстановлен в finally, после восстановления положительный e2e прошёл","environment":"Локальный Chromium и TelegramStub"},
+    {"command":"node --disable-warning=ExperimentalWarning tools/check2-recovery.mjs","result":"Два запуска exit 0: SQLite .backup/gzip, App/Store 3a7fcc8, сохранение новых таблиц и approved-заказа, сверка оплаты/возврата ровно раз, integrity_check=ok, schema=5","environment":"Только временная SQLite, старый код из Git в временной папке, TelegramStub, без сервера"},
+    {"command":"npm audit --json","result":"exit 0, уязвимостей 0, зависимости не менялись","environment":"Актуальный ответ npm registry на 31.10.2026, без установки пакетов"},
+    {"command":"node --expose-gc --disable-warning=ExperimentalWarning tools/perf-baseline.mjs","result":"exit 0, 3 повтора до правок приложения, результаты в perf-baseline.json/md; шёл соседний e2e, ограничение записано","environment":"Node/Chromium, 10 столов, 20 WS, временная SQLite, localhost, TelegramStub"},
+    {"command":"node --expose-gc --disable-warning=ExperimentalWarning tools/load-check.mjs","result":"exit 0, исходный разогрев; таймеры и подписки после очистки 0","environment":"Локальная память, FakeClock, TelegramStub, рядом с исходным npm test"},
+    {"command":"git diff --check","result":"без ошибок","environment":"Локальное рабочее дерево redesign"}
+  ],
+  "blockers": [
+    {"scope":"external","reason":"Нет доказательств официальной тестовой оплаты Telegram, реальных событий/возвратов, живого Telegram и iOS/Android; браузер и платёжный API здесь заглушки. Сервер и состояние обслуживания по заданию не проверяются."},
+    {"scope":"owner","reason":"Нужны сведения продавца, налоговый режим/специалисты, решения по данным и срокам/удалению, утверждение арта/прав и отдельное разрешение выкатки; единый список docs/next-release/owner-inputs.md. Подтверждённые цены и канал поддержки повторно не запрашиваются. Рейтинг остаётся закрыт."}
+  ]
+}

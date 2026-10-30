@@ -61,7 +61,7 @@ const sdk = (initData) => `
   window.Telegram = { WebApp: { initData: ${JSON.stringify(initData)},
     initDataUnsafe: { start_param: new URLSearchParams(${JSON.stringify(initData)}).get('start_param') },
     ready(){}, expand(){}, close(){}, disableVerticalSwipes(){}, setHeaderColor(){}, setBackgroundColor(){}, setBottomBarColor(){},
-    onEvent(){}, openTelegramLink(){}, BackButton: { show(){}, hide(){}, onClick(){} },
+    onEvent(){}, openTelegramLink(url){ window.__openedTelegram = url; }, BackButton: { show(){}, hide(){}, onClick(){} },
     openInvoice(url, cb) { window.__invoices.push({ url, cb }); },
     HapticFeedback: { impactOccurred(){}, notificationOccurred(){}, selectionChanged(){} } } };`;
 
@@ -100,6 +100,9 @@ try {
     const col = S.app.collections;
     const page = await open(S, ivan, size);
     await goSettings(page);
+    await page.locator('[data-act="support"]').click();
+    assert.equal(await page.evaluate(() => window.__openedTelegram), 'https://t.me/All_InPoker_bot?start=support');
+    await shot(page, `support-settings-${size[0]}.png`);
     await page.locator('[data-entry="collections"]').click();
     await page.waitForSelector('.col-show');
     assert.match(await page.locator('.col-show').innerText(), /Тестовая среда · звёзды ненастоящие/);
@@ -111,9 +114,11 @@ try {
     await page.waitForSelector('.col-buy');
     const card = await page.locator('.col-buy').innerText();
     assert.ok(!card.includes('Навсегда'), 'обещания «навсегда» в условиях покупки нет');
-    for (const want of ['Пока работает приложение', 'не влияет', 'Возврат полностью', '50 ⭐', 'Условия покупки', 'Правила возврата']) assert.ok(card.includes(want), `на карточке до покупки: «${want}»`);
+    for (const want of ['Пока работает приложение', 'не влияет', 'Возврат полностью', '50 ⭐', 'Условия покупки', 'Правила возврата', 'Нажимая «Купить», вы подтверждаете, что прочитали и принимаете Условия покупки версии 1.0.']) assert.ok(card.includes(want), `на карточке до покупки: «${want}»`);
     await layoutOk(page, `${size[0]}: карточка`);
     await shot(page, `pay-card-${size[0]}.png`);
+    await page.locator('[data-act="buy"]').scrollIntoViewIfNeeded();
+    await shot(page, `pay-terms-${size[0]}.png`);
     step(`${size[0]} px: карточка — состав, цена 50 ⭐, условия и возврат видны до «Купить»`);
 
     // Купить → окно оплаты. В окне «оплачено», но сервер ещё не подтвердил — вещи нет.
@@ -167,10 +172,13 @@ try {
     await page.locator('[data-act="purchases"]').click();
     await page.waitForSelector('.col-order');
     assert.match(await page.locator('.col-purchases').innerText(), new RegExp(`Заказ ${order.id}`));
-    await page.locator('[data-act="support"]').click();
+    await page.locator('.col-purchases [data-act="support"]').click();
     await page.waitForSelector('.col-purchases [role="status"]');
     assert.match(await page.locator('.col-purchases').innerText(), /в личку/);
     assert.match(S.api.dms('101').at(-1), new RegExp(order.id), 'бот прислал номер заказа в личку');
+    await page.evaluate(() => { window.__openedTelegram = null; });
+    await page.locator('.col-purchases [data-act="support-chat"]').click();
+    assert.equal(await page.evaluate(() => window.__openedTelegram), 'https://t.me/All_InPoker_bot?start=support');
     await layoutOk(page, `${size[0]}: мои покупки`);
     await shot(page, `pay-purchases-${size[0]}.png`);
     await page.locator('[data-doc="terms-of-purchase"]').click();

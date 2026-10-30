@@ -45,14 +45,14 @@ test('по умолчанию продажи закрыты: режим off, с�
   assert.equal(t.page(OWNER).inbox.some((m) => m.t === 'col'), false, 'страница не получает состояния коллекций');
 });
 
-test('offers.json в репозитории: стартовые цены (выбраны по поручению владельца 30.10), но не утверждены — настоящие продажи не откроются', () => {
+test('offers.json: подтверждённые владельцем цены; проекты документов по-прежнему закрывают продажи', () => {
   const offers = readOffers();
-  assert.equal(offers.approved, false);
+  assert.equal(offers.approved, true);
   assert.deepEqual(offers.items, { 'graphit-cardback': 75, 'graphit-table': 100, 'graphit-profile': 50, 'graphit-bundle': 175 });
   assert.deepEqual(offers.hidden, [], 'в файле ничего не скрыто');
   const g = gate(salesConfig({ SALES_MODE: 'live', PAY_SUPPORT: '@x' }));
   assert.equal(g.open, false);
-  assert.ok(g.reasons.some((r) => /не утверждены/.test(r)));
+  assert.ok(!g.reasons.some((r) => /не утверждены/.test(r)), 'подтверждение владельца учтено');
   assert.ok(g.reasons.some((r) => /terms-of-purchase\.md не готов/.test(r)), 'проекты документов не пускают в продажу');
 });
 
@@ -73,6 +73,35 @@ test('live открывается только при всех условиях;
   assert.equal(gate(cfgOf({ mode: 'test', testEnv: false })).open, false, 'test без тестовой среды');
   // Строгие значения: «LIVE», «1», пробелы — это off.
   for (const v of ['LIVE', ' live', '1', 'true', 'yes']) assert.equal(salesConfig({ SALES_MODE: v }).mode, 'off', v);
+});
+
+test('PAY_SUPPORT=bot: без отвечающего администратора нет новых счетов и pre_checkout, старые оплаты выдаются', async () => {
+  const t = shop({ mode: 'live', support: 'bot' });
+  try {
+    assert.equal(t.app.payments.gate().open, true);
+    const inv = await buy(t, ALICE, 'graphit-table');
+    assert.ok(inv.link);
+    const o = t.app.store.pay.order(inv.order);
+    assert.equal((await preCheckout(t, ALICE, { payload: P(o.id), amount: o.price })).ok, true);
+    t.app.admins.clear();
+    const g = t.app.payments.gate();
+    assert.equal(g.open, false, 'поддержке в боте некому отвечать');
+    assert.ok(g.reasons.some((r) => /ADMINS пуст/.test(r)), g.reasons.join(' | '));
+    const before = calls(t, 'createInvoiceLink').length;
+    assert.equal((await buy(t, BOB, 'graphit-profile')).error?.code, 'PAY_CLOSED');
+    assert.equal(calls(t, 'createInvoiceLink').length, before);
+    assert.equal((await preCheckout(t, ALICE, { payload: P(o.id), amount: o.price })).error, PRECHECKOUT.closed);
+    await paid(t, ALICE, { payload: P(o.id), amount: o.price });
+    assert.equal(t.app.collections.owns(ALICE.id, o.item), true, 'уже оплаченная вещь выдаётся');
+    t.app.admins.add(String(OWNER.id));
+    assert.equal(t.app.payments.gate().open, true);
+    assert.equal(gate(cfgOf({ mode: 'live', support: '@help' }), { botSupport: false }).open, true, 'внешний контакт независим от ADMINS');
+    assert.equal(gate(cfgOf({ mode: 'live', support: 'bot' })).open, false, 'неизвестная готовность поддержки закрывает продажи');
+  } finally { t.app.stop(); t.app.store.close(); }
+  const empty = shop({ mode: 'live', support: 'bot' }, { admins: [] });
+  try {
+    assert.equal(empty.app.payments.gate().open, false, 'нет администратора уже при запуске');
+  } finally { empty.app.stop(); empty.app.store.close(); }
 });
 
 test('продаётся только «Графит»: «Ночной казино-клуб» и выдуманные id в предложения не попадают', () => {

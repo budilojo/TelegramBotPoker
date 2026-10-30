@@ -95,7 +95,11 @@ export class Payments {
 
   /** Можно ли сейчас выставлять новые счета. */
   gate() {
-    return gate(this.eff(), { stopped: this.db.stopped(), down: this.app.down });
+    return gate(this.eff(), this.gateOpts());
+  }
+  /** Общее состояние процесса для новых счетов и pre_checkout. */
+  gateOpts() {
+    return { stopped: this.db.stopped(), down: this.app.down, botSupport: (this.app.admins?.size ?? 0) > 0 };
   }
   get open() { return this.gate().open; }
 
@@ -279,7 +283,7 @@ export class Payments {
     if (!['created', 'approved'].includes(o.state)) return { ok: false, why: 'state', o };
     if (o.expiresAt <= now) return { ok: false, why: 'expired', o };
     const eff = this.eff();
-    const g = gate({ ...eff, mode: o.mode === this.cfg.mode ? this.cfg.mode : 'off' }, { stopped: this.db.stopped(), down: this.app.down });
+    const g = gate({ ...eff, mode: o.mode === this.cfg.mode ? this.cfg.mode : 'off' }, this.gateOpts());
     if (!g.open) return { ok: false, why: 'closed', o };
     // Цену сменили или вещь скрыли после выставления счёта — старый счёт не оплатить (B-3).
     if (priceOf(eff, o.item) !== o.price || this.cfg.terms !== o.terms) return { ok: false, why: 'changed', o };
