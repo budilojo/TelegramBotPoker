@@ -324,6 +324,8 @@ test('партия двух страниц до мата: каждый ход �
   assert.equal(t.state(MAX).score.find((r) => r.name === 'Макс').wins, 1);
 
   await t.send(IVAN, { t: 'next' });
+  assert.equal(room.match.no, 1, 'один зовёт — партия не началась без согласия второго');
+  await t.send(MAX, { t: 'next' });
   assert.equal(room.match.white, '202', 'цвета сменились');
   assert.equal(t.state(MAX).me.color, 'w');
   await t.send(IVAN, { t: 'finish' });
@@ -491,6 +493,7 @@ test('рейтинг: короткая сдача очков не даёт, дл
   assert.equal(t.app.store.ratingOf(101, 'chess'), null, 'сдался на втором ходу — очков нет');
   assert.match(room.rated[`${room.code}#1`].why, /короче 10 ходов/);
   await t.send(IVAN, { t: 'next' });
+  await t.send(MAX, { t: 'next' });
   await play(t, room, LONG);
   await t.send(IVAN, { t: 'resign' });
   assert.equal(t.app.store.ratingOf(202, 'chess').points, PLACE[0], 'Иван сдался в длинной партии — победа Макса засчитана');
@@ -805,4 +808,104 @@ test('КД на просьбы: нажатия чаще раза в 20 секу�
   await t.send(MAX, { t: 'decline' });
   await t.send(IVAN, { t: 'takeback' });
   assert.equal(room.match.takeback?.by, '101', 'через 20 секунд — снова можно');
+});
+
+
+/* ----------------------------------------- итог партии после окончания (F) */
+
+const resultPosts = (t) => groupPosts(t).filter((c) => /победил|вничью/.test(c.text) && !/ИТОГИ/.test(c.text));
+
+test('после мата оба телефона сразу получают итог словами, а победа записана до любых кнопок', async () => {
+  const store = new Store(':memory:');
+  const t = new Table({ store });
+  const room = await duel(t);
+  await play(t, room, FOOLS);
+  for (const u of [IVAN, MAX]) {
+    const s = t.state(u);
+    assert.equal(s.match.over.kind, 'mate');
+    assert.equal(s.match.over.winner, 'b');
+    assert.equal(s.canNext, true, `${u.first_name}: «сыграть ещё раз» видно`);
+  }
+  assert.equal(t.state(IVAN).me.color, 'w');
+  // Запись сделана сама: история и рейтинг — без «Завершить» и «Ещё партия».
+  assert.equal(room.history.length, 1);
+  assert.equal(room.history[0].winner, '202');
+  assert.equal(store.ratingOf(MAX.id, 'chess').points, PLACE[0]);
+  assert.equal(room.status, 'playing');
+  store.close();
+});
+
+test('итог партии приходит в группу сам и ровно один раз — что бы ни нажали дальше', async () => {
+  const t = new Table();
+  const room = await duel(t);
+  await play(t, room, FOOLS);
+  assert.equal(resultPosts(t).length, 1);
+  assert.match(resultPosts(t)[0].text, /Макс.*победил.*Иван.*мат.*партия 1/);
+  await t.send(IVAN, { t: 'next' });
+  await t.send(MAX, { t: 'next' });
+  await t.send(IVAN, { t: 'finish' }); // идущая вторая партия — отменена, не объявляется
+  assert.equal(resultPosts(t).length, 1, 'ни ещё раз, ни за отменённую');
+  assert.equal(groupPosts(t).filter((c) => /ИТОГИ · ШАХМАТЫ/.test(c.text)).length, 1);
+  assert.equal(room.history[0].winner, '202', 'победа осталась записанной');
+  assert.equal(room.history[0].aborted, false);
+});
+
+test('все концы партии идут одним путём: сдача, время и ничья по согласию тоже объявлены', async () => {
+  for (const how of ['resign', 'time', 'agreed']) {
+    const t = new Table();
+    const room = await duel(t, { base: 60 });
+    await play(t, room, LONG);
+    if (how === 'resign') await t.send(IVAN, { t: 'resign' });
+    if (how === 'time') await t.advance(60_000);
+    if (how === 'agreed') { await t.send(IVAN, { t: 'draw' }); await t.send(MAX, { t: 'draw' }); }
+    assert.equal(room.history.length, 1, how);
+    assert.equal(resultPosts(t).length, 1, `${how}: одно сообщение в группе`);
+    if (how === 'agreed') assert.match(resultPosts(t)[0].text, /вничью/);
+    else assert.match(resultPosts(t)[0].text, /победил/);
+  }
+});
+
+test('отменённая партия в группу итогом не уходит', async () => {
+  const t = new Table();
+  const room = await duel(t);
+  await t.send(IVAN, { t: 'abort' });
+  assert.equal(room.match.over.kind, 'aborted');
+  assert.equal(resultPosts(t).length, 0);
+});
+
+test('«сыграть ещё раз»: видно обоим, один зовёт — второй получает предложение, начинается по согласию', async () => {
+  const t = new Table();
+  const room = await duel(t);
+  await play(t, room, FOOLS);
+  await t.send(MAX, { t: 'next' });
+  assert.equal(room.match.no, 1, 'без согласия партия не началась');
+  assert.deepEqual(t.state(MAX).match.rematch, { mine: true });
+  assert.deepEqual(t.state(IVAN).match.rematch, { mine: false }, 'второму пришло предложение');
+  await t.send(MAX, { t: 'next' }); // повторное нажатие своего же предложения не принимает его
+  assert.equal(room.match.no, 1);
+  await t.send(IVAN, { t: 'next' });
+  assert.equal(room.match.no, 2);
+  assert.equal(room.match.over, null);
+  assert.equal(t.state(IVAN).match.rematch, null);
+  assert.equal(t.state(IVAN).me.color, 'b', 'цвета сменились');
+});
+
+test('зритель не может позвать на ещё одну партию и принять чужое предложение', async () => {
+  const t = new Table();
+  const room = await duel(t);
+  await t.start(DIMA);
+  t.openRoom(DIMA, room);
+  await play(t, room, FOOLS);
+  await t.send(DIMA, { t: 'next' });
+  assert.equal(room.match.rematch ?? null, null);
+  await t.send(IVAN, { t: 'next' });
+  await t.send(DIMA, { t: 'next' });
+  assert.equal(room.match.no, 1);
+});
+
+test('после мата приватность прежняя: ни у кого нет «законных ходов»', async () => {
+  const t = new Table();
+  const room = await duel(t);
+  await play(t, room, FOOLS);
+  for (const u of [IVAN, MAX]) assert.equal(t.state(u).legal.myTurn, false);
 });

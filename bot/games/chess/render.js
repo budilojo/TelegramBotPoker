@@ -109,6 +109,24 @@ export function renderResults(room) {
   ].join('\n');
 }
 
+/* ------------------------------------------------- итог одной партии в чат */
+
+/**
+ * Одно короткое сообщение в группу сразу после окончания партии — без кнопок
+ * «завершить»: «♟ Макс победил Ивана — мат (партия 1). Счёт: Макс 1 : Иван 0».
+ * `g` — запись из `room.history`.
+ */
+export function gameResultText(room, g) {
+  const how = KIND_RU[g.kind];
+  const sc = score(room).filter((r) => r.games > 0);
+  const line = sc.length ? `\nСчёт: ${sc.map((r) => `${esc(r.name)} ${r.wins}`).join(' : ')}` : '';
+  if (g.winner) {
+    const loser = g.winner === g.white ? g.black : g.white;
+    return `♟ <b>${nameOf(room, g.winner)}</b> победил <b>${nameOf(room, loser)}</b> — ${how} (партия ${g.no}).${line}`;
+  }
+  return `♟ <b>${nameOf(room, g.white)}</b> и <b>${nameOf(room, g.black)}</b> сыграли вничью — ${how} (партия ${g.no}).${line}`;
+}
+
 /* ----------------------------------------------------------- поделиться */
 
 /**

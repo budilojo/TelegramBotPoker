@@ -399,6 +399,9 @@ function playOut(room) {
   C.startGame(mate, '101', { rand: () => 0.1 });
   go(mate, [['f2', 'f3'], ['e7', 'e5'], ['g2', 'g4'], ['d8', 'h4']]);
   scene('32-chess-mate', mate, 101);
+  scene('32б-chess-mate-320', mate, 101, { width: 320, height: 568 });
+  C.askRematch(mate, '102');
+  scene('32в-chess-rematch-asked-320', mate, 101, { width: 320, height: 568 });
 
   const offer = duel();
   C.startGame(offer, '101', { rand: () => 0.1 });

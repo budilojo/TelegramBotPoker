@@ -767,7 +767,24 @@ export class App {
     if (gameOf(room).beginShow?.(this, room)) return this.draw(room);
     this.rate(room); // в дураке партию заканчивает ход, а не сдача следующей
     if (room.status === 'finished') return this.finishUp(room);
+    // Сначала телефоны и карточка, потом сообщение в чат: ответ Telegram не задерживает экран.
+    const texts = this.announcements(room);
     await this.draw(room);
+    await this.say(room, texts);
+  }
+
+  /**
+   * Итог только что законченной партии — в чат группы, сам и один раз (игра
+   * отдаёт тексты и помечает их объявленными до публикации). Партии с ботами
+   * идут без группы: им объявлять некому.
+   */
+  announcements(room) {
+    return room.solo ? [] : gameOf(room).announcements?.(room) ?? [];
+  }
+
+  async say(room, texts) {
+    for (const text of texts) await this.reply(room.chatId, text);
+    if (texts.length) this.save(room);
   }
 
   /** A hand was dealt (or the game ended instead). */
@@ -1485,6 +1502,7 @@ export class App {
       return;
     }
     this.rate(room);
+    const announced = this.announcements(room); // партия, закончившаяся вместе с серией, объявляется до итогов
     this.note('finished', room);
     this.outbox.cancel(room.chatId, room.code);
     g.onFinish?.(room);
@@ -1497,6 +1515,7 @@ export class App {
         this.log(err);
       }
     }
+    await this.say(room, announced);
     await this.outbox.post(room.chatId, g.results(room));
     this.save(room);
   }

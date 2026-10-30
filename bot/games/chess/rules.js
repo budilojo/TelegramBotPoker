@@ -82,6 +82,7 @@ export function createRoom({ chatId, host, title = '', code = newRoomCode(), bas
     hostId: null,
     gameNo: 0,
     history: [], // { no, white, black, winner (id|null), kind, aborted, plies }
+    announced: [], // номера партий, итог которых уже ушёл в чат группы (один раз на партию)
     match: null,
     turn: null, // { key, deadline, remaining } — идущие часы того, чей ход
     seq: 1,
@@ -185,6 +186,7 @@ function newMatch(room, white, black) {
     over: null, // { winner: 'w'|'b'|null, kind }
     drawOffer: null, // { by, ply }
     noOffer: {}, // id -> с какого хода снова можно предлагать
+    rematch: null, // { by } — «ещё партия»: предложил один, ждём второго
     takeback: null, // { by, ply } — просьба вернуть свой последний ход
     noTake: {}, // id -> с какого хода снова можно просить
     asked: {}, // `id:draw` | `id:takeback` -> когда в последний раз просил (по часам приложения)
@@ -231,6 +233,39 @@ export function nextGame(room, userId) {
   room.notice = null;
   touch(room);
   return { ok: true, started: true };
+}
+
+/**
+ * «Ещё партия» по согласию двоих. Первый, кто нажал, только предлагает; второй
+ * принимает — и партия начинается. Повтор своего предложения ничего не меняет.
+ * Предложение живёт в `match.rematch` и исчезает вместе с партией.
+ */
+export function askRematch(room, userId) {
+  if (room.status === 'finished') return { error: 'GAME_FINISHED' };
+  if (room.status !== 'playing') return { error: 'NOT_PLAYING' };
+  if (live(room)) return { error: 'GAME_IN_PROGRESS' };
+  const p = findPlayer(room, userId);
+  if (!isSeated(p)) return { error: 'NOT_SEATED' };
+  if (startBlocker(room)) return { error: 'NOT_ENOUGH_PLAYERS' };
+  const m = room.match;
+  if (!m.rematch) {
+    m.rematch = { by: p.id };
+    touch(room);
+    return { ok: true, offered: true };
+  }
+  if (m.rematch.by === p.id) return { ok: true, noop: true };
+  return nextGame(room, userId);
+}
+
+/**
+ * Итоги сыгранных партий, которых в группе ещё не было. Вызов сразу помечает
+ * их объявленными (до любого await публикации): повторный вызов вернёт пусто.
+ * Отменённая партия — не итог.
+ */
+export function takeAnnouncements(room) {
+  const out = room.history.filter((h) => !h.aborted && !room.announced.includes(h.no));
+  for (const h of out) room.announced.push(h.no);
+  return out;
 }
 
 /** Закрыть партию: записать результат, остановить часы. */
@@ -652,6 +687,7 @@ export function deserialize(data) {
   const room = clone(data);
   room.game = 'chess';
   room.ui = room.ui || {};
+  room.announced ||= (room.history || []).map((h) => h.no); // стол до появления итога в чат: старые партии заново не объявляем
   room.ui.lastText = null; // заставить карточку перерисоваться
   room.ui.lastKb = null;
   room.ui.lastMsgId = room.ui.lastMsgId || 0;

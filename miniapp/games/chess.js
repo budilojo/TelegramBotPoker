@@ -521,8 +521,10 @@ function statusEl() {
     const o = m.over;
     const text = o.kind === 'aborted' ? 'Партия отменена'
       : o.winner == null ? `Ничья — ${o.why}`
-        : `${o.winner === me ? 'Вы выиграли' : me ? 'Вы проиграли' : `Победа: ${COLOR_RU[o.winner]}`} — ${o.why}`;
-    return h(`div.ch-status.over${o.winner && o.winner === me ? '.won' : ''}`, text);
+        : `${o.winner === me ? 'Вы победили' : me ? 'Вы проиграли' : `Победа: ${COLOR_RU[o.winner]}`} — ${o.why}`;
+    const rm = m.rematch;
+    const ask = !rm ? null : rm.mine ? 'Ждём ответа соперника' : 'Соперник зовёт ещё раз';
+    return h(`div.ch-status.over${o.winner && o.winner === me ? '.won' : ''}`, h('span', text), ask ? h('span.ch-rematch', ask) : null);
   }
   if (viewPly !== null) return h('div.ch-status.review', 'Вы смотрите прошлую позицию — ходить пока нельзя');
   if (s.canAnswerTakeback) {
@@ -589,9 +591,16 @@ function actionsEl() {
   const m = s.match;
   const panel = h('div.panel');
   if (m.over) {
-    if (s.canNext) panel.append(h('button.k-btn.k-btn--primary.k-btn--block', { onclick: () => { haptic.tap(); send({ t: 'next' }); } }, '▶ Ещё партия'));
+    if (s.canNext) {
+      // Двое людей садятся за новую партию по согласию: один зовёт, второй принимает.
+      const rm = m.rematch;
+      panel.append(rm?.mine
+        ? h('button.k-btn.k-btn--secondary.k-btn--block', { disabled: true }, 'Ждём…')
+        : h('button.k-btn.k-btn--primary.k-btn--block', { onclick: () => { haptic.tap(); send({ t: 'next' }); } },
+          rm ? '▶ Принять' : '▶ Ещё раз'));
+    }
     if (s.canShare) panel.append(h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: shareResult }, 'Поделиться'));
-    if (s.me.isHost || s.me.seated) panel.append(h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: confirmFinish }, 'Завершить'));
+    if (s.me.isHost || s.me.seated) panel.append(h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: confirmFinish }, 'Закончить'));
     return panel;
   }
   if (!s.me.color) {
@@ -782,8 +791,10 @@ function confirmAbort() {
 
 function confirmFinish() {
   showSheet('finish', () => h('div',
-    h('h3', 'Завершить игру?'),
-    h('div.sub', 'Идущая партия не засчитается. Итоги увидят оба и группа.'),
+    h('h3', state.match?.over ? 'Закончить серию?' : 'Завершить игру?'),
+    h('div.sub', state.match?.over
+      ? 'Сыгранные партии уже записаны, итог каждой уже в группе. Серия закроется, сводку увидят оба и группа.'
+      : 'Идущая партия не засчитается. Итоги увидят оба и группа.'),
     h('div.grid2',
       h('button.btn', { onclick: () => closeSheet() }, 'Отмена'),
       h('button.btn.danger', { onclick: () => { closeSheet(); send({ t: 'finish' }); } }, 'Завершить')),

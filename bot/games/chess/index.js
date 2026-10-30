@@ -9,7 +9,7 @@
  */
 import * as C from './rules.js';
 import { chessView } from './view.js';
-import { renderCard, renderResults, renderTurnPing, shareText } from './render.js';
+import { renderCard, renderResults, gameResultText, renderTurnPing, shareText } from './render.js';
 import bot from './bot.js';
 
 /** Что страница вправе просить у шахматного стола — и больше ничего. */
@@ -85,6 +85,8 @@ export default {
   card: (room, opts) => renderCard(room, opts),
   shareText: (room, userId, opts) => shareText(room, userId, opts),
   results: (room) => renderResults(room),
+  /** Тексты итогов партий, ещё не объявленных в группе (помечает объявленными). Ядро шлёт их само. */
+  announcements: (room) => C.takeAnnouncements(room).map((g) => gameResultText(room, g)),
 
   /**
    * Партии для рейтинга. Победа и поражение считаются как места 1 и 2;
@@ -173,9 +175,11 @@ export default {
         return app.afterDeal(room, r);
       }
       case 'next': {
-        const r = C.nextGame(room, uid);
+        // С ботом соперник согласен заранее; двое людей — по обоюдному согласию.
+        const r = room.solo ? C.nextGame(room, uid) : C.askRematch(room, uid);
         if (fail(r)) return;
-        return app.afterDeal(room, r);
+        if (r.noop) return;
+        return r.started ? app.afterDeal(room, r) : app.afterChange(room);
       }
 
       case 'move': {

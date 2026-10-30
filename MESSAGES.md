@@ -1710,6 +1710,9 @@
 | «+ Новое лобби» на экране итогов покера, дурака, UNOQ и дуэлей (кнопка у каждого, кто сидел за столом) | `miniapp/games/{poker,durak,colors}.js` — `newLobby`, экран итогов |
 | Откат, просмотр, «Поделиться», «+ Новое лобби» | `miniapp/games/chess.js` — `statusEl`, `navEl`, `actionsEl`, `shareResult`, `newLobby` |
 | Текст сообщения «Поделиться» и кнопка «Сыграть со мной» | `bot/games/chess/render.js` — `shareText` |
+| Итог каждой партии в группу, сам, один раз: «♟ Макс победил Ивана — мат (партия 1). Счёт: …» / «… сыграли вничью — пат (партия 2)» | `bot/games/chess/render.js` — `gameResultText`; шлёт `bot/app.js` — `announcements`, `say` |
+| Итог на экране игрока: «Вы победили — мат», «Вы проиграли — мат», «Ничья — …»; «Соперник зовёт ещё раз», «Ждём ответа соперника» | `miniapp/games/chess.js` — `statusEl` |
+| Кнопки конца партии «▶ Ещё раз» / «▶ Принять» / «Ждём…», «Поделиться», «Закончить»; шторка «Закончить серию?» | `miniapp/games/chess.js` — `actionsEl`, `confirmFinish` |
 | Ошибки отката и шеринга | `bot/games/chess/index.js` — `ERRORS`; `bot/hub.js` — `CORE_ERRORS` (`NOT_SHAREABLE`, `TOO_FAST`…) |
 | Быстрые команды `/chess` `/durak` `/unoq` и их описания в меню «/» | `bot/games/<игра>/index.js` — `commands`; собирает `bot/app.js` — `QUICK_GAMES`, `QUICK_MENU`, `quickLobby`; меню — `bot/index.js` — `GROUP_COMMANDS` |
 

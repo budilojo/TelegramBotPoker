@@ -95,6 +95,7 @@ export function chessView(room, viewerId, { now = Date.now(), botUsername = '' }
       captured: caps,
       material: material(m.pos.b),
       over: m.over ? { winner: m.over.winner, kind: m.over.kind, why: KIND_RU[m.over.kind] } : null,
+      rematch: m.over && m.rematch ? { mine: m.rematch.by === uid } : null,
       takeback: m.takeback ? { byColor: m.white === m.takeback.by ? 'w' : 'b', mine: m.takeback.by === uid } : null,
       drawOffer: m.drawOffer ? { byColor: m.white === m.drawOffer.by ? 'w' : 'b', mine: m.drawOffer.by === uid } : null,
       clock: {

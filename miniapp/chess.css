@@ -240,7 +240,8 @@
   padding: var(--k-s4) var(--k-s12);
   align-self: center;
 }
-.ch-status.over { color: var(--k-text); }
+.ch-status.over { color: var(--k-text); flex-wrap: wrap; gap: var(--k-s4) var(--k-s12); }
+.ch-rematch { flex-basis: 100%; font-weight: var(--k-w-regular); }
 /* Победа названа словом — цвет ей не нужен. */
 .ch-status.over.won { color: var(--k-text); }
 .ch-status.offer { flex-wrap: wrap; color: var(--k-text); }

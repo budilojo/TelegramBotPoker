@@ -364,6 +364,20 @@ assert.match(decodeURIComponent(opened), /Победил Иван — сдалс
 assert.match(decodeURIComponent(opened), /@All_InPoker_bot/, 'реклама бота в тексте');
 step('на клиенте без shareMessage — запасной путь: t.me/share/url с тем же текстом и ссылкой на бота');
 
+/* ----------------- итог словами и «сыграть ещё раз» по согласию обоих */
+
+await pi.waitForSelector('.ch-status.over:has-text("Вы победили")');
+await pm.waitForSelector('.ch-status.over:has-text("Вы проиграли")');
+assert.ok(api.groupTexts(CHAT).some((x) => /Иван.*победил/.test(x)), 'итог партии ушёл в группу сам, без кнопки «Завершить»');
+const no = room.match.no;
+await pm.getByRole('button', { name: /Ещё раз/ }).click();
+await pm.waitForSelector('button:disabled:has-text("Ждём")');
+await pi.getByRole('button', { name: /Принять/ }).waitFor();
+assert.equal(room.match.no, no, 'пока второй не согласился, партия не началась');
+await pi.getByRole('button', { name: /Принять/ }).click();
+await until(() => room.match.no === no + 1 && !room.match.over, 'вторая партия началась по согласию');
+step('конец партии: «Вы победили» / «Вы проиграли», итог в группе сам; «Сыграть ещё раз» — предложение второму и партия по согласию');
+
 /* -------------------------------------- быстрое новое лобби: команда и кнопка */
 
 await app.handleUpdate(cmdUpdate(CHAT, ivan, '/chess', { message_id: 900 }));
