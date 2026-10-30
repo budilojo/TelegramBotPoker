@@ -67,3 +67,16 @@ test('второй пакет (next-release-2): манифест коррект�
     assert.ok(all[i][1] < all[j][0] || all[j][1] < all[i][0], `решения ${all[i]} и ${all[j]} пересекаются`);
   }
 });
+
+test('третий пакет (next-release-3): манифест корректен, порядок J→K→L→M, своё состояние внутри .release-run, решения не пересекаются с первыми двумя', () => {
+  const m2 = loadManifest(path.join(ROOT, manifestOf('next-release-2')));
+  const m3 = loadManifest(path.join(ROOT, manifestOf('next-release-3')));
+  assert.deepEqual(validateManifest(m3), []);
+  assert.deepEqual(m3.steps.map((s) => s.letter), ['J', 'K', 'L', 'M']);
+  assert.ok(m3.stateDir.startsWith('.release-run/'), 'состояние внутри уже игнорируемой папки');
+  for (const k of ['runBranch', 'worktree', 'stateDir', 'portBase']) assert.notEqual(m3[k], m2[k], `${k} свой`);
+  const all = [...real.steps, ...m2.steps, ...m3.steps].map((s) => s.decisions);
+  for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) {
+    assert.ok(all[i][1] < all[j][0] || all[j][1] < all[i][0], `решения ${all[i]} и ${all[j]} пересекаются`);
+  }
+});

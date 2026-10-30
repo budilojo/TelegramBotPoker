@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "baseBranch": "redesign",
+  "runBranch": "release3/run",
+  "stateDir": ".release-run/pack3",
+  "worktree": "release3",
+  "reportsDir": "docs/next-release-3/reports",
+  "portBase": 9800,
+  "maxAttempts": 3,
+  "common": ["docs/next-release/01-common.md", "docs/next-release-3/00-plan.md"],
+  "steps": [
+    { "id": "multiplayer", "letter": "J", "agent": "release3-multiplayer", "task": "docs/next-release-3/01-multiplayer.md", "decisions": [181, 184] },
+    { "id": "uxtext", "letter": "K", "agent": "release3-uxtext", "task": "docs/next-release-3/02-ux-text.md", "decisions": [185, 189] },
+    { "id": "perf", "letter": "L", "agent": "release3-perf", "task": "docs/next-release-3/03-perf-cleanup.md", "decisions": [190, 195] },
+    { "id": "final", "letter": "M", "agent": "release3-final", "task": "docs/next-release-3/04-final-check.md", "decisions": [196, 200] }
+  ]
+}
