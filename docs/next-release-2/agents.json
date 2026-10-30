@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "baseBranch": "redesign",
+  "runBranch": "release2/run",
+  "stateDir": ".release2-run",
+  "worktree": "release2",
+  "reportsDir": "docs/next-release-2/reports",
+  "portBase": 9600,
+  "maxAttempts": 3,
+  "common": ["docs/next-release/01-common.md", "docs/next-release-2/00-plan.md"],
+  "steps": [
+    { "id": "chess", "letter": "F", "agent": "release2-chess", "task": "docs/next-release-2/01-chess.md", "decisions": [161, 164] },
+    { "id": "support", "letter": "G", "agent": "release2-support", "task": "docs/next-release-2/02-support.md", "decisions": [165, 170] },
+    { "id": "adminshop", "letter": "H", "agent": "release2-adminshop", "task": "docs/next-release-2/03-admin-shop.md", "decisions": [171, 176] },
+    { "id": "check", "letter": "I", "agent": "release2-check", "task": "docs/next-release-2/04-check.md", "decisions": [177, 180] }
+  ]
+}

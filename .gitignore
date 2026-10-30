@@ -34,3 +34,4 @@ assets-incoming/*
 
 # состояние запуска подготовки релиза (tools/release-run.mjs)
 .release-run/
+.release2-run/

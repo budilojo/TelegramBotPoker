@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadManifest, validateManifest, nextStep } from './release-run.mjs';
+import path from 'node:path';
+import { loadManifest, validateManifest, nextStep, manifestOf, ROOT } from './release-run.mjs';
 
 const real = loadManifest();
 const clone = () => JSON.parse(JSON.stringify(real));
@@ -50,4 +51,19 @@ test('--only запускает один шаг и не перепрыгивае
   assert.ok(nextStep(real, st({}), { only: ['rating'] }).stop);
   assert.equal(nextStep(real, st({ law: 'done', payments: 'done', navigation: 'done' }), { only: ['rating'] }).step.id, 'rating');
   assert.equal(nextStep(real, st({ law: 'done' }), { only: ['law'] }).done, true);
+});
+
+test('второй пакет (next-release-2): манифест корректен, порядок F→G→H→I, отчёты и порт — свои', () => {
+  const m2 = loadManifest(path.join(ROOT, manifestOf('next-release-2')));
+  assert.deepEqual(validateManifest(m2), []);
+  assert.deepEqual(m2.steps.map((s) => s.letter), ['F', 'G', 'H', 'I']);
+  assert.notEqual(m2.stateDir, real.stateDir || '.release-run', 'своё состояние');
+  assert.notEqual(m2.runBranch, real.runBranch, 'своя ветка');
+  assert.notEqual(m2.worktree, real.worktree || 'release', 'своя рабочая копия');
+  assert.notEqual(m2.portBase, 9300, 'свой диапазон портов');
+  // номера решений не пересекаются с первым пакетом
+  const all = [...real.steps, ...m2.steps].map((s) => s.decisions);
+  for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) {
+    assert.ok(all[i][1] < all[j][0] || all[j][1] < all[i][0], `решения ${all[i]} и ${all[j]} пересекаются`);
+  }
 });

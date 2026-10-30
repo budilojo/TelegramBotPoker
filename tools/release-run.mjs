@@ -8,7 +8,7 @@
  *   node tools/release-run.mjs --check         # проверить только манифест
  *   node tools/release-run.mjs --only law      # только один шаг (предыдущие должны быть выполнены)
  *
- * Параметры: --no-push, --model <модель> (перекрывает модель из .claude/agents), --permission-mode <режим> (auto),
+ * Параметры: --pack <папка в docs/> (по умолчанию next-release; второй пакет — next-release-2), --no-push, --model <модель> (перекрывает модель из .claude/agents), --permission-mode <режим> (auto),
  * --agent-timeout-min N (240), --continue-partial (идти дальше после статуса partial).
  *
  * Устройство (подробно — docs/next-release/README.md):
@@ -27,10 +27,23 @@ import { parseAgentStatus, looksLikeLimit, snippet, changedSince } from './graph
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(HERE, '..');
 export const MANIFEST = 'docs/next-release/agents.json';
+export const manifestOf = (pack) => `docs/${pack}/agents.json`;
 const EXIT = { OK: 0, FAIL: 1, PRE: 2, LIMIT: 75 };
-const RUN_DIR = path.join(ROOT, '.release-run');
-const STATE_FILE = path.join(RUN_DIR, 'state.json');
-const LOCK_FILE = path.join(RUN_DIR, 'lock');
+// Эти пути зависят от пакета (--pack): у каждого пакета своё состояние, своя рабочая копия и свои отчёты.
+let RUN_DIR = path.join(ROOT, '.release-run');
+let STATE_FILE = path.join(RUN_DIR, 'state.json');
+let LOCK_FILE = path.join(RUN_DIR, 'lock');
+let WORKTREE_NAME = 'release';
+let REPORTS_DIR = 'docs/next-release/reports';
+let PORT_BASE = 9300;
+function applyManifestPaths(m) {
+  RUN_DIR = path.join(ROOT, m.stateDir || '.release-run');
+  STATE_FILE = path.join(RUN_DIR, 'state.json');
+  LOCK_FILE = path.join(RUN_DIR, 'lock');
+  WORKTREE_NAME = m.worktree || 'release';
+  REPORTS_DIR = m.reportsDir || 'docs/next-release/reports';
+  PORT_BASE = m.portBase || 9300;
+}
 
 /* ------------------------------------------------------------------ манифест */
 
@@ -94,7 +107,7 @@ const now = () => new Date().toISOString();
 const log = (...a) => console.log(...a);
 
 const repoName = () => path.basename(ROOT);
-const worktreeDir = () => path.resolve(ROOT, '..', `${repoName()}-release`);
+const worktreeDir = () => path.resolve(ROOT, '..', `${repoName()}-${WORKTREE_NAME}`);
 
 function readState() {
   try { return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')); } catch { return { steps: {} }; }
@@ -107,7 +120,7 @@ const logFiles = (id, attempt) => ({
   out: path.join(RUN_DIR, 'logs', `${id}.${attempt}.out.json`),
   err: path.join(RUN_DIR, 'logs', `${id}.${attempt}.err.log`),
 });
-const statusPath = (id) => `docs/next-release/reports/${id}.status.json`;
+const statusPath = (id) => `${REPORTS_DIR}/${id}.status.json`;
 
 /* ------------------------------------------------------------------ проверки перед запуском */
 
@@ -174,7 +187,7 @@ function buildPrompt(m, s, dir, state) {
     `Ты — исполнитель «${s.id}» (${s.letter}) подготовки релиза с покупками проекта TelegramBotPoker. Человека рядом нет: вопросов не задавай, обычные решения принимай сам и записывай в отчёт.`,
     `Твоя рабочая копия: ${dir} (ветка ${m.runBranch}). Сначала прочитай ${m.common.join(' и ')}, затем целиком своё задание ${s.task} и выполни его. Если в ветке уже есть твоя работа — продолжи, не переделывая.`,
     `Переопределение общей части: вместо «работа в redesign и обычный push» коммить в ${m.runBranch}; git push НЕ делай — скрипт проверит и опубликует сам. Не создавай PR, не выкатывай.`,
-    `Закончи только после того, как записаны docs/next-release/reports/${s.id}.md и ${s.id}.status.json (поля id, status done|partial|blocked, summary, at, tests, blockers), всё закоммичено и git status чистый.`,
+    `Закончи только после того, как записаны ${REPORTS_DIR}/${s.id}.md и ${s.id}.status.json (поля id, status done|partial|blocked, summary, at, tests, blockers), всё закоммичено и git status чистый.`,
     prev.length ? `Предыдущие шаги:\n${prev.join('\n')}` : '',
   ].filter(Boolean).join('\n');
 }
@@ -186,7 +199,7 @@ function runAgent(m, s, dir, opts, state, index) {
   const err = fs.openSync(f.err, 'w');
   const args = ['-p', buildPrompt(m, s, dir, state), '--agent', s.agent, '--permission-mode', opts.permissionMode, '--output-format', 'json', '--name', `release-${s.id}`];
   if (opts.model) args.push('--model', opts.model);
-  return spawn('claude', args, { cwd: dir, stdio: ['ignore', out, err], env: { ...process.env, RELEASE_RUN: '1', E2E_PORT: String(9300 + 40 * index) } });
+  return spawn('claude', args, { cwd: dir, stdio: ['ignore', out, err], env: { ...process.env, RELEASE_RUN: '1', E2E_PORT: String(PORT_BASE + 40 * index) } });
 }
 
 function waitFor(child, timeoutMin) {
@@ -246,6 +259,7 @@ function parseArgs(argv) {
     else if (x === '--check') o.check = true;
     else if (x === '--no-push') o.noPush = true;
     else if (x === '--continue-partial') o.continuePartial = true;
+    else if (x === '--pack') o.pack = argv[++i];
     else if (x === '--only') o.only = String(argv[++i]).split(',').filter(Boolean);
     else if (x === '--model') o.model = argv[++i];
     else if (x === '--permission-mode') o.permissionMode = argv[++i];
@@ -261,7 +275,8 @@ function parseArgs(argv) {
 async function main() {
   const o = parseArgs(process.argv.slice(2));
   if (o.help) { console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('*/')[0].replace(/^#!.*\n/, '')); return EXIT.OK; }
-  const m = loadManifest();
+  const m = loadManifest(path.join(ROOT, manifestOf(o.pack || 'next-release')));
+  applyManifestPaths(m);
   const state = readState();
   if (o.only) {
     const bad = o.only.filter((id) => !m.steps.some((s) => s.id === id));
@@ -381,7 +396,7 @@ async function main() {
         exit = EXIT.FAIL; break;
       }
       writeState(state);
-      if (ps.status === 'blocked') { log(`\nШаг «${s.id}» заблокирован — дальше не иду. Причина — в docs/next-release/reports/${s.id}.md`); exit = EXIT.FAIL; break; }
+      if (ps.status === 'blocked') { log(`\nШаг «${s.id}» заблокирован — дальше не иду. Причина — в ${REPORTS_DIR}/${s.id}.md`); exit = EXIT.FAIL; break; }
       if (ps.status === 'partial' && !o.continuePartial) { log(`\nШаг «${s.id}» выполнен частично — остановка. Прочитайте отчёт; продолжить можно командой с --continue-partial.`); exit = EXIT.FAIL; break; }
     }
   } catch (e) {
