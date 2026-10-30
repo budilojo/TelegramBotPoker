@@ -103,6 +103,9 @@ export default {
       return {
         id: `${room.code}#${g.no}`,
         aborted: !!g.aborted,
+        // Ничья («карты кончились у всех разом»): порядок выхода условный, делить
+        // победу нечем — очков нет, как в шахматах.
+        draw: !!g.draw && !g.aborted,
         loserId: g.fool || null,
         places: order.map((id) => ({ id, name: D.findPlayer(room, id)?.name ?? null })),
       };

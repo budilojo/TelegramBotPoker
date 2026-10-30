@@ -15,6 +15,9 @@ import { tableView } from '../../view.js';
 import { renderCard, renderResults, renderTurnPing } from '../../render.js';
 import { num } from '../../fmt.js';
 import { results as tally } from '../../../server/game.js';
+
+/** Вечер короче десяти раздач (если не кончился сам) в рейтинг не идёт. */
+export const RATED_MIN_HANDS = 10;
 import pokerBot, { decidePoker } from './bot.js';
 import * as S from './school.js';
 import { begin as beginDecision } from '../../decisions.js';
@@ -300,9 +303,20 @@ export default {
       .filter((r) => !byId.get(r.id)?.kicked)
       .sort((a, b) => b.net - a.net || b.stack - a.stack);
     if (players.length < 2) return [];
+    // Вечер, который закрыли на второй раздаче (хост, «завершить все», простой),
+    // — самая дешёвая накрутка: двое сыграли раздачу, хост нажал «завершить»,
+    // +20/−10. Короткий вечер очков не даёт; естественный конец — когда все
+    // фишки собрал один — считается при любой длине.
+    const natural = players.filter((r) => r.stack > 0).length <= 1;
+    const hands = Math.max(...players.map((r) => r.handsPlayed));
+    // Первые двое поровну (и по итогу, и по стеку) — ничья: делить +20 нечем, а
+    // порядок «по рассадке» отдал бы победу хосту.
+    const draw = players[0].net === players[1].net && players[0].stack === players[1].stack;
     return [{
       id: room.code,
       aborted: false,
+      short: !natural && hands < RATED_MIN_HANDS,
+      draw,
       loserId: players.at(-1).id,
       places: players.map((r) => ({ id: r.id, name: r.name })),
     }];
