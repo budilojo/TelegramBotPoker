@@ -1,0 +1,54 @@
+{
+  "id": "art",
+  "attemptId": "60eae50e-ce18-4fb5-b962-cfad1af5a58c",
+  "status": "done",
+  "summary": "Созданы шесть разных коллекций: 54 самостоятельных предмета и 6 комплектов, 114 SVG, детерминированный источник и полный manifest. Лимиты соблюдены, 31/31 поломок пойманы, 1587/1587 тестов зелёные. Графит/права/цены сохранены; интеграция C/D и утверждение нового арта впереди, телефоны не проверены.",
+  "tests": [
+    {
+      "command": "node tools/build-cosmetics-v2.mjs",
+      "result": "exit 0; 114 SVG + manifest, 392719 байт, preview <=19750, game <=3509",
+      "environment": "macOS 26.6.2 (25G83) arm64, Node 24.12.0, npm 11.6.2"
+    },
+    {
+      "command": "node --test tools/cosmetics-v2-art.test.js",
+      "result": "exit 0, 7/7, fail/cancelled/skipped/todo=0; детерминированность, безопасный SVG, состав/хэши/размеры, запись CLI не меняет посторонние файлы и Графит",
+      "environment": "Node 24.12.0, отдельная tmp-папка"
+    },
+    {
+      "command": "node tools/check-cosmetics-v2.mjs --sheet docs/cosmetics-v2/reports/art-sheets",
+      "result": "exit 0; 114 непустых SVG, 72 прозрачных слоя, 7134768 защищённых пикселей; композиция неизменна. Четыре окончательных PNG просмотрены",
+      "environment": "Playwright 1.63.0, Chromium 153.0.8010.12, локальные SVG/Canvas, без Telegram"
+    },
+    {
+      "command": "node tools/cosmetics-v2-art-teeth.mjs --browser",
+      "result": "exit 0, 31/31 временных поломок пойманы ожидаемым assert; исходный пакет не менялся, контроль 7/7 зелёный",
+      "environment": "Node 24.12.0 + Chromium, отдельные копии SVG в tmp"
+    },
+    {
+      "command": "npm run kit",
+      "result": "exit 0, новых кеглей/скруглений вне шкалы нет",
+      "environment": "Node 24.12.0 + локальный Chromium"
+    },
+    {
+      "command": "npm run contrast",
+      "result": "exit 0, прежние документированные исключения; палитры арта отдельно проверены unit >=4.5",
+      "environment": "Node 24.12.0, macOS"
+    },
+    {
+      "command": "npm test",
+      "result": "exit 0, 1587/1587, fail/cancelled/skipped/todo=0, 37.61 с; полный прогон перед коммитом",
+      "environment": "macOS 26.6.2 arm64, Node 24.12.0, localhost HTTP/WS разрешён, TelegramStub"
+    },
+    {
+      "command": "git diff --exit-code dbd603e -- miniapp/collections/art miniapp/collections/catalog.js bot/collections bot/payments bot/app.js bot/hub.js bot/store.js server public deploy MESSAGES.md",
+      "result": "exit 0, прежние ресурсы/права/платежи/общий runtime не менялись",
+      "environment": "Git, redesign"
+    },
+    {
+      "command": "git diff --check",
+      "result": "exit 0",
+      "environment": "Git, redesign"
+    }
+  ],
+  "blockers": []
+}

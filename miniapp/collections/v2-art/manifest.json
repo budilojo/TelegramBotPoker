@@ -1,0 +1,3536 @@
+{
+  "v": 2,
+  "generator": "tools/build-cosmetics-v2.mjs",
+  "source": {
+    "kind": "project-generated",
+    "author": "Codex B",
+    "approved": false
+  },
+  "collections": [
+    {
+      "id": "sever",
+      "title": "Север",
+      "motif": "Ледяные грани и восьмилучевой кристалл",
+      "palette": {
+        "bg": "#203442",
+        "ink": "#D4E7EF",
+        "mid": "#738F9D"
+      }
+    },
+    {
+      "id": "obsidian",
+      "title": "Обсидиан",
+      "motif": "Асимметричные срезы и монолит",
+      "palette": {
+        "bg": "#25262C",
+        "ink": "#D6D7DC",
+        "mid": "#777883"
+      }
+    },
+    {
+      "id": "chertezh",
+      "title": "Чертёж",
+      "motif": "Калибровка, координатная сетка и угловые метки",
+      "palette": {
+        "bg": "#1E304F",
+        "ink": "#E5E8DF",
+        "mid": "#7C91B0"
+      }
+    },
+    {
+      "id": "terracotta",
+      "title": "Терракота",
+      "motif": "Широкие дуги, плитка и ступени",
+      "palette": {
+        "bg": "#743F36",
+        "ink": "#F3DDC8",
+        "mid": "#B77F68"
+      }
+    },
+    {
+      "id": "orbita",
+      "title": "Орбита",
+      "motif": "Смещённые окружности и спутники",
+      "palette": {
+        "bg": "#403448",
+        "ink": "#DED8ED",
+        "mid": "#9C8FAE"
+      }
+    },
+    {
+      "id": "porcelain",
+      "title": "Фарфор",
+      "motif": "Парные листья и тонкий растительный бордюр",
+      "palette": {
+        "bg": "#E0E9EC",
+        "ink": "#304553",
+        "mid": "#8499A3"
+      }
+    }
+  ],
+  "budget": {
+    "detailBytes": 24576,
+    "smallBytes": 8192,
+    "totalBytes": 1048576
+  },
+  "items": [
+    {
+      "id": "sever-cardback",
+      "collection": "sever",
+      "kind": "item",
+      "slot": "cardback",
+      "games": [
+        "poker"
+      ],
+      "visibility": "owner-closed-cards",
+      "title": "Рубашка покера «Север»",
+      "description": "Центральная эмблема и читаемый край закрытой карты.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/sever-cardback-preview.svg",
+        "game": "/collections/v2-art/sever-cardback-game.svg"
+      },
+      "preview": "/collections/v2-art/sever-cardback-preview.svg",
+      "game": "/collections/v2-art/sever-cardback-game.svg"
+    },
+    {
+      "id": "sever-table",
+      "collection": "sever",
+      "kind": "item",
+      "slot": "table",
+      "games": [
+        "poker",
+        "durak"
+      ],
+      "visibility": "room",
+      "title": "Стол «Север»",
+      "description": "Орнамент по краю; центр для банка и карт свободен.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/sever-table-preview.svg",
+        "game": "/collections/v2-art/sever-table-game.svg"
+      },
+      "preview": "/collections/v2-art/sever-table-preview.svg",
+      "game": "/collections/v2-art/sever-table-game.svg"
+    },
+    {
+      "id": "sever-frame",
+      "collection": "sever",
+      "kind": "item",
+      "slot": "frame",
+      "games": [
+        "poker",
+        "durak",
+        "colors",
+        "chess",
+        "checkers",
+        "nardy",
+        "battleship"
+      ],
+      "visibility": "public-profile",
+      "title": "Рамка «Север»",
+      "description": "Контур аватара, сохраняющий лицо и имя.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/sever-frame-preview.svg",
+        "game": "/collections/v2-art/sever-frame-game.svg"
+      },
+      "preview": "/collections/v2-art/sever-frame-preview.svg",
+      "game": "/collections/v2-art/sever-frame-game.svg"
+    },
+    {
+      "id": "sever-badge",
+      "collection": "sever",
+      "kind": "item",
+      "slot": "badge",
+      "games": [
+        "poker",
+        "durak",
+        "colors",
+        "chess",
+        "checkers",
+        "nardy",
+        "battleship"
+      ],
+      "visibility": "public-profile",
+      "title": "Значок «Север»",
+      "description": "Украшение рядом с именем, без значения роли или ранга.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/sever-badge-preview.svg",
+        "game": "/collections/v2-art/sever-badge-game.svg"
+      },
+      "preview": "/collections/v2-art/sever-badge-preview.svg",
+      "game": "/collections/v2-art/sever-badge-game.svg"
+    },
+    {
+      "id": "sever-chess-board",
+      "collection": "sever",
+      "kind": "item",
+      "slot": "chess-board",
+      "games": [
+        "chess"
+      ],
+      "visibility": "room",
+      "title": "Шахматная доска «Север»",
+      "description": "Рама и безопасная фактура; светлые и тёмные клетки различимы.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/sever-chess-board-preview.svg",
+        "game": "/collections/v2-art/sever-chess-board-game.svg"
+      },
+      "preview": "/collections/v2-art/sever-chess-board-preview.svg",
+      "game": "/collections/v2-art/sever-chess-board-game.svg"
+    },
+    {
+      "id": "sever-checkers-board",
+      "collection": "sever",
+      "kind": "item",
+      "slot": "checkers-board",
+      "games": [
+        "checkers"
+      ],
+      "visibility": "room",
+      "title": "Шашечная доска «Север»",
+      "description": "Своя рама и миниатюра; фигуры и обязательное взятие читаются.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/sever-checkers-board-preview.svg",
+        "game": "/collections/v2-art/sever-checkers-board-game.svg"
+      },
+      "preview": "/collections/v2-art/sever-checkers-board-preview.svg",
+      "game": "/collections/v2-art/sever-checkers-board-game.svg"
+    },
+    {
+      "id": "sever-nardy-board",
+      "collection": "sever",
+      "kind": "item",
+      "slot": "nardy-board",
+      "games": [
+        "nardy"
+      ],
+      "visibility": "room",
+      "title": "Доска нард «Север»",
+      "description": "Рама, бар и свободные участки; треугольники и кубики прежние.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/sever-nardy-board-preview.svg",
+        "game": "/collections/v2-art/sever-nardy-board-game.svg"
+      },
+      "preview": "/collections/v2-art/sever-nardy-board-preview.svg",
+      "game": "/collections/v2-art/sever-nardy-board-game.svg"
+    },
+    {
+      "id": "sever-battleship-panel",
+      "collection": "sever",
+      "kind": "item",
+      "slot": "battleship-panel",
+      "games": [
+        "battleship"
+      ],
+      "visibility": "room",
+      "title": "Панель морского боя «Север»",
+      "description": "Только рама и координатные поля; без содержимого флота.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/sever-battleship-panel-preview.svg",
+        "game": "/collections/v2-art/sever-battleship-panel-game.svg"
+      },
+      "preview": "/collections/v2-art/sever-battleship-panel-preview.svg",
+      "game": "/collections/v2-art/sever-battleship-panel-game.svg"
+    },
+    {
+      "id": "sever-unoq-cardback",
+      "collection": "sever",
+      "kind": "item",
+      "slot": "unoq-cardback",
+      "games": [
+        "colors"
+      ],
+      "visibility": "room",
+      "title": "Рубашка UNOQ «Север»",
+      "description": "Закрытая сторона и стопка добора; лица и четыре цвета прежние.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/sever-unoq-cardback-preview.svg",
+        "game": "/collections/v2-art/sever-unoq-cardback-game.svg"
+      },
+      "preview": "/collections/v2-art/sever-unoq-cardback-preview.svg",
+      "game": "/collections/v2-art/sever-unoq-cardback-game.svg"
+    },
+    {
+      "id": "sever-bundle",
+      "collection": "sever",
+      "kind": "bundle",
+      "slot": null,
+      "games": [
+        "poker",
+        "durak",
+        "colors",
+        "chess",
+        "checkers",
+        "nardy",
+        "battleship"
+      ],
+      "visibility": "inventory-only",
+      "title": "Комплект «Север»",
+      "description": "Девять самостоятельных предметов коллекции.",
+      "includes": [
+        "sever-cardback",
+        "sever-table",
+        "sever-frame",
+        "sever-badge",
+        "sever-chess-board",
+        "sever-checkers-board",
+        "sever-nardy-board",
+        "sever-battleship-panel",
+        "sever-unoq-cardback"
+      ],
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/sever-bundle-preview.svg",
+        "game": null
+      },
+      "preview": "/collections/v2-art/sever-bundle-preview.svg",
+      "game": null
+    },
+    {
+      "id": "obsidian-cardback",
+      "collection": "obsidian",
+      "kind": "item",
+      "slot": "cardback",
+      "games": [
+        "poker"
+      ],
+      "visibility": "owner-closed-cards",
+      "title": "Рубашка покера «Обсидиан»",
+      "description": "Центральная эмблема и читаемый край закрытой карты.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/obsidian-cardback-preview.svg",
+        "game": "/collections/v2-art/obsidian-cardback-game.svg"
+      },
+      "preview": "/collections/v2-art/obsidian-cardback-preview.svg",
+      "game": "/collections/v2-art/obsidian-cardback-game.svg"
+    },
+    {
+      "id": "obsidian-table",
+      "collection": "obsidian",
+      "kind": "item",
+      "slot": "table",
+      "games": [
+        "poker",
+        "durak"
+      ],
+      "visibility": "room",
+      "title": "Стол «Обсидиан»",
+      "description": "Орнамент по краю; центр для банка и карт свободен.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/obsidian-table-preview.svg",
+        "game": "/collections/v2-art/obsidian-table-game.svg"
+      },
+      "preview": "/collections/v2-art/obsidian-table-preview.svg",
+      "game": "/collections/v2-art/obsidian-table-game.svg"
+    },
+    {
+      "id": "obsidian-frame",
+      "collection": "obsidian",
+      "kind": "item",
+      "slot": "frame",
+      "games": [
+        "poker",
+        "durak",
+        "colors",
+        "chess",
+        "checkers",
+        "nardy",
+        "battleship"
+      ],
+      "visibility": "public-profile",
+      "title": "Рамка «Обсидиан»",
+      "description": "Контур аватара, сохраняющий лицо и имя.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/obsidian-frame-preview.svg",
+        "game": "/collections/v2-art/obsidian-frame-game.svg"
+      },
+      "preview": "/collections/v2-art/obsidian-frame-preview.svg",
+      "game": "/collections/v2-art/obsidian-frame-game.svg"
+    },
+    {
+      "id": "obsidian-badge",
+      "collection": "obsidian",
+      "kind": "item",
+      "slot": "badge",
+      "games": [
+        "poker",
+        "durak",
+        "colors",
+        "chess",
+        "checkers",
+        "nardy",
+        "battleship"
+      ],
+      "visibility": "public-profile",
+      "title": "Значок «Обсидиан»",
+      "description": "Украшение рядом с именем, без значения роли или ранга.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/obsidian-badge-preview.svg",
+        "game": "/collections/v2-art/obsidian-badge-game.svg"
+      },
+      "preview": "/collections/v2-art/obsidian-badge-preview.svg",
+      "game": "/collections/v2-art/obsidian-badge-game.svg"
+    },
+    {
+      "id": "obsidian-chess-board",
+      "collection": "obsidian",
+      "kind": "item",
+      "slot": "chess-board",
+      "games": [
+        "chess"
+      ],
+      "visibility": "room",
+      "title": "Шахматная доска «Обсидиан»",
+      "description": "Рама и безопасная фактура; светлые и тёмные клетки различимы.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/obsidian-chess-board-preview.svg",
+        "game": "/collections/v2-art/obsidian-chess-board-game.svg"
+      },
+      "preview": "/collections/v2-art/obsidian-chess-board-preview.svg",
+      "game": "/collections/v2-art/obsidian-chess-board-game.svg"
+    },
+    {
+      "id": "obsidian-checkers-board",
+      "collection": "obsidian",
+      "kind": "item",
+      "slot": "checkers-board",
+      "games": [
+        "checkers"
+      ],
+      "visibility": "room",
+      "title": "Шашечная доска «Обсидиан»",
+      "description": "Своя рама и миниатюра; фигуры и обязательное взятие читаются.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/obsidian-checkers-board-preview.svg",
+        "game": "/collections/v2-art/obsidian-checkers-board-game.svg"
+      },
+      "preview": "/collections/v2-art/obsidian-checkers-board-preview.svg",
+      "game": "/collections/v2-art/obsidian-checkers-board-game.svg"
+    },
+    {
+      "id": "obsidian-nardy-board",
+      "collection": "obsidian",
+      "kind": "item",
+      "slot": "nardy-board",
+      "games": [
+        "nardy"
+      ],
+      "visibility": "room",
+      "title": "Доска нард «Обсидиан»",
+      "description": "Рама, бар и свободные участки; треугольники и кубики прежние.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/obsidian-nardy-board-preview.svg",
+        "game": "/collections/v2-art/obsidian-nardy-board-game.svg"
+      },
+      "preview": "/collections/v2-art/obsidian-nardy-board-preview.svg",
+      "game": "/collections/v2-art/obsidian-nardy-board-game.svg"
+    },
+    {
+      "id": "obsidian-battleship-panel",
+      "collection": "obsidian",
+      "kind": "item",
+      "slot": "battleship-panel",
+      "games": [
+        "battleship"
+      ],
+      "visibility": "room",
+      "title": "Панель морского боя «Обсидиан»",
+      "description": "Только рама и координатные поля; без содержимого флота.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/obsidian-battleship-panel-preview.svg",
+        "game": "/collections/v2-art/obsidian-battleship-panel-game.svg"
+      },
+      "preview": "/collections/v2-art/obsidian-battleship-panel-preview.svg",
+      "game": "/collections/v2-art/obsidian-battleship-panel-game.svg"
+    },
+    {
+      "id": "obsidian-unoq-cardback",
+      "collection": "obsidian",
+      "kind": "item",
+      "slot": "unoq-cardback",
+      "games": [
+        "colors"
+      ],
+      "visibility": "room",
+      "title": "Рубашка UNOQ «Обсидиан»",
+      "description": "Закрытая сторона и стопка добора; лица и четыре цвета прежние.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/obsidian-unoq-cardback-preview.svg",
+        "game": "/collections/v2-art/obsidian-unoq-cardback-game.svg"
+      },
+      "preview": "/collections/v2-art/obsidian-unoq-cardback-preview.svg",
+      "game": "/collections/v2-art/obsidian-unoq-cardback-game.svg"
+    },
+    {
+      "id": "obsidian-bundle",
+      "collection": "obsidian",
+      "kind": "bundle",
+      "slot": null,
+      "games": [
+        "poker",
+        "durak",
+        "colors",
+        "chess",
+        "checkers",
+        "nardy",
+        "battleship"
+      ],
+      "visibility": "inventory-only",
+      "title": "Комплект «Обсидиан»",
+      "description": "Девять самостоятельных предметов коллекции.",
+      "includes": [
+        "obsidian-cardback",
+        "obsidian-table",
+        "obsidian-frame",
+        "obsidian-badge",
+        "obsidian-chess-board",
+        "obsidian-checkers-board",
+        "obsidian-nardy-board",
+        "obsidian-battleship-panel",
+        "obsidian-unoq-cardback"
+      ],
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/obsidian-bundle-preview.svg",
+        "game": null
+      },
+      "preview": "/collections/v2-art/obsidian-bundle-preview.svg",
+      "game": null
+    },
+    {
+      "id": "chertezh-cardback",
+      "collection": "chertezh",
+      "kind": "item",
+      "slot": "cardback",
+      "games": [
+        "poker"
+      ],
+      "visibility": "owner-closed-cards",
+      "title": "Рубашка покера «Чертёж»",
+      "description": "Центральная эмблема и читаемый край закрытой карты.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/chertezh-cardback-preview.svg",
+        "game": "/collections/v2-art/chertezh-cardback-game.svg"
+      },
+      "preview": "/collections/v2-art/chertezh-cardback-preview.svg",
+      "game": "/collections/v2-art/chertezh-cardback-game.svg"
+    },
+    {
+      "id": "chertezh-table",
+      "collection": "chertezh",
+      "kind": "item",
+      "slot": "table",
+      "games": [
+        "poker",
+        "durak"
+      ],
+      "visibility": "room",
+      "title": "Стол «Чертёж»",
+      "description": "Орнамент по краю; центр для банка и карт свободен.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/chertezh-table-preview.svg",
+        "game": "/collections/v2-art/chertezh-table-game.svg"
+      },
+      "preview": "/collections/v2-art/chertezh-table-preview.svg",
+      "game": "/collections/v2-art/chertezh-table-game.svg"
+    },
+    {
+      "id": "chertezh-frame",
+      "collection": "chertezh",
+      "kind": "item",
+      "slot": "frame",
+      "games": [
+        "poker",
+        "durak",
+        "colors",
+        "chess",
+        "checkers",
+        "nardy",
+        "battleship"
+      ],
+      "visibility": "public-profile",
+      "title": "Рамка «Чертёж»",
+      "description": "Контур аватара, сохраняющий лицо и имя.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/chertezh-frame-preview.svg",
+        "game": "/collections/v2-art/chertezh-frame-game.svg"
+      },
+      "preview": "/collections/v2-art/chertezh-frame-preview.svg",
+      "game": "/collections/v2-art/chertezh-frame-game.svg"
+    },
+    {
+      "id": "chertezh-badge",
+      "collection": "chertezh",
+      "kind": "item",
+      "slot": "badge",
+      "games": [
+        "poker",
+        "durak",
+        "colors",
+        "chess",
+        "checkers",
+        "nardy",
+        "battleship"
+      ],
+      "visibility": "public-profile",
+      "title": "Значок «Чертёж»",
+      "description": "Украшение рядом с именем, без значения роли или ранга.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/chertezh-badge-preview.svg",
+        "game": "/collections/v2-art/chertezh-badge-game.svg"
+      },
+      "preview": "/collections/v2-art/chertezh-badge-preview.svg",
+      "game": "/collections/v2-art/chertezh-badge-game.svg"
+    },
+    {
+      "id": "chertezh-chess-board",
+      "collection": "chertezh",
+      "kind": "item",
+      "slot": "chess-board",
+      "games": [
+        "chess"
+      ],
+      "visibility": "room",
+      "title": "Шахматная доска «Чертёж»",
+      "description": "Рама и безопасная фактура; светлые и тёмные клетки различимы.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/chertezh-chess-board-preview.svg",
+        "game": "/collections/v2-art/chertezh-chess-board-game.svg"
+      },
+      "preview": "/collections/v2-art/chertezh-chess-board-preview.svg",
+      "game": "/collections/v2-art/chertezh-chess-board-game.svg"
+    },
+    {
+      "id": "chertezh-checkers-board",
+      "collection": "chertezh",
+      "kind": "item",
+      "slot": "checkers-board",
+      "games": [
+        "checkers"
+      ],
+      "visibility": "room",
+      "title": "Шашечная доска «Чертёж»",
+      "description": "Своя рама и миниатюра; фигуры и обязательное взятие читаются.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/chertezh-checkers-board-preview.svg",
+        "game": "/collections/v2-art/chertezh-checkers-board-game.svg"
+      },
+      "preview": "/collections/v2-art/chertezh-checkers-board-preview.svg",
+      "game": "/collections/v2-art/chertezh-checkers-board-game.svg"
+    },
+    {
+      "id": "chertezh-nardy-board",
+      "collection": "chertezh",
+      "kind": "item",
+      "slot": "nardy-board",
+      "games": [
+        "nardy"
+      ],
+      "visibility": "room",
+      "title": "Доска нард «Чертёж»",
+      "description": "Рама, бар и свободные участки; треугольники и кубики прежние.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/chertezh-nardy-board-preview.svg",
+        "game": "/collections/v2-art/chertezh-nardy-board-game.svg"
+      },
+      "preview": "/collections/v2-art/chertezh-nardy-board-preview.svg",
+      "game": "/collections/v2-art/chertezh-nardy-board-game.svg"
+    },
+    {
+      "id": "chertezh-battleship-panel",
+      "collection": "chertezh",
+      "kind": "item",
+      "slot": "battleship-panel",
+      "games": [
+        "battleship"
+      ],
+      "visibility": "room",
+      "title": "Панель морского боя «Чертёж»",
+      "description": "Только рама и координатные поля; без содержимого флота.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/chertezh-battleship-panel-preview.svg",
+        "game": "/collections/v2-art/chertezh-battleship-panel-game.svg"
+      },
+      "preview": "/collections/v2-art/chertezh-battleship-panel-preview.svg",
+      "game": "/collections/v2-art/chertezh-battleship-panel-game.svg"
+    },
+    {
+      "id": "chertezh-unoq-cardback",
+      "collection": "chertezh",
+      "kind": "item",
+      "slot": "unoq-cardback",
+      "games": [
+        "colors"
+      ],
+      "visibility": "room",
+      "title": "Рубашка UNOQ «Чертёж»",
+      "description": "Закрытая сторона и стопка добора; лица и четыре цвета прежние.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/chertezh-unoq-cardback-preview.svg",
+        "game": "/collections/v2-art/chertezh-unoq-cardback-game.svg"
+      },
+      "preview": "/collections/v2-art/chertezh-unoq-cardback-preview.svg",
+      "game": "/collections/v2-art/chertezh-unoq-cardback-game.svg"
+    },
+    {
+      "id": "chertezh-bundle",
+      "collection": "chertezh",
+      "kind": "bundle",
+      "slot": null,
+      "games": [
+        "poker",
+        "durak",
+        "colors",
+        "chess",
+        "checkers",
+        "nardy",
+        "battleship"
+      ],
+      "visibility": "inventory-only",
+      "title": "Комплект «Чертёж»",
+      "description": "Девять самостоятельных предметов коллекции.",
+      "includes": [
+        "chertezh-cardback",
+        "chertezh-table",
+        "chertezh-frame",
+        "chertezh-badge",
+        "chertezh-chess-board",
+        "chertezh-checkers-board",
+        "chertezh-nardy-board",
+        "chertezh-battleship-panel",
+        "chertezh-unoq-cardback"
+      ],
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/chertezh-bundle-preview.svg",
+        "game": null
+      },
+      "preview": "/collections/v2-art/chertezh-bundle-preview.svg",
+      "game": null
+    },
+    {
+      "id": "terracotta-cardback",
+      "collection": "terracotta",
+      "kind": "item",
+      "slot": "cardback",
+      "games": [
+        "poker"
+      ],
+      "visibility": "owner-closed-cards",
+      "title": "Рубашка покера «Терракота»",
+      "description": "Центральная эмблема и читаемый край закрытой карты.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/terracotta-cardback-preview.svg",
+        "game": "/collections/v2-art/terracotta-cardback-game.svg"
+      },
+      "preview": "/collections/v2-art/terracotta-cardback-preview.svg",
+      "game": "/collections/v2-art/terracotta-cardback-game.svg"
+    },
+    {
+      "id": "terracotta-table",
+      "collection": "terracotta",
+      "kind": "item",
+      "slot": "table",
+      "games": [
+        "poker",
+        "durak"
+      ],
+      "visibility": "room",
+      "title": "Стол «Терракота»",
+      "description": "Орнамент по краю; центр для банка и карт свободен.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/terracotta-table-preview.svg",
+        "game": "/collections/v2-art/terracotta-table-game.svg"
+      },
+      "preview": "/collections/v2-art/terracotta-table-preview.svg",
+      "game": "/collections/v2-art/terracotta-table-game.svg"
+    },
+    {
+      "id": "terracotta-frame",
+      "collection": "terracotta",
+      "kind": "item",
+      "slot": "frame",
+      "games": [
+        "poker",
+        "durak",
+        "colors",
+        "chess",
+        "checkers",
+        "nardy",
+        "battleship"
+      ],
+      "visibility": "public-profile",
+      "title": "Рамка «Терракота»",
+      "description": "Контур аватара, сохраняющий лицо и имя.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/terracotta-frame-preview.svg",
+        "game": "/collections/v2-art/terracotta-frame-game.svg"
+      },
+      "preview": "/collections/v2-art/terracotta-frame-preview.svg",
+      "game": "/collections/v2-art/terracotta-frame-game.svg"
+    },
+    {
+      "id": "terracotta-badge",
+      "collection": "terracotta",
+      "kind": "item",
+      "slot": "badge",
+      "games": [
+        "poker",
+        "durak",
+        "colors",
+        "chess",
+        "checkers",
+        "nardy",
+        "battleship"
+      ],
+      "visibility": "public-profile",
+      "title": "Значок «Терракота»",
+      "description": "Украшение рядом с именем, без значения роли или ранга.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/terracotta-badge-preview.svg",
+        "game": "/collections/v2-art/terracotta-badge-game.svg"
+      },
+      "preview": "/collections/v2-art/terracotta-badge-preview.svg",
+      "game": "/collections/v2-art/terracotta-badge-game.svg"
+    },
+    {
+      "id": "terracotta-chess-board",
+      "collection": "terracotta",
+      "kind": "item",
+      "slot": "chess-board",
+      "games": [
+        "chess"
+      ],
+      "visibility": "room",
+      "title": "Шахматная доска «Терракота»",
+      "description": "Рама и безопасная фактура; светлые и тёмные клетки различимы.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/terracotta-chess-board-preview.svg",
+        "game": "/collections/v2-art/terracotta-chess-board-game.svg"
+      },
+      "preview": "/collections/v2-art/terracotta-chess-board-preview.svg",
+      "game": "/collections/v2-art/terracotta-chess-board-game.svg"
+    },
+    {
+      "id": "terracotta-checkers-board",
+      "collection": "terracotta",
+      "kind": "item",
+      "slot": "checkers-board",
+      "games": [
+        "checkers"
+      ],
+      "visibility": "room",
+      "title": "Шашечная доска «Терракота»",
+      "description": "Своя рама и миниатюра; фигуры и обязательное взятие читаются.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/terracotta-checkers-board-preview.svg",
+        "game": "/collections/v2-art/terracotta-checkers-board-game.svg"
+      },
+      "preview": "/collections/v2-art/terracotta-checkers-board-preview.svg",
+      "game": "/collections/v2-art/terracotta-checkers-board-game.svg"
+    },
+    {
+      "id": "terracotta-nardy-board",
+      "collection": "terracotta",
+      "kind": "item",
+      "slot": "nardy-board",
+      "games": [
+        "nardy"
+      ],
+      "visibility": "room",
+      "title": "Доска нард «Терракота»",
+      "description": "Рама, бар и свободные участки; треугольники и кубики прежние.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/terracotta-nardy-board-preview.svg",
+        "game": "/collections/v2-art/terracotta-nardy-board-game.svg"
+      },
+      "preview": "/collections/v2-art/terracotta-nardy-board-preview.svg",
+      "game": "/collections/v2-art/terracotta-nardy-board-game.svg"
+    },
+    {
+      "id": "terracotta-battleship-panel",
+      "collection": "terracotta",
+      "kind": "item",
+      "slot": "battleship-panel",
+      "games": [
+        "battleship"
+      ],
+      "visibility": "room",
+      "title": "Панель морского боя «Терракота»",
+      "description": "Только рама и координатные поля; без содержимого флота.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/terracotta-battleship-panel-preview.svg",
+        "game": "/collections/v2-art/terracotta-battleship-panel-game.svg"
+      },
+      "preview": "/collections/v2-art/terracotta-battleship-panel-preview.svg",
+      "game": "/collections/v2-art/terracotta-battleship-panel-game.svg"
+    },
+    {
+      "id": "terracotta-unoq-cardback",
+      "collection": "terracotta",
+      "kind": "item",
+      "slot": "unoq-cardback",
+      "games": [
+        "colors"
+      ],
+      "visibility": "room",
+      "title": "Рубашка UNOQ «Терракота»",
+      "description": "Закрытая сторона и стопка добора; лица и четыре цвета прежние.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/terracotta-unoq-cardback-preview.svg",
+        "game": "/collections/v2-art/terracotta-unoq-cardback-game.svg"
+      },
+      "preview": "/collections/v2-art/terracotta-unoq-cardback-preview.svg",
+      "game": "/collections/v2-art/terracotta-unoq-cardback-game.svg"
+    },
+    {
+      "id": "terracotta-bundle",
+      "collection": "terracotta",
+      "kind": "bundle",
+      "slot": null,
+      "games": [
+        "poker",
+        "durak",
+        "colors",
+        "chess",
+        "checkers",
+        "nardy",
+        "battleship"
+      ],
+      "visibility": "inventory-only",
+      "title": "Комплект «Терракота»",
+      "description": "Девять самостоятельных предметов коллекции.",
+      "includes": [
+        "terracotta-cardback",
+        "terracotta-table",
+        "terracotta-frame",
+        "terracotta-badge",
+        "terracotta-chess-board",
+        "terracotta-checkers-board",
+        "terracotta-nardy-board",
+        "terracotta-battleship-panel",
+        "terracotta-unoq-cardback"
+      ],
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/terracotta-bundle-preview.svg",
+        "game": null
+      },
+      "preview": "/collections/v2-art/terracotta-bundle-preview.svg",
+      "game": null
+    },
+    {
+      "id": "orbita-cardback",
+      "collection": "orbita",
+      "kind": "item",
+      "slot": "cardback",
+      "games": [
+        "poker"
+      ],
+      "visibility": "owner-closed-cards",
+      "title": "Рубашка покера «Орбита»",
+      "description": "Центральная эмблема и читаемый край закрытой карты.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/orbita-cardback-preview.svg",
+        "game": "/collections/v2-art/orbita-cardback-game.svg"
+      },
+      "preview": "/collections/v2-art/orbita-cardback-preview.svg",
+      "game": "/collections/v2-art/orbita-cardback-game.svg"
+    },
+    {
+      "id": "orbita-table",
+      "collection": "orbita",
+      "kind": "item",
+      "slot": "table",
+      "games": [
+        "poker",
+        "durak"
+      ],
+      "visibility": "room",
+      "title": "Стол «Орбита»",
+      "description": "Орнамент по краю; центр для банка и карт свободен.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/orbita-table-preview.svg",
+        "game": "/collections/v2-art/orbita-table-game.svg"
+      },
+      "preview": "/collections/v2-art/orbita-table-preview.svg",
+      "game": "/collections/v2-art/orbita-table-game.svg"
+    },
+    {
+      "id": "orbita-frame",
+      "collection": "orbita",
+      "kind": "item",
+      "slot": "frame",
+      "games": [
+        "poker",
+        "durak",
+        "colors",
+        "chess",
+        "checkers",
+        "nardy",
+        "battleship"
+      ],
+      "visibility": "public-profile",
+      "title": "Рамка «Орбита»",
+      "description": "Контур аватара, сохраняющий лицо и имя.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/orbita-frame-preview.svg",
+        "game": "/collections/v2-art/orbita-frame-game.svg"
+      },
+      "preview": "/collections/v2-art/orbita-frame-preview.svg",
+      "game": "/collections/v2-art/orbita-frame-game.svg"
+    },
+    {
+      "id": "orbita-badge",
+      "collection": "orbita",
+      "kind": "item",
+      "slot": "badge",
+      "games": [
+        "poker",
+        "durak",
+        "colors",
+        "chess",
+        "checkers",
+        "nardy",
+        "battleship"
+      ],
+      "visibility": "public-profile",
+      "title": "Значок «Орбита»",
+      "description": "Украшение рядом с именем, без значения роли или ранга.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/orbita-badge-preview.svg",
+        "game": "/collections/v2-art/orbita-badge-game.svg"
+      },
+      "preview": "/collections/v2-art/orbita-badge-preview.svg",
+      "game": "/collections/v2-art/orbita-badge-game.svg"
+    },
+    {
+      "id": "orbita-chess-board",
+      "collection": "orbita",
+      "kind": "item",
+      "slot": "chess-board",
+      "games": [
+        "chess"
+      ],
+      "visibility": "room",
+      "title": "Шахматная доска «Орбита»",
+      "description": "Рама и безопасная фактура; светлые и тёмные клетки различимы.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/orbita-chess-board-preview.svg",
+        "game": "/collections/v2-art/orbita-chess-board-game.svg"
+      },
+      "preview": "/collections/v2-art/orbita-chess-board-preview.svg",
+      "game": "/collections/v2-art/orbita-chess-board-game.svg"
+    },
+    {
+      "id": "orbita-checkers-board",
+      "collection": "orbita",
+      "kind": "item",
+      "slot": "checkers-board",
+      "games": [
+        "checkers"
+      ],
+      "visibility": "room",
+      "title": "Шашечная доска «Орбита»",
+      "description": "Своя рама и миниатюра; фигуры и обязательное взятие читаются.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/orbita-checkers-board-preview.svg",
+        "game": "/collections/v2-art/orbita-checkers-board-game.svg"
+      },
+      "preview": "/collections/v2-art/orbita-checkers-board-preview.svg",
+      "game": "/collections/v2-art/orbita-checkers-board-game.svg"
+    },
+    {
+      "id": "orbita-nardy-board",
+      "collection": "orbita",
+      "kind": "item",
+      "slot": "nardy-board",
+      "games": [
+        "nardy"
+      ],
+      "visibility": "room",
+      "title": "Доска нард «Орбита»",
+      "description": "Рама, бар и свободные участки; треугольники и кубики прежние.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/orbita-nardy-board-preview.svg",
+        "game": "/collections/v2-art/orbita-nardy-board-game.svg"
+      },
+      "preview": "/collections/v2-art/orbita-nardy-board-preview.svg",
+      "game": "/collections/v2-art/orbita-nardy-board-game.svg"
+    },
+    {
+      "id": "orbita-battleship-panel",
+      "collection": "orbita",
+      "kind": "item",
+      "slot": "battleship-panel",
+      "games": [
+        "battleship"
+      ],
+      "visibility": "room",
+      "title": "Панель морского боя «Орбита»",
+      "description": "Только рама и координатные поля; без содержимого флота.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/orbita-battleship-panel-preview.svg",
+        "game": "/collections/v2-art/orbita-battleship-panel-game.svg"
+      },
+      "preview": "/collections/v2-art/orbita-battleship-panel-preview.svg",
+      "game": "/collections/v2-art/orbita-battleship-panel-game.svg"
+    },
+    {
+      "id": "orbita-unoq-cardback",
+      "collection": "orbita",
+      "kind": "item",
+      "slot": "unoq-cardback",
+      "games": [
+        "colors"
+      ],
+      "visibility": "room",
+      "title": "Рубашка UNOQ «Орбита»",
+      "description": "Закрытая сторона и стопка добора; лица и четыре цвета прежние.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/orbita-unoq-cardback-preview.svg",
+        "game": "/collections/v2-art/orbita-unoq-cardback-game.svg"
+      },
+      "preview": "/collections/v2-art/orbita-unoq-cardback-preview.svg",
+      "game": "/collections/v2-art/orbita-unoq-cardback-game.svg"
+    },
+    {
+      "id": "orbita-bundle",
+      "collection": "orbita",
+      "kind": "bundle",
+      "slot": null,
+      "games": [
+        "poker",
+        "durak",
+        "colors",
+        "chess",
+        "checkers",
+        "nardy",
+        "battleship"
+      ],
+      "visibility": "inventory-only",
+      "title": "Комплект «Орбита»",
+      "description": "Девять самостоятельных предметов коллекции.",
+      "includes": [
+        "orbita-cardback",
+        "orbita-table",
+        "orbita-frame",
+        "orbita-badge",
+        "orbita-chess-board",
+        "orbita-checkers-board",
+        "orbita-nardy-board",
+        "orbita-battleship-panel",
+        "orbita-unoq-cardback"
+      ],
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/orbita-bundle-preview.svg",
+        "game": null
+      },
+      "preview": "/collections/v2-art/orbita-bundle-preview.svg",
+      "game": null
+    },
+    {
+      "id": "porcelain-cardback",
+      "collection": "porcelain",
+      "kind": "item",
+      "slot": "cardback",
+      "games": [
+        "poker"
+      ],
+      "visibility": "owner-closed-cards",
+      "title": "Рубашка покера «Фарфор»",
+      "description": "Центральная эмблема и читаемый край закрытой карты.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/porcelain-cardback-preview.svg",
+        "game": "/collections/v2-art/porcelain-cardback-game.svg"
+      },
+      "preview": "/collections/v2-art/porcelain-cardback-preview.svg",
+      "game": "/collections/v2-art/porcelain-cardback-game.svg"
+    },
+    {
+      "id": "porcelain-table",
+      "collection": "porcelain",
+      "kind": "item",
+      "slot": "table",
+      "games": [
+        "poker",
+        "durak"
+      ],
+      "visibility": "room",
+      "title": "Стол «Фарфор»",
+      "description": "Орнамент по краю; центр для банка и карт свободен.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/porcelain-table-preview.svg",
+        "game": "/collections/v2-art/porcelain-table-game.svg"
+      },
+      "preview": "/collections/v2-art/porcelain-table-preview.svg",
+      "game": "/collections/v2-art/porcelain-table-game.svg"
+    },
+    {
+      "id": "porcelain-frame",
+      "collection": "porcelain",
+      "kind": "item",
+      "slot": "frame",
+      "games": [
+        "poker",
+        "durak",
+        "colors",
+        "chess",
+        "checkers",
+        "nardy",
+        "battleship"
+      ],
+      "visibility": "public-profile",
+      "title": "Рамка «Фарфор»",
+      "description": "Контур аватара, сохраняющий лицо и имя.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/porcelain-frame-preview.svg",
+        "game": "/collections/v2-art/porcelain-frame-game.svg"
+      },
+      "preview": "/collections/v2-art/porcelain-frame-preview.svg",
+      "game": "/collections/v2-art/porcelain-frame-game.svg"
+    },
+    {
+      "id": "porcelain-badge",
+      "collection": "porcelain",
+      "kind": "item",
+      "slot": "badge",
+      "games": [
+        "poker",
+        "durak",
+        "colors",
+        "chess",
+        "checkers",
+        "nardy",
+        "battleship"
+      ],
+      "visibility": "public-profile",
+      "title": "Значок «Фарфор»",
+      "description": "Украшение рядом с именем, без значения роли или ранга.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/porcelain-badge-preview.svg",
+        "game": "/collections/v2-art/porcelain-badge-game.svg"
+      },
+      "preview": "/collections/v2-art/porcelain-badge-preview.svg",
+      "game": "/collections/v2-art/porcelain-badge-game.svg"
+    },
+    {
+      "id": "porcelain-chess-board",
+      "collection": "porcelain",
+      "kind": "item",
+      "slot": "chess-board",
+      "games": [
+        "chess"
+      ],
+      "visibility": "room",
+      "title": "Шахматная доска «Фарфор»",
+      "description": "Рама и безопасная фактура; светлые и тёмные клетки различимы.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/porcelain-chess-board-preview.svg",
+        "game": "/collections/v2-art/porcelain-chess-board-game.svg"
+      },
+      "preview": "/collections/v2-art/porcelain-chess-board-preview.svg",
+      "game": "/collections/v2-art/porcelain-chess-board-game.svg"
+    },
+    {
+      "id": "porcelain-checkers-board",
+      "collection": "porcelain",
+      "kind": "item",
+      "slot": "checkers-board",
+      "games": [
+        "checkers"
+      ],
+      "visibility": "room",
+      "title": "Шашечная доска «Фарфор»",
+      "description": "Своя рама и миниатюра; фигуры и обязательное взятие читаются.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/porcelain-checkers-board-preview.svg",
+        "game": "/collections/v2-art/porcelain-checkers-board-game.svg"
+      },
+      "preview": "/collections/v2-art/porcelain-checkers-board-preview.svg",
+      "game": "/collections/v2-art/porcelain-checkers-board-game.svg"
+    },
+    {
+      "id": "porcelain-nardy-board",
+      "collection": "porcelain",
+      "kind": "item",
+      "slot": "nardy-board",
+      "games": [
+        "nardy"
+      ],
+      "visibility": "room",
+      "title": "Доска нард «Фарфор»",
+      "description": "Рама, бар и свободные участки; треугольники и кубики прежние.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/porcelain-nardy-board-preview.svg",
+        "game": "/collections/v2-art/porcelain-nardy-board-game.svg"
+      },
+      "preview": "/collections/v2-art/porcelain-nardy-board-preview.svg",
+      "game": "/collections/v2-art/porcelain-nardy-board-game.svg"
+    },
+    {
+      "id": "porcelain-battleship-panel",
+      "collection": "porcelain",
+      "kind": "item",
+      "slot": "battleship-panel",
+      "games": [
+        "battleship"
+      ],
+      "visibility": "room",
+      "title": "Панель морского боя «Фарфор»",
+      "description": "Только рама и координатные поля; без содержимого флота.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/porcelain-battleship-panel-preview.svg",
+        "game": "/collections/v2-art/porcelain-battleship-panel-game.svg"
+      },
+      "preview": "/collections/v2-art/porcelain-battleship-panel-preview.svg",
+      "game": "/collections/v2-art/porcelain-battleship-panel-game.svg"
+    },
+    {
+      "id": "porcelain-unoq-cardback",
+      "collection": "porcelain",
+      "kind": "item",
+      "slot": "unoq-cardback",
+      "games": [
+        "colors"
+      ],
+      "visibility": "room",
+      "title": "Рубашка UNOQ «Фарфор»",
+      "description": "Закрытая сторона и стопка добора; лица и четыре цвета прежние.",
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/porcelain-unoq-cardback-preview.svg",
+        "game": "/collections/v2-art/porcelain-unoq-cardback-game.svg"
+      },
+      "preview": "/collections/v2-art/porcelain-unoq-cardback-preview.svg",
+      "game": "/collections/v2-art/porcelain-unoq-cardback-game.svg"
+    },
+    {
+      "id": "porcelain-bundle",
+      "collection": "porcelain",
+      "kind": "bundle",
+      "slot": null,
+      "games": [
+        "poker",
+        "durak",
+        "colors",
+        "chess",
+        "checkers",
+        "nardy",
+        "battleship"
+      ],
+      "visibility": "inventory-only",
+      "title": "Комплект «Фарфор»",
+      "description": "Девять самостоятельных предметов коллекции.",
+      "includes": [
+        "porcelain-cardback",
+        "porcelain-table",
+        "porcelain-frame",
+        "porcelain-badge",
+        "porcelain-chess-board",
+        "porcelain-checkers-board",
+        "porcelain-nardy-board",
+        "porcelain-battleship-panel",
+        "porcelain-unoq-cardback"
+      ],
+      "price": null,
+      "readiness": "art-ready",
+      "artSource": "tools/build-cosmetics-v2.mjs",
+      "assets": {
+        "preview": "/collections/v2-art/porcelain-bundle-preview.svg",
+        "game": null
+      },
+      "preview": "/collections/v2-art/porcelain-bundle-preview.svg",
+      "game": null
+    }
+  ],
+  "files": [
+    {
+      "file": "sever-cardback-preview.svg",
+      "item": "sever-cardback",
+      "role": "preview",
+      "slot": "cardback",
+      "viewBox": "0 0 200 280",
+      "width": 200,
+      "height": 280,
+      "bytes": 2979,
+      "sha256": "64040334d90de81d9b54b51987bd63ed64f295770c86cffc7c59dd421c046ec9",
+      "protectedRegions": []
+    },
+    {
+      "file": "sever-cardback-game.svg",
+      "item": "sever-cardback",
+      "role": "game",
+      "slot": "cardback",
+      "viewBox": "0 0 40 56",
+      "width": 40,
+      "height": 56,
+      "bytes": 1532,
+      "sha256": "e4d6fd70450a85c3933db733b5cfb54c3617d0ce1d3cece86ebf039042f15c94",
+      "protectedRegions": []
+    },
+    {
+      "file": "sever-table-preview.svg",
+      "item": "sever-table",
+      "role": "preview",
+      "slot": "table",
+      "viewBox": "0 0 480 320",
+      "width": 480,
+      "height": 320,
+      "bytes": 3847,
+      "sha256": "0fc5e34a2074b4a731dc630f9d73026c5966bcee8ca1e57865b029c7527ad722",
+      "protectedRegions": [
+        {
+          "shape": "ellipse",
+          "cx": 240,
+          "cy": 160,
+          "rx": 218,
+          "ry": 138
+        }
+      ]
+    },
+    {
+      "file": "sever-table-game.svg",
+      "item": "sever-table",
+      "role": "game",
+      "slot": "table",
+      "viewBox": "0 0 480 320",
+      "width": 480,
+      "height": 320,
+      "bytes": 2669,
+      "sha256": "742fdc326e62294fc897caba1195cfa1928608f69e4255013d5bcedcddb62269",
+      "protectedRegions": [
+        {
+          "shape": "ellipse",
+          "cx": 240,
+          "cy": 160,
+          "rx": 218,
+          "ry": 138
+        }
+      ]
+    },
+    {
+      "file": "sever-frame-preview.svg",
+      "item": "sever-frame",
+      "role": "preview",
+      "slot": "frame",
+      "viewBox": "0 0 160 160",
+      "width": 160,
+      "height": 160,
+      "bytes": 2558,
+      "sha256": "8ff1209d77b85e6d5dd31e4491efab301c7e33d345a1a816177555879cc3fc5c",
+      "protectedRegions": [
+        {
+          "shape": "circle",
+          "cx": 80,
+          "cy": 80,
+          "r": 60
+        }
+      ]
+    },
+    {
+      "file": "sever-frame-game.svg",
+      "item": "sever-frame",
+      "role": "game",
+      "slot": "frame",
+      "viewBox": "0 0 48 48",
+      "width": 48,
+      "height": 48,
+      "bytes": 1960,
+      "sha256": "f1ebc8323db2f15a2e9e186fb8ad7f6ff6036c5469e20859a6a0651c2a76853d",
+      "protectedRegions": [
+        {
+          "shape": "circle",
+          "cx": 24,
+          "cy": 24,
+          "r": 18
+        }
+      ]
+    },
+    {
+      "file": "sever-badge-preview.svg",
+      "item": "sever-badge",
+      "role": "preview",
+      "slot": "badge",
+      "viewBox": "0 0 160 160",
+      "width": 160,
+      "height": 160,
+      "bytes": 980,
+      "sha256": "3cd9f48366383e683204df57951fb3e8611235d36ada80b319ee829d2bd49d1b",
+      "protectedRegions": []
+    },
+    {
+      "file": "sever-badge-game.svg",
+      "item": "sever-badge",
+      "role": "game",
+      "slot": "badge",
+      "viewBox": "0 0 24 24",
+      "width": 24,
+      "height": 24,
+      "bytes": 725,
+      "sha256": "dee96d8d6a0a1c735a66d31b9a09dea171977747861ea24c253394c6d385968c",
+      "protectedRegions": []
+    },
+    {
+      "file": "sever-chess-board-preview.svg",
+      "item": "sever-chess-board",
+      "role": "preview",
+      "slot": "chess-board",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 3634,
+      "sha256": "5890a9c6d2b03f1e4c8de028e8eb73da787dca64df942978ad360cb6fa08a10c",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "sever-chess-board-game.svg",
+      "item": "sever-chess-board",
+      "role": "game",
+      "slot": "chess-board",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 1637,
+      "sha256": "9322e899fbcae910cc17e75f1521dcf55974ea6b5db46c12dbc664a65bd5532a",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "sever-checkers-board-preview.svg",
+      "item": "sever-checkers-board",
+      "role": "preview",
+      "slot": "checkers-board",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 3342,
+      "sha256": "7bc9c5dc81f4369edd6c36d8c520da21628d5b8ae834c60de0f9086814c3e691",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "sever-checkers-board-game.svg",
+      "item": "sever-checkers-board",
+      "role": "game",
+      "slot": "checkers-board",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 3242,
+      "sha256": "d3b2e1c5f7204939e85eb2460909785400d9a6fcf110e3f212b14512e028ae81",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "sever-nardy-board-preview.svg",
+      "item": "sever-nardy-board",
+      "role": "preview",
+      "slot": "nardy-board",
+      "viewBox": "0 0 480 360",
+      "width": 480,
+      "height": 360,
+      "bytes": 3900,
+      "sha256": "951b6e6d7ccdaa5ed0ebf5a8eb301d08d0c747af21abbec026a50f9f1f961008",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 208,
+          "height": 312
+        },
+        {
+          "shape": "rect",
+          "x": 248,
+          "y": 24,
+          "width": 208,
+          "height": 312
+        }
+      ]
+    },
+    {
+      "file": "sever-nardy-board-game.svg",
+      "item": "sever-nardy-board",
+      "role": "game",
+      "slot": "nardy-board",
+      "viewBox": "0 0 480 360",
+      "width": 480,
+      "height": 360,
+      "bytes": 3067,
+      "sha256": "753c63e64e85f2b8acda2554ad91cdeedc0cb746708f122444fba5e0159b40c2",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 208,
+          "height": 312
+        },
+        {
+          "shape": "rect",
+          "x": 248,
+          "y": 24,
+          "width": 208,
+          "height": 312
+        }
+      ]
+    },
+    {
+      "file": "sever-battleship-panel-preview.svg",
+      "item": "sever-battleship-panel",
+      "role": "preview",
+      "slot": "battleship-panel",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 3785,
+      "sha256": "7463587f52fc77d2586c35c9545fcfad15a66e9430dbda3f5ec54c4be6511718",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "sever-battleship-panel-game.svg",
+      "item": "sever-battleship-panel",
+      "role": "game",
+      "slot": "battleship-panel",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 3032,
+      "sha256": "8bb7e9dabfa2bff43583131ace58214b769d889dcf6b4b3c806ecb3f649dfa8f",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "sever-unoq-cardback-preview.svg",
+      "item": "sever-unoq-cardback",
+      "role": "preview",
+      "slot": "unoq-cardback",
+      "viewBox": "0 0 200 280",
+      "width": 200,
+      "height": 280,
+      "bytes": 1985,
+      "sha256": "2ae3c849f981b966d2a8bed60f411f03b0f9306eb67902c436838c9dc24372f1",
+      "protectedRegions": []
+    },
+    {
+      "file": "sever-unoq-cardback-game.svg",
+      "item": "sever-unoq-cardback",
+      "role": "game",
+      "slot": "unoq-cardback",
+      "viewBox": "0 0 40 56",
+      "width": 40,
+      "height": 56,
+      "bytes": 1383,
+      "sha256": "6838c790e2682770099f856df198cf031d009318b5d7e38383013c796d543604",
+      "protectedRegions": []
+    },
+    {
+      "file": "sever-bundle-preview.svg",
+      "item": "sever-bundle",
+      "role": "preview",
+      "slot": null,
+      "viewBox": "0 0 480 320",
+      "width": 480,
+      "height": 320,
+      "bytes": 18586,
+      "sha256": "a91060e7b4763f61001f0659d46158b5d4bcad0aedbad6bb91e41d0be65d15d2",
+      "protectedRegions": []
+    },
+    {
+      "file": "obsidian-cardback-preview.svg",
+      "item": "obsidian-cardback",
+      "role": "preview",
+      "slot": "cardback",
+      "viewBox": "0 0 200 280",
+      "width": 200,
+      "height": 280,
+      "bytes": 2951,
+      "sha256": "a37e53f930cd91713fed9b6072bd92c19660605d53218120080ed7de7e348bbe",
+      "protectedRegions": []
+    },
+    {
+      "file": "obsidian-cardback-game.svg",
+      "item": "obsidian-cardback",
+      "role": "game",
+      "slot": "cardback",
+      "viewBox": "0 0 40 56",
+      "width": 40,
+      "height": 56,
+      "bytes": 1675,
+      "sha256": "506f971a010801c3c6fff80d879085fa70cf22fc03a450c1e6341ae51bcae1e9",
+      "protectedRegions": []
+    },
+    {
+      "file": "obsidian-table-preview.svg",
+      "item": "obsidian-table",
+      "role": "preview",
+      "slot": "table",
+      "viewBox": "0 0 480 320",
+      "width": 480,
+      "height": 320,
+      "bytes": 3891,
+      "sha256": "35042830dadf7a31dc1f30cc99d2c6676bf1b5b3aaffb619f5a0c23125451ce4",
+      "protectedRegions": [
+        {
+          "shape": "ellipse",
+          "cx": 240,
+          "cy": 160,
+          "rx": 218,
+          "ry": 138
+        }
+      ]
+    },
+    {
+      "file": "obsidian-table-game.svg",
+      "item": "obsidian-table",
+      "role": "game",
+      "slot": "table",
+      "viewBox": "0 0 480 320",
+      "width": 480,
+      "height": 320,
+      "bytes": 2713,
+      "sha256": "f9125d81f4e1b708c4d804bba99a71e6c65b1b3e5b73a044fda770bf99b7f689",
+      "protectedRegions": [
+        {
+          "shape": "ellipse",
+          "cx": 240,
+          "cy": 160,
+          "rx": 218,
+          "ry": 138
+        }
+      ]
+    },
+    {
+      "file": "obsidian-frame-preview.svg",
+      "item": "obsidian-frame",
+      "role": "preview",
+      "slot": "frame",
+      "viewBox": "0 0 160 160",
+      "width": 160,
+      "height": 160,
+      "bytes": 2149,
+      "sha256": "dc27e96f167f604943382b4773b13857d10b4b94627340e172dacc824effe6dd",
+      "protectedRegions": [
+        {
+          "shape": "circle",
+          "cx": 80,
+          "cy": 80,
+          "r": 60
+        }
+      ]
+    },
+    {
+      "file": "obsidian-frame-game.svg",
+      "item": "obsidian-frame",
+      "role": "game",
+      "slot": "frame",
+      "viewBox": "0 0 48 48",
+      "width": 48,
+      "height": 48,
+      "bytes": 1551,
+      "sha256": "f9e95909c0da44e6f5b2f3bdd8cd27e809407204f8cceb28eb8d77e275f65a74",
+      "protectedRegions": [
+        {
+          "shape": "circle",
+          "cx": 24,
+          "cy": 24,
+          "r": 18
+        }
+      ]
+    },
+    {
+      "file": "obsidian-badge-preview.svg",
+      "item": "obsidian-badge",
+      "role": "preview",
+      "slot": "badge",
+      "viewBox": "0 0 160 160",
+      "width": 160,
+      "height": 160,
+      "bytes": 886,
+      "sha256": "9885891a1a6814892d300819185f7af393202da6f5834efab42ca080bec2afbe",
+      "protectedRegions": []
+    },
+    {
+      "file": "obsidian-badge-game.svg",
+      "item": "obsidian-badge",
+      "role": "game",
+      "slot": "badge",
+      "viewBox": "0 0 24 24",
+      "width": 24,
+      "height": 24,
+      "bytes": 802,
+      "sha256": "882d6c08067a5a76b4f1a3b5a6ec5aec6e94274f4298d8adab979a0926a6097b",
+      "protectedRegions": []
+    },
+    {
+      "file": "obsidian-chess-board-preview.svg",
+      "item": "obsidian-chess-board",
+      "role": "preview",
+      "slot": "chess-board",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 3678,
+      "sha256": "4c64e0865508d02e086b329dd36e844b29c98da7b0016a5dd2224922f74bd099",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "obsidian-chess-board-game.svg",
+      "item": "obsidian-chess-board",
+      "role": "game",
+      "slot": "chess-board",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 1681,
+      "sha256": "9a78579bea0bbadefe52ca33682d873c20d6e1261f573d78afa0b73910c9f4b2",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "obsidian-checkers-board-preview.svg",
+      "item": "obsidian-checkers-board",
+      "role": "preview",
+      "slot": "checkers-board",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 3386,
+      "sha256": "f2604f2d8019fb21c6a52dfbd7d87cb38e8a260a302f11933c064082fd8543b2",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "obsidian-checkers-board-game.svg",
+      "item": "obsidian-checkers-board",
+      "role": "game",
+      "slot": "checkers-board",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 3286,
+      "sha256": "7b78b26c59f0b2110d865604a08cc2dc6b67cf18980f7cb0f95c30c822be4277",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "obsidian-nardy-board-preview.svg",
+      "item": "obsidian-nardy-board",
+      "role": "preview",
+      "slot": "nardy-board",
+      "viewBox": "0 0 480 360",
+      "width": 480,
+      "height": 360,
+      "bytes": 3944,
+      "sha256": "3fe5552139e28f166d0c2d465f0092d4a600dd132c21af0b62bb12d31a3f7884",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 208,
+          "height": 312
+        },
+        {
+          "shape": "rect",
+          "x": 248,
+          "y": 24,
+          "width": 208,
+          "height": 312
+        }
+      ]
+    },
+    {
+      "file": "obsidian-nardy-board-game.svg",
+      "item": "obsidian-nardy-board",
+      "role": "game",
+      "slot": "nardy-board",
+      "viewBox": "0 0 480 360",
+      "width": 480,
+      "height": 360,
+      "bytes": 3111,
+      "sha256": "a51321fda6c7eb89e1b42601635134404e61559b96ce6077f00299b6a98fbdbf",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 208,
+          "height": 312
+        },
+        {
+          "shape": "rect",
+          "x": 248,
+          "y": 24,
+          "width": 208,
+          "height": 312
+        }
+      ]
+    },
+    {
+      "file": "obsidian-battleship-panel-preview.svg",
+      "item": "obsidian-battleship-panel",
+      "role": "preview",
+      "slot": "battleship-panel",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 3961,
+      "sha256": "b763d68ff7d9e5a434696f8b753b0335b1bad0a2883d03601948cba56090306f",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "obsidian-battleship-panel-game.svg",
+      "item": "obsidian-battleship-panel",
+      "role": "game",
+      "slot": "battleship-panel",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 3208,
+      "sha256": "2c822250dd9cd4f98139b972c9ca53764ab699689d38fe1e2bca4a84ad1bea8e",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "obsidian-unoq-cardback-preview.svg",
+      "item": "obsidian-unoq-cardback",
+      "role": "preview",
+      "slot": "unoq-cardback",
+      "viewBox": "0 0 200 280",
+      "width": 200,
+      "height": 280,
+      "bytes": 1753,
+      "sha256": "a5045404f9c54fb124ce1277feeef505f57aae2a4e2e0cb96cb9afbfac23efcc",
+      "protectedRegions": []
+    },
+    {
+      "file": "obsidian-unoq-cardback-game.svg",
+      "item": "obsidian-unoq-cardback",
+      "role": "game",
+      "slot": "unoq-cardback",
+      "viewBox": "0 0 40 56",
+      "width": 40,
+      "height": 56,
+      "bytes": 1493,
+      "sha256": "2c1fd7e75b61d1838ef3168e2899fd7d9b56248f84c32669ec41134cc16dd308",
+      "protectedRegions": []
+    },
+    {
+      "file": "obsidian-bundle-preview.svg",
+      "item": "obsidian-bundle",
+      "role": "preview",
+      "slot": null,
+      "viewBox": "0 0 480 320",
+      "width": 480,
+      "height": 320,
+      "bytes": 18859,
+      "sha256": "8557beb21efe4b9b0ca08d51a8853b72e4e939ef3629289e7501e579d80869e8",
+      "protectedRegions": []
+    },
+    {
+      "file": "chertezh-cardback-preview.svg",
+      "item": "chertezh-cardback",
+      "role": "preview",
+      "slot": "cardback",
+      "viewBox": "0 0 200 280",
+      "width": 200,
+      "height": 280,
+      "bytes": 2998,
+      "sha256": "fd8a60abf978f1427cdcc94f7b332c71364a7f3e19cec3bc57161d57201e031e",
+      "protectedRegions": []
+    },
+    {
+      "file": "chertezh-cardback-game.svg",
+      "item": "chertezh-cardback",
+      "role": "game",
+      "slot": "cardback",
+      "viewBox": "0 0 40 56",
+      "width": 40,
+      "height": 56,
+      "bytes": 1724,
+      "sha256": "c4b06cd763a95fd134ea68a8856e689d81906ff6985bbd10ceb3d1857ed82c8d",
+      "protectedRegions": []
+    },
+    {
+      "file": "chertezh-table-preview.svg",
+      "item": "chertezh-table",
+      "role": "preview",
+      "slot": "table",
+      "viewBox": "0 0 480 320",
+      "width": 480,
+      "height": 320,
+      "bytes": 3848,
+      "sha256": "49da19440063d9c1f1df739609b9c0e8dff44a6784e918e9c8ad8962b4434613",
+      "protectedRegions": [
+        {
+          "shape": "ellipse",
+          "cx": 240,
+          "cy": 160,
+          "rx": 218,
+          "ry": 138
+        }
+      ]
+    },
+    {
+      "file": "chertezh-table-game.svg",
+      "item": "chertezh-table",
+      "role": "game",
+      "slot": "table",
+      "viewBox": "0 0 480 320",
+      "width": 480,
+      "height": 320,
+      "bytes": 2672,
+      "sha256": "27d0a90de8a10ee4d9ac183afda653968e05fc8dd456b09cb3213535745ce281",
+      "protectedRegions": [
+        {
+          "shape": "ellipse",
+          "cx": 240,
+          "cy": 160,
+          "rx": 218,
+          "ry": 138
+        }
+      ]
+    },
+    {
+      "file": "chertezh-frame-preview.svg",
+      "item": "chertezh-frame",
+      "role": "preview",
+      "slot": "frame",
+      "viewBox": "0 0 160 160",
+      "width": 160,
+      "height": 160,
+      "bytes": 2067,
+      "sha256": "07f447d9ff00d5762e27d8c8349f1ef72ad49d02b14a2e6d8760c417cecd3a23",
+      "protectedRegions": [
+        {
+          "shape": "circle",
+          "cx": 80,
+          "cy": 80,
+          "r": 60
+        }
+      ]
+    },
+    {
+      "file": "chertezh-frame-game.svg",
+      "item": "chertezh-frame",
+      "role": "game",
+      "slot": "frame",
+      "viewBox": "0 0 48 48",
+      "width": 48,
+      "height": 48,
+      "bytes": 1471,
+      "sha256": "f4d976affed5f688012af78c988f36edbe9e1b4d58db7e69beb06c69d40a501f",
+      "protectedRegions": [
+        {
+          "shape": "circle",
+          "cx": 24,
+          "cy": 24,
+          "r": 18
+        }
+      ]
+    },
+    {
+      "file": "chertezh-badge-preview.svg",
+      "item": "chertezh-badge",
+      "role": "preview",
+      "slot": "badge",
+      "viewBox": "0 0 160 160",
+      "width": 160,
+      "height": 160,
+      "bytes": 873,
+      "sha256": "e27c4bfc328f58d85a9ebad3d8c53392806e7505ad6be3ae052864da47f37eee",
+      "protectedRegions": []
+    },
+    {
+      "file": "chertezh-badge-game.svg",
+      "item": "chertezh-badge",
+      "role": "game",
+      "slot": "badge",
+      "viewBox": "0 0 24 24",
+      "width": 24,
+      "height": 24,
+      "bytes": 791,
+      "sha256": "132a0782b85b0526807b50ebc2dfc5767fff9afe4a35a4ffe28ce16ce630376b",
+      "protectedRegions": []
+    },
+    {
+      "file": "chertezh-chess-board-preview.svg",
+      "item": "chertezh-chess-board",
+      "role": "preview",
+      "slot": "chess-board",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 3635,
+      "sha256": "9fb7fd808075367b157870782ffb06758070def6f61ff8b57498a577118e9399",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "chertezh-chess-board-game.svg",
+      "item": "chertezh-chess-board",
+      "role": "game",
+      "slot": "chess-board",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 1640,
+      "sha256": "8687fadd4a627df7f30671545d954e0c595db60adfe9c96aad6a898189fc8bc6",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "chertezh-checkers-board-preview.svg",
+      "item": "chertezh-checkers-board",
+      "role": "preview",
+      "slot": "checkers-board",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 3343,
+      "sha256": "370fac722414fcaa52d1c472606d0d10651aa6a7a2a301e5383329a6049a0e7d",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "chertezh-checkers-board-game.svg",
+      "item": "chertezh-checkers-board",
+      "role": "game",
+      "slot": "checkers-board",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 3245,
+      "sha256": "61c5939eca0a114771403ec958a32c96e92227fd895a2e4de6a2e6f2d507f029",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "chertezh-nardy-board-preview.svg",
+      "item": "chertezh-nardy-board",
+      "role": "preview",
+      "slot": "nardy-board",
+      "viewBox": "0 0 480 360",
+      "width": 480,
+      "height": 360,
+      "bytes": 3901,
+      "sha256": "eaf3f21fdea033654a84dfeda0c12b7f1b03cd2f72fed6ae66ff88fae32b8918",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 208,
+          "height": 312
+        },
+        {
+          "shape": "rect",
+          "x": 248,
+          "y": 24,
+          "width": 208,
+          "height": 312
+        }
+      ]
+    },
+    {
+      "file": "chertezh-nardy-board-game.svg",
+      "item": "chertezh-nardy-board",
+      "role": "game",
+      "slot": "nardy-board",
+      "viewBox": "0 0 480 360",
+      "width": 480,
+      "height": 360,
+      "bytes": 3070,
+      "sha256": "a717750ac71653fe9d8c7b2ed663356fd7af466cfa3e4a8e464bd3e5966466c1",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 208,
+          "height": 312
+        },
+        {
+          "shape": "rect",
+          "x": 248,
+          "y": 24,
+          "width": 208,
+          "height": 312
+        }
+      ]
+    },
+    {
+      "file": "chertezh-battleship-panel-preview.svg",
+      "item": "chertezh-battleship-panel",
+      "role": "preview",
+      "slot": "battleship-panel",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 4038,
+      "sha256": "5a0461a3b6a97a3eaaf953c665773ab7a2f39e6118ad6d05395b98e5653ff734",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "chertezh-battleship-panel-game.svg",
+      "item": "chertezh-battleship-panel",
+      "role": "game",
+      "slot": "battleship-panel",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 3287,
+      "sha256": "e6785829f884830ef4ab4f6963e5d43418e6ce9f1bed8c951ecb9fced88bf48f",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "chertezh-unoq-cardback-preview.svg",
+      "item": "chertezh-unoq-cardback",
+      "role": "preview",
+      "slot": "unoq-cardback",
+      "viewBox": "0 0 200 280",
+      "width": 200,
+      "height": 280,
+      "bytes": 1770,
+      "sha256": "49fccbfc1f3f688652747eb3e78b0af6145c42a33fa0d4566e5ec0329ba88c5f",
+      "protectedRegions": []
+    },
+    {
+      "file": "chertezh-unoq-cardback-game.svg",
+      "item": "chertezh-unoq-cardback",
+      "role": "game",
+      "slot": "unoq-cardback",
+      "viewBox": "0 0 40 56",
+      "width": 40,
+      "height": 56,
+      "bytes": 1512,
+      "sha256": "c7a0d21b523a6cfeb90004565cd02921dc5a0f2e3a53606be95d653d1d66f399",
+      "protectedRegions": []
+    },
+    {
+      "file": "chertezh-bundle-preview.svg",
+      "item": "chertezh-bundle",
+      "role": "preview",
+      "slot": null,
+      "viewBox": "0 0 480 320",
+      "width": 480,
+      "height": 320,
+      "bytes": 18751,
+      "sha256": "c0f291bc357b585a000b4f10f57f43fd683cd72ad2cd7bfa1b2a256d41fb5ae6",
+      "protectedRegions": []
+    },
+    {
+      "file": "terracotta-cardback-preview.svg",
+      "item": "terracotta-cardback",
+      "role": "preview",
+      "slot": "cardback",
+      "viewBox": "0 0 200 280",
+      "width": 200,
+      "height": 280,
+      "bytes": 2894,
+      "sha256": "9c103d50c4fc616b0e571f495b2329bdb42fad7fded7c069ca86b2b2bd0bc7b1",
+      "protectedRegions": []
+    },
+    {
+      "file": "terracotta-cardback-game.svg",
+      "item": "terracotta-cardback",
+      "role": "game",
+      "slot": "cardback",
+      "viewBox": "0 0 40 56",
+      "width": 40,
+      "height": 56,
+      "bytes": 1481,
+      "sha256": "cbce7900de811da0845be2c8576af9dd2b9e777742810544c304b632003742d3",
+      "protectedRegions": []
+    },
+    {
+      "file": "terracotta-table-preview.svg",
+      "item": "terracotta-table",
+      "role": "preview",
+      "slot": "table",
+      "viewBox": "0 0 480 320",
+      "width": 480,
+      "height": 320,
+      "bytes": 3850,
+      "sha256": "0f7c485dfb37b2eb56ef63a695e427d730b32c6e153f12bc6fb473b4cf22d9a2",
+      "protectedRegions": [
+        {
+          "shape": "ellipse",
+          "cx": 240,
+          "cy": 160,
+          "rx": 218,
+          "ry": 138
+        }
+      ]
+    },
+    {
+      "file": "terracotta-table-game.svg",
+      "item": "terracotta-table",
+      "role": "game",
+      "slot": "table",
+      "viewBox": "0 0 480 320",
+      "width": 480,
+      "height": 320,
+      "bytes": 2672,
+      "sha256": "99d92b28e67c68ce9d8a81c407856e48e25a17ccff9f13a330c01be400bfd869",
+      "protectedRegions": [
+        {
+          "shape": "ellipse",
+          "cx": 240,
+          "cy": 160,
+          "rx": 218,
+          "ry": 138
+        }
+      ]
+    },
+    {
+      "file": "terracotta-frame-preview.svg",
+      "item": "terracotta-frame",
+      "role": "preview",
+      "slot": "frame",
+      "viewBox": "0 0 160 160",
+      "width": 160,
+      "height": 160,
+      "bytes": 2246,
+      "sha256": "f3e8fb09270ec6d74aa65dc408956871d56db00e4fd3547b5c97e59c6a3f37f3",
+      "protectedRegions": [
+        {
+          "shape": "circle",
+          "cx": 80,
+          "cy": 80,
+          "r": 60
+        }
+      ]
+    },
+    {
+      "file": "terracotta-frame-game.svg",
+      "item": "terracotta-frame",
+      "role": "game",
+      "slot": "frame",
+      "viewBox": "0 0 48 48",
+      "width": 48,
+      "height": 48,
+      "bytes": 1648,
+      "sha256": "585cecdd6d4db0ac933ebd9d6293c8b59d3c3bba38442960dbfc41b45bd6857c",
+      "protectedRegions": [
+        {
+          "shape": "circle",
+          "cx": 24,
+          "cy": 24,
+          "r": 18
+        }
+      ]
+    },
+    {
+      "file": "terracotta-badge-preview.svg",
+      "item": "terracotta-badge",
+      "role": "preview",
+      "slot": "badge",
+      "viewBox": "0 0 160 160",
+      "width": 160,
+      "height": 160,
+      "bytes": 931,
+      "sha256": "2246315947ba5ef9cc07a340fe2c500b5cacf15ff541c35a6965c91952bdc45a",
+      "protectedRegions": []
+    },
+    {
+      "file": "terracotta-badge-game.svg",
+      "item": "terracotta-badge",
+      "role": "game",
+      "slot": "badge",
+      "viewBox": "0 0 24 24",
+      "width": 24,
+      "height": 24,
+      "bytes": 710,
+      "sha256": "89c9416a309a1dd68b3c8b190e58518d072c0810019b78978b4ff54170ad211f",
+      "protectedRegions": []
+    },
+    {
+      "file": "terracotta-chess-board-preview.svg",
+      "item": "terracotta-chess-board",
+      "role": "preview",
+      "slot": "chess-board",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 3637,
+      "sha256": "ecd711b5dcfc46302845ed47ffd97040865dc39c773b94764e936a143b28f8dd",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "terracotta-chess-board-game.svg",
+      "item": "terracotta-chess-board",
+      "role": "game",
+      "slot": "chess-board",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 1640,
+      "sha256": "d21d46531eaf953a9fb7e38031145dfc75ca3b9430fafd3733bec998045819c5",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "terracotta-checkers-board-preview.svg",
+      "item": "terracotta-checkers-board",
+      "role": "preview",
+      "slot": "checkers-board",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 3345,
+      "sha256": "8e614fe7c36f0e2d4c678ff7f2edfd07c753b8c6a897dc07507403dd142ad334",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "terracotta-checkers-board-game.svg",
+      "item": "terracotta-checkers-board",
+      "role": "game",
+      "slot": "checkers-board",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 3245,
+      "sha256": "eff0a0d2a9d77b2545481dafeb78a6a26fbcff1aebf49ad62b9909031c5a7019",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "terracotta-nardy-board-preview.svg",
+      "item": "terracotta-nardy-board",
+      "role": "preview",
+      "slot": "nardy-board",
+      "viewBox": "0 0 480 360",
+      "width": 480,
+      "height": 360,
+      "bytes": 3903,
+      "sha256": "51aa6911094734d68e3c69391870e4607fee7c4b38193fb3413ff1bdc5970076",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 208,
+          "height": 312
+        },
+        {
+          "shape": "rect",
+          "x": 248,
+          "y": 24,
+          "width": 208,
+          "height": 312
+        }
+      ]
+    },
+    {
+      "file": "terracotta-nardy-board-game.svg",
+      "item": "terracotta-nardy-board",
+      "role": "game",
+      "slot": "nardy-board",
+      "viewBox": "0 0 480 360",
+      "width": 480,
+      "height": 360,
+      "bytes": 3070,
+      "sha256": "8da7ad36b402db52c86423e73f3d981f8fb5e93a2983fe87744addc6d43d0733",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 208,
+          "height": 312
+        },
+        {
+          "shape": "rect",
+          "x": 248,
+          "y": 24,
+          "width": 208,
+          "height": 312
+        }
+      ]
+    },
+    {
+      "file": "terracotta-battleship-panel-preview.svg",
+      "item": "terracotta-battleship-panel",
+      "role": "preview",
+      "slot": "battleship-panel",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 3716,
+      "sha256": "0d45660db789759fb7f3cefd11eab850eba51d11be47b4cf6d0c9caf26c1626a",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "terracotta-battleship-panel-game.svg",
+      "item": "terracotta-battleship-panel",
+      "role": "game",
+      "slot": "battleship-panel",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 2963,
+      "sha256": "96edc6177c9712bf8d6fffb1ea690b62a8016523abe0905647596ecc68deab35",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "terracotta-unoq-cardback-preview.svg",
+      "item": "terracotta-unoq-cardback",
+      "role": "preview",
+      "slot": "unoq-cardback",
+      "viewBox": "0 0 200 280",
+      "width": 200,
+      "height": 280,
+      "bytes": 1884,
+      "sha256": "71cde1b328e8c9860087be7bc435fb9f6994d2ecbd504382c4ab90a6272f9a31",
+      "protectedRegions": []
+    },
+    {
+      "file": "terracotta-unoq-cardback-game.svg",
+      "item": "terracotta-unoq-cardback",
+      "role": "game",
+      "slot": "unoq-cardback",
+      "viewBox": "0 0 40 56",
+      "width": 40,
+      "height": 56,
+      "bytes": 1350,
+      "sha256": "a1a487100eadb38f2af89f72003158184f0af7a4939ae41608831cb28921705a",
+      "protectedRegions": []
+    },
+    {
+      "file": "terracotta-bundle-preview.svg",
+      "item": "terracotta-bundle",
+      "role": "preview",
+      "slot": null,
+      "viewBox": "0 0 480 320",
+      "width": 480,
+      "height": 320,
+      "bytes": 18118,
+      "sha256": "e35f8118f90e25a10dc870350177462692f13d4c67cd815f6433e0c4222c6393",
+      "protectedRegions": []
+    },
+    {
+      "file": "orbita-cardback-preview.svg",
+      "item": "orbita-cardback",
+      "role": "preview",
+      "slot": "cardback",
+      "viewBox": "0 0 200 280",
+      "width": 200,
+      "height": 280,
+      "bytes": 3176,
+      "sha256": "069a7e90f72aa85dc71436d18937063df90c2da0099153793c643fe22c54b8fa",
+      "protectedRegions": []
+    },
+    {
+      "file": "orbita-cardback-game.svg",
+      "item": "orbita-cardback",
+      "role": "game",
+      "slot": "cardback",
+      "viewBox": "0 0 40 56",
+      "width": 40,
+      "height": 56,
+      "bytes": 1901,
+      "sha256": "cafead54f097c35f8abd68fa4a5237575db23340d818e8842167854fc3629e27",
+      "protectedRegions": []
+    },
+    {
+      "file": "orbita-table-preview.svg",
+      "item": "orbita-table",
+      "role": "preview",
+      "slot": "table",
+      "viewBox": "0 0 480 320",
+      "width": 480,
+      "height": 320,
+      "bytes": 3904,
+      "sha256": "4f62bc3d96e77c7b01e61ebad3ab9d2a433cac9dfbe4b3b732e77acacebfb7cc",
+      "protectedRegions": [
+        {
+          "shape": "ellipse",
+          "cx": 240,
+          "cy": 160,
+          "rx": 218,
+          "ry": 138
+        }
+      ]
+    },
+    {
+      "file": "orbita-table-game.svg",
+      "item": "orbita-table",
+      "role": "game",
+      "slot": "table",
+      "viewBox": "0 0 480 320",
+      "width": 480,
+      "height": 320,
+      "bytes": 2726,
+      "sha256": "a5d66f51a9590b755352e718928863a533d024e94bda02465d8e7c6c17c2470c",
+      "protectedRegions": [
+        {
+          "shape": "ellipse",
+          "cx": 240,
+          "cy": 160,
+          "rx": 218,
+          "ry": 138
+        }
+      ]
+    },
+    {
+      "file": "orbita-frame-preview.svg",
+      "item": "orbita-frame",
+      "role": "preview",
+      "slot": "frame",
+      "viewBox": "0 0 160 160",
+      "width": 160,
+      "height": 160,
+      "bytes": 2226,
+      "sha256": "7b850d521135081365028cad44321157bbf89ae2a5970c6d6f4c4a107c91d7e1",
+      "protectedRegions": [
+        {
+          "shape": "circle",
+          "cx": 80,
+          "cy": 80,
+          "r": 60
+        }
+      ]
+    },
+    {
+      "file": "orbita-frame-game.svg",
+      "item": "orbita-frame",
+      "role": "game",
+      "slot": "frame",
+      "viewBox": "0 0 48 48",
+      "width": 48,
+      "height": 48,
+      "bytes": 1628,
+      "sha256": "06b7653a7877c7aa2cf40bd4819bf73cac0568cccc4397e6f778002a166ace56",
+      "protectedRegions": [
+        {
+          "shape": "circle",
+          "cx": 24,
+          "cy": 24,
+          "r": 18
+        }
+      ]
+    },
+    {
+      "file": "orbita-badge-preview.svg",
+      "item": "orbita-badge",
+      "role": "preview",
+      "slot": "badge",
+      "viewBox": "0 0 160 160",
+      "width": 160,
+      "height": 160,
+      "bytes": 969,
+      "sha256": "ab72e0a3f9e7237857d44d032c4fbaced3516639d0cbf7ee40cc6dad698b07be",
+      "protectedRegions": []
+    },
+    {
+      "file": "orbita-badge-game.svg",
+      "item": "orbita-badge",
+      "role": "game",
+      "slot": "badge",
+      "viewBox": "0 0 24 24",
+      "width": 24,
+      "height": 24,
+      "bytes": 886,
+      "sha256": "460497393a83ceb9d6cb5b96bd79ec398d8cbd46b98504c0b1c90e8d64b0cb52",
+      "protectedRegions": []
+    },
+    {
+      "file": "orbita-chess-board-preview.svg",
+      "item": "orbita-chess-board",
+      "role": "preview",
+      "slot": "chess-board",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 3691,
+      "sha256": "8967434467daf52494848a775f5b2c357aefef05cf3209f946615c13e0577070",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "orbita-chess-board-game.svg",
+      "item": "orbita-chess-board",
+      "role": "game",
+      "slot": "chess-board",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 1694,
+      "sha256": "22aa493d512c84889bad123c319c3b5899fb4d866b4368091f7c5605f06b9715",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "orbita-checkers-board-preview.svg",
+      "item": "orbita-checkers-board",
+      "role": "preview",
+      "slot": "checkers-board",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 3399,
+      "sha256": "9cccc6ccaa5b36eef7bdf4d52ea6f423092f5526a213386875e0c2c0fd680d44",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "orbita-checkers-board-game.svg",
+      "item": "orbita-checkers-board",
+      "role": "game",
+      "slot": "checkers-board",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 3299,
+      "sha256": "df8e2b904b937ba6acb789d6fae008b5338681e2d7bbb07e7e9f19ce567d8528",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "orbita-nardy-board-preview.svg",
+      "item": "orbita-nardy-board",
+      "role": "preview",
+      "slot": "nardy-board",
+      "viewBox": "0 0 480 360",
+      "width": 480,
+      "height": 360,
+      "bytes": 3957,
+      "sha256": "6e7fe5a8b1512bd1b0ccd4d8ca38814a98d64e9f27f55bce7fa4a27cda25ba17",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 208,
+          "height": 312
+        },
+        {
+          "shape": "rect",
+          "x": 248,
+          "y": 24,
+          "width": 208,
+          "height": 312
+        }
+      ]
+    },
+    {
+      "file": "orbita-nardy-board-game.svg",
+      "item": "orbita-nardy-board",
+      "role": "game",
+      "slot": "nardy-board",
+      "viewBox": "0 0 480 360",
+      "width": 480,
+      "height": 360,
+      "bytes": 3124,
+      "sha256": "2de4dba48216ebe0d27cdefb132ed139784f71a02b09dcd87ab7dedd2ec943f4",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 208,
+          "height": 312
+        },
+        {
+          "shape": "rect",
+          "x": 248,
+          "y": 24,
+          "width": 208,
+          "height": 312
+        }
+      ]
+    },
+    {
+      "file": "orbita-battleship-panel-preview.svg",
+      "item": "orbita-battleship-panel",
+      "role": "preview",
+      "slot": "battleship-panel",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 4258,
+      "sha256": "522bb0688d827c1b0e38b91acc42874dcb5090c03f2faa468417193479484fa8",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "orbita-battleship-panel-game.svg",
+      "item": "orbita-battleship-panel",
+      "role": "game",
+      "slot": "battleship-panel",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 3505,
+      "sha256": "40ec36a2fd6db051ce7ec30ff1aec03ec6bdf4e020f62ed622df25c745959097",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "orbita-unoq-cardback-preview.svg",
+      "item": "orbita-unoq-cardback",
+      "role": "preview",
+      "slot": "unoq-cardback",
+      "viewBox": "0 0 200 280",
+      "width": 200,
+      "height": 280,
+      "bytes": 1906,
+      "sha256": "b521c159d4527fbb4c11f9c2fbc8ccddd63179c985b033a2bb6905e5c533a560",
+      "protectedRegions": []
+    },
+    {
+      "file": "orbita-unoq-cardback-game.svg",
+      "item": "orbita-unoq-cardback",
+      "role": "game",
+      "slot": "unoq-cardback",
+      "viewBox": "0 0 40 56",
+      "width": 40,
+      "height": 56,
+      "bytes": 1648,
+      "sha256": "51dd12e57cb9dca92cc57b75b685fcdd10931403215d20894daeb92d07b194de",
+      "protectedRegions": []
+    },
+    {
+      "file": "orbita-bundle-preview.svg",
+      "item": "orbita-bundle",
+      "role": "preview",
+      "slot": null,
+      "viewBox": "0 0 480 320",
+      "width": 480,
+      "height": 320,
+      "bytes": 19750,
+      "sha256": "7a0fd5a4a2bb417f0867b749d865f15749a65d916776852460bf10aca813bf9f",
+      "protectedRegions": []
+    },
+    {
+      "file": "porcelain-cardback-preview.svg",
+      "item": "porcelain-cardback",
+      "role": "preview",
+      "slot": "cardback",
+      "viewBox": "0 0 200 280",
+      "width": 200,
+      "height": 280,
+      "bytes": 3179,
+      "sha256": "05ce68e93201a297901f52006a6b8386c2fe317437379d18370ff5647b258dc2",
+      "protectedRegions": []
+    },
+    {
+      "file": "porcelain-cardback-game.svg",
+      "item": "porcelain-cardback",
+      "role": "game",
+      "slot": "cardback",
+      "viewBox": "0 0 40 56",
+      "width": 40,
+      "height": 56,
+      "bytes": 1903,
+      "sha256": "4851eb4d26cef16fa38daa5f47b4bf19df75a4f019083352aee499b6b3c8d6fc",
+      "protectedRegions": []
+    },
+    {
+      "file": "porcelain-table-preview.svg",
+      "item": "porcelain-table",
+      "role": "preview",
+      "slot": "table",
+      "viewBox": "0 0 480 320",
+      "width": 480,
+      "height": 320,
+      "bytes": 3900,
+      "sha256": "24a056e0c342d108ea440fe1f753b1defd6b59784374b02c2b66cd3ae21b92dc",
+      "protectedRegions": [
+        {
+          "shape": "ellipse",
+          "cx": 240,
+          "cy": 160,
+          "rx": 218,
+          "ry": 138
+        }
+      ]
+    },
+    {
+      "file": "porcelain-table-game.svg",
+      "item": "porcelain-table",
+      "role": "game",
+      "slot": "table",
+      "viewBox": "0 0 480 320",
+      "width": 480,
+      "height": 320,
+      "bytes": 2722,
+      "sha256": "a921838334efd2aa304280ecfd3db2440b09fbb0c706ac1f9a5d8b073573b909",
+      "protectedRegions": [
+        {
+          "shape": "ellipse",
+          "cx": 240,
+          "cy": 160,
+          "rx": 218,
+          "ry": 138
+        }
+      ]
+    },
+    {
+      "file": "porcelain-frame-preview.svg",
+      "item": "porcelain-frame",
+      "role": "preview",
+      "slot": "frame",
+      "viewBox": "0 0 160 160",
+      "width": 160,
+      "height": 160,
+      "bytes": 2125,
+      "sha256": "6b75888def8bf9afd054abc8e297948f61d28e65517f01b123d24a2977f12280",
+      "protectedRegions": [
+        {
+          "shape": "circle",
+          "cx": 80,
+          "cy": 80,
+          "r": 60
+        }
+      ]
+    },
+    {
+      "file": "porcelain-frame-game.svg",
+      "item": "porcelain-frame",
+      "role": "game",
+      "slot": "frame",
+      "viewBox": "0 0 48 48",
+      "width": 48,
+      "height": 48,
+      "bytes": 1527,
+      "sha256": "4403c5c59e5f5803f323014ebc609f8159b3001e5489f21c211bd1cdfda79bed",
+      "protectedRegions": [
+        {
+          "shape": "circle",
+          "cx": 24,
+          "cy": 24,
+          "r": 18
+        }
+      ]
+    },
+    {
+      "file": "porcelain-badge-preview.svg",
+      "item": "porcelain-badge",
+      "role": "preview",
+      "slot": "badge",
+      "viewBox": "0 0 160 160",
+      "width": 160,
+      "height": 160,
+      "bytes": 968,
+      "sha256": "ddd7fc2058af3a8101e074f36413d68bcc1ea7ea084f5b018315a435ffc033c4",
+      "protectedRegions": []
+    },
+    {
+      "file": "porcelain-badge-game.svg",
+      "item": "porcelain-badge",
+      "role": "game",
+      "slot": "badge",
+      "viewBox": "0 0 24 24",
+      "width": 24,
+      "height": 24,
+      "bytes": 884,
+      "sha256": "9120fb33b146d38e8e91431a1a0b39390115596d7781e105d7f4c81b330f9e2d",
+      "protectedRegions": []
+    },
+    {
+      "file": "porcelain-chess-board-preview.svg",
+      "item": "porcelain-chess-board",
+      "role": "preview",
+      "slot": "chess-board",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 3687,
+      "sha256": "d5874099bbd016c25a28689d2d0371da4b7dd9b9f9520c0bcf2de9c247e8434a",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "porcelain-chess-board-game.svg",
+      "item": "porcelain-chess-board",
+      "role": "game",
+      "slot": "chess-board",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 1690,
+      "sha256": "c66f7205d878d95b4d1062eb43cee262e7e28d87a07a0b7c1f619fd6331e2a29",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "porcelain-checkers-board-preview.svg",
+      "item": "porcelain-checkers-board",
+      "role": "preview",
+      "slot": "checkers-board",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 3395,
+      "sha256": "d99f0993ed07a780b3e077f4193a0944fc14524aef2a46bf74c427b2df02d25b",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "porcelain-checkers-board-game.svg",
+      "item": "porcelain-checkers-board",
+      "role": "game",
+      "slot": "checkers-board",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 3295,
+      "sha256": "f34d7758a9968827c0bcba424b63565a505148c422443d9ad90aefd79e5a2bb5",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "porcelain-nardy-board-preview.svg",
+      "item": "porcelain-nardy-board",
+      "role": "preview",
+      "slot": "nardy-board",
+      "viewBox": "0 0 480 360",
+      "width": 480,
+      "height": 360,
+      "bytes": 3953,
+      "sha256": "45e07fc7165f3d7d86ad2e4218479ae07f32b55f90b68584c586e076708a519f",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 208,
+          "height": 312
+        },
+        {
+          "shape": "rect",
+          "x": 248,
+          "y": 24,
+          "width": 208,
+          "height": 312
+        }
+      ]
+    },
+    {
+      "file": "porcelain-nardy-board-game.svg",
+      "item": "porcelain-nardy-board",
+      "role": "game",
+      "slot": "nardy-board",
+      "viewBox": "0 0 480 360",
+      "width": 480,
+      "height": 360,
+      "bytes": 3120,
+      "sha256": "312a79aab8ed092ebe66a06752eddcfaef5ef9b510b0f09c17cfd66e0116c058",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 208,
+          "height": 312
+        },
+        {
+          "shape": "rect",
+          "x": 248,
+          "y": 24,
+          "width": 208,
+          "height": 312
+        }
+      ]
+    },
+    {
+      "file": "porcelain-battleship-panel-preview.svg",
+      "item": "porcelain-battleship-panel",
+      "role": "preview",
+      "slot": "battleship-panel",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 4262,
+      "sha256": "88dfea04551b867dcd8ca67fdc99fd80d9ebc661b25e2dd87ae772e734a3b1a4",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "porcelain-battleship-panel-game.svg",
+      "item": "porcelain-battleship-panel",
+      "role": "game",
+      "slot": "battleship-panel",
+      "viewBox": "0 0 400 400",
+      "width": 400,
+      "height": 400,
+      "bytes": 3509,
+      "sha256": "266a2f56f6801edaafc952e590e14e72e1fa6feff3edf84ccd1252a7b5837039",
+      "protectedRegions": [
+        {
+          "shape": "rect",
+          "x": 24,
+          "y": 24,
+          "width": 352,
+          "height": 352
+        }
+      ]
+    },
+    {
+      "file": "porcelain-unoq-cardback-preview.svg",
+      "item": "porcelain-unoq-cardback",
+      "role": "preview",
+      "slot": "unoq-cardback",
+      "viewBox": "0 0 200 280",
+      "width": 200,
+      "height": 280,
+      "bytes": 1908,
+      "sha256": "463c373adcebf82fba3e2c5a3fc6befef6d1fee2b49050c91043e7f8db37a99c",
+      "protectedRegions": []
+    },
+    {
+      "file": "porcelain-unoq-cardback-game.svg",
+      "item": "porcelain-unoq-cardback",
+      "role": "game",
+      "slot": "unoq-cardback",
+      "viewBox": "0 0 40 56",
+      "width": 40,
+      "height": 56,
+      "bytes": 1648,
+      "sha256": "2e3efeb75d7e91885446354e343444f0e7e143ed213557864597c7d6828bdb41",
+      "protectedRegions": []
+    },
+    {
+      "file": "porcelain-bundle-preview.svg",
+      "item": "porcelain-bundle",
+      "role": "preview",
+      "slot": null,
+      "viewBox": "0 0 480 320",
+      "width": 480,
+      "height": 320,
+      "bytes": 19637,
+      "sha256": "4aabef49baebdddf74867739d466876ed204cb722f844499a3c0be9c1f77d282",
+      "protectedRegions": []
+    }
+  ]
+}

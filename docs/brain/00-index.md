@@ -45,6 +45,12 @@
 ## Косметика v2, текущая последовательная работа
 
 A выполнен локально: `../cosmetics-v2/audit.md`, `contracts.md`, `item-plan.json`,
-`reports/audit.md`; решение 197. Сессия —
-`sessions/2026-10-31-cosmetics-v2-stage-A-audit.md`. Далее B → C → D → E,
-каждый этап отдельно; новый ассортимент/магазин пока не реализованы.
+`reports/audit.md`; решение 197, сессия
+`sessions/2026-10-31-cosmetics-v2-stage-A-audit.md`.
+
+B выполнен локально: `../cosmetics-v2/reports/art.md`, сессия
+`sessions/2026-10-31-cosmetics-v2-stage-B-art.md`; ресурсы/README/manifest —
+`miniapp/collections/v2-art/`, источник `tools/build-cosmetics-v2.mjs`.
+54 предмета/6 комплектов — готовые SVG, ещё не подключённый ассортимент.
+Текущая очередь C → D → E; новый арт требует отдельного одобрения,
+живой Telegram/телефонный шаг ещё впереди. Магазин v2 пока не реализован.
