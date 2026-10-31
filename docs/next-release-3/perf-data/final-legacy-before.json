@@ -1,0 +1,2254 @@
+{
+  "commit": "bf9f725bd2758882c0272150b61aee2a3dce6f40",
+  "node": "v24.12.0",
+  "os": "darwin 25.6.0 arm64",
+  "cpus": 10,
+  "workload": "10 шахматных столов, 20 WS, 400 refresh/run за 5с, 10 ходов, 10 reconnect, 100 SQLite save, браузер 320×568; 3 повтора",
+  "limitations": "Нет ботов и долгого прогона; CPU/RSS только Node, loopback и прогретые файлы ОС; firstBoard без загрузки Chromium, Telegram SDK заглушён; L дополнит профили ботов и длительности.",
+  "runs": [
+    {
+      "run": 1,
+      "startupMs": 5.153707999999995,
+      "wallMs": 5829.333417,
+      "cpuMs": 637.81,
+      "heapMB": {
+        "before": 44.44242858886719,
+        "underLoad": 46.412445068359375,
+        "afterClose": 50.14323425292969
+      },
+      "rssMB": 199.578125,
+      "wsOpenMs": {
+        "n": 20,
+        "min": 0.3865420000000199,
+        "median": 0.49200000000001864,
+        "p95": 0.817292000000009,
+        "max": 4.002250000000004
+      },
+      "refreshMs": {
+        "n": 400,
+        "min": 1.3542919999999867,
+        "median": 5.860125000000153,
+        "p95": 8.45554200000015,
+        "max": 9.314082999999982
+      },
+      "actionToStateMs": {
+        "n": 10,
+        "min": 1.1033750000005966,
+        "median": 1.6442090000000462,
+        "p95": 7.348292000000583,
+        "max": 7.348292000000583
+      },
+      "reconnectMs": {
+        "n": 10,
+        "min": 0.6665830000001733,
+        "median": 0.7538749999994252,
+        "p95": 3.3705409999993208,
+        "max": 3.3705409999993208
+      },
+      "dbSaveMs": {
+        "n": 100,
+        "min": 0.07191700000021228,
+        "median": 0.10545899999942776,
+        "p95": 0.14579200000025594,
+        "max": 0.5682079999996859
+      },
+      "eventLoopMs": {
+        "median": 11.051007,
+        "p95": 11.100159,
+        "max": 16.826367
+      },
+      "messages": 450,
+      "bytes": 825930,
+      "sessionsAfterClose": 0,
+      "firstBoardMs": 159.27316700000029,
+      "resources": [
+        {
+          "name": "/js/telegram-web-app.js",
+          "bytes": 0,
+          "ms": 5.800000011920929
+        },
+        {
+          "name": "/tokens.css",
+          "bytes": 12671,
+          "ms": 6.400000035762787
+        },
+        {
+          "name": "/kit.css",
+          "bytes": 34454,
+          "ms": 6.400000035762787
+        },
+        {
+          "name": "/style.css",
+          "bytes": 39067,
+          "ms": 7
+        },
+        {
+          "name": "/hub.css",
+          "bytes": 23380,
+          "ms": 7.600000023841858
+        },
+        {
+          "name": "/colors.css",
+          "bytes": 22996,
+          "ms": 8.199999988079071
+        },
+        {
+          "name": "/poker.css",
+          "bytes": 15014,
+          "ms": 8.300000011920929
+        },
+        {
+          "name": "/chess.css",
+          "bytes": 14290,
+          "ms": 8.400000035762787
+        },
+        {
+          "name": "/durak.css",
+          "bytes": 19849,
+          "ms": 8.600000023841858
+        },
+        {
+          "name": "/checkers.css",
+          "bytes": 3188,
+          "ms": 8.900000035762787
+        },
+        {
+          "name": "/nardy.css",
+          "bytes": 8327,
+          "ms": 9.600000023841858
+        },
+        {
+          "name": "/reactions.css",
+          "bytes": 2973,
+          "ms": 10.199999988079071
+        },
+        {
+          "name": "/battleship.css",
+          "bytes": 13229,
+          "ms": 10.199999988079071
+        },
+        {
+          "name": "/nav.css",
+          "bytes": 3218,
+          "ms": 10
+        },
+        {
+          "name": "/profile.css",
+          "bytes": 3501,
+          "ms": 10.5
+        },
+        {
+          "name": "/chat.css",
+          "bytes": 10919,
+          "ms": 10.699999988079071
+        },
+        {
+          "name": "/cosmetics.css",
+          "bytes": 5679,
+          "ms": 11.199999988079071
+        },
+        {
+          "name": "/learn.css",
+          "bytes": 12630,
+          "ms": 11.399999976158142
+        },
+        {
+          "name": "/collections.css",
+          "bytes": 20730,
+          "ms": 11.699999988079071
+        },
+        {
+          "name": "/collections-look.css",
+          "bytes": 4782,
+          "ms": 11.700000047683716
+        },
+        {
+          "name": "/admin.css",
+          "bytes": 15322,
+          "ms": 11.700000047683716
+        },
+        {
+          "name": "/train.css",
+          "bytes": 11259,
+          "ms": 12.100000023841858
+        },
+        {
+          "name": "/train/math.css",
+          "bytes": 8364,
+          "ms": 12.400000035762787
+        },
+        {
+          "name": "/app.js",
+          "bytes": 8732,
+          "ms": 12.600000023841858
+        },
+        {
+          "name": "/net.js",
+          "bytes": 7434,
+          "ms": 2.599999964237213
+        },
+        {
+          "name": "/ui.js",
+          "bytes": 27436,
+          "ms": 2.899999976158142
+        },
+        {
+          "name": "/rating.js",
+          "bytes": 11603,
+          "ms": 2.600000023841858
+        },
+        {
+          "name": "/down.js",
+          "bytes": 2322,
+          "ms": 3.700000047683716
+        },
+        {
+          "name": "/hub.js",
+          "bytes": 15886,
+          "ms": 4.100000023841858
+        },
+        {
+          "name": "/admin.js",
+          "bytes": 23724,
+          "ms": 4.100000023841858
+        },
+        {
+          "name": "/games/index.js",
+          "bytes": 1374,
+          "ms": 5.100000023841858
+        },
+        {
+          "name": "/solo.js",
+          "bytes": 8608,
+          "ms": 5.200000047683716
+        },
+        {
+          "name": "/nav.js",
+          "bytes": 9643,
+          "ms": 5.5
+        },
+        {
+          "name": "/learn/hook.js",
+          "bytes": 2209,
+          "ms": 5.800000011920929
+        },
+        {
+          "name": "/train/link-wire.js",
+          "bytes": 3739,
+          "ms": 6.300000011920929
+        },
+        {
+          "name": "/train/screens.js",
+          "bytes": 27685,
+          "ms": 6.199999988079071
+        },
+        {
+          "name": "/train/route.js",
+          "bytes": 2663,
+          "ms": 10.100000023841858
+        },
+        {
+          "name": "/collections/index.js",
+          "bytes": 10581,
+          "ms": 10.199999988079071
+        },
+        {
+          "name": "/profile.js",
+          "bytes": 7992,
+          "ms": 7.600000023841858
+        },
+        {
+          "name": "/cosmetics/art.js",
+          "bytes": 1717,
+          "ms": 7.300000011920929
+        },
+        {
+          "name": "/catalog.js",
+          "bytes": 3907,
+          "ms": 7.699999988079071
+        },
+        {
+          "name": "/admin-shop.js",
+          "bytes": 14991,
+          "ms": 7.600000023841858
+        },
+        {
+          "name": "/games/durak.js",
+          "bytes": 45921,
+          "ms": 8.899999976158142
+        },
+        {
+          "name": "/games/poker.js",
+          "bytes": 74000,
+          "ms": 9.399999976158142
+        },
+        {
+          "name": "/games/colors.js",
+          "bytes": 39652,
+          "ms": 9.699999988079071
+        },
+        {
+          "name": "/games/chess.js",
+          "bytes": 45463,
+          "ms": 9.700000047683716
+        },
+        {
+          "name": "/games/checkers.js",
+          "bytes": 45267,
+          "ms": 10.400000035762787
+        },
+        {
+          "name": "/games/nardy.js",
+          "bytes": 33079,
+          "ms": 13.400000035762787
+        },
+        {
+          "name": "/games/battleship.js",
+          "bytes": 48838,
+          "ms": 14
+        },
+        {
+          "name": "/school.js",
+          "bytes": 9860,
+          "ms": 14.699999988079071
+        },
+        {
+          "name": "/settings-rows.js",
+          "bytes": 1360,
+          "ms": 14.200000047683716
+        },
+        {
+          "name": "/collections/state.js",
+          "bytes": 14291,
+          "ms": 14.400000035762787
+        },
+        {
+          "name": "/train/engine.js",
+          "bytes": 11125,
+          "ms": 14.800000011920929
+        },
+        {
+          "name": "/train/content/index.js",
+          "bytes": 1411,
+          "ms": 15.199999988079071
+        },
+        {
+          "name": "/learn/screens.js",
+          "bytes": 10020,
+          "ms": 16.099999964237213
+        },
+        {
+          "name": "/train/link.js",
+          "bytes": 5346,
+          "ms": 16.600000023841858
+        },
+        {
+          "name": "/train/placement.js",
+          "bytes": 13228,
+          "ms": 16.69999998807907
+        },
+        {
+          "name": "/train/topics.js",
+          "bytes": 8292,
+          "ms": 17.30000001192093
+        },
+        {
+          "name": "/train/skills.js",
+          "bytes": 4060,
+          "ms": 17.200000047683716
+        },
+        {
+          "name": "/train/widgets/choice.js",
+          "bytes": 1762,
+          "ms": 17.600000023841858
+        },
+        {
+          "name": "/train/widgets/explain.js",
+          "bytes": 1958,
+          "ms": 18
+        },
+        {
+          "name": "/train/widgets/progress-bar.js",
+          "bytes": 1069,
+          "ms": 18.30000001192093
+        },
+        {
+          "name": "/train/widgets/cards.js",
+          "bytes": 2710,
+          "ms": 18.30000001192093
+        },
+        {
+          "name": "/train/widgets/bet-slider.js",
+          "bytes": 4307,
+          "ms": 18.69999998807907
+        },
+        {
+          "name": "/train/widgets/odds-bar.js",
+          "bytes": 4609,
+          "ms": 18.69999998807907
+        },
+        {
+          "name": "/train/widgets/table-seat.js",
+          "bytes": 8043,
+          "ms": 19.399999976158142
+        },
+        {
+          "name": "/train/widgets/reveal.js",
+          "bytes": 2475,
+          "ms": 19.899999976158142
+        },
+        {
+          "name": "/train/widgets/range-grid.js",
+          "bytes": 21241,
+          "ms": 20
+        },
+        {
+          "name": "/collections/catalog.js",
+          "bytes": 3638,
+          "ms": 16.30000001192093
+        },
+        {
+          "name": "/collections/item.js",
+          "bytes": 11623,
+          "ms": 17.399999976158142
+        },
+        {
+          "name": "/collections/showcase.js",
+          "bytes": 2334,
+          "ms": 17.399999976158142
+        },
+        {
+          "name": "/collections/fitting.js",
+          "bytes": 3381,
+          "ms": 17.899999976158142
+        },
+        {
+          "name": "/collections/inventory.js",
+          "bytes": 5147,
+          "ms": 18.299999952316284
+        },
+        {
+          "name": "/collections/receive.js",
+          "bytes": 3263,
+          "ms": 18.299999952316284
+        },
+        {
+          "name": "/collections/pay.js",
+          "bytes": 8988,
+          "ms": 18.299999952316284
+        },
+        {
+          "name": "/collections/purchase.js",
+          "bytes": 8220,
+          "ms": 19.19999998807907
+        },
+        {
+          "name": "/cosmetics/apply.js",
+          "bytes": 6847,
+          "ms": 18.5
+        },
+        {
+          "name": "/cosmetics/catalog.js",
+          "bytes": 3258,
+          "ms": 18.80000001192093
+        },
+        {
+          "name": "/cosmetics/look.js",
+          "bytes": 6359,
+          "ms": 19.19999998807907
+        },
+        {
+          "name": "/catalog-pager.js",
+          "bytes": 2489,
+          "ms": 19
+        },
+        {
+          "name": "/drop.js",
+          "bytes": 1597,
+          "ms": 16.100000023841858
+        },
+        {
+          "name": "/collections/look-view.js",
+          "bytes": 11523,
+          "ms": 16.80000001192093
+        },
+        {
+          "name": "/chat.js",
+          "bytes": 22749,
+          "ms": 17.100000023841858
+        },
+        {
+          "name": "/collections/settings-row.js",
+          "bytes": 1558,
+          "ms": 11.400000035762787
+        },
+        {
+          "name": "/homescreen-row.js",
+          "bytes": 1933,
+          "ms": 11.900000035762787
+        },
+        {
+          "name": "/collections/protocol.js",
+          "bytes": 1846,
+          "ms": 11.100000023841858
+        },
+        {
+          "name": "/train/content/starter.js",
+          "bytes": 6161,
+          "ms": 11
+        },
+        {
+          "name": "/train/content/ranges.js",
+          "bytes": 15109,
+          "ms": 11.299999952316284
+        },
+        {
+          "name": "/train/content/preflop.js",
+          "bytes": 23244,
+          "ms": 11.799999952316284
+        },
+        {
+          "name": "/train/content/readrange.js",
+          "bytes": 13607,
+          "ms": 12.399999976158142
+        },
+        {
+          "name": "/train/content/potodds.js",
+          "bytes": 15886,
+          "ms": 12.399999976158142
+        },
+        {
+          "name": "/train/content/outs.js",
+          "bytes": 15351,
+          "ms": 12.399999976158142
+        },
+        {
+          "name": "/train/content/postflop.js",
+          "bytes": 17977,
+          "ms": 13
+        },
+        {
+          "name": "/train/content/hands.js",
+          "bytes": 10951,
+          "ms": 13.300000011920929
+        },
+        {
+          "name": "/train/content/advanced.js",
+          "bytes": 16956,
+          "ms": 13.5
+        },
+        {
+          "name": "/learn/sections.js",
+          "bytes": 3007,
+          "ms": 13.300000011920929
+        },
+        {
+          "name": "/learn/progress.js",
+          "bytes": 1704,
+          "ms": 13.300000011920929
+        },
+        {
+          "name": "/learn/facts.js",
+          "bytes": 7561,
+          "ms": 13.399999976158142
+        },
+        {
+          "name": "/learn/diagrams.js",
+          "bytes": 9406,
+          "ms": 13.899999976158142
+        },
+        {
+          "name": "/learn/play.js",
+          "bytes": 25946,
+          "ms": 14.399999976158142
+        },
+        {
+          "name": "/learn/parts.js",
+          "bytes": 4793,
+          "ms": 15.699999988079071
+        },
+        {
+          "name": "/train/placement-core.js",
+          "bytes": 6435,
+          "ms": 15.199999988079071
+        },
+        {
+          "name": "/train/widgets/dom.js",
+          "bytes": 2904,
+          "ms": 13.600000023841858
+        },
+        {
+          "name": "/train/widgets/card-el.js",
+          "bytes": 1402,
+          "ms": 13.600000023841858
+        },
+        {
+          "name": "/train/poker-math.js",
+          "bytes": 24058,
+          "ms": 14.100000023841858
+        },
+        {
+          "name": "/train/widgets/board.js",
+          "bytes": 1995,
+          "ms": 13.600000023841858
+        },
+        {
+          "name": "/train/widgets/pot.js",
+          "bytes": 1131,
+          "ms": 13.899999976158142
+        },
+        {
+          "name": "/train/ranges/cell-note.js",
+          "bytes": 1800,
+          "ms": 13.699999988079071
+        },
+        {
+          "name": "/train/ranges/grid.js",
+          "bytes": 6684,
+          "ms": 13.5
+        },
+        {
+          "name": "/train/ranges/hands.js",
+          "bytes": 15081,
+          "ms": 13.900000035762787
+        },
+        {
+          "name": "/collections/art.js",
+          "bytes": 3946,
+          "ms": 13.300000011920929
+        },
+        {
+          "name": "/collections/pay-protocol.js",
+          "bytes": 4037,
+          "ms": 12.800000011920929
+        },
+        {
+          "name": "/reactions.js",
+          "bytes": 15853,
+          "ms": 10.699999988079071
+        },
+        {
+          "name": "/homescreen.js",
+          "bytes": 7237,
+          "ms": 10.699999988079071
+        },
+        {
+          "name": "/train/ranges/data.js",
+          "bytes": 15173,
+          "ms": 9.899999976158142
+        },
+        {
+          "name": "/train/ranges/tasks.js",
+          "bytes": 7862,
+          "ms": 10.399999976158142
+        },
+        {
+          "name": "/train/ranges/equity169.js",
+          "bytes": 3745,
+          "ms": 9.899999976158142
+        },
+        {
+          "name": "/train/content/x-util.js",
+          "bytes": 12920,
+          "ms": 10.099999964237213
+        },
+        {
+          "name": "/learn/content/basics.js",
+          "bytes": 7849,
+          "ms": 8.5
+        },
+        {
+          "name": "/learn/content/ranges.js",
+          "bytes": 7635,
+          "ms": 8.799999952316284
+        },
+        {
+          "name": "/learn/content/preflop.js",
+          "bytes": 9573,
+          "ms": 9
+        },
+        {
+          "name": "/learn/content/math.js",
+          "bytes": 14314,
+          "ms": 9.599999964237213
+        },
+        {
+          "name": "/learn/content/postflop.js",
+          "bytes": 9929,
+          "ms": 9.599999964237213
+        },
+        {
+          "name": "/learn/content/gto.js",
+          "bytes": 10782,
+          "ms": 9.899999976158142
+        },
+        {
+          "name": "/learn/hands.js",
+          "bytes": 5182,
+          "ms": 9.699999988079071
+        },
+        {
+          "name": "/train/placement.css",
+          "bytes": 4351,
+          "ms": 5
+        },
+        {
+          "name": "/chess/bR.svg",
+          "bytes": 764,
+          "ms": 3
+        },
+        {
+          "name": "/chess/bN.svg",
+          "bytes": 881,
+          "ms": 2.699999988079071
+        },
+        {
+          "name": "/chess/bQ.svg",
+          "bytes": 926,
+          "ms": 3
+        },
+        {
+          "name": "/chess/bK.svg",
+          "bytes": 843,
+          "ms": 3.100000023841858
+        },
+        {
+          "name": "/chess/bB.svg",
+          "bytes": 846,
+          "ms": 3.300000011920929
+        },
+        {
+          "name": "/chess/bP.svg",
+          "bytes": 770,
+          "ms": 3.099999964237213
+        },
+        {
+          "name": "/chess/wP.svg",
+          "bytes": 771,
+          "ms": 4
+        },
+        {
+          "name": "/chess/wR.svg",
+          "bytes": 765,
+          "ms": 4.099999964237213
+        },
+        {
+          "name": "/chess/wN.svg",
+          "bytes": 882,
+          "ms": 4.199999988079071
+        },
+        {
+          "name": "/chess/wB.svg",
+          "bytes": 847,
+          "ms": 4.300000011920929
+        },
+        {
+          "name": "/chess/wQ.svg",
+          "bytes": 927,
+          "ms": 4.399999976158142
+        },
+        {
+          "name": "/chess/wK.svg",
+          "bytes": 844,
+          "ms": 4.5
+        }
+      ]
+    },
+    {
+      "run": 2,
+      "startupMs": 5.396834000000126,
+      "wallMs": 5554.897917,
+      "cpuMs": 539.785,
+      "heapMB": {
+        "before": 50.152610778808594,
+        "underLoad": 50.627769470214844,
+        "afterClose": 52.2364501953125
+      },
+      "rssMB": 205.171875,
+      "wsOpenMs": {
+        "n": 20,
+        "min": 0.32941699999992125,
+        "median": 0.431416999999783,
+        "p95": 0.5672500000000582,
+        "max": 0.9809580000001006
+      },
+      "refreshMs": {
+        "n": 400,
+        "min": 1.165541999999732,
+        "median": 5.8680829999993875,
+        "p95": 6.958708000000115,
+        "max": 7.679667000000336
+      },
+      "actionToStateMs": {
+        "n": 10,
+        "min": 0.8641250000000582,
+        "median": 1.413416999999754,
+        "p95": 3.761333000000377,
+        "max": 3.761333000000377
+      },
+      "reconnectMs": {
+        "n": 10,
+        "min": 0.768792000000758,
+        "median": 0.9787500000002183,
+        "p95": 2.9260830000002898,
+        "max": 2.9260830000002898
+      },
+      "dbSaveMs": {
+        "n": 100,
+        "min": 0.0650420000001759,
+        "median": 0.09012499999880674,
+        "p95": 0.15308399999958056,
+        "max": 0.581040999999459
+      },
+      "eventLoopMs": {
+        "median": 11.051007,
+        "p95": 11.091967,
+        "max": 14.934015
+      },
+      "messages": 450,
+      "bytes": 825930,
+      "sessionsAfterClose": 0,
+      "firstBoardMs": 103.64124999999876,
+      "resources": [
+        {
+          "name": "/js/telegram-web-app.js",
+          "bytes": 0,
+          "ms": 3.5
+        },
+        {
+          "name": "/tokens.css",
+          "bytes": 12671,
+          "ms": 4.100000023841858
+        },
+        {
+          "name": "/kit.css",
+          "bytes": 34454,
+          "ms": 4.5
+        },
+        {
+          "name": "/style.css",
+          "bytes": 39067,
+          "ms": 4.899999976158142
+        },
+        {
+          "name": "/hub.css",
+          "bytes": 23380,
+          "ms": 5.199999988079071
+        },
+        {
+          "name": "/poker.css",
+          "bytes": 15014,
+          "ms": 5.699999988079071
+        },
+        {
+          "name": "/colors.css",
+          "bytes": 22996,
+          "ms": 5.5
+        },
+        {
+          "name": "/durak.css",
+          "bytes": 19849,
+          "ms": 6.100000023841858
+        },
+        {
+          "name": "/chess.css",
+          "bytes": 14290,
+          "ms": 5.899999976158142
+        },
+        {
+          "name": "/checkers.css",
+          "bytes": 3188,
+          "ms": 6.399999976158142
+        },
+        {
+          "name": "/nardy.css",
+          "bytes": 8327,
+          "ms": 6.800000011920929
+        },
+        {
+          "name": "/battleship.css",
+          "bytes": 13229,
+          "ms": 7.100000023841858
+        },
+        {
+          "name": "/reactions.css",
+          "bytes": 2973,
+          "ms": 7.199999988079071
+        },
+        {
+          "name": "/nav.css",
+          "bytes": 3218,
+          "ms": 7.600000023841858
+        },
+        {
+          "name": "/profile.css",
+          "bytes": 3501,
+          "ms": 7.600000023841858
+        },
+        {
+          "name": "/chat.css",
+          "bytes": 10919,
+          "ms": 8
+        },
+        {
+          "name": "/cosmetics.css",
+          "bytes": 5679,
+          "ms": 8.300000011920929
+        },
+        {
+          "name": "/learn.css",
+          "bytes": 12630,
+          "ms": 8.600000023841858
+        },
+        {
+          "name": "/collections.css",
+          "bytes": 20730,
+          "ms": 8.699999988079071
+        },
+        {
+          "name": "/collections-look.css",
+          "bytes": 4782,
+          "ms": 9
+        },
+        {
+          "name": "/admin.css",
+          "bytes": 15322,
+          "ms": 9
+        },
+        {
+          "name": "/train.css",
+          "bytes": 11259,
+          "ms": 9.299999952316284
+        },
+        {
+          "name": "/train/math.css",
+          "bytes": 8364,
+          "ms": 9.599999964237213
+        },
+        {
+          "name": "/app.js",
+          "bytes": 8732,
+          "ms": 9.799999952316284
+        },
+        {
+          "name": "/ui.js",
+          "bytes": 27436,
+          "ms": 2.400000035762787
+        },
+        {
+          "name": "/net.js",
+          "bytes": 7434,
+          "ms": 2.5
+        },
+        {
+          "name": "/hub.js",
+          "bytes": 15886,
+          "ms": 2.600000023841858
+        },
+        {
+          "name": "/rating.js",
+          "bytes": 11603,
+          "ms": 2.5
+        },
+        {
+          "name": "/down.js",
+          "bytes": 2322,
+          "ms": 2.599999964237213
+        },
+        {
+          "name": "/admin.js",
+          "bytes": 23724,
+          "ms": 2.800000011920929
+        },
+        {
+          "name": "/games/index.js",
+          "bytes": 1374,
+          "ms": 4.5
+        },
+        {
+          "name": "/solo.js",
+          "bytes": 8608,
+          "ms": 4.600000023841858
+        },
+        {
+          "name": "/nav.js",
+          "bytes": 9643,
+          "ms": 4.800000011920929
+        },
+        {
+          "name": "/train/link-wire.js",
+          "bytes": 3739,
+          "ms": 5.200000047683716
+        },
+        {
+          "name": "/learn/hook.js",
+          "bytes": 2209,
+          "ms": 5.5
+        },
+        {
+          "name": "/train/screens.js",
+          "bytes": 27685,
+          "ms": 5.100000023841858
+        },
+        {
+          "name": "/train/route.js",
+          "bytes": 2663,
+          "ms": 8
+        },
+        {
+          "name": "/collections/index.js",
+          "bytes": 10581,
+          "ms": 8.100000023841858
+        },
+        {
+          "name": "/cosmetics/art.js",
+          "bytes": 1717,
+          "ms": 5.5
+        },
+        {
+          "name": "/catalog.js",
+          "bytes": 3907,
+          "ms": 5.400000035762787
+        },
+        {
+          "name": "/profile.js",
+          "bytes": 7992,
+          "ms": 5.399999976158142
+        },
+        {
+          "name": "/admin-shop.js",
+          "bytes": 14991,
+          "ms": 5.199999988079071
+        },
+        {
+          "name": "/games/durak.js",
+          "bytes": 45921,
+          "ms": 6
+        },
+        {
+          "name": "/games/poker.js",
+          "bytes": 74000,
+          "ms": 6.199999988079071
+        },
+        {
+          "name": "/games/colors.js",
+          "bytes": 39652,
+          "ms": 6.399999976158142
+        },
+        {
+          "name": "/games/chess.js",
+          "bytes": 45463,
+          "ms": 6.599999964237213
+        },
+        {
+          "name": "/games/checkers.js",
+          "bytes": 45267,
+          "ms": 6.5
+        },
+        {
+          "name": "/games/nardy.js",
+          "bytes": 33079,
+          "ms": 6.600000023841858
+        },
+        {
+          "name": "/games/battleship.js",
+          "bytes": 48838,
+          "ms": 8.699999988079071
+        },
+        {
+          "name": "/school.js",
+          "bytes": 9860,
+          "ms": 8.5
+        },
+        {
+          "name": "/settings-rows.js",
+          "bytes": 1360,
+          "ms": 9.099999964237213
+        },
+        {
+          "name": "/collections/state.js",
+          "bytes": 14291,
+          "ms": 9.299999952316284
+        },
+        {
+          "name": "/train/link.js",
+          "bytes": 5346,
+          "ms": 8.800000011920929
+        },
+        {
+          "name": "/train/engine.js",
+          "bytes": 11125,
+          "ms": 8.800000011920929
+        },
+        {
+          "name": "/train/placement.js",
+          "bytes": 13228,
+          "ms": 10.400000035762787
+        },
+        {
+          "name": "/train/topics.js",
+          "bytes": 8292,
+          "ms": 10.5
+        },
+        {
+          "name": "/train/content/index.js",
+          "bytes": 1411,
+          "ms": 10.800000011920929
+        },
+        {
+          "name": "/learn/screens.js",
+          "bytes": 10020,
+          "ms": 10.899999976158142
+        },
+        {
+          "name": "/train/skills.js",
+          "bytes": 4060,
+          "ms": 10.800000011920929
+        },
+        {
+          "name": "/train/widgets/choice.js",
+          "bytes": 1762,
+          "ms": 10.800000011920929
+        },
+        {
+          "name": "/train/widgets/explain.js",
+          "bytes": 1958,
+          "ms": 13.899999976158142
+        },
+        {
+          "name": "/train/widgets/progress-bar.js",
+          "bytes": 1069,
+          "ms": 13.899999976158142
+        },
+        {
+          "name": "/train/widgets/cards.js",
+          "bytes": 2710,
+          "ms": 14.599999964237213
+        },
+        {
+          "name": "/train/widgets/odds-bar.js",
+          "bytes": 4609,
+          "ms": 14.599999964237213
+        },
+        {
+          "name": "/train/widgets/bet-slider.js",
+          "bytes": 4307,
+          "ms": 14.799999952316284
+        },
+        {
+          "name": "/train/widgets/table-seat.js",
+          "bytes": 8043,
+          "ms": 14.899999976158142
+        },
+        {
+          "name": "/train/widgets/range-grid.js",
+          "bytes": 21241,
+          "ms": 16.299999952316284
+        },
+        {
+          "name": "/train/widgets/reveal.js",
+          "bytes": 2475,
+          "ms": 16.399999976158142
+        },
+        {
+          "name": "/collections/catalog.js",
+          "bytes": 3638,
+          "ms": 16.899999976158142
+        },
+        {
+          "name": "/collections/showcase.js",
+          "bytes": 2334,
+          "ms": 17
+        },
+        {
+          "name": "/collections/fitting.js",
+          "bytes": 3381,
+          "ms": 17.099999964237213
+        },
+        {
+          "name": "/collections/item.js",
+          "bytes": 11623,
+          "ms": 17.19999998807907
+        },
+        {
+          "name": "/collections/receive.js",
+          "bytes": 3263,
+          "ms": 18.5
+        },
+        {
+          "name": "/collections/inventory.js",
+          "bytes": 5147,
+          "ms": 18.599999964237213
+        },
+        {
+          "name": "/collections/pay.js",
+          "bytes": 8988,
+          "ms": 19
+        },
+        {
+          "name": "/collections/purchase.js",
+          "bytes": 8220,
+          "ms": 18.900000035762787
+        },
+        {
+          "name": "/cosmetics/catalog.js",
+          "bytes": 3258,
+          "ms": 18.30000001192093
+        },
+        {
+          "name": "/cosmetics/look.js",
+          "bytes": 6359,
+          "ms": 18.399999976158142
+        },
+        {
+          "name": "/catalog-pager.js",
+          "bytes": 2489,
+          "ms": 19.399999976158142
+        },
+        {
+          "name": "/cosmetics/apply.js",
+          "bytes": 6847,
+          "ms": 19.5
+        },
+        {
+          "name": "/drop.js",
+          "bytes": 1597,
+          "ms": 17.5
+        },
+        {
+          "name": "/collections/look-view.js",
+          "bytes": 11523,
+          "ms": 17.700000047683716
+        },
+        {
+          "name": "/chat.js",
+          "bytes": 22749,
+          "ms": 17.700000047683716
+        },
+        {
+          "name": "/collections/settings-row.js",
+          "bytes": 1558,
+          "ms": 14.899999976158142
+        },
+        {
+          "name": "/homescreen-row.js",
+          "bytes": 1933,
+          "ms": 15.899999976158142
+        },
+        {
+          "name": "/collections/protocol.js",
+          "bytes": 1846,
+          "ms": 15.5
+        },
+        {
+          "name": "/train/placement-core.js",
+          "bytes": 6435,
+          "ms": 14.300000011920929
+        },
+        {
+          "name": "/train/content/starter.js",
+          "bytes": 6161,
+          "ms": 13.699999988079071
+        },
+        {
+          "name": "/train/content/ranges.js",
+          "bytes": 15109,
+          "ms": 13.800000011920929
+        },
+        {
+          "name": "/train/content/preflop.js",
+          "bytes": 23244,
+          "ms": 14
+        },
+        {
+          "name": "/train/content/readrange.js",
+          "bytes": 13607,
+          "ms": 15.300000011920929
+        },
+        {
+          "name": "/train/content/outs.js",
+          "bytes": 15351,
+          "ms": 15.299999952316284
+        },
+        {
+          "name": "/train/content/hands.js",
+          "bytes": 10951,
+          "ms": 15.699999988079071
+        },
+        {
+          "name": "/train/content/postflop.js",
+          "bytes": 17977,
+          "ms": 15.599999964237213
+        },
+        {
+          "name": "/train/content/potodds.js",
+          "bytes": 15886,
+          "ms": 15.799999952316284
+        },
+        {
+          "name": "/train/content/advanced.js",
+          "bytes": 16956,
+          "ms": 15.899999976158142
+        },
+        {
+          "name": "/learn/sections.js",
+          "bytes": 3007,
+          "ms": 16.80000001192093
+        },
+        {
+          "name": "/learn/progress.js",
+          "bytes": 1704,
+          "ms": 16.69999998807907
+        },
+        {
+          "name": "/learn/diagrams.js",
+          "bytes": 9406,
+          "ms": 17.19999998807907
+        },
+        {
+          "name": "/learn/facts.js",
+          "bytes": 7561,
+          "ms": 17.19999998807907
+        },
+        {
+          "name": "/learn/parts.js",
+          "bytes": 4793,
+          "ms": 17.400000035762787
+        },
+        {
+          "name": "/learn/play.js",
+          "bytes": 25946,
+          "ms": 17.30000001192093
+        },
+        {
+          "name": "/train/widgets/dom.js",
+          "bytes": 2904,
+          "ms": 14.900000035762787
+        },
+        {
+          "name": "/train/widgets/card-el.js",
+          "bytes": 1402,
+          "ms": 14.900000035762787
+        },
+        {
+          "name": "/train/poker-math.js",
+          "bytes": 24058,
+          "ms": 15.400000035762787
+        },
+        {
+          "name": "/train/widgets/board.js",
+          "bytes": 1995,
+          "ms": 15.399999976158142
+        },
+        {
+          "name": "/train/widgets/pot.js",
+          "bytes": 1131,
+          "ms": 15.399999976158142
+        },
+        {
+          "name": "/train/ranges/hands.js",
+          "bytes": 15081,
+          "ms": 14.199999988079071
+        },
+        {
+          "name": "/train/ranges/grid.js",
+          "bytes": 6684,
+          "ms": 14.699999988079071
+        },
+        {
+          "name": "/train/ranges/cell-note.js",
+          "bytes": 1800,
+          "ms": 14.599999964237213
+        },
+        {
+          "name": "/collections/art.js",
+          "bytes": 3946,
+          "ms": 12.100000023841858
+        },
+        {
+          "name": "/collections/pay-protocol.js",
+          "bytes": 4037,
+          "ms": 10.400000035762787
+        },
+        {
+          "name": "/reactions.js",
+          "bytes": 15853,
+          "ms": 8.400000035762787
+        },
+        {
+          "name": "/homescreen.js",
+          "bytes": 7237,
+          "ms": 8
+        },
+        {
+          "name": "/train/ranges/data.js",
+          "bytes": 15173,
+          "ms": 7.400000035762787
+        },
+        {
+          "name": "/train/ranges/tasks.js",
+          "bytes": 7862,
+          "ms": 7.399999976158142
+        },
+        {
+          "name": "/train/ranges/equity169.js",
+          "bytes": 3745,
+          "ms": 7.599999964237213
+        },
+        {
+          "name": "/train/content/x-util.js",
+          "bytes": 12920,
+          "ms": 7.100000023841858
+        },
+        {
+          "name": "/learn/content/basics.js",
+          "bytes": 7849,
+          "ms": 5.5
+        },
+        {
+          "name": "/learn/content/preflop.js",
+          "bytes": 9573,
+          "ms": 5.600000023841858
+        },
+        {
+          "name": "/learn/content/ranges.js",
+          "bytes": 7635,
+          "ms": 6.199999988079071
+        },
+        {
+          "name": "/learn/content/math.js",
+          "bytes": 14314,
+          "ms": 6.199999988079071
+        },
+        {
+          "name": "/learn/content/postflop.js",
+          "bytes": 9929,
+          "ms": 6.5
+        },
+        {
+          "name": "/learn/content/gto.js",
+          "bytes": 10782,
+          "ms": 6.5
+        },
+        {
+          "name": "/learn/hands.js",
+          "bytes": 5182,
+          "ms": 5.699999988079071
+        },
+        {
+          "name": "/train/placement.css",
+          "bytes": 4351,
+          "ms": 1.5999999642372131
+        },
+        {
+          "name": "/chess/bR.svg",
+          "bytes": 764,
+          "ms": 3.399999976158142
+        },
+        {
+          "name": "/chess/bN.svg",
+          "bytes": 881,
+          "ms": 3.5
+        },
+        {
+          "name": "/chess/bB.svg",
+          "bytes": 846,
+          "ms": 3.600000023841858
+        },
+        {
+          "name": "/chess/bQ.svg",
+          "bytes": 926,
+          "ms": 3.800000011920929
+        },
+        {
+          "name": "/chess/bK.svg",
+          "bytes": 843,
+          "ms": 4
+        },
+        {
+          "name": "/chess/bP.svg",
+          "bytes": 770,
+          "ms": 4
+        },
+        {
+          "name": "/chess/wP.svg",
+          "bytes": 771,
+          "ms": 4.599999964237213
+        },
+        {
+          "name": "/chess/wR.svg",
+          "bytes": 765,
+          "ms": 4.699999988079071
+        },
+        {
+          "name": "/chess/wN.svg",
+          "bytes": 882,
+          "ms": 4.799999952316284
+        },
+        {
+          "name": "/chess/wB.svg",
+          "bytes": 847,
+          "ms": 4.800000011920929
+        },
+        {
+          "name": "/chess/wQ.svg",
+          "bytes": 927,
+          "ms": 5.400000035762787
+        },
+        {
+          "name": "/chess/wK.svg",
+          "bytes": 844,
+          "ms": 5.400000035762787
+        }
+      ]
+    },
+    {
+      "run": 3,
+      "startupMs": 5.561999999999898,
+      "wallMs": 5526.949624999999,
+      "cpuMs": 458.702,
+      "heapMB": {
+        "before": 50.62348175048828,
+        "underLoad": 50.97541046142578,
+        "afterClose": 49.428558349609375
+      },
+      "rssMB": 206.390625,
+      "wsOpenMs": {
+        "n": 20,
+        "min": 0.3262080000004062,
+        "median": 0.4111250000005384,
+        "p95": 0.5348749999993743,
+        "max": 0.8642080000008718
+      },
+      "refreshMs": {
+        "n": 400,
+        "min": 0.9196670000001177,
+        "median": 4.808208999998897,
+        "p95": 5.594583000000057,
+        "max": 5.836291999999958
+      },
+      "actionToStateMs": {
+        "n": 10,
+        "min": 0.917833999999857,
+        "median": 1.6361250000009022,
+        "p95": 3.3587920000027225,
+        "max": 3.3587920000027225
+      },
+      "reconnectMs": {
+        "n": 10,
+        "min": 0.7535419999985606,
+        "median": 1.0329580000034184,
+        "p95": 3.161041999999725,
+        "max": 3.161041999999725
+      },
+      "dbSaveMs": {
+        "n": 100,
+        "min": 0.07033299999966403,
+        "median": 0.09445899999991525,
+        "p95": 0.3366249999999127,
+        "max": 0.6967089999998279
+      },
+      "eventLoopMs": {
+        "median": 11.051007,
+        "p95": 11.091967,
+        "max": 14.426111
+      },
+      "messages": 450,
+      "bytes": 825930,
+      "sessionsAfterClose": 0,
+      "firstBoardMs": 103.60774999999921,
+      "resources": [
+        {
+          "name": "/js/telegram-web-app.js",
+          "bytes": 0,
+          "ms": 3.600000023841858
+        },
+        {
+          "name": "/tokens.css",
+          "bytes": 12671,
+          "ms": 4.100000023841858
+        },
+        {
+          "name": "/kit.css",
+          "bytes": 34454,
+          "ms": 4.699999988079071
+        },
+        {
+          "name": "/style.css",
+          "bytes": 39067,
+          "ms": 4.699999988079071
+        },
+        {
+          "name": "/hub.css",
+          "bytes": 23380,
+          "ms": 5.199999988079071
+        },
+        {
+          "name": "/poker.css",
+          "bytes": 15014,
+          "ms": 5.799999952316284
+        },
+        {
+          "name": "/colors.css",
+          "bytes": 22996,
+          "ms": 5.600000023841858
+        },
+        {
+          "name": "/durak.css",
+          "bytes": 19849,
+          "ms": 6.100000023841858
+        },
+        {
+          "name": "/chess.css",
+          "bytes": 14290,
+          "ms": 6.400000035762787
+        },
+        {
+          "name": "/checkers.css",
+          "bytes": 3188,
+          "ms": 6.400000035762787
+        },
+        {
+          "name": "/nardy.css",
+          "bytes": 8327,
+          "ms": 6.800000011920929
+        },
+        {
+          "name": "/battleship.css",
+          "bytes": 13229,
+          "ms": 7.199999988079071
+        },
+        {
+          "name": "/reactions.css",
+          "bytes": 2973,
+          "ms": 7.199999988079071
+        },
+        {
+          "name": "/nav.css",
+          "bytes": 3218,
+          "ms": 7.600000023841858
+        },
+        {
+          "name": "/profile.css",
+          "bytes": 3501,
+          "ms": 8
+        },
+        {
+          "name": "/chat.css",
+          "bytes": 10919,
+          "ms": 8
+        },
+        {
+          "name": "/cosmetics.css",
+          "bytes": 5679,
+          "ms": 8.400000035762787
+        },
+        {
+          "name": "/learn.css",
+          "bytes": 12630,
+          "ms": 8.599999964237213
+        },
+        {
+          "name": "/collections.css",
+          "bytes": 20730,
+          "ms": 8.699999988079071
+        },
+        {
+          "name": "/collections-look.css",
+          "bytes": 4782,
+          "ms": 9
+        },
+        {
+          "name": "/admin.css",
+          "bytes": 15322,
+          "ms": 9.300000011920929
+        },
+        {
+          "name": "/train.css",
+          "bytes": 11259,
+          "ms": 9.400000035762787
+        },
+        {
+          "name": "/train/math.css",
+          "bytes": 8364,
+          "ms": 9.600000023841858
+        },
+        {
+          "name": "/app.js",
+          "bytes": 8732,
+          "ms": 9.800000011920929
+        },
+        {
+          "name": "/ui.js",
+          "bytes": 27436,
+          "ms": 2.300000011920929
+        },
+        {
+          "name": "/net.js",
+          "bytes": 7434,
+          "ms": 2.599999964237213
+        },
+        {
+          "name": "/rating.js",
+          "bytes": 11603,
+          "ms": 2.699999988079071
+        },
+        {
+          "name": "/hub.js",
+          "bytes": 15886,
+          "ms": 2.599999964237213
+        },
+        {
+          "name": "/admin.js",
+          "bytes": 23724,
+          "ms": 2.699999988079071
+        },
+        {
+          "name": "/down.js",
+          "bytes": 2322,
+          "ms": 2.900000035762787
+        },
+        {
+          "name": "/games/index.js",
+          "bytes": 1374,
+          "ms": 4.300000011920929
+        },
+        {
+          "name": "/solo.js",
+          "bytes": 8608,
+          "ms": 4.900000035762787
+        },
+        {
+          "name": "/nav.js",
+          "bytes": 9643,
+          "ms": 4.899999976158142
+        },
+        {
+          "name": "/learn/hook.js",
+          "bytes": 2209,
+          "ms": 5.199999988079071
+        },
+        {
+          "name": "/train/link-wire.js",
+          "bytes": 3739,
+          "ms": 5.100000023841858
+        },
+        {
+          "name": "/train/screens.js",
+          "bytes": 27685,
+          "ms": 5
+        },
+        {
+          "name": "/train/route.js",
+          "bytes": 2663,
+          "ms": 7.300000011920929
+        },
+        {
+          "name": "/collections/index.js",
+          "bytes": 10581,
+          "ms": 8.399999976158142
+        },
+        {
+          "name": "/cosmetics/art.js",
+          "bytes": 1717,
+          "ms": 5.899999976158142
+        },
+        {
+          "name": "/profile.js",
+          "bytes": 7992,
+          "ms": 5.200000047683716
+        },
+        {
+          "name": "/catalog.js",
+          "bytes": 3907,
+          "ms": 5.800000011920929
+        },
+        {
+          "name": "/admin-shop.js",
+          "bytes": 14991,
+          "ms": 5.800000011920929
+        },
+        {
+          "name": "/games/poker.js",
+          "bytes": 74000,
+          "ms": 6.800000011920929
+        },
+        {
+          "name": "/games/durak.js",
+          "bytes": 45921,
+          "ms": 6.900000035762787
+        },
+        {
+          "name": "/games/colors.js",
+          "bytes": 39652,
+          "ms": 7.300000011920929
+        },
+        {
+          "name": "/games/chess.js",
+          "bytes": 45463,
+          "ms": 6.900000035762787
+        },
+        {
+          "name": "/games/nardy.js",
+          "bytes": 33079,
+          "ms": 7.700000047683716
+        },
+        {
+          "name": "/games/checkers.js",
+          "bytes": 45267,
+          "ms": 7.700000047683716
+        },
+        {
+          "name": "/games/battleship.js",
+          "bytes": 48838,
+          "ms": 9
+        },
+        {
+          "name": "/school.js",
+          "bytes": 9860,
+          "ms": 8.5
+        },
+        {
+          "name": "/settings-rows.js",
+          "bytes": 1360,
+          "ms": 8.600000023841858
+        },
+        {
+          "name": "/collections/state.js",
+          "bytes": 14291,
+          "ms": 8.700000047683716
+        },
+        {
+          "name": "/train/engine.js",
+          "bytes": 11125,
+          "ms": 8.300000011920929
+        },
+        {
+          "name": "/train/content/index.js",
+          "bytes": 1411,
+          "ms": 8.300000011920929
+        },
+        {
+          "name": "/train/link.js",
+          "bytes": 5346,
+          "ms": 11.300000011920929
+        },
+        {
+          "name": "/learn/screens.js",
+          "bytes": 10020,
+          "ms": 11.400000035762787
+        },
+        {
+          "name": "/train/placement.js",
+          "bytes": 13228,
+          "ms": 11.400000035762787
+        },
+        {
+          "name": "/train/topics.js",
+          "bytes": 8292,
+          "ms": 11.400000035762787
+        },
+        {
+          "name": "/train/widgets/choice.js",
+          "bytes": 1762,
+          "ms": 11.5
+        },
+        {
+          "name": "/train/skills.js",
+          "bytes": 4060,
+          "ms": 11.699999988079071
+        },
+        {
+          "name": "/train/widgets/explain.js",
+          "bytes": 1958,
+          "ms": 13.800000011920929
+        },
+        {
+          "name": "/train/widgets/progress-bar.js",
+          "bytes": 1069,
+          "ms": 13.899999976158142
+        },
+        {
+          "name": "/train/widgets/cards.js",
+          "bytes": 2710,
+          "ms": 13.899999976158142
+        },
+        {
+          "name": "/train/widgets/odds-bar.js",
+          "bytes": 4609,
+          "ms": 13.800000011920929
+        },
+        {
+          "name": "/train/widgets/bet-slider.js",
+          "bytes": 4307,
+          "ms": 13.800000011920929
+        },
+        {
+          "name": "/train/widgets/table-seat.js",
+          "bytes": 8043,
+          "ms": 13.900000035762787
+        },
+        {
+          "name": "/train/widgets/reveal.js",
+          "bytes": 2475,
+          "ms": 16.100000023841858
+        },
+        {
+          "name": "/train/widgets/range-grid.js",
+          "bytes": 21241,
+          "ms": 16.69999998807907
+        },
+        {
+          "name": "/collections/catalog.js",
+          "bytes": 3638,
+          "ms": 13.699999988079071
+        },
+        {
+          "name": "/collections/showcase.js",
+          "bytes": 2334,
+          "ms": 14
+        },
+        {
+          "name": "/collections/fitting.js",
+          "bytes": 3381,
+          "ms": 14
+        },
+        {
+          "name": "/collections/item.js",
+          "bytes": 11623,
+          "ms": 14.099999964237213
+        },
+        {
+          "name": "/collections/inventory.js",
+          "bytes": 5147,
+          "ms": 18
+        },
+        {
+          "name": "/collections/receive.js",
+          "bytes": 3263,
+          "ms": 18.599999964237213
+        },
+        {
+          "name": "/collections/pay.js",
+          "bytes": 8988,
+          "ms": 18.5
+        },
+        {
+          "name": "/collections/purchase.js",
+          "bytes": 8220,
+          "ms": 18.5
+        },
+        {
+          "name": "/cosmetics/catalog.js",
+          "bytes": 3258,
+          "ms": 18.69999998807907
+        },
+        {
+          "name": "/cosmetics/look.js",
+          "bytes": 6359,
+          "ms": 18.900000035762787
+        },
+        {
+          "name": "/cosmetics/apply.js",
+          "bytes": 6847,
+          "ms": 19.399999976158142
+        },
+        {
+          "name": "/catalog-pager.js",
+          "bytes": 2489,
+          "ms": 19.099999964237213
+        },
+        {
+          "name": "/drop.js",
+          "bytes": 1597,
+          "ms": 17.30000001192093
+        },
+        {
+          "name": "/collections/look-view.js",
+          "bytes": 11523,
+          "ms": 17.5
+        },
+        {
+          "name": "/chat.js",
+          "bytes": 22749,
+          "ms": 17.399999976158142
+        },
+        {
+          "name": "/collections/settings-row.js",
+          "bytes": 1558,
+          "ms": 14.399999976158142
+        },
+        {
+          "name": "/homescreen-row.js",
+          "bytes": 1933,
+          "ms": 15.5
+        },
+        {
+          "name": "/collections/protocol.js",
+          "bytes": 1846,
+          "ms": 15.800000011920929
+        },
+        {
+          "name": "/train/content/starter.js",
+          "bytes": 6161,
+          "ms": 15.600000023841858
+        },
+        {
+          "name": "/train/content/ranges.js",
+          "bytes": 15109,
+          "ms": 15.800000011920929
+        },
+        {
+          "name": "/train/content/preflop.js",
+          "bytes": 23244,
+          "ms": 16.399999976158142
+        },
+        {
+          "name": "/train/content/readrange.js",
+          "bytes": 13607,
+          "ms": 16.399999976158142
+        },
+        {
+          "name": "/train/content/outs.js",
+          "bytes": 15351,
+          "ms": 17.19999998807907
+        },
+        {
+          "name": "/train/content/potodds.js",
+          "bytes": 15886,
+          "ms": 17.5
+        },
+        {
+          "name": "/train/content/postflop.js",
+          "bytes": 17977,
+          "ms": 17.600000023841858
+        },
+        {
+          "name": "/train/content/hands.js",
+          "bytes": 10951,
+          "ms": 17.69999998807907
+        },
+        {
+          "name": "/train/content/advanced.js",
+          "bytes": 16956,
+          "ms": 18.19999998807907
+        },
+        {
+          "name": "/learn/sections.js",
+          "bytes": 3007,
+          "ms": 15.400000035762787
+        },
+        {
+          "name": "/learn/progress.js",
+          "bytes": 1704,
+          "ms": 16.600000023841858
+        },
+        {
+          "name": "/learn/facts.js",
+          "bytes": 7561,
+          "ms": 16.80000001192093
+        },
+        {
+          "name": "/learn/diagrams.js",
+          "bytes": 9406,
+          "ms": 16.900000035762787
+        },
+        {
+          "name": "/learn/parts.js",
+          "bytes": 4793,
+          "ms": 17.30000001192093
+        },
+        {
+          "name": "/learn/play.js",
+          "bytes": 25946,
+          "ms": 17.100000023841858
+        },
+        {
+          "name": "/train/placement-core.js",
+          "bytes": 6435,
+          "ms": 17.399999976158142
+        },
+        {
+          "name": "/train/widgets/dom.js",
+          "bytes": 2904,
+          "ms": 15.800000011920929
+        },
+        {
+          "name": "/train/widgets/card-el.js",
+          "bytes": 1402,
+          "ms": 16
+        },
+        {
+          "name": "/train/poker-math.js",
+          "bytes": 24058,
+          "ms": 16.30000001192093
+        },
+        {
+          "name": "/train/widgets/board.js",
+          "bytes": 1995,
+          "ms": 15.800000011920929
+        },
+        {
+          "name": "/train/widgets/pot.js",
+          "bytes": 1131,
+          "ms": 16.100000023841858
+        },
+        {
+          "name": "/train/ranges/cell-note.js",
+          "bytes": 1800,
+          "ms": 14.100000023841858
+        },
+        {
+          "name": "/collections/art.js",
+          "bytes": 3946,
+          "ms": 14.5
+        },
+        {
+          "name": "/train/ranges/hands.js",
+          "bytes": 15081,
+          "ms": 14.399999976158142
+        },
+        {
+          "name": "/train/ranges/grid.js",
+          "bytes": 6684,
+          "ms": 14.599999964237213
+        },
+        {
+          "name": "/collections/pay-protocol.js",
+          "bytes": 4037,
+          "ms": 10.399999976158142
+        },
+        {
+          "name": "/reactions.js",
+          "bytes": 15853,
+          "ms": 8.600000023841858
+        },
+        {
+          "name": "/homescreen.js",
+          "bytes": 7237,
+          "ms": 8.299999952316284
+        },
+        {
+          "name": "/train/ranges/data.js",
+          "bytes": 15173,
+          "ms": 8
+        },
+        {
+          "name": "/train/ranges/tasks.js",
+          "bytes": 7862,
+          "ms": 8.600000023841858
+        },
+        {
+          "name": "/train/ranges/equity169.js",
+          "bytes": 3745,
+          "ms": 8.199999988079071
+        },
+        {
+          "name": "/train/content/x-util.js",
+          "bytes": 12920,
+          "ms": 7.5
+        },
+        {
+          "name": "/learn/content/basics.js",
+          "bytes": 7849,
+          "ms": 6.699999988079071
+        },
+        {
+          "name": "/learn/content/preflop.js",
+          "bytes": 9573,
+          "ms": 6.699999988079071
+        },
+        {
+          "name": "/learn/content/ranges.js",
+          "bytes": 7635,
+          "ms": 7.299999952316284
+        },
+        {
+          "name": "/learn/content/math.js",
+          "bytes": 14314,
+          "ms": 7.599999964237213
+        },
+        {
+          "name": "/learn/content/postflop.js",
+          "bytes": 9929,
+          "ms": 7.799999952316284
+        },
+        {
+          "name": "/learn/content/gto.js",
+          "bytes": 10782,
+          "ms": 7.899999976158142
+        },
+        {
+          "name": "/learn/hands.js",
+          "bytes": 5182,
+          "ms": 6.5
+        },
+        {
+          "name": "/train/placement.css",
+          "bytes": 4351,
+          "ms": 1.699999988079071
+        },
+        {
+          "name": "/chess/bR.svg",
+          "bytes": 764,
+          "ms": 3.699999988079071
+        },
+        {
+          "name": "/chess/bN.svg",
+          "bytes": 881,
+          "ms": 3.899999976158142
+        },
+        {
+          "name": "/chess/bB.svg",
+          "bytes": 846,
+          "ms": 3.900000035762787
+        },
+        {
+          "name": "/chess/bQ.svg",
+          "bytes": 926,
+          "ms": 4.300000011920929
+        },
+        {
+          "name": "/chess/bK.svg",
+          "bytes": 843,
+          "ms": 4.5
+        },
+        {
+          "name": "/chess/bP.svg",
+          "bytes": 770,
+          "ms": 4.600000023841858
+        },
+        {
+          "name": "/chess/wP.svg",
+          "bytes": 771,
+          "ms": 5.899999976158142
+        },
+        {
+          "name": "/chess/wR.svg",
+          "bytes": 765,
+          "ms": 6
+        },
+        {
+          "name": "/chess/wN.svg",
+          "bytes": 882,
+          "ms": 6
+        },
+        {
+          "name": "/chess/wB.svg",
+          "bytes": 847,
+          "ms": 6.400000035762787
+        },
+        {
+          "name": "/chess/wQ.svg",
+          "bytes": 927,
+          "ms": 6.800000011920929
+        },
+        {
+          "name": "/chess/wK.svg",
+          "bytes": 844,
+          "ms": 6.900000035762787
+        }
+      ]
+    }
+  ]
+}

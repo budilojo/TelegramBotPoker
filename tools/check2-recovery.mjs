@@ -49,6 +49,10 @@ try {
   // Эти события случились ПОСЛЕ копии; старый код их обрабатывать не умеет.
   await paid(t, BOB, { payload: payloadOf(pending), amount: pending.price, deliver: false });
   await refund(t, a.order.id);
+  // Ранняя копия не содержит ни этой покупки, ни её возврата. В API возврат свежее.
+  const lostPair = await purchase(t, ALICE, 'graphit-profile');
+  assert.ok(lostPair.ok);
+  await refund(t, lostPair.order.id);
   const stars = structuredClone(t.tg.stars);
   close(t);
   fs.writeFileSync(restored, gunzipSync(fs.readFileSync(`${backup}.gz`)));
@@ -78,17 +82,19 @@ try {
   assert.deepEqual(extraDump(restoredTable.app.store.db), before);
   restoredTable.tg.stars = stars;
   const result = await owner(restoredTable, '/reconcile');
-  assert.match(result, /восстановлено оплат 1.*засчитано возвратов 1/);
+  assert.match(result, /восстановлено оплат 2.*засчитано возвратов 2/);
   assert.equal(restoredTable.app.store.pay.order(pending.id).state, 'paid');
   assert.equal(restoredTable.app.collections.owns(BOB.id, 'graphit-profile'), true);
   assert.equal(restoredTable.app.collections.owns(ALICE.id, 'graphit-table'), false);
+  assert.equal(restoredTable.app.collections.owns(ALICE.id, 'graphit-profile'), false);
+  assert.equal(restoredTable.app.store.pay.order(lostPair.order.id).state, 'refunded');
   assert.equal(restoredTable.app.collections.owns(BOB.id, 'graphit-cardback'), true, 'независимая выдача сохранилась');
   assert.ok(restoredTable.app.store.support.ticket(ticket.id));
   assert.equal(restoredTable.app.payments.offers().items['graphit-cardback'], 31);
   assert.match(await owner(restoredTable, '/reconcile'), /восстановлено оплат 0.*засчитано возвратов 0/);
   assert.equal(restoredTable.tg.calls.filter((c) => c.method === 'refundStarPayment').length, 0);
   close(restoredTable);
-  console.log('check2 recovery: SQLite .backup → gzip → 3a7fcc8 App/Store → новый код: все новые таблицы неизменны; approved заказ, пропущенная оплата и возврат сверены ровно один раз; integrity_check=ok, schema=5. Только заглушка.');
+  console.log('check2 recovery: SQLite .backup → gzip → 3a7fcc8 App/Store → новый код: все новые таблицы неизменны; approved заказ и потерянная пара покупка/возврат: восстановлены 2 оплаты и 2 возврата ровно один раз; integrity_check=ok, schema=5. Только заглушка.');
 } finally {
   for (const t of opened) { t.app.stop(); t.app.store.close(); }
   fs.rmSync(dir, { recursive: true, force: true });

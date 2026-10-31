@@ -1,0 +1,26 @@
+{
+  "head": "bf9f725bd2758882c0272150b61aee2a3dce6f40",
+  "note": "before: приложение HEAD; after: HEAD + правки M. Точные SHA-256 различают грязное дерево до коммита; тестовые инструменты UI не влияют на приложение.",
+  "sha256": {
+    "bot/payments/index.js": {
+      "before": "e575f7074c79db49cd8e3c8a07b91839827cd2dda471448b0c36036ff0fce037",
+      "after": "f3dd038f5151b9839fe0324e86549fa18c409ef7ed73805a16b741291866bbd2"
+    },
+    "bot/payments/texts.js": {
+      "before": "1b9a7a4c0a21380b39fb69bd73a440bc14b8e2d570627dc9cc9199e05b576a76",
+      "after": "804d2c9aa677d446cd8582454b6c1fdf1ab7081b12a93e7040555baf8671f538"
+    },
+    "miniapp/collections/pay.js": {
+      "before": "54fffa9805ace9097e0a22e936f5b3a07635a7c01519b03c505560029c61ddb3",
+      "after": "54fffa9805ace9097e0a22e936f5b3a07635a7c01519b03c505560029c61ddb3"
+    },
+    "tools/perf-suite.mjs": {
+      "before": "2784a69872e345bbf196a38adee1c833ba884bad16d6297ba03d92f69dd5fc8e",
+      "after": "2784a69872e345bbf196a38adee1c833ba884bad16d6297ba03d92f69dd5fc8e"
+    },
+    "tools/perf-baseline.mjs": {
+      "before": "dd98959928c2426b1de8e168b0e85ec66058b66b1ed5caa7f984b0af9aa45de8",
+      "after": "dd98959928c2426b1de8e168b0e85ec66058b66b1ed5caa7f984b0af9aa45de8"
+    }
+  }
+}

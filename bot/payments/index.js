@@ -334,6 +334,7 @@ export class Payments {
       }
       let kind = 'order';
       if (!o) kind = 'orphan';
+      else if (parsed.item && parsed.item !== o.item) kind = 'mismatch';
       else if (o.userId !== String(payerId) || sp.currency !== 'XTR' || sp.total_amount !== o.price) kind = 'mismatch';
       else if (o.state === 'paid' || o.state === 'refunded' || this.db.paymentsOfOrder(o.id).some((p) => p.kind === 'order')) kind = 'duplicate';
       this.db.addPayment({
@@ -511,19 +512,35 @@ export class Payments {
   /** Пройти по транзакциям бота: пропущенные оплаты провести, исходящие по нашим платежам — засчитать возвратом. */
   async reconcile() {
     const out = { seen: 0, recovered: 0, refunds: 0, unknownOut: 0, review: 0 };
-    for await (const t of this.transactions()) {
-      out.seen++;
-      const src = t.source;
-      if (src?.type === 'user' && src.transaction_type === 'invoice_payment' && orderOfPayload(src.invoice_payload)) {
-        if (this.db.payment(t.id)) continue;
-        const r = this.record({ telegram_payment_charge_id: t.id, invoice_payload: src.invoice_payload, currency: 'XTR', total_amount: t.amount }, String(src.user?.id ?? ''), 'reconcile');
-        if (r.fresh) { out.recovered++; if (r.kind !== 'order') out.review++; await this.afterPayment(r, String(src.user?.id ?? '')); }
-      } else if (t.receiver?.type === 'user') {
-        const p = this.db.payment(t.id);
-        if (!p) { out.unknownOut++; continue; }
-        const r = this.closeRefund(t.id, 'reconcile', 'исходящая транзакция');
-        if (r.fresh) { out.refunds++; await this.afterRefund(r); }
+    // Сначала дочитываем ограниченный список (до RECONCILE_PAGES × 100). Возврат
+    // может лежать на более свежей странице, чем потерянная при восстановлении оплата.
+    const transactions = [];
+    for await (const t of this.transactions()) transactions.push(t);
+    const payments = [], refunds = [];
+    // Старые события раньше новых; reverse сохраняет этот порядок при равных date
+    // в списке «свежие первыми». Сеть закончена, до уведомлений цикл синхронный.
+    this.db.tx(() => {
+      for (const t of transactions.reverse().sort((a, b) => a.date - b.date)) {
+        out.seen++;
+        const src = t.source;
+        if (src?.type === 'user' && src.transaction_type === 'invoice_payment' && orderOfPayload(src.invoice_payload)) {
+          if (this.db.payment(t.id)) continue;
+          const r = this.record({ telegram_payment_charge_id: t.id, invoice_payload: src.invoice_payload, currency: 'XTR', total_amount: t.amount }, String(src.user?.id ?? ''), 'reconcile');
+          if (r.fresh) { out.recovered++; if (r.kind !== 'order') out.review++; payments.push([r, String(src.user?.id ?? '')]); }
+        } else if (t.receiver?.type === 'user') {
+          const p = this.db.payment(t.id);
+          if (!p) { out.unknownOut++; continue; }
+          const r = this.closeRefund(t.id, 'reconcile', 'исходящая транзакция');
+          if (r.fresh) { out.refunds++; refunds.push(r); }
+        }
       }
+    });
+    // Все кадры и сообщения показывают итог сверки: уже возвращённая покупка
+    // не появляется ни на миг и не сопровождается ложным «Куплено».
+    for (const r of refunds) await this.afterRefund(r);
+    for (const [r, payer] of payments) {
+      if (r.kind === 'order' && this.db.order(r.order.id)?.state === 'refunded') continue;
+      await this.afterPayment(r, payer);
     }
     this.log('reconcile', { note: JSON.stringify(out) });
     return out;

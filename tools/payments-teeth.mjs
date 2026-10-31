@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
-const TESTS = ['bot/payments.test.js', 'bot/payments.client.test.js'];
+const TESTS = ['bot/payments.test.js', 'bot/payments.client.test.js', 'bot/payments.final.test.js'];
 const PAY = 'bot/payments/index.js';
 const CASES = [
   { name: 'продажи открыты по умолчанию', file: 'bot/app.js',
@@ -27,6 +27,18 @@ const CASES = [
     from: "this.gateOpts());\n    if (!g.open) return { ok: false, why: 'closed', o };", to: "{ stopped: false, down: false, botSupport: true });\n    if (!g.open) return { ok: false, why: 'closed', o };" },
   { name: 'выдача без сверки суммы/покупателя', file: PAY,
     from: "else if (o.userId !== String(payerId) || sp.currency !== 'XTR' || sp.total_amount !== o.price) kind = 'mismatch';", to: '' },
+  { name: 'M: выдача без сверки товара payload', file: PAY,
+    from: "      else if (parsed.item && parsed.item !== o.item) kind = 'mismatch';\n", to: '', expect: 'товар payload должен совпадать с заказом' },
+  { name: 'M: сверка обрабатывает возврат раньше потерянной оплаты', file: PAY,
+    from: 'for (const t of transactions.reverse().sort((a, b) => a.date - b.date))', to: 'for (const t of transactions)', expect: 'возврат найден в этом же проходе' },
+  { name: 'M: промежуточная выдача уходит до обработки возврата', file: PAY,
+    from: "payments.push([r, String(src.user?.id ?? '')]);", to: "payments.push([r, String(src.user?.id ?? '')]); if (r.kind === 'order') this.app.collections.pushState(r.order.userId);", expect: 'ни один отправленный кадр не выдаёт возвращённую вещь' },
+  { name: 'M: сверка без общей транзакции оставляет оплаченную половину пары', file: PAY,
+    from: '    this.db.tx(() => {\n      for (const t of transactions', to: '    ((f) => f())(() => {\n      for (const t of transactions', expect: 'сбой сверки не оставляет половину восстановленной пары' },
+  { name: 'M: ложное «Куплено» для возвращённой покупки', file: PAY,
+    from: "      if (r.kind === 'order' && this.db.order(r.order.id)?.state === 'refunded') continue;\n", to: '', expect: 'нет ложного сообщения о покупке' },
+  { name: 'M: сообщение возврата обещает удалить независимую выдачу', file: 'bot/payments/texts.js',
+    from: 'Право от этой покупки прекращено. Другие права на вещь сохраняются.', to: 'Вещь убрана из коллекции.', expect: 'Право от этой покупки прекращено' },
   { name: 'повторная оплата заказа выдаёт снова', file: PAY,
     from: "else if (o.state === 'paid' || o.state === 'refunded' || this.db.paymentsOfOrder(o.id).some((p) => p.kind === 'order')) kind = 'duplicate';", to: '' },
   { name: 'нет уникальности платежа (повтор события)', file: 'bot/payments/store.js',
@@ -107,7 +119,7 @@ for (const c of CASES) {
   let r = null;
   try { if (!missing) r = run(); } finally { for (const [f, src] of saved) fs.writeFileSync(f, src); }
   if (missing) { console.log(`?? ${c.name}: место поломки не найдено`); bad++; continue; }
-  const fell = r.status !== 0;
+  const fell = r.status !== 0 && (!c.expect || (r.stdout + r.stderr).includes(c.expect));
   const n = (r.stdout.match(/^✖ /gm) || []).length;
   console.log(`${fell ? 'упал ' : 'НЕ УПАЛ'}  ${c.name}${fell ? ` (красных: ${n})` : ''}`);
   if (!fell) bad++;

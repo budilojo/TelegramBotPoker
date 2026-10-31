@@ -6,7 +6,7 @@
  * Telegram — заглушка (bot/tg-stub.js): окно оплаты — подменённый `Telegram.WebApp.openInvoice`, сама «оплата» —
  * обновления pre_checkout_query и successful_payment, которые тест посылает серверу. Реальных счетов и звёзд нет.
  *
- * Путь: «Настройки» → «Коллекции» → стол → «Примерить» → назад → состав/цена/условия → «Купить за 50 ⭐» → окно →
+ * Путь: «Настройки» → «Коллекции» → стол → «Примерить» → назад → состав/цена/условия → «Купить за 100 ⭐» → окно →
  * «оплачено» в окне (вещи ещё НЕТ — «ждём подтверждения») → successful_payment → «Куплено» → надеть → выбор на сервере.
  * Ещё: отмена окна, «Мои покупки», «Поддержка», условия; режим off — входа нет.
  */
@@ -24,11 +24,14 @@ import { TelegramStub, dmUpdate, user } from '../bot/tg-stub.js';
 import { signInitData } from '../bot/webapp-auth.js';
 import { cfgOf, preCheckout, paid } from '../bot/payments/testkit.js';
 import { payloadOf } from '../bot/payments/index.js';
+import { readOffers } from '../bot/payments/config.js';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.E2E_PORT || 8131);
 const TOKEN = `0:${crypto.randomBytes(16).toString('hex')}`;
 const SHOTS = process.env.SHOTS === '1';
+const CONFIRMED = { 'graphit-cardback': 75, 'graphit-profile': 50, 'graphit-table': 100, 'graphit-bundle': 175 };
+assert.deepEqual(readOffers().items, CONFIRMED, 'подтверждённые цены репозитория');
 const require = createRequire(import.meta.url);
 let chromium;
 try { ({ chromium } = require('playwright')); } catch { ({ chromium } = require('/opt/node22/lib/node_modules/playwright')); }
@@ -96,7 +99,7 @@ async function layoutOk(page, where) {
 
 try {
   for (const [i, size] of [[320, 568], [390, 844]].entries()) {
-    const S = await boot(PORT + i, cfgOf({ mode: 'test' }));
+    const S = await boot(PORT + i, cfgOf({ mode: 'test', prices: readOffers().items }));
     const col = S.app.collections;
     const page = await open(S, ivan, size);
     await goSettings(page);
@@ -106,6 +109,12 @@ try {
     await page.locator('[data-entry="collections"]').click();
     await page.waitForSelector('.col-show');
     assert.match(await page.locator('.col-show').innerText(), /Тестовая среда · звёзды ненастоящие/);
+    for (const [item, price] of Object.entries(CONFIRMED)) {
+      await page.locator(`.col-card[data-item="${item}"]`).click();
+      await page.waitForSelector('.col-item');
+      assert.equal(await page.locator('[data-act="buy"]').innerText(), `Купить за ${price} ⭐`);
+      await page.locator('.col-back').click();
+    }
     await page.locator('.col-card[data-item="graphit-table"]').click();
     await page.waitForSelector('.col-item');
     await page.getByRole('button', { name: 'Примерить' }).click();
@@ -114,12 +123,12 @@ try {
     await page.waitForSelector('.col-buy');
     const card = await page.locator('.col-buy').innerText();
     assert.ok(!card.includes('Навсегда'), 'обещания «навсегда» в условиях покупки нет');
-    for (const want of ['Пока работает приложение', 'не влияет', 'Возврат полностью', '50 ⭐', 'Условия покупки', 'Правила возврата', 'Нажимая «Купить», вы подтверждаете, что прочитали и принимаете Условия покупки версии 1.0.']) assert.ok(card.includes(want), `на карточке до покупки: «${want}»`);
+    for (const want of ['Пока работает приложение', 'не влияет', 'Возврат полностью', '100 ⭐', 'Условия покупки', 'Правила возврата', 'Нажимая «Купить», вы подтверждаете, что прочитали и принимаете Условия покупки версии 1.0.']) assert.ok(card.includes(want), `на карточке до покупки: «${want}»`);
     await layoutOk(page, `${size[0]}: карточка`);
     await shot(page, `pay-card-${size[0]}.png`);
     await page.locator('[data-act="buy"]').scrollIntoViewIfNeeded();
     await shot(page, `pay-terms-${size[0]}.png`);
-    step(`${size[0]} px: карточка — состав, цена 50 ⭐, условия и возврат видны до «Купить»`);
+    step(`${size[0]} px: четыре подтверждённые цены; карточка — состав, цена 100 ⭐, условия и возврат видны до «Купить»`);
 
     // Купить → окно оплаты. В окне «оплачено», но сервер ещё не подтвердил — вещи нет.
     await page.locator('[data-act="buy"]').click();
@@ -127,7 +136,7 @@ try {
     const url = await page.evaluate(() => window.__invoices[0].url);
     assert.match(url, /^https:\/\/t\.me\/\$/);
     const order = S.app.store.pay.recentOrders(1)[0];
-    assert.equal(order.price, 50);
+    assert.equal(order.price, 100);
     await page.evaluate(() => window.__invoices[0].cb('paid'));
     await page.waitForSelector('.col-pay-status.confirming');
     assert.equal(await page.locator('.col-recv').count(), 0, '«Куплено» не показано по одному статусу окна');
