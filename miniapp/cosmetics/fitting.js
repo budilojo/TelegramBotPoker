@@ -1,22 +1,19 @@
-/**
- * Примерочная: настоящий вид покерного стола БЕЗ сервера — три игрока, карты, банк, борд, ваш круг.
- * Рубашка, сукно, рамка, звание, реакции и эффект победы — те же, что и за живым столом
- * (`backImg`, стили сукна, `frameOn`, `titleEl`, `winFx`), только данные выдуманные.
- *
- * Почему отдельная лёгкая раскладка, а не `renderTable()` из poker.js: тот целиком живёт на
- * состоянии сервера (`state`, `prev`, `dealOrder`, анимации раздачи) и на живом `#app`; тащить
- * сюда фальшивое состояние значило бы гонять игровой код ради картинки. Здесь — те же классы
- * (`.av`, `.card`, `.plate`-подпись, сукно `--cos-felt`) без дублирования самих вещей.
- *
- *   renderFitting(container, { onBack })   рисует примерочную в `container`; вызывает витрина (L)
- *
- * Обновление вида правит узлы на месте (`replaceChildren` у трёх блоков), а не пересоздаёт экран:
- * прокрутка и фокус остаются (`docs/scroll.md`).
+/** Архивная локальная примерочная nc-*. Публичных входов из приложения нет.
+ * Данные и идентификаторы сохранены для совместимости. Образец изолирован от партии;
+ * при изменении выбора обновляет узлы на месте, сохраняя прокрутку.
  */
-import { h, backImg, cardImg, avatar, fmt } from '../ui.js';
+import { h, cardImg, avatar, fmt } from '../ui.js';
 import { getLook, onLook, clearLook } from './look.js';
 import { itemById } from './catalog.js';
-import { frameOn, titleEl, winFx, fxOff } from './apply.js';
+import { cardBackSrc, DEFAULT_BACK } from './art.js';
+
+// Архивная примерка использует собственные рубашки, не общий ui.backImg.
+const backImg = () => {
+  const img = h('img.card.cos-back', { src: cardBackSrc() || DEFAULT_BACK, alt: 'back', draggable: 'false' });
+  img.addEventListener('error', () => { img.src = DEFAULT_BACK; }, { once: true });
+  return img;
+};
+import { frameOn, titleEl, winFx, fxOff, applyFelt } from './apply.js';
 import { tryReaction, face } from '../reactions.js';
 
 const DEMO = [
@@ -36,6 +33,7 @@ export function renderFitting(container, { onBack } = {}) {
     h('div.cf-nm', p.name));
 
   function paint() {
+    applyFelt(root);
     const look = getLook();
     stage.replaceChildren(
       h('div.cf-felt'),

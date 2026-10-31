@@ -18,7 +18,6 @@
 import { h, haptic, REDUCED } from './ui.js';
 import { net, bus, send, serverNow } from './net.js';
 import { itemById } from './cosmetics/catalog.js';
-import { getLook } from './cosmetics/look.js';
 import { artSrc } from './cosmetics/art.js';
 
 export const REACTIONS = [
@@ -95,11 +94,7 @@ function loadManifest() {
 
 /** Наборы для этой игры: [{ id, title, items: [{ id, label, file? , quick }] }]. */
 export function reactionSets(game) {
-  const base = baseSets(game);
-  // Реакции набора из примерки — отдельная вкладка; уходят только вам на экран, не на сервер.
-  const mine = getLook().reactions.map(itemById).filter(Boolean);
-  if (!mine.length) return base;
-  return [...base, { id: 'night-club', title: 'Ночной клуб', items: mine.map((x) => ({ id: x.id, label: x.title, quick: false })) }];
+  return baseSets(game); // Архивный выбор nc-* не добавляет вкладку в живой чат.
 }
 function baseSets(game) {
   loadManifest();

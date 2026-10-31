@@ -2,9 +2,7 @@
    сами экраны, подписи и кнопки остаются плоскими и на токенах. */
 
 /* ---- сукно: цвет (и текстура, когда есть файл) из выбранной вещи ---- */
-html[data-cos-felt] body[data-screen='poker'] .felt,
-html[data-cos-felt] .dk-cloth,
-html[data-cos-felt] .cos-fit .cf-felt {
+.cos-fit[data-cos-felt] .cf-felt {
   background-color: var(--cos-felt);
   background-image: var(--cos-felt-tex, none);
   background-size: 256px;

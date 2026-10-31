@@ -1,0 +1,84 @@
+{
+  "id": "audit",
+  "attemptId": "83f73a05-e4ee-43ac-81b9-7a012b0335ab",
+  "status": "done",
+  "summary": "Источник старого вида воспроизведён и устранён в живой партии; базовый вид, Графит, покупки, источники прав и старые id сохранены. Контракт 54 предметов и 6 комплектов передан B–D. Локальные тесты зелёные, живой Telegram не проверен.",
+  "tests": [
+    {
+      "command": "SHOT_PREFIX=before node --disable-warning=ExperimentalWarning tools/e2e-look.mjs",
+      "result": "Ожидаемый exit 1 на исходных ui/profile/poker: 4 != 0; baseline снимок сохранён",
+      "environment": "macOS 26.6.2, Node 24.12.0, Chromium 153.0.8010.12, TelegramStub"
+    },
+    {
+      "command": "node --disable-warning=ExperimentalWarning --test bot/cosmetics.retirement.test.js",
+      "result": "exit 0, 3/3; файловая SQLite, два restart, строки прав/заказов сохранены",
+      "environment": "macOS 26.6.2 arm64, Node 24.12.0, SQLite"
+    },
+    {
+      "command": "node tools/cosmetics-legacy-teeth.mjs --browser",
+      "result": "exit 0, 7/7 поломок пойманы, 4 также браузером; восстановленный код зелёный",
+      "environment": "Node 24.12.0, Chromium/TelegramStub, localhost"
+    },
+    {
+      "command": "node --disable-warning=ExperimentalWarning --test bot/cosmetics*.test.js bot/collections*.test.js bot/profile.test.js bot/payments*.test.js bot/admin.shop.test.js",
+      "result": "exit 0, 204/204, без падений и пропусков",
+      "environment": "Node 24.12.0, SQLite, TelegramStub"
+    },
+    {
+      "command": "node --disable-warning=ExperimentalWarning tools/e2e-look.mjs",
+      "result": "exit 0; look финально повторён после поломок",
+      "environment": "Chromium 153.0.8010.12, TelegramStub, localhost; SHOTS=1 для профильных сценариев"
+    },
+    {
+      "command": "node --disable-warning=ExperimentalWarning tools/e2e-collections-look.mjs",
+      "result": "exit 0",
+      "environment": "Chromium 153.0.8010.12, TelegramStub, localhost; SHOTS=1 для профильных сценариев"
+    },
+    {
+      "command": "node --disable-warning=ExperimentalWarning tools/e2e-collections-flow.mjs",
+      "result": "exit 0",
+      "environment": "Chromium 153.0.8010.12, TelegramStub, localhost; SHOTS=1 для профильных сценариев"
+    },
+    {
+      "command": "node --disable-warning=ExperimentalWarning tools/e2e-profile.mjs",
+      "result": "exit 0",
+      "environment": "Chromium 153.0.8010.12, TelegramStub, localhost; SHOTS=1 для профильных сценариев"
+    },
+    {
+      "command": "node --disable-warning=ExperimentalWarning tools/e2e-durak.mjs",
+      "result": "exit 0",
+      "environment": "Chromium 153.0.8010.12, TelegramStub, localhost; SHOTS=1 для профильных сценариев"
+    },
+    {
+      "command": "node --disable-warning=ExperimentalWarning tools/e2e-reactions.mjs",
+      "result": "exit 0",
+      "environment": "Chromium 153.0.8010.12, TelegramStub, localhost; SHOTS=1 для профильных сценариев"
+    },
+    {
+      "command": "npm run kit",
+      "result": "exit 0",
+      "environment": "Node 24.12.0 / Chromium, macOS 26.6.2"
+    },
+    {
+      "command": "npm run contrast",
+      "result": "exit 0",
+      "environment": "Node 24.12.0 / Chromium, macOS 26.6.2"
+    },
+    {
+      "command": "npm run layout",
+      "result": "exit 0",
+      "environment": "Node 24.12.0 / Chromium, macOS 26.6.2"
+    },
+    {
+      "command": "npm test",
+      "result": "exit 0, 1580/1580, fail/cancelled/skipped/todo=0, 49.64 s",
+      "environment": "macOS 26.6.2 arm64, Node 24.12.0, localhost разрешён"
+    },
+    {
+      "command": "git diff --check",
+      "result": "exit 0",
+      "environment": "Git, redesign"
+    }
+  ],
+  "blockers": []
+}

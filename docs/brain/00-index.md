@@ -41,3 +41,10 @@
 `docs/bots.md` (боты), `docs/audit/` (аудит безопасности),
 `docs/next-deploy-prompt.md` (выкатка),
 `MESSAGES.md` (все тексты).
+
+## Косметика v2, текущая последовательная работа
+
+A выполнен локально: `../cosmetics-v2/audit.md`, `contracts.md`, `item-plan.json`,
+`reports/audit.md`; решение 197. Сессия —
+`sessions/2026-10-31-cosmetics-v2-stage-A-audit.md`. Далее B → C → D → E,
+каждый этап отдельно; новый ассортимент/магазин пока не реализованы.

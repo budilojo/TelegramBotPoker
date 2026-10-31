@@ -9,12 +9,11 @@
  */
 import { h, avatar, haptic, toast } from './ui.js';
 import { bus, send } from './net.js';
-import { frameOn } from './cosmetics/apply.js';
 
 /** Круг игрока: `player` — {name, hue, avatar} из вида стола. Картинку берёт только по шаблону avNN. */
 export const avatarEl = (player, cls = '') => {
   const av = avatar(player?.name, player?.hue ?? 0, cls, player?.avatar ?? null);
-  return player?.isMe ? frameOn(av) : av; // рамка из примерки — только у вашего круга
+  return av; // Оформление добавляет экран из серверного view, архивная примерка не участвует.
 };
 
 const NICK_MAX_DEFAULT = 16;
