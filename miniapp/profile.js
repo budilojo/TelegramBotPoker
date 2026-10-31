@@ -25,6 +25,7 @@ const st = { profile: null, nick: '', avatar: null, error: null, asked: false, p
 bus.onProfile = (msg) => {
   if (msg.error) {
     st.error = msg.error.text || 'Не получилось сохранить.';
+    st.justSaved = false;
     haptic.err?.();
   } else if (msg.profile) {
     const first = !st.profile;
@@ -74,6 +75,17 @@ export function renderProfileSettings(container) {
       : h('div.av.pf-cell-av.pf-none', { style: { '--h': 200 } }, (draftName()[0] || '?').toUpperCase());
     return h(`button.pf-cell${on ? '.on' : ''}`, {
       type: 'button', role: 'radio', 'aria-checked': on ? 'true' : 'false', 'aria-label': label,
+      tabindex: on ? '0' : '-1',
+      onkeydown: (e) => {
+        const ids = [null, ...(st.profile?.avatars ?? [])];
+        const at = ids.indexOf(id);
+        const delta = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+        if (delta == null && e.key !== 'Home' && e.key !== 'End') return;
+        e.preventDefault();
+        const next = e.key === 'Home' ? 0 : e.key === 'End' ? ids.length - 1 : (at + delta + ids.length) % ids.length;
+        st.avatar = ids[next]; st.error = null; patch();
+        grid.children[next]?.focus({ preventScroll: true });
+      },
       onclick: () => { st.avatar = id; haptic.soft?.(); st.error = null; patch(); },
     }, face, on ? h('span.pf-check', '✓') : null);
   };
@@ -87,11 +99,13 @@ export function renderProfileSettings(container) {
     save.disabled = !dirty() || !st.profile;
     reset.disabled = !st.profile?.nickname;
     const ids = st.profile?.avatars ?? [];
+    const focused = [...grid.children].indexOf(document.activeElement);
     grid.replaceChildren(cell(null, 'Без аватара'), ...ids.map((id, i) => cell(id, `Аватар ${i + 1}`)));
+    if (focused >= 0) grid.children[focused]?.focus({ preventScroll: true });
   }
   st.patch = () => { if (container.isConnected) { if (st.profile && document.activeElement !== nickIn) nickIn.value = st.nick; patch(); } };
 
-  nickIn.addEventListener('input', () => { st.error = null; patch(); });
+  nickIn.addEventListener('input', () => { st.nick = nickIn.value; st.error = null; patch(); });
   nickIn.addEventListener('focus', () => {
     // Клавиатура поднимается и сжимает экран: поле и кнопки должны остаться на виду.
     const keep = () => wrap.scrollIntoView({ block: 'center', behavior: 'auto' });

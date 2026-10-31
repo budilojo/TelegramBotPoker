@@ -811,7 +811,7 @@ function openSettings() {
       st.base ? h('div.section-label', 'Прибавка за ход') : null,
       st.base ? seg(INCS, 'inc') : null,
       h('button.btn.primary.wide.lg', { style: { marginTop: '16px', width: '100%' }, onclick: () => {
-        send({ t: 'settings', base: st.base, inc: st.inc });
+        if (!send({ t: 'settings', base: st.base, inc: st.inc })) return;
         closeSheet();
       } }, 'Сохранить'),
     );

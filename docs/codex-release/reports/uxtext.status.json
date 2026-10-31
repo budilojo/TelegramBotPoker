@@ -1,0 +1,25 @@
+{
+  "id": "uxtext",
+  "attemptId": "79a554dc-dd29-4f9e-9057-2f201b9521a2",
+  "status": "partial",
+  "summary": "Вся локальная задача K выполнена: проверены маршруты и настройки семи игр, профиль, магазин, история и поддержка; исправлены Back, фокус/клавиатура, черновик, шесть offline-форм, форма UNOQ и тексты. npm test 1565/1565; все 32 e2e; 22/22 поломки пойманы; layout/kit/contrast/colors/preview прошли, снимки просмотрены. Локальных блокеров нет. Реальная оплата, официальный тестовый Telegram и телефон не проверены; продажи/рейтинг закрыты, сервер неизвестен.",
+  "tests": [
+    {"command":"git fetch origin redesign; git rev-list --left-right --count HEAD...origin/redesign","result":"0/0; исходный f90661e, redesign, дерево чистое; push не выполнялся","environment":"Локальный Git, 31.10.2026"},
+    {"command":"npm test","result":"exit 0, 1565/1565, fail/cancelled/skipped/todo=0, 67.60 с","environment":"macOS 26.6.2 arm64, Node 24.12.0, временные базы и TelegramStub"},
+    {"command":"E2E_PORT=8250 npm run e2e","result":"exit 0, все 32 файла, включая K и J; 320×568 и крупнее","environment":"macOS, Playwright 1.63.0/Chromium, localhost HTTP/WS, TelegramStub"},
+    {"command":"E2E_PORT=8254 SHOTS=1 node tools/e2e-uxtext.mjs","result":"exit 0; общие сценарии на двух ширинах и 14 сценариев форм семи игр, обрыв WS/reconnect; снимки просмотрены","environment":"Chromium 320×568/390×844, локальный App/Hub, SQLite :memory:, TelegramStub"},
+    {"command":"node tools/uxtext-teeth.mjs","result":"exit 0, 22/22 поломки пойманы на целевых утверждениях, файлы восстановлены","environment":"Последовательные локальные Chromium/TelegramStub проверки, без соседних проверок во время мутаций"},
+    {"command":"LAYOUT_PORT=8260 npm run layout","result":"exit 0, no overlaps","environment":"Локальный Chromium, предусмотренные сценарием размеры"},
+    {"command":"npm run kit; npm run contrast","result":"exit 0; новые исключения оформления не добавлены","environment":"Локальный Chromium и анализ стилей, 31.10.2026"},
+    {"command":"COLORS_PORT=8261 npm run colors","result":"exit 0, все сценарии UNOQ на пяти размерах","environment":"Локальный Chromium, TelegramStub"},
+    {"command":"PREVIEW_PORT=8262 npm run preview","result":"exit 0, 105 свежих снимков, нет ошибок JS/служебных слов; просмотрены на контактных листах","environment":"Локальный Chromium, TelegramStub; живые часы, не статический эталон; ограничения описаны в отчёте"},
+    {"command":"E2E_PORT=8268 SHOTS=1 node --disable-warning=ExperimentalWarning tools/e2e-payments.mjs","result":"exit 0; текущие тексты и снимки 320×568/390×844 просмотрены","environment":"Локальный сервер/памятная SQLite, окно оплаты и события только TelegramStub, не настоящие Stars"},
+    {"command":"npm run e2e (первый запуск с унаследованным E2E_PORT=10080)","result":"exit 1, Chromium ERR_UNSAFE_PORT; повтор на 8250 прошёл. Первое подключение нового теста без разрешения localhost: EPERM; разрешённый повтор прошёл","environment":"Ограничения среды; не продуктовый дефект, подробности и остальные красные воспроизведения в uxtext.md"},
+    {"command":"git diff --check","result":"без ошибок; запрещённые пути не изменены","environment":"Рабочая копия codex-release, redesign"}
+  ],
+  "blockers": [
+    {"scope":"external","reason":"Живой Telegram, iOS/Android, настоящие Back/клавиатура/системные края/дикторы/жесты и доставка сообщений не доступны в этой среде; чек-лист ux-matrix.md и единый owner-inputs п. 10. Телефон не проверен."},
+    {"scope":"external","reason":"Официальный тестовый Telegram и реальные платежи/возвраты не проверены; API и окно оплаты только заглушки. Следующий внешний шаг — owner-inputs п. 8, без открытия продаж в K."},
+    {"scope":"owner","reason":"Единый список owner-inputs сохраняется: сведения продавца/специалисты/данные/арт и отдельное разрешение будущей выкатки. Повторного решения о ценах и канале поддержки не требуется; K новых правовых выводов не принимал."}
+  ]
+}

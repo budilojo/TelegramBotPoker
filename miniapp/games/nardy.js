@@ -547,7 +547,7 @@ function openSettings() {
       h('div.section-label', 'Цвет хоста'),
       seg(SIDES, 'side'),
       h('button.btn.primary.wide.lg', { style: { marginTop: '16px', width: '100%' }, onclick: () => {
-        send({ t: 'settings', base: st.base, inc: st.inc, side: st.side });
+        if (!send({ t: 'settings', base: st.base, inc: st.inc, side: st.side })) return;
         closeSheet();
       } }, 'Сохранить'),
     );

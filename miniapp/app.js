@@ -7,7 +7,7 @@
  * `onState(state, previous)` and `render()` — so a new game is a new file in
  * games/ and one line here.
  */
-import { tg, $app, h, tickClocks, flushAnimations, closeSheet } from './ui.js';
+import { tg, $app, h, tickClocks, flushAnimations, closeSheet, currentSheet } from './ui.js';
 import { net, bus, connect, send, serverNow, initData, isOpen } from './net.js';
 import * as hub from './hub.js';
 import * as rating from './rating.js';
@@ -53,6 +53,8 @@ bus.onState = (wasConnected) => {
 };
 
 bus.render = render;
+bus.syncBack = () => backButton(net.state);
+document.addEventListener('navigationchange', bus.syncBack);
 
 /*
  * Прокручивается у экранов хаба и лобби корневой `.lobby` (у body overflow:
@@ -64,6 +66,7 @@ bus.render = render;
 let drawnKey = null;
 
 function render() {
+  backButton(net.state);
   const key = net.state ? `${screenOf(net.state)}|${net.state.kind || ''}|${placeOf(net.state)}|${nav.activeTab(net.state)}` : null;
   const keep = key && key === drawnKey && !net.fatal && tg && initData ? $app.firstElementChild : null;
   const stay = keep && keep.matches('.lobby') ? keep : null;
@@ -133,10 +136,16 @@ function backButton(s) {
   const b = tg?.BackButton;
   if (!b) return;
   if (!backBound) {
-    b.onClick?.(() => send({ t: 'hub' }, { lock: false }));
+    b.onClick?.(() => {
+      if (currentSheet()) return closeSheet(true);
+      if (collections.isOpen()) return collections.back();
+      if (activeRoute()) return train.navigateBack();
+      if (nav.back()) return;
+      send({ t: 'hub' }, { lock: false });
+    });
     backBound = true;
   }
-  if (s?.hub) b.show?.();
+  if (s?.hub || currentSheet() || collections.isOpen() || activeRoute() || (s && nav.activeTab(s) !== 'games')) b.show?.();
   else b.hide?.();
 }
 

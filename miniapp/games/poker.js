@@ -1076,7 +1076,7 @@ function openRaise() {
     // Клавиатура закрывает низ экрана — а подтверждение внизу. Подвинем его
     // в видимую часть: это единственное место в игре, где клавиатура вообще
     // появляется.
-    input.onfocus = () => setTimeout(() => confirm.scrollIntoView({ block: 'end', behavior: 'smooth' }), 300);
+    input.onfocus = () => setTimeout(() => confirm.scrollIntoView({ block: 'end', behavior: REDUCED ? 'instant' : 'smooth' }), 300);
     const sub = h('div.amount-sub');
     const confirm = h('button.btn.primary.wide.lg');
     const sync = () => {
@@ -1096,7 +1096,7 @@ function openRaise() {
       confirm.textContent = value >= L.maxTotal ? `All-in ${fmt(value)}` : `${word} ${fmt(value)}`;
     };
     const slider = h('input.slider', {
-      type: 'range', min: L.minTotal, max: L.maxTotal, step: 1, value,
+      type: 'range', 'aria-label': 'Размер ставки', min: L.minTotal, max: L.maxTotal, step: 1, value,
       oninput: (e) => {
         const v = Number(e.target.value);
         value = v >= L.maxTotal - step / 2 ? L.maxTotal : snap(v);
@@ -1328,7 +1328,7 @@ function openSettings() {
     const problem = bad(inLobby);
     const numField = (label, key, disabled) => h('div.field', h('label', label),
       h('input.num', {
-        type: 'number', inputmode: 'numeric', value: Number.isFinite(st[key]) ? st[key] : '', disabled,
+        type: 'number', inputmode: 'numeric', 'aria-label': label, value: Number.isFinite(st[key]) ? st[key] : '', disabled,
         oninput: (e) => { st[key] = e.target.value === '' ? NaN : Number(e.target.value); refreshSave(); },
       }));
     const seg = (options, key) => h('div.seg', options.map(([v, label]) => h(`button${st[key] === v ? '.on' : ''}`, {
@@ -1339,11 +1339,11 @@ function openSettings() {
       if (sent) return; // повторное нажатие: уходит один набор
       const now = moment();
       if (bad(now.inLobby)) return;
-      sent = true;
       const patch = { t: 'settings', smallBlind: st.smallBlind, bigBlind: st.bigBlind, turnSeconds: st.turnSeconds, blindMode: st.blindMode, levelMinutes: st.levelMinutes };
       if (now.inLobby) patch.startingStack = st.startingStack;
       if (!now.midHand) patch.cards = st.cards;
-      send(patch);
+      if (!send(patch)) return;
+      sent = true;
       closeSheet();
     } }, 'Сохранить');
     // Ввод не пересобирает форму (иначе клавиатура закрывается): меняем только подсказку и кнопку.

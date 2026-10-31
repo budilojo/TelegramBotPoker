@@ -564,3 +564,10 @@
  * поэтому на этом экране опускается ниже их — в пустую середину сукна.
  */
 body[data-screen='colors'] #toast { top: var(--cl-toast-top, calc(150px + var(--sat))); }
+
+/* Форма настроек: подпись, выбор и пояснение читаются сверху вниз на 320 px. */
+body[data-screen='colors'] .sheet .field {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--k-s8);
+}

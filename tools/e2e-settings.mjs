@@ -85,7 +85,7 @@ const noSideways = async (page, what) => {
 };
 
 try {
-  for (const size of [[320, 640], [390, 800]]) {
+  for (const size of [[320, 568], [390, 800]]) {
     step(`экран ${size[0]} px`);
     CHAT -= 1;
     await app.handleUpdate(cmdUpdate(CHAT, ivan, '/newgame', { message_id: 1 }));
@@ -108,7 +108,7 @@ try {
     await guest.waitForSelector('.sheet .menu-list');
     assert.equal(await guest.getByText('Настройки стола').count(), 0, 'гость настроек не видит');
     await guest.keyboard.press('Escape');
-    await guest.locator('.backdrop').click({ position: { x: 5, y: 5 } }).catch(() => {});
+    await guest.waitForSelector('.sheet', { state: 'detached' });
 
     // Хост открывает настройки посреди раздачи и начинает печатать в поле малого блайнда.
     await host.getByRole('button', { name: 'Меню' }).click();

@@ -25,6 +25,7 @@ export const net = {
 
 /** The shell's hooks: what to do with a state, how to redraw. */
 export const bus = {
+  syncBack: () => {},
   onState: () => {},
   render: () => {},
   onNotice: (text) => toast(text, 3200),

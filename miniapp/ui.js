@@ -435,9 +435,29 @@ export const currentSheet = () => openSheet;
  * `scrollTop`, а анимация появления не играет заново (docs/scroll.md).
  */
 let shell = null; // { sheet, content }
+let sheetOpener = null;
+
+/** Только верхний слой доступен клавиатуре и средствам чтения экрана. */
+export function syncLayers() {
+  const collections = !!document.querySelector('.col-root');
+  $app.inert = collections || !!shell;
+  $sheets.inert = collections;
+}
+
+const TABBABLE = 'button, a[href], input, textarea, select, [tabindex]';
+export function trapFocus(e, root, dismiss) {
+  if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); dismiss(); return; }
+  if (e.key !== 'Tab') return;
+  const els = [...root.querySelectorAll(TABBABLE)].filter(el => !el.disabled && el.tabIndex >= 0 && el.getClientRects().length && !el.closest('[inert]'));
+  const at = els.indexOf(document.activeElement);
+  if (!els.length) { e.preventDefault(); root.focus({ preventScroll: true }); }
+  else if (e.shiftKey && at <= 0) { e.preventDefault(); els.at(-1).focus(); }
+  else if (!e.shiftKey && (at < 0 || at === els.length - 1)) { e.preventDefault(); els[0].focus(); }
+}
 
 export function showSheet(name, build, opts = {}) {
   // Та же шторка уже открыта (например, «К урокам» в форме) — оболочка остаётся.
+  if (!openSheet) sheetOpener = document.activeElement;
   if (openSheet !== name) shell = null;
   openSheet = name;
   sheetOpts = opts;
@@ -454,18 +474,27 @@ export function showSheet(name, build, opts = {}) {
       const scroll = shell.sheet.scrollTop;
       shell.content.replaceWith(body);
       shell.content = body;
+      shell.sheet.setAttribute('aria-label', body.querySelector('h3, h2, h1')?.textContent || 'Окно игры');
       restoreFocus(body, keep);
       shell.sheet.scrollTop = scroll;
       return;
     }
-    const sheet = h('div.sheet', h('div.grab'), body);
+    const sheet = h('div.sheet', {
+      role: 'dialog', 'aria-modal': 'true', tabindex: '-1',
+      'aria-label': body.querySelector('h3, h2, h1')?.textContent || 'Окно игры',
+      onkeydown: e => trapFocus(e, sheet, () => closeSheet(true)),
+    }, h('div.grab', { 'aria-hidden': 'true' }), body,
+    h('button.btn.sheet-dismiss', { type: 'button', onclick: () => closeSheet(true) }, 'Закрыть окно'));
     shell = { sheet, content: body };
     $sheets.replaceChildren(h('div.backdrop', { onclick: () => closeSheet(true) }), sheet);
+    syncLayers();
+    sheet.focus({ preventScroll: true });
+    document.dispatchEvent(new Event('navigationchange'));
   };
   sheetRenderers[name]();
 }
 
-const FIELDS = 'input, textarea, select';
+const FIELDS = 'input, textarea, select, button, [tabindex]';
 
 /** Какое поле шторки сейчас в фокусе (порядковый номер) и где в нём курсор. */
 export function focusMemo(root) {
@@ -486,7 +515,7 @@ export function restoreFocus(root, memo) {
   el.focus({ preventScroll: true });
   if (memo.start != null) {
     try { el.setSelectionRange(memo.start, memo.end); } catch { /* number */ }
-  } else {
+  } else if (el.matches('input, textarea')) {
     // У числового поля курсора для чтения нет, а новая копия ставит его в начало:
     // человек печатает в конец, так что переписанное значение уводит курсор в конец.
     const v = el.value; el.value = ''; el.value = v;
@@ -500,6 +529,10 @@ export function closeSheet(byUser = false) {
   sheetOpts = {};
   shell = null;
   $sheets.replaceChildren();
+  syncLayers();
+  if (sheetOpener?.isConnected) sheetOpener.focus({ preventScroll: true });
+  sheetOpener = null;
+  document.dispatchEvent(new Event('navigationchange'));
 }
 
 /** Redraw the open sheet from the current state. */

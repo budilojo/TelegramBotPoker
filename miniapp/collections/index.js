@@ -8,7 +8,7 @@
  * Открыть слой можно только из строки «Настроек» и только в демо (`store.visible` — серверное enabled && demo);
  * прямого маршрута, адреса или хэша нет. Если сервер перестал присылать демо — слой закрывается.
  */
-import { h, haptic } from '../ui.js';
+import { h, haptic, trapFocus, syncLayers, focusMemo, restoreFocus } from '../ui.js';
 import { net, bus, send } from '../net.js';
 import { store, DEFAULT_COLOR } from './state.js';
 import { itemById, itemsOfBundle } from './catalog.js';
@@ -65,14 +65,14 @@ const ctx = () => ({
   grant: (id) => { if (store.grant(id)) awaiting = id; },
 });
 
-function back() {
+export function back() {
   awaiting = null;
   haptic.soft?.();
   if (stack.length > 1) { stack.pop(); draw(true); } else close();
 }
 
 function build() {
-  const el = h('div.col-root', { role: 'region', 'aria-label': 'Коллекции' });
+  const el = h('div.col-root', { role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Коллекции', onkeydown: (e) => trapFocus(e, el, back) });
   const backBtn = h('button.col-back', { type: 'button', 'aria-label': 'Назад', onclick: back, html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>' });
   const title = h('h1.col-title', { tabindex: '-1' });
   const scroll = h('div.col-scroll');
@@ -130,7 +130,9 @@ function draw(routeChanged) {
       : skeleton();
   } else body = screenOf(c);
   const key = `${r.name}|${r.id || ''}|${r.tab || ''}`;
+  const focus = focusMemo(root.scroll);
   root.scroll.replaceChildren(body);
+  restoreFocus(root.scroll, focus);
   root.foot.replaceChildren(...footNodes(snap));
   root.el.dataset.route = r.name;
   root.el.dataset.link = snap.link;
@@ -184,7 +186,11 @@ export function open() {
   awaiting = null;
   lastKey = '';
   pay.reset();
+  const opener = document.activeElement;
   build();
+  root.opener = opener;
+  syncLayers();
+  bus.syncBack();
   draw(true);
   root.back.focus({ preventScroll: true });
   store.refresh();
@@ -193,10 +199,14 @@ export function open() {
 
 export function close() {
   if (!root) return;
+  const opener = root.opener;
   root.el.remove();
   root = null;
   stack = [];
   awaiting = null;
+  syncLayers();
+  if (opener?.isConnected) opener.focus({ preventScroll: true });
+  bus.syncBack();
 }
 
 /** Страница сменила место (стол, группа) — слой закрыть. */

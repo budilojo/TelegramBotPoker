@@ -183,7 +183,7 @@ export function renderRanked(s) {
         h('div.set-body',
           h('div.set-title', 'Пока закрыт', h('span.rt-soon-tag', 'скоро')),
           h('div.set-sub', s.ratingSoon))),
-      h('div.hint', 'Очки за доигранные партии уже копятся. Рейтинговые столы появятся, когда откроются рейтинговые группы: обычные столы в рейтинг не идут.'));
+      h('div.hint', 'Очки за доигранные партии уже копятся. Таблица игроков пока закрыта.'));
   }
 
   const games = s.rankGames || s.games || [];

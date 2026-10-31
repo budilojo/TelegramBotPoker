@@ -4,7 +4,7 @@
  * снаружи (из реестра), число страниц считается из него. Позиция запоминается по ключу,
  * поэтому возврат на экран открывает ту же страницу.
  */
-import { h, haptic } from './ui.js';
+import { h, haptic, REDUCED } from './ui.js';
 import { perPage, paginate, clampPage, pageAt, pageLabel, rememberPage, recallPage } from './catalog-pager.js';
 
 const arrow = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
@@ -45,7 +45,7 @@ export function gameCatalog({ games, key, card, empty = 'Игр пока нет.
   function to(i, smooth) {
     page = clampPage(i, count);
     if (smooth) haptic.soft?.();
-    track.scrollTo?.({ left: page * track.clientWidth, behavior: smooth ? 'smooth' : 'instant' });
+    track.scrollTo?.({ left: page * track.clientWidth, behavior: smooth && !REDUCED ? 'smooth' : 'instant' });
     mark();
   }
   let settle = null;

@@ -775,8 +775,8 @@ function openSettings() {
       h('div.hint', { style: { marginTop: '6px' } }, 'Не успел: отбивающийся берёт, подкидывающие пасуют; начать отбой — бот ходит младшей некозырной.'),
       h('button.btn.primary.wide.lg', { style: { marginTop: '16px', width: '100%' }, onclick: () => {
         if (sent) return;
+        if (!send({ t: 'settings', turnSeconds: st.turnSeconds, ...(isLive() ? {} : { variant: st.variant }) })) return;
         sent = true;
-        send({ t: 'settings', turnSeconds: st.turnSeconds, ...(isLive() ? {} : { variant: st.variant }) });
         closeSheet();
       } }, 'Сохранить'),
     );

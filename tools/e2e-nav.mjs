@@ -167,6 +167,9 @@ try {
     await page.waitForSelector('.sheet');
     assert.equal(await page.locator('.nav').isVisible(), false, 'под шторкой панели не видно');
     await page.keyboard.press('Escape');
+    await page.waitForSelector('.sheet', { state: 'detached' });
+    await page.locator('.game-card.g-durak').click();
+    await page.waitForSelector('.sheet');
     await page.locator('.backdrop').click({ position: { x: 5, y: 5 } });
     await page.waitForSelector('.sheet', { state: 'detached' });
     assert.equal(await page.locator('.nav').isVisible(), true, 'шторку закрыли — панель вернулась');

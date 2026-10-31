@@ -227,7 +227,7 @@ function openCreate(g) {
       onclick: () => { st[key] = v; refreshSheet(); },
     }, label)));
     const numField = (label, key) => h('div.field', h('label', label),
-      h('input.num', { type: 'number', inputmode: 'numeric', value: st[key], oninput: (e) => (st[key] = Number(e.target.value)) }));
+      h('input.num', { type: 'number', inputmode: 'numeric', 'aria-label': label, value: st[key], oninput: (e) => (st[key] = Number(e.target.value)) }));
 
     const fields = form ? form.fields(st, { seg, numField, TIMERS, h }) : [];
 

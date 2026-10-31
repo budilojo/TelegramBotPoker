@@ -11,7 +11,7 @@
  * самой страницы поверх него: сервер о них не знает, а шаг «назад» к играм
  * ничего не запрашивает.
  */
-import { $app, h, haptic, tg } from './ui.js';
+import { $app, h, haptic, tg, REDUCED } from './ui.js';
 import { bus, send } from './net.js';
 import { renderRanked, resetRanked } from './rating.js';
 import { renderProfileSettings } from './profile.js';
@@ -41,7 +41,16 @@ export function activeTab(s) {
 
 function scrollTop() {
   const el = $app.querySelector('.lobby');
-  el?.scrollTo?.({ top: 0, behavior: 'smooth' });
+  el?.scrollTo?.({ top: 0, behavior: REDUCED ? 'instant' : 'smooth' });
+}
+
+/** Локальный раздел закрывается без запроса к серверу и смены группы. */
+export function back() {
+  if (!view) return false;
+  view = null;
+  resetRanked();
+  bus.render();
+  return true;
 }
 
 function go(tab, s) {
@@ -114,7 +123,7 @@ function shopSoon() {
     h('section.set-block',
       h('div.set-row', h('div.set-body',
         h('div.set-title', 'Магазин скоро откроется'),
-        h('div.set-sub', 'Мы готовим наборы для игры — например, «Ночной казино-клуб». Загляните позже.')))));
+        h('div.set-sub', 'Готовим оформление для игр. Покупки пока закрыты.')))));
 }
 
 /** Блок строк из реестра `settings-rows.js`; пока строк нет — ничего, вид «Настроек» прежний. */
@@ -128,7 +137,7 @@ const profileBox = h('div.pf-host');
 
 function settings(s) {
   return h('div.lobby.hub.settings',
-    h('div.hub-head', h('h1', 'Настройки'), h('div.sub', 'Этот телефон и бот')),
+    h('div.hub-head', h('h1', 'Настройки'), h('div.sub', 'Профиль, уведомления и поддержка')),
 
     h('section.set-block',
       h('div.section-label', 'Профиль'),

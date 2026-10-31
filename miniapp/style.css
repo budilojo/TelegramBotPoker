@@ -644,6 +644,8 @@ input { font: inherit; color: inherit; }
 @keyframes sheet-in { from { transform: translate(-50%, 40px); opacity: 0; } }
 .grab { width: 40px; height: 5px; border-radius: var(--k-r-pill); background: var(--line-hi); margin: 0 auto 12px; }
 .sheet h3 { margin: 0 0 4px; font-size: var(--k-fs-section); }
+.sheet-dismiss { width: 100%; margin-top: var(--k-s16); }
+.sheet :focus-visible { outline: 2px solid var(--text-primary); outline-offset: -2px; }
 .sheet .sub { color: var(--muted); font-size: var(--k-fs-secondary); margin-bottom: 14px; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .size-btn { height: 64px; }

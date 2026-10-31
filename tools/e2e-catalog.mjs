@@ -75,7 +75,7 @@ const info = (page) => page.evaluate(() => {
 const settle = (page) => page.waitForTimeout(450);
 
 try {
-  for (const size of [[320, 640], [390, 844]]) {
+  for (const size of [[320, 568], [390, 844]]) {
     step(`хаб группы, ${size[0]} px`);
     const page = await open(size, `g_${gcode}`);
     await page.waitForSelector('.game-card');
@@ -129,7 +129,7 @@ try {
 
   step('«Игры с ботами»: те же страницы');
   {
-    const page = await open([320, 640], '');
+    const page = await open([320, 568], '');
     await page.locator('button:has-text("Играть с ботами")').first().click();
     await page.waitForSelector('.hub.solo .game-card');
     const i = await info(page);
@@ -140,7 +140,7 @@ try {
 
   step('одна страница и пустой набор, длинное название (на подставленном состоянии)');
   {
-    const page = await open([320, 640], `g_${gcode}`);
+    const page = await open([320, 568], `g_${gcode}`);
     await page.waitForSelector('.game-card');
     const probe = (games) => page.evaluate(async (list) => {
       const { gameCatalog } = await import('/catalog.js');

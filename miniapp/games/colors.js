@@ -709,6 +709,7 @@ function openSettings() {
     const playing = s.deal?.phase === 'play';
     return h('div.sheet-body',
       h('h3', 'Настройки стола'),
+      h('div.hint', 'Изменения применяются сразу.'),
       h('div.field',
         h('label', 'Накопление «+2»'),
         h('div.seg', [[true, 'Вкл'], [false, 'Выкл']].map(([v, t]) =>

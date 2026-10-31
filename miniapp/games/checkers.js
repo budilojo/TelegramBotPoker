@@ -760,7 +760,7 @@ function openSettings() {
       seg(SIDES, 'side'),
       h('div.hint', { style: { marginTop: '6px' } }, 'Следующая партия серии — с обратными цветами.'),
       h('button.btn.primary.wide.lg', { style: { marginTop: '16px', width: '100%' }, onclick: () => {
-        send({ t: 'settings', base: st.base, inc: st.inc, side: st.side });
+        if (!send({ t: 'settings', base: st.base, inc: st.inc, side: st.side })) return;
         closeSheet();
       } }, 'Сохранить'),
     );

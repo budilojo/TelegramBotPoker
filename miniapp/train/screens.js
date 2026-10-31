@@ -7,7 +7,7 @@
  * контейнер прокрутки не пересоздаётся; приходящий прогресс обновляет только
  * блоки-«секции» внутри него. Полная перерисовка — лишь при смене экрана.
  */
-import { $app, h, haptic, toast, showSheet, closeSheet } from '../ui.js';
+import { $app, h, haptic, toast, showSheet, closeSheet, REDUCED } from '../ui.js';
 import { bus, send } from '../net.js';
 import { TRACKS, SKILLS, LEVELS, LEVEL_NAMES, topicById, trackById } from './topics.js';
 import {
@@ -97,6 +97,14 @@ function patchSections() {
 }
 
 const back = (text, fn) => h('button.back-link', { type: 'button', onclick: () => { haptic.soft(); fn(); } }, text);
+
+/** Telegram Back повторяет экранную кнопку, включая подтверждение несохранённого ответа. */
+export function navigateBack() {
+  const button = $app.querySelector('.tr-back, .back-link');
+  if (button) button.click();
+  else if (activeRoute()?.name === 'train') closeRoute();
+  else openRoute('train');
+}
 const dots = (t) => {
   const row = trackRow(t);
   return h('span.tr-dots', { 'aria-hidden': 'true' }, Array.from({ length: LEVELS }, (_, i) => h(`i${row.passed.includes(i + 1) ? '.on' : ''}`)));
@@ -315,7 +323,7 @@ function exerciseScreen() {
     if (wEl) mod.update?.(wEl, props());
     reviewHost.replaceChildren(explain.mount({ review, extra: revealOf(task) }));
     drawFoot();
-    reviewHost.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+    reviewHost.scrollIntoView?.({ block: 'nearest', behavior: REDUCED ? 'instant' : 'smooth' });
   }
   drawFoot();
 

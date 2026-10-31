@@ -95,7 +95,7 @@ async function layoutOk(page, where) {
 }
 
 try {
-  for (const [i, size] of [[320, 640], [390, 844]].entries()) {
+  for (const [i, size] of [[320, 568], [390, 844]].entries()) {
     const S = await boot(PORT + i, cfgOf({ mode: 'test' }));
     const col = S.app.collections;
     const page = await open(S, ivan, size);
