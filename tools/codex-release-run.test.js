@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { STEPS, acquireLock, buildPrompt, codexArgs, parseArgs, readState, reportPath, run, validateReport } from './codex-release-run.mjs';
+import { PROFILE } from './cosmetics-run.mjs';
 
 const opts = { timeoutMin: 1 };
 const origin = 'https://github.com/budilojo/TelegramBotPoker.git';
@@ -13,7 +14,9 @@ const report = (step, attemptId, extra = {}) => ({
   tests: [{ command: 'fixture', result: 'pass', environment: 'stub' }], blockers: [], ...extra,
 });
 
-function fixture(t) {
+function fixture(t, profile) {
+  const steps = profile?.steps || STEPS;
+  const reports = profile?.reports || 'docs/codex-release/reports';
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-release-test-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const put = (name, value) => {
@@ -32,12 +35,12 @@ function fixture(t) {
   };
   git('init', '--quiet', '-b', 'redesign');
   put('.gitignore', '.release-run/\n');
-  for (const name of ['docs/codex-release/00-plan.md', 'docs/codex-release/claude-interrupted.patch', ...STEPS.map((s) => s.task)]) put(name, 'Тестовый материал\n');
+  for (const name of [...(profile?.materials || ['docs/codex-release/00-plan.md', 'docs/codex-release/claude-interrupted.patch']), ...steps.map((s) => s.task)]) put(name, 'Тестовый материал\n');
   commit('Исходное состояние теста');
   git('remote', 'add', 'origin', origin);
   git('update-ref', 'refs/remotes/origin/redesign', 'HEAD');
-  const stateFile = path.join(root, '.release-run/codex/state.json');
-  const state = () => readState(stateFile);
+  const stateFile = path.join(root, profile?.stateDir || '.release-run/codex', 'state.json');
+  const state = () => readState(stateFile, steps);
   const events = [];
   const control = { testStatus: 0, fetchFail: 0, pushFail: 0, reportExtra: {}, reportPerStep: {}, wrongAttempt: false, forbidden: null, dirtyAfter: false };
   let fetchCount = 0;
@@ -61,8 +64,8 @@ function fixture(t) {
   };
   const launch = async (_root, step, attemptId) => {
     events.push({ cmd: 'launch', id: step.id, attemptId });
-    put(reportPath(step), JSON.stringify(report(step, control.wrongAttempt ? 'previous-attempt' : attemptId, { ...control.reportExtra, ...control.reportPerStep[step.id] })));
-    put(`docs/codex-release/reports/${step.id}.md`, 'Отчёт тестового исполнителя\n');
+    put(`${reports}/${step.id}.status.json`, JSON.stringify(report(step, control.wrongAttempt ? 'previous-attempt' : attemptId, { ...control.reportExtra, ...control.reportPerStep[step.id] })));
+    put(`${reports}/${step.id}.md`, 'Отчёт тестового исполнителя\n');
     if (control.forbidden) put(control.forbidden, 'Запрещённое изменение\n');
     commit(`Проверка ${step.id}`);
     if (control.dirtyAfter) put('unfinished.txt', 'Работа сохранена\n');
@@ -70,8 +73,62 @@ function fixture(t) {
   };
   const pushes = () => events.filter((e) => e.cmd === 'git' && e.args[0] === 'push');
   const launches = () => events.filter((e) => e.cmd === 'launch');
-  return { root, put, git, commit, state, stateFile, events, control, command, launch, pushes, launches };
+  return { root, put, git, commit, state, stateFile, events, control, command, launch, pushes, launches, profile };
 }
+
+test('косметика: отдельные этапы/состояние, тест перед каждым push и повтор без запуска', async (t) => {
+  const f = fixture(t, PROFILE);
+  const oldState = JSON.stringify({ version: 1, steps: { final: { status: 'partial', published: true } } });
+  f.put('.release-run/codex/state.json', oldState);
+  assert.equal(await run(f.root, opts, f), 0);
+  assert.deepEqual(f.launches().map((x) => x.id), PROFILE.steps.map((s) => s.id));
+  assert.equal(f.pushes().length, 5);
+  for (const s of PROFILE.steps) {
+    const i = f.events.findIndex((x) => x.cmd === 'launch' && x.id === s.id);
+    const after = f.events.slice(i + 1);
+    assert.ok(after.findIndex((x) => x.cmd === 'npm') < after.findIndex((x) => x.cmd === 'git' && x.args[0] === 'push'));
+    assert.equal(f.state().steps[s.id].published, true);
+  }
+  assert.equal(fs.readFileSync(path.join(f.root, '.release-run/codex/state.json'), 'utf8'), oldState);
+  f.events.length = 0;
+  assert.equal(await run(f.root, opts, f), 0);
+  assert.equal(f.launches().length, 0);
+});
+
+test('косметика: общий lock не позволяет работать одновременно со старым релизом', async (t) => {
+  const f = fixture(t, PROFILE);
+  f.put('.release-run/codex/lock', 'живой старый запуск');
+  await assert.rejects(run(f.root, opts, f), /блокировк/i);
+  assert.equal(f.launches().length, 0);
+});
+
+test('косметика: запускатор и настройки защищены от правок исполнителя', async (t) => {
+  const f = fixture(t, PROFILE);
+  f.control.forbidden = 'tools/cosmetics-run.mjs';
+  await assert.rejects(run(f.root, opts, f), /запрещённый/);
+  assert.equal(f.pushes().length, 0);
+});
+
+test('косметика: красные тесты останавливают пакет, dry-run не запускает работу', async (t) => {
+  const f = fixture(t, PROFILE);
+  assert.equal(await run(f.root, { ...opts, dryRun: true }, f), 0);
+  assert.equal(f.launches().length, 0);
+  assert.ok(!fs.existsSync(f.stateFile));
+  f.control.testStatus = 1;
+  await assert.rejects(run(f.root, opts, f), /npm test/);
+  assert.equal(f.pushes().length, 0);
+  assert.deepEqual(f.launches().map((x) => x.id), ['audit']);
+});
+
+test('косметика: задания и план доступны, промпт не запускает старые I–M', () => {
+  for (const name of [...PROFILE.materials, ...PROFILE.steps.map((s) => s.task)]) {
+    assert.ok(fs.existsSync(new URL(`../${name}`, import.meta.url)), name);
+  }
+  const prompt = PROFILE.buildPrompt('/tmp/repo', PROFILE.steps[0], 'attempt-cosmetic');
+  assert.match(prompt, /attempt-cosmetic/);
+  assert.match(prompt, /docs\/cosmetics-v2/);
+  assert.doesNotMatch(prompt, /claude-interrupted\.patch/);
+});
 
 test('Codex: строгие аргументы, безопасный sandbox и отдельные задания без Claude', () => {
   assert.deepEqual(STEPS.map((s) => s.letter), ['I', 'J', 'K', 'L', 'M']);

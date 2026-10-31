@@ -19,12 +19,12 @@ const STATE_DIR = '.release-run/codex';
 const accepted = (s) => ['done', 'partial'].includes(s?.status) && s?.published === true;
 export const reportPath = (s) => `${REPORTS}/${s.id}.status.json`;
 
-export function readState(file) {
+export function readState(file, steps = STEPS) {
   if (!fs.existsSync(file)) return { version: 1, steps: {} };
   const s = JSON.parse(fs.readFileSync(file, 'utf8'));
   if (s.version !== 1 || !s.steps || typeof s.steps !== 'object' || Array.isArray(s.steps)) throw new Error('Повреждено состояние Codex; файл сохранён, автоматического сброса нет.');
   for (const [id, v] of Object.entries(s.steps)) {
-    if (!STEPS.some((x) => x.id === id) || !v || typeof v !== 'object') throw new Error('Неизвестный этап в состоянии Codex.');
+    if (!steps.some((x) => x.id === id) || !v || typeof v !== 'object') throw new Error('Неизвестный этап в состоянии Codex.');
   }
   return s;
 }
@@ -100,11 +100,11 @@ export async function launchCodex(root, step, attemptId, opts, runDir) {
   const err = fs.openSync(`${stem}.stderr.log`, 'w');
   const child = spawn('codex', codexArgs(root, `${stem}.last.md`, opts.model), {
     cwd: root, detached: true, stdio: ['pipe', out, err],
-    env: { ...process.env, RELEASE_RUN: '1', E2E_PORT: String(10000 + 40 * STEPS.indexOf(step)) },
+    env: { ...process.env, RELEASE_RUN: '1', E2E_PORT: String(10000 + 40 * (opts.profile?.steps || STEPS).indexOf(step)) },
   });
   fs.closeSync(out); fs.closeSync(err);
   child.stdin.on('error', () => {});
-  child.stdin.end(buildPrompt(root, step, attemptId));
+  child.stdin.end(opts.profile ? opts.profile.buildPrompt(root, step, attemptId) : buildPrompt(root, step, attemptId));
   let stopped = false;
   let hardStop;
   const stop = () => {
@@ -133,6 +133,10 @@ export async function launchCodex(root, step, attemptId, opts, runDir) {
 const command = (cmd, args, root) => spawnSync(cmd, args, { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
 
 export async function run(root, opts, deps = {}) {
+  const profile = deps.profile;
+  const steps = profile?.steps || STEPS;
+  const reports = profile?.reports || REPORTS;
+  const statusPath = (s) => `${reports}/${s.id}.status.json`;
   const exec = deps.command || ((cmd, args) => command(cmd, args, root));
   const launch = deps.launch || launchCodex;
   const must = (cmd, args) => {
@@ -145,7 +149,7 @@ export async function run(root, opts, deps = {}) {
   const dirty = () => git('status', '--porcelain', '--untracked-files=all');
   const checkProtected = (base) => {
     const names = git('diff', '--name-only', base, 'HEAD').split('\n');
-    if (names.some((p) => /^(server\/|public\/|deploy\/)|(^|\/)\.env(?:\.|$)/.test(p) || p === 'tools/codex-release-run.mjs')) throw new Error('Изменён запрещённый файл; публикация остановлена.');
+    if (names.some((p) => /^(server\/|public\/|deploy\/)|(^|\/)\.env(?:\.|$)/.test(p) || p === 'tools/codex-release-run.mjs' || profile?.protected?.includes(p))) throw new Error('Изменён запрещённый файл; публикация остановлена.');
   };
   const fingerprint = () => {
     const hash = createHash('sha256').update(git('diff', '--binary', 'HEAD')).update(dirty());
@@ -156,25 +160,27 @@ export async function run(root, opts, deps = {}) {
     }
     return hash.digest('hex');
   };
-  const runDir = path.join(root, STATE_DIR);
+  const runDir = path.join(root, profile?.stateDir || STATE_DIR);
   const stateFile = path.join(runDir, 'state.json');
-  let state = readState(stateFile);
-  const print = () => STEPS.forEach((s) => console.log(`${s.letter} ${s.id}: ${state.steps[s.id]?.status || 'pending'}${state.steps[s.id]?.published ? ' — опубликован' : ''}`));
+  let state = readState(stateFile, steps);
+  const print = () => steps.forEach((s) => console.log(`${s.letter} ${s.id}: ${state.steps[s.id]?.status || 'pending'}${state.steps[s.id]?.published ? ' — опубликован' : ''}`));
   if (opts.status) { print(); return 0; }
   if (git('branch', '--show-current') !== 'redesign') throw new Error('Нужна ветка redesign.');
-  for (const f of ['docs/codex-release/00-plan.md', 'docs/codex-release/claude-interrupted.patch', ...STEPS.map((s) => s.task)]) {
+  for (const f of [...(profile?.materials || ['docs/codex-release/00-plan.md', 'docs/codex-release/claude-interrupted.patch']), ...steps.map((s) => s.task)]) {
     if (!fs.existsSync(path.join(root, f))) throw new Error(`Нет задания/материалов: ${f}`);
   }
   if (opts.check || opts.dryRun) {
     must('codex', ['--version']); must('codex', ['login', 'status']);
-    console.log('Codex доступен; I → J → K → L → M, отдельные последовательные сессии.'); print();
+    console.log(`Codex доступен; ${steps.map((s) => s.letter).join(' → ')}, отдельные последовательные сессии.`); print();
     console.log('Агенты, fetch, тесты и push не запускались.'); return 0;
   }
   fs.mkdirSync(runDir, { recursive: true });
-  const unlock = acquireLock(path.join(runDir, 'lock'));
+  // Все пакеты делят рабочую копию: старый и новый запуск не могут работать вместе.
+  fs.mkdirSync(path.join(root, STATE_DIR), { recursive: true });
+  const unlock = acquireLock(path.join(root, STATE_DIR, 'lock'));
   try {
-    state = readState(stateFile);
-    const current = STEPS.find((s) => !accepted(state.steps[s.id]));
+    state = readState(stateFile, steps);
+    const current = steps.find((s) => !accepted(state.steps[s.id]));
     if (!current) { console.log('По сохранённому состоянию все этапы ранее приняты и опубликованы. Новые проверки не запускались; выкатка не выполнялась.'); return 0; }
     const recovery = state.steps[current.id];
     if (dirty() && (!recovery?.dirtyHash || recovery.dirtyHash !== fingerprint())) throw new Error('Есть посторонние или изменившиеся незакоммиченные файлы. Ничего не удалено; покажите вывод агенту.');
@@ -184,28 +190,28 @@ export async function run(root, opts, deps = {}) {
     for (const flag of ['--approve-for-me', '--json', '--output-last-message']) if (!help.includes(flag)) throw new Error(`Codex не поддерживает ${flag}; требуется обновление.`);
     git('fetch', 'origin', 'redesign');
     git('merge-base', '--is-ancestor', 'origin/redesign', 'HEAD');
-    for (const s of STEPS) {
+    for (const s of steps) {
       let rec = state.steps[s.id];
       if (accepted(rec)) {
         git('merge-base', '--is-ancestor', rec.head, 'HEAD');
-        const r = validateReport(JSON.parse(git('show', `HEAD:${reportPath(s)}`)), s, rec.attemptId);
+        const r = validateReport(JSON.parse(git('show', `HEAD:${statusPath(s)}`)), s, rec.attemptId);
         if (r.status !== rec.status) throw new Error('Принятый отчёт изменился; требуется проверка.');
         continue;
       }
-      const prior = STEPS.slice(0, STEPS.indexOf(s));
+      const prior = steps.slice(0, steps.indexOf(s));
       if (prior.some((p) => !accepted(state.steps[p.id]))) throw new Error('Предыдущий этап не принят.');
       if (rec?.status !== 'ready' || rec.head !== head() || dirty()) {
         rec = state.steps[s.id] = { attemptId: randomUUID(), attempts: (rec?.attempts || 0) + 1, base: head(), status: 'running' };
         writeState(stateFile, state);
         console.log(`▶ ${s.letter}: ${s.scope}; попытка ${rec.attempts}`);
         try {
-          const result = await launch(root, s, rec.attemptId, opts, runDir);
+          const result = await launch(root, s, rec.attemptId, { ...opts, profile }, runDir);
           if (result.code !== 0) throw new Error(`Codex остановился (код ${result.code}); повторите эту же команду после устранения причины. Журнал: ${runDir}`);
           if (git('branch', '--show-current') !== 'redesign') throw new Error('Исполнитель сменил ветку.');
           if (dirty()) throw new Error('После работы остались незакоммиченные файлы.');
           git('merge-base', '--is-ancestor', rec.base, 'HEAD');
-          const r = validateReport(JSON.parse(git('show', `HEAD:${reportPath(s)}`)), s, rec.attemptId);
-          git('show', `HEAD:${REPORTS}/${s.id}.md`);
+          const r = validateReport(JSON.parse(git('show', `HEAD:${statusPath(s)}`)), s, rec.attemptId);
+          git('show', `HEAD:${reports}/${s.id}.md`);
           checkProtected('origin/redesign');
           console.log('  Проверяю npm test на точном коммите исполнителя…');
           const testedHead = head();
