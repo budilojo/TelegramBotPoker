@@ -1,0 +1,4085 @@
+{
+  "version": 1,
+  "toolSha256": "2784a69872e345bbf196a38adee1c833ba884bad16d6297ba03d92f69dd5fc8e",
+  "at": "2026-10-31T07:44:33.847Z",
+  "commit": "11d086c031e7f912dbc904e8cdd861ac30809dc0",
+  "node": "v24.12.0",
+  "os": "darwin 25.6.0 arm64",
+  "cpus": 10,
+  "options": {
+    "runs": 3,
+    "seconds": 120
+  },
+  "games": [
+    "poker",
+    "durak",
+    "colors",
+    "chess",
+    "checkers",
+    "nardy",
+    "battleship"
+  ],
+  "browser": [
+    {
+      "chromium": "153.0.8010.12",
+      "results": [
+        {
+          "game": "poker",
+          "cpuRate": 1,
+          "firstReadyMs": 223.73024999999996,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 2,
+            "median": 3.399999976158142,
+            "p95": 4.600000023841858,
+            "max": 5.100000023841858
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 28,
+            "median": 31.900000035762787,
+            "p95": 33.40000003576279,
+            "max": 33.5
+          },
+          "action": "act",
+          "actionLatency": {
+            "stateMs": 16,
+            "paintedMs": 29.19999998807907
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 1.5999999642372131,
+            "median": 2.5,
+            "p95": 4,
+            "max": 10.400000035762787
+          },
+          "longTasksMs": {
+            "n": 0
+          },
+          "frameIntervalMs": {
+            "n": 51,
+            "min": 16.5,
+            "median": 16.69999999999999,
+            "p95": 16.799999999999997,
+            "max": 33.30000000000001
+          },
+          "messages": 23,
+          "wsBytes": 44604,
+          "resources": 128,
+          "transferBytes": 1581688,
+          "encodedBytes": 1543288,
+          "largest": [
+            {
+              "path": "/cards/KS.svg",
+              "transfer": 79973,
+              "encoded": 79673
+            },
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/cards/back.svg",
+              "transfer": 46563,
+              "encoded": 46263
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            }
+          ]
+        },
+        {
+          "game": "poker",
+          "cpuRate": 4,
+          "firstReadyMs": 259.17645800000014,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 4.200000047683716,
+            "median": 4.800000011920929,
+            "p95": 7.300000011920929,
+            "max": 8.300000011920929
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 30.399999976158142,
+            "median": 32.69999998807907,
+            "p95": 33.299999952316284,
+            "max": 34
+          },
+          "action": "act",
+          "actionLatency": {
+            "stateMs": 8.699999988079071,
+            "paintedMs": 32.80000001192093
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 3.400000035762787,
+            "median": 4.100000023841858,
+            "p95": 7.199999988079071,
+            "max": 7.399999976158142
+          },
+          "longTasksMs": {
+            "n": 1,
+            "min": 57,
+            "median": 57,
+            "p95": 57,
+            "max": 57
+          },
+          "frameIntervalMs": {
+            "n": 50,
+            "min": 16.59999999999991,
+            "median": 16.69999999999999,
+            "p95": 16.80000000000001,
+            "max": 83.4
+          },
+          "messages": 23,
+          "wsBytes": 44604,
+          "resources": 128,
+          "transferBytes": 1503357,
+          "encodedBytes": 1464957,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/cards/back.svg",
+              "transfer": 46563,
+              "encoded": 46263
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            }
+          ]
+        },
+        {
+          "game": "durak",
+          "cpuRate": 1,
+          "firstReadyMs": 154.2857079999999,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 2.100000023841858,
+            "median": 5.100000023841858,
+            "p95": 6.5,
+            "max": 6.800000011920929
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 30.099999964237213,
+            "median": 32.10000002384186,
+            "p95": 33.5,
+            "max": 33.69999998807907
+          },
+          "action": "attack",
+          "actionLatency": {
+            "stateMs": 8.700000047683716,
+            "paintedMs": 31.200000047683716
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 1.800000011920929,
+            "median": 4,
+            "p95": 5.900000035762787,
+            "max": 6.800000011920929
+          },
+          "longTasksMs": {
+            "n": 0
+          },
+          "frameIntervalMs": {
+            "n": 51,
+            "min": 16.599999999999966,
+            "median": 16.69999999999999,
+            "p95": 16.799999999999955,
+            "max": 16.799999999999955
+          },
+          "messages": 23,
+          "wsBytes": 38461,
+          "resources": 133,
+          "transferBytes": 1914053,
+          "encodedBytes": 1874153,
+          "largest": [
+            {
+              "path": "/cards/JH.svg",
+              "transfer": 90843,
+              "encoded": 90543
+            },
+            {
+              "path": "/cards/QC.svg",
+              "transfer": 80075,
+              "encoded": 79775
+            },
+            {
+              "path": "/cards/QS.svg",
+              "transfer": 80069,
+              "encoded": 79769
+            },
+            {
+              "path": "/cards/QH.svg",
+              "transfer": 80007,
+              "encoded": 79707
+            },
+            {
+              "path": "/cards/QD.svg",
+              "transfer": 79953,
+              "encoded": 79653
+            }
+          ]
+        },
+        {
+          "game": "durak",
+          "cpuRate": 4,
+          "firstReadyMs": 308.3528329999999,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 2.100000023841858,
+            "median": 3.300000011920929,
+            "p95": 5,
+            "max": 6.599999964237213
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 30.099999964237213,
+            "median": 32.700000047683716,
+            "p95": 33.10000002384186,
+            "max": 33.19999998807907
+          },
+          "action": "take",
+          "actionLatency": {
+            "stateMs": 5.5,
+            "paintedMs": 18.399999976158142
+          },
+          "renderJSms": {
+            "n": 22,
+            "min": 1.699999988079071,
+            "median": 2.699999988079071,
+            "p95": 5.800000011920929,
+            "max": 6.800000011920929
+          },
+          "longTasksMs": {
+            "n": 1,
+            "min": 98,
+            "median": 98,
+            "p95": 98,
+            "max": 98
+          },
+          "frameIntervalMs": {
+            "n": 51,
+            "min": 16.599999999999966,
+            "median": 16.699999999999932,
+            "p95": 33.2,
+            "max": 83.4
+          },
+          "messages": 24,
+          "wsBytes": 39591,
+          "resources": 134,
+          "transferBytes": 1669152,
+          "encodedBytes": 1628952,
+          "largest": [
+            {
+              "path": "/cards/KC.svg",
+              "transfer": 79979,
+              "encoded": 79679
+            },
+            {
+              "path": "/cards/KH.svg",
+              "transfer": 79911,
+              "encoded": 79611
+            },
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/cards/back.svg",
+              "transfer": 46563,
+              "encoded": 46263
+            }
+          ]
+        },
+        {
+          "game": "colors",
+          "cpuRate": 1,
+          "firstReadyMs": 122.06512500000008,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 1,
+            "median": 2.699999988079071,
+            "p95": 4,
+            "max": 4.199999988079071
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 30.399999976158142,
+            "median": 31.600000023841858,
+            "p95": 33.39999997615814,
+            "max": 33.5
+          },
+          "action": "draw",
+          "actionLatency": {
+            "stateMs": 3.599999964237213,
+            "paintedMs": 27.099999964237213
+          },
+          "renderJSms": {
+            "n": 22,
+            "min": 0.6000000238418579,
+            "median": 2.199999988079071,
+            "p95": 2.899999976158142,
+            "max": 7.300000011920929
+          },
+          "longTasksMs": {
+            "n": 0
+          },
+          "frameIntervalMs": {
+            "n": 50,
+            "min": 16.59999999999991,
+            "median": 16.69999999999999,
+            "p95": 16.700000000000045,
+            "max": 16.800000000000068
+          },
+          "messages": 24,
+          "wsBytes": 41488,
+          "resources": 135,
+          "transferBytes": 1479470,
+          "encodedBytes": 1438970,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        },
+        {
+          "game": "colors",
+          "cpuRate": 4,
+          "firstReadyMs": 242.13916599999993,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 1.600000023841858,
+            "median": 2.300000011920929,
+            "p95": 3.699999988079071,
+            "max": 4.5
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 30.399999976158142,
+            "median": 32.700000047683716,
+            "p95": 33.10000002384186,
+            "max": 33.39999997615814
+          },
+          "action": "play",
+          "actionLatency": {
+            "stateMs": 3.699999988079071,
+            "paintedMs": 25.19999998807907
+          },
+          "renderJSms": {
+            "n": 23,
+            "min": 0.9000000357627869,
+            "median": 1.7000000476837158,
+            "p95": 3,
+            "max": 5.399999976158142
+          },
+          "longTasksMs": {
+            "n": 0
+          },
+          "frameIntervalMs": {
+            "n": 51,
+            "min": 16.5,
+            "median": 16.69999999999999,
+            "p95": 16.80000000000001,
+            "max": 66.69999999999999
+          },
+          "messages": 25,
+          "wsBytes": 43758,
+          "resources": 138,
+          "transferBytes": 1487062,
+          "encodedBytes": 1445662,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        },
+        {
+          "game": "chess",
+          "cpuRate": 1,
+          "firstReadyMs": 139.35962500000005,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 1.800000011920929,
+            "median": 3.5,
+            "p95": 5.100000023841858,
+            "max": 6
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 30.69999998807907,
+            "median": 31.600000023841858,
+            "p95": 32.80000001192093,
+            "max": 32.89999997615814
+          },
+          "action": "move",
+          "actionLatency": {
+            "stateMs": 13.800000011920929,
+            "paintedMs": 29.30000001192093
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 1.4000000357627869,
+            "median": 2.300000011920929,
+            "p95": 4.600000023841858,
+            "max": 11
+          },
+          "longTasksMs": {
+            "n": 0
+          },
+          "frameIntervalMs": {
+            "n": 50,
+            "min": 16.599999999999966,
+            "median": 16.69999999999999,
+            "p95": 16.700000000000045,
+            "max": 16.80000000000001
+          },
+          "messages": 23,
+          "wsBytes": 42611,
+          "resources": 137,
+          "transferBytes": 1463831,
+          "encodedBytes": 1422731,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        },
+        {
+          "game": "chess",
+          "cpuRate": 4,
+          "firstReadyMs": 275.9639580000003,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 2.5,
+            "median": 3.699999988079071,
+            "p95": 4.800000011920929,
+            "max": 5.400000035762787
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 31.69999998807907,
+            "median": 32.60000002384186,
+            "p95": 33.69999998807907,
+            "max": 33.700000047683716
+          },
+          "action": "move",
+          "actionLatency": {
+            "stateMs": 18,
+            "paintedMs": 32.39999997615814
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 2.199999988079071,
+            "median": 2.899999976158142,
+            "p95": 4.5,
+            "max": 17.100000023841858
+          },
+          "longTasksMs": {
+            "n": 1,
+            "min": 76,
+            "median": 76,
+            "p95": 76,
+            "max": 76
+          },
+          "frameIntervalMs": {
+            "n": 51,
+            "min": 16.5,
+            "median": 16.699999999999932,
+            "p95": 16.800000000000068,
+            "max": 83.39999999999998
+          },
+          "messages": 23,
+          "wsBytes": 42633,
+          "resources": 137,
+          "transferBytes": 1463831,
+          "encodedBytes": 1422731,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        },
+        {
+          "game": "checkers",
+          "cpuRate": 1,
+          "firstReadyMs": 123.89087499999914,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 1.699999988079071,
+            "median": 4.699999988079071,
+            "p95": 5.399999976158142,
+            "max": 5.5
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 30.299999952316284,
+            "median": 32.09999996423721,
+            "p95": 33.40000003576279,
+            "max": 33.69999998807907
+          },
+          "action": "move",
+          "actionLatency": {
+            "stateMs": 17.400000035762787,
+            "paintedMs": 28.80000001192093
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 1.199999988079071,
+            "median": 3.399999976158142,
+            "p95": 3.900000035762787,
+            "max": 14.300000011920929
+          },
+          "longTasksMs": {
+            "n": 0
+          },
+          "frameIntervalMs": {
+            "n": 49,
+            "min": 16.5,
+            "median": 16.699999999999932,
+            "p95": 16.700000000000045,
+            "max": 16.799999999999997
+          },
+          "messages": 23,
+          "wsBytes": 46739,
+          "resources": 127,
+          "transferBytes": 1455067,
+          "encodedBytes": 1416967,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        },
+        {
+          "game": "checkers",
+          "cpuRate": 4,
+          "firstReadyMs": 258.36725000000115,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 2.800000011920929,
+            "median": 4,
+            "p95": 5.300000011920929,
+            "max": 5.700000047683716
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 31.099999964237213,
+            "median": 32.5,
+            "p95": 33.80000001192093,
+            "max": 34
+          },
+          "action": "move",
+          "actionLatency": {
+            "stateMs": 17.30000001192093,
+            "paintedMs": 31.80000001192093
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 2.400000035762787,
+            "median": 3.199999988079071,
+            "p95": 4.800000011920929,
+            "max": 16.69999998807907
+          },
+          "longTasksMs": {
+            "n": 1,
+            "min": 72,
+            "median": 72,
+            "p95": 72,
+            "max": 72
+          },
+          "frameIntervalMs": {
+            "n": 50,
+            "min": 16.59999999999991,
+            "median": 16.69999999999999,
+            "p95": 16.799999999999997,
+            "max": 83.30000000000001
+          },
+          "messages": 23,
+          "wsBytes": 46717,
+          "resources": 127,
+          "transferBytes": 1455067,
+          "encodedBytes": 1416967,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        },
+        {
+          "game": "nardy",
+          "cpuRate": 1,
+          "firstReadyMs": 121.01383300000089,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 0.800000011920929,
+            "median": 2,
+            "p95": 2.399999976158142,
+            "max": 2.600000023841858
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 30.799999952316284,
+            "median": 31.69999998807907,
+            "p95": 33,
+            "max": 33.30000001192093
+          },
+          "action": "move",
+          "actionLatency": {
+            "stateMs": 2.5,
+            "paintedMs": 30.700000047683716
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 0.3999999761581421,
+            "median": 1.0999999642372131,
+            "p95": 1.399999976158142,
+            "max": 1.600000023841858
+          },
+          "longTasksMs": {
+            "n": 0
+          },
+          "frameIntervalMs": {
+            "n": 49,
+            "min": 16.59999999999991,
+            "median": 16.69999999999999,
+            "p95": 16.700000000000045,
+            "max": 16.80000000000001
+          },
+          "messages": 23,
+          "wsBytes": 36094,
+          "resources": 127,
+          "transferBytes": 1455067,
+          "encodedBytes": 1416967,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        },
+        {
+          "game": "nardy",
+          "cpuRate": 4,
+          "firstReadyMs": 259.6319170000006,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 1.4000000357627869,
+            "median": 1.800000011920929,
+            "p95": 2.5,
+            "max": 2.899999976158142
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 25.899999976158142,
+            "median": 32.5,
+            "p95": 33.80000001192093,
+            "max": 38.299999952316284
+          },
+          "action": "move",
+          "actionLatency": {
+            "stateMs": 2.5,
+            "paintedMs": 32.19999998807907
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 0.7999999523162842,
+            "median": 1.199999988079071,
+            "p95": 1.899999976158142,
+            "max": 2
+          },
+          "longTasksMs": {
+            "n": 1,
+            "min": 71,
+            "median": 71,
+            "p95": 71,
+            "max": 71
+          },
+          "frameIntervalMs": {
+            "n": 50,
+            "min": 16.59999999999991,
+            "median": 16.69999999999999,
+            "p95": 16.700000000000045,
+            "max": 83.4
+          },
+          "messages": 24,
+          "wsBytes": 36109,
+          "resources": 127,
+          "transferBytes": 1455067,
+          "encodedBytes": 1416967,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        },
+        {
+          "game": "battleship",
+          "cpuRate": 1,
+          "firstReadyMs": 104.47225000000071,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 0.699999988079071,
+            "median": 2.100000023841858,
+            "p95": 2.5,
+            "max": 2.5
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 30.30000001192093,
+            "median": 31.899999976158142,
+            "p95": 33.80000001192093,
+            "max": 33.80000001192093
+          },
+          "action": "random",
+          "actionLatency": {
+            "stateMs": 5,
+            "paintedMs": 29.69999998807907
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 0.30000001192092896,
+            "median": 1.100000023841858,
+            "p95": 1.4000000357627869,
+            "max": 1.699999988079071
+          },
+          "longTasksMs": {
+            "n": 0
+          },
+          "frameIntervalMs": {
+            "n": 48,
+            "min": 16.5,
+            "median": 16.69999999999999,
+            "p95": 16.799999999999997,
+            "max": 16.80000000000001
+          },
+          "messages": 23,
+          "wsBytes": 35699,
+          "resources": 125,
+          "transferBytes": 1453765,
+          "encodedBytes": 1416265,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        },
+        {
+          "game": "battleship",
+          "cpuRate": 4,
+          "firstReadyMs": 241.2955839999995,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 0.8999999761581421,
+            "median": 1.4000000357627869,
+            "p95": 2.099999964237213,
+            "max": 2.399999976158142
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 31.100000023841858,
+            "median": 32.80000001192093,
+            "p95": 33.80000001192093,
+            "max": 34
+          },
+          "action": "random",
+          "actionLatency": {
+            "stateMs": 3.300000011920929,
+            "paintedMs": 31.5
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 0.19999998807907104,
+            "median": 1,
+            "p95": 1.5999999642372131,
+            "max": 2.300000011920929
+          },
+          "longTasksMs": {
+            "n": 1,
+            "min": 65,
+            "median": 65,
+            "p95": 65,
+            "max": 65
+          },
+          "frameIntervalMs": {
+            "n": 50,
+            "min": 16.5,
+            "median": 16.69999999999999,
+            "p95": 16.800000000000068,
+            "max": 66.69999999999999
+          },
+          "messages": 24,
+          "wsBytes": 35714,
+          "resources": 125,
+          "transferBytes": 1453765,
+          "encodedBytes": 1416265,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        }
+      ],
+      "db": {
+        "executions": 670,
+        "executionMs": {
+          "n": 670,
+          "min": 0.0012080000014975667,
+          "median": 0.003416000001379871,
+          "p95": 0.192124999999578,
+          "max": 1.8807910000000447
+        },
+        "counts": {
+          "store.getMeta.get": 1,
+          "store.getUser.get": 28,
+          "store.addEvent.run": 28,
+          "store.addSeen.run": 45,
+          "dynamic.all": 131,
+          "dynamic.get": 295,
+          "store.getProfile.get": 28,
+          "store.put.run": 92,
+          "store.addDecision.run": 2,
+          "store.trimDecisions.run": 2,
+          "store.del.run": 14,
+          "store.putGroup.run": 4
+        },
+        "preparedAfterStore": 426,
+        "prepareMs": {
+          "n": 426,
+          "min": 0.0020419999991645454,
+          "median": 0.005666999999903055,
+          "p95": 0.02599999999983993,
+          "max": 0.07570800000030431
+        }
+      },
+      "cleanup": {
+        "sessions": 0,
+        "rooms": 0,
+        "timers": 0,
+        "subscriptions": 0
+      }
+    },
+    {
+      "chromium": "153.0.8010.12",
+      "results": [
+        {
+          "game": "poker",
+          "cpuRate": 1,
+          "firstReadyMs": 121.91749999999956,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 1.5,
+            "median": 3.400000035762787,
+            "p95": 4.600000023841858,
+            "max": 6.100000023841858
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 30.899999976158142,
+            "median": 32,
+            "p95": 33.30000001192093,
+            "max": 33.5
+          },
+          "action": "act",
+          "actionLatency": {
+            "stateMs": 6.700000047683716,
+            "paintedMs": 32.200000047683716
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 1.300000011920929,
+            "median": 2.399999976158142,
+            "p95": 4.300000011920929,
+            "max": 5.300000011920929
+          },
+          "longTasksMs": {
+            "n": 0
+          },
+          "frameIntervalMs": {
+            "n": 49,
+            "min": 16.59999999999991,
+            "median": 16.69999999999999,
+            "p95": 16.799999999999955,
+            "max": 16.80000000000001
+          },
+          "messages": 23,
+          "wsBytes": 44604,
+          "resources": 128,
+          "transferBytes": 1581688,
+          "encodedBytes": 1543288,
+          "largest": [
+            {
+              "path": "/cards/KS.svg",
+              "transfer": 79973,
+              "encoded": 79673
+            },
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/cards/back.svg",
+              "transfer": 46563,
+              "encoded": 46263
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            }
+          ]
+        },
+        {
+          "game": "poker",
+          "cpuRate": 4,
+          "firstReadyMs": 261.2322920000006,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 3.399999976158142,
+            "median": 4.100000023841858,
+            "p95": 6,
+            "max": 7.5
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 31.19999998807907,
+            "median": 32.60000002384186,
+            "p95": 33.30000001192093,
+            "max": 33.80000001192093
+          },
+          "action": "act",
+          "actionLatency": {
+            "stateMs": 8.800000011920929,
+            "paintedMs": 31.899999976158142
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 2.699999988079071,
+            "median": 4,
+            "p95": 6.399999976158142,
+            "max": 7.100000023841858
+          },
+          "longTasksMs": {
+            "n": 1,
+            "min": 58,
+            "median": 58,
+            "p95": 58,
+            "max": 58
+          },
+          "frameIntervalMs": {
+            "n": 51,
+            "min": 16.59999999999991,
+            "median": 16.699999999999932,
+            "p95": 16.800000000000068,
+            "max": 83.29999999999998
+          },
+          "messages": 23,
+          "wsBytes": 44604,
+          "resources": 128,
+          "transferBytes": 1503357,
+          "encodedBytes": 1464957,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/cards/back.svg",
+              "transfer": 46563,
+              "encoded": 46263
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            }
+          ]
+        },
+        {
+          "game": "durak",
+          "cpuRate": 1,
+          "firstReadyMs": 137.9704160000001,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 2.100000023841858,
+            "median": 4.599999964237213,
+            "p95": 5.800000011920929,
+            "max": 6.399999976158142
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 30.30000001192093,
+            "median": 32,
+            "p95": 33.59999996423721,
+            "max": 33.60000002384186
+          },
+          "action": "attack",
+          "actionLatency": {
+            "stateMs": 6.699999988079071,
+            "paintedMs": 29.900000035762787
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 1.7000000476837158,
+            "median": 3.799999952316284,
+            "p95": 5.399999976158142,
+            "max": 5.399999976158142
+          },
+          "longTasksMs": {
+            "n": 0
+          },
+          "frameIntervalMs": {
+            "n": 50,
+            "min": 16.5,
+            "median": 16.69999999999999,
+            "p95": 16.700000000000045,
+            "max": 16.800000000000068
+          },
+          "messages": 23,
+          "wsBytes": 38483,
+          "resources": 133,
+          "transferBytes": 1914053,
+          "encodedBytes": 1874153,
+          "largest": [
+            {
+              "path": "/cards/JH.svg",
+              "transfer": 90843,
+              "encoded": 90543
+            },
+            {
+              "path": "/cards/QC.svg",
+              "transfer": 80075,
+              "encoded": 79775
+            },
+            {
+              "path": "/cards/QS.svg",
+              "transfer": 80069,
+              "encoded": 79769
+            },
+            {
+              "path": "/cards/QH.svg",
+              "transfer": 80007,
+              "encoded": 79707
+            },
+            {
+              "path": "/cards/QD.svg",
+              "transfer": 79953,
+              "encoded": 79653
+            }
+          ]
+        },
+        {
+          "game": "durak",
+          "cpuRate": 4,
+          "firstReadyMs": 329.9279580000002,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 2.100000023841858,
+            "median": 3.299999952316284,
+            "p95": 5.100000023841858,
+            "max": 7.900000035762787
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 28.80000001192093,
+            "median": 32.60000002384186,
+            "p95": 33.69999998807907,
+            "max": 33.700000047683716
+          },
+          "action": "take",
+          "actionLatency": {
+            "stateMs": 5.800000011920929,
+            "paintedMs": 19.399999976158142
+          },
+          "renderJSms": {
+            "n": 22,
+            "min": 1.699999988079071,
+            "median": 2.699999988079071,
+            "p95": 6.800000011920929,
+            "max": 6.899999976158142
+          },
+          "longTasksMs": {
+            "n": 1,
+            "min": 109,
+            "median": 109,
+            "p95": 109,
+            "max": 109
+          },
+          "frameIntervalMs": {
+            "n": 52,
+            "min": 16.59999999999991,
+            "median": 16.69999999999999,
+            "p95": 33.3,
+            "max": 100
+          },
+          "messages": 24,
+          "wsBytes": 39591,
+          "resources": 134,
+          "transferBytes": 1669152,
+          "encodedBytes": 1628952,
+          "largest": [
+            {
+              "path": "/cards/KC.svg",
+              "transfer": 79979,
+              "encoded": 79679
+            },
+            {
+              "path": "/cards/KH.svg",
+              "transfer": 79911,
+              "encoded": 79611
+            },
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/cards/back.svg",
+              "transfer": 46563,
+              "encoded": 46263
+            }
+          ]
+        },
+        {
+          "game": "colors",
+          "cpuRate": 1,
+          "firstReadyMs": 121.44287500000064,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 0.8999999761581421,
+            "median": 3.399999976158142,
+            "p95": 4.100000023841858,
+            "max": 5.899999976158142
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 29.5,
+            "median": 31.600000023841858,
+            "p95": 32.90000003576279,
+            "max": 33
+          },
+          "action": "play",
+          "actionLatency": {
+            "stateMs": 4.600000023841858,
+            "paintedMs": 34.19999998807907
+          },
+          "renderJSms": {
+            "n": 22,
+            "min": 0.5999999642372131,
+            "median": 2.300000011920929,
+            "p95": 3,
+            "max": 5
+          },
+          "longTasksMs": {
+            "n": 0
+          },
+          "frameIntervalMs": {
+            "n": 50,
+            "min": 16.599999999999966,
+            "median": 16.69999999999999,
+            "p95": 16.700000000000045,
+            "max": 16.799999999999997
+          },
+          "messages": 24,
+          "wsBytes": 41498,
+          "resources": 135,
+          "transferBytes": 1477959,
+          "encodedBytes": 1437459,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        },
+        {
+          "game": "colors",
+          "cpuRate": 4,
+          "firstReadyMs": 245.5657910000009,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 1.5,
+            "median": 2.5,
+            "p95": 3.600000023841858,
+            "max": 5
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 30.600000023841858,
+            "median": 32.30000001192093,
+            "p95": 33.5,
+            "max": 33.80000001192093
+          },
+          "action": "play",
+          "actionLatency": {
+            "stateMs": 4,
+            "paintedMs": 23.399999976158142
+          },
+          "renderJSms": {
+            "n": 22,
+            "min": 1.2999999523162842,
+            "median": 1.899999976158142,
+            "p95": 3.799999952316284,
+            "max": 4.600000023841858
+          },
+          "longTasksMs": {
+            "n": 0
+          },
+          "frameIntervalMs": {
+            "n": 51,
+            "min": 16.5,
+            "median": 16.699999999999932,
+            "p95": 16.800000000000068,
+            "max": 66.6
+          },
+          "messages": 24,
+          "wsBytes": 41507,
+          "resources": 135,
+          "transferBytes": 1479780,
+          "encodedBytes": 1439280,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        },
+        {
+          "game": "chess",
+          "cpuRate": 1,
+          "firstReadyMs": 121.40862500000003,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 1.399999976158142,
+            "median": 3.800000011920929,
+            "p95": 5.399999976158142,
+            "max": 5.600000023841858
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 30.80000001192093,
+            "median": 31.700000047683716,
+            "p95": 33.10000002384186,
+            "max": 33.30000001192093
+          },
+          "action": "move",
+          "actionLatency": {
+            "stateMs": 12,
+            "paintedMs": 29.600000023841858
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 1.0999999642372131,
+            "median": 2.599999964237213,
+            "p95": 4.400000035762787,
+            "max": 10.399999976158142
+          },
+          "longTasksMs": {
+            "n": 0
+          },
+          "frameIntervalMs": {
+            "n": 49,
+            "min": 16.59999999999991,
+            "median": 16.69999999999999,
+            "p95": 16.700000000000045,
+            "max": 16.80000000000001
+          },
+          "messages": 23,
+          "wsBytes": 42633,
+          "resources": 137,
+          "transferBytes": 1463831,
+          "encodedBytes": 1422731,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        },
+        {
+          "game": "chess",
+          "cpuRate": 4,
+          "firstReadyMs": 257.700582999998,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 2.899999976158142,
+            "median": 3.799999952316284,
+            "p95": 5,
+            "max": 5.300000011920929
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 31.5,
+            "median": 32.69999998807907,
+            "p95": 33.69999998807907,
+            "max": 33.700000047683716
+          },
+          "action": "move",
+          "actionLatency": {
+            "stateMs": 17.5,
+            "paintedMs": 31.69999998807907
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 2.199999988079071,
+            "median": 3.299999952316284,
+            "p95": 4.600000023841858,
+            "max": 16.900000035762787
+          },
+          "longTasksMs": {
+            "n": 1,
+            "min": 72,
+            "median": 72,
+            "p95": 72,
+            "max": 72
+          },
+          "frameIntervalMs": {
+            "n": 50,
+            "min": 16.5,
+            "median": 16.69999999999999,
+            "p95": 16.800000000000068,
+            "max": 83.4
+          },
+          "messages": 23,
+          "wsBytes": 42611,
+          "resources": 137,
+          "transferBytes": 1463831,
+          "encodedBytes": 1422731,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        },
+        {
+          "game": "checkers",
+          "cpuRate": 1,
+          "firstReadyMs": 138.5364580000023,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 1.2999999523162842,
+            "median": 3.699999988079071,
+            "p95": 4.899999976158142,
+            "max": 5.300000011920929
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 30,
+            "median": 31.700000047683716,
+            "p95": 33,
+            "max": 33.299999952316284
+          },
+          "action": "move",
+          "actionLatency": {
+            "stateMs": 9.599999964237213,
+            "paintedMs": 30.599999964237213
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 1,
+            "median": 2.699999988079071,
+            "p95": 4,
+            "max": 8.099999964237213
+          },
+          "longTasksMs": {
+            "n": 0
+          },
+          "frameIntervalMs": {
+            "n": 50,
+            "min": 16.59999999999991,
+            "median": 16.69999999999999,
+            "p95": 16.700000000000045,
+            "max": 16.800000000000068
+          },
+          "messages": 23,
+          "wsBytes": 46717,
+          "resources": 127,
+          "transferBytes": 1455067,
+          "encodedBytes": 1416967,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        },
+        {
+          "game": "checkers",
+          "cpuRate": 4,
+          "firstReadyMs": 291.8043749999997,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 2.5,
+            "median": 3.300000011920929,
+            "p95": 4.800000011920929,
+            "max": 5.5
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 31.19999998807907,
+            "median": 32.60000002384186,
+            "p95": 33.69999998807907,
+            "max": 34
+          },
+          "action": "move",
+          "actionLatency": {
+            "stateMs": 16.899999976158142,
+            "paintedMs": 31
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 2.300000011920929,
+            "median": 2.800000011920929,
+            "p95": 4.5,
+            "max": 16.5
+          },
+          "longTasksMs": {
+            "n": 1,
+            "min": 94,
+            "median": 94,
+            "p95": 94,
+            "max": 94
+          },
+          "frameIntervalMs": {
+            "n": 50,
+            "min": 16.5,
+            "median": 16.69999999999999,
+            "p95": 16.799999999999955,
+            "max": 116.69999999999999
+          },
+          "messages": 23,
+          "wsBytes": 46739,
+          "resources": 127,
+          "transferBytes": 1455067,
+          "encodedBytes": 1416967,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        },
+        {
+          "game": "nardy",
+          "cpuRate": 1,
+          "firstReadyMs": 121.30499999999665,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 0.800000011920929,
+            "median": 1.699999988079071,
+            "p95": 2.700000047683716,
+            "max": 2.900000035762787
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 30.700000047683716,
+            "median": 31.80000001192093,
+            "p95": 33,
+            "max": 33
+          },
+          "action": "move",
+          "actionLatency": {
+            "stateMs": 3,
+            "paintedMs": 31.100000023841858
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 0.5,
+            "median": 0.800000011920929,
+            "p95": 1.699999988079071,
+            "max": 1.7000000476837158
+          },
+          "longTasksMs": {
+            "n": 0
+          },
+          "frameIntervalMs": {
+            "n": 49,
+            "min": 16.59999999999991,
+            "median": 16.69999999999999,
+            "p95": 16.799999999999997,
+            "max": 16.800000000000068
+          },
+          "messages": 23,
+          "wsBytes": 36072,
+          "resources": 127,
+          "transferBytes": 1455067,
+          "encodedBytes": 1416967,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        },
+        {
+          "game": "nardy",
+          "cpuRate": 4,
+          "firstReadyMs": 257.3202089999977,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 0.699999988079071,
+            "median": 1.800000011920929,
+            "p95": 2.200000047683716,
+            "max": 2.899999976158142
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 17.700000047683716,
+            "median": 32.5,
+            "p95": 33.30000001192093,
+            "max": 33.69999998807907
+          },
+          "action": "move",
+          "actionLatency": {
+            "stateMs": 1.199999988079071,
+            "paintedMs": 32.30000001192093
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 0.3999999761581421,
+            "median": 1.100000023841858,
+            "p95": 1.800000011920929,
+            "max": 1.9000000357627869
+          },
+          "longTasksMs": {
+            "n": 1,
+            "min": 70,
+            "median": 70,
+            "p95": 70,
+            "max": 70
+          },
+          "frameIntervalMs": {
+            "n": 50,
+            "min": 16.599999999999966,
+            "median": 16.699999999999932,
+            "p95": 16.80000000000001,
+            "max": 83.4
+          },
+          "messages": 24,
+          "wsBytes": 36153,
+          "resources": 127,
+          "transferBytes": 1455067,
+          "encodedBytes": 1416967,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        },
+        {
+          "game": "battleship",
+          "cpuRate": 1,
+          "firstReadyMs": 120.9430420000026,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 0.800000011920929,
+            "median": 2.099999964237213,
+            "p95": 2.400000035762787,
+            "max": 2.600000023841858
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 30.799999952316284,
+            "median": 31.899999976158142,
+            "p95": 33,
+            "max": 33.30000001192093
+          },
+          "action": "random",
+          "actionLatency": {
+            "stateMs": 4.399999976158142,
+            "paintedMs": 30.69999998807907
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 0.3999999761581421,
+            "median": 1.100000023841858,
+            "p95": 1.4000000357627869,
+            "max": 2
+          },
+          "longTasksMs": {
+            "n": 0
+          },
+          "frameIntervalMs": {
+            "n": 49,
+            "min": 16.59999999999991,
+            "median": 16.69999999999999,
+            "p95": 16.700000000000045,
+            "max": 16.80000000000001
+          },
+          "messages": 23,
+          "wsBytes": 35677,
+          "resources": 125,
+          "transferBytes": 1453765,
+          "encodedBytes": 1416265,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        },
+        {
+          "game": "battleship",
+          "cpuRate": 4,
+          "firstReadyMs": 241.96608399999968,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 0.699999988079071,
+            "median": 1.600000023841858,
+            "p95": 2.799999952316284,
+            "max": 3
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 30.600000023841858,
+            "median": 32.5,
+            "p95": 33.30000001192093,
+            "max": 33.5
+          },
+          "action": "random",
+          "actionLatency": {
+            "stateMs": 2.300000011920929,
+            "paintedMs": 32.5
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 0.5,
+            "median": 1,
+            "p95": 1.899999976158142,
+            "max": 1.9000000357627869
+          },
+          "longTasksMs": {
+            "n": 1,
+            "min": 67,
+            "median": 67,
+            "p95": 67,
+            "max": 67
+          },
+          "frameIntervalMs": {
+            "n": 50,
+            "min": 16.59999999999991,
+            "median": 16.69999999999999,
+            "p95": 16.80000000000001,
+            "max": 66.6
+          },
+          "messages": 24,
+          "wsBytes": 35714,
+          "resources": 125,
+          "transferBytes": 1453765,
+          "encodedBytes": 1416265,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        }
+      ],
+      "db": {
+        "executions": 672,
+        "executionMs": {
+          "n": 672,
+          "min": 0.0012499999975261744,
+          "median": 0.0035420000021986198,
+          "p95": 0.22699999999895226,
+          "max": 2.5959169999987353
+        },
+        "counts": {
+          "store.getMeta.get": 1,
+          "store.getUser.get": 28,
+          "store.addEvent.run": 28,
+          "store.addSeen.run": 45,
+          "dynamic.all": 131,
+          "dynamic.get": 295,
+          "store.getProfile.get": 28,
+          "store.put.run": 90,
+          "store.addDecision.run": 2,
+          "store.trimDecisions.run": 2,
+          "store.del.run": 14,
+          "store.putGroup.run": 8
+        },
+        "preparedAfterStore": 426,
+        "prepareMs": {
+          "n": 426,
+          "min": 0.0016250000007858034,
+          "median": 0.005790999999589985,
+          "p95": 0.027167000000190455,
+          "max": 0.0885420000013255
+        }
+      },
+      "cleanup": {
+        "sessions": 0,
+        "rooms": 0,
+        "timers": 0,
+        "subscriptions": 0
+      }
+    },
+    {
+      "chromium": "153.0.8010.12",
+      "results": [
+        {
+          "game": "poker",
+          "cpuRate": 1,
+          "firstReadyMs": 138.53087500000038,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 1.800000011920929,
+            "median": 4,
+            "p95": 4.900000035762787,
+            "max": 5.100000023841858
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 30.80000001192093,
+            "median": 31.700000047683716,
+            "p95": 33.30000001192093,
+            "max": 33.60000002384186
+          },
+          "action": "act",
+          "actionLatency": {
+            "stateMs": 9.300000011920929,
+            "paintedMs": 31.100000023841858
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 1.399999976158142,
+            "median": 3.099999964237213,
+            "p95": 4.199999988079071,
+            "max": 4.199999988079071
+          },
+          "longTasksMs": {
+            "n": 0
+          },
+          "frameIntervalMs": {
+            "n": 50,
+            "min": 16.59999999999991,
+            "median": 16.69999999999999,
+            "p95": 16.700000000000045,
+            "max": 16.800000000000068
+          },
+          "messages": 23,
+          "wsBytes": 44604,
+          "resources": 128,
+          "transferBytes": 1581688,
+          "encodedBytes": 1543288,
+          "largest": [
+            {
+              "path": "/cards/KS.svg",
+              "transfer": 79973,
+              "encoded": 79673
+            },
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/cards/back.svg",
+              "transfer": 46563,
+              "encoded": 46263
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            }
+          ]
+        },
+        {
+          "game": "poker",
+          "cpuRate": 4,
+          "firstReadyMs": 258.333584,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 3.300000011920929,
+            "median": 5,
+            "p95": 6.400000035762787,
+            "max": 7.799999952316284
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 31.299999952316284,
+            "median": 32.5,
+            "p95": 33.39999997615814,
+            "max": 33.59999996423721
+          },
+          "action": "act",
+          "actionLatency": {
+            "stateMs": 8.800000011920929,
+            "paintedMs": 33.30000001192093
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 2.900000035762787,
+            "median": 4.100000023841858,
+            "p95": 6.299999952316284,
+            "max": 7
+          },
+          "longTasksMs": {
+            "n": 1,
+            "min": 55,
+            "median": 55,
+            "p95": 55,
+            "max": 55
+          },
+          "frameIntervalMs": {
+            "n": 51,
+            "min": 16.59999999999991,
+            "median": 16.69999999999999,
+            "p95": 16.800000000000068,
+            "max": 66.70000000000002
+          },
+          "messages": 23,
+          "wsBytes": 44604,
+          "resources": 128,
+          "transferBytes": 1503357,
+          "encodedBytes": 1464957,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/cards/back.svg",
+              "transfer": 46563,
+              "encoded": 46263
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            }
+          ]
+        },
+        {
+          "game": "durak",
+          "cpuRate": 1,
+          "firstReadyMs": 154.88508399999773,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 2,
+            "median": 4.700000047683716,
+            "p95": 6,
+            "max": 6.200000047683716
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 30.5,
+            "median": 32,
+            "p95": 32.69999998807907,
+            "max": 32.799999952316284
+          },
+          "action": "attack",
+          "actionLatency": {
+            "stateMs": 7.200000047683716,
+            "paintedMs": 30.80000001192093
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 1.800000011920929,
+            "median": 3.700000047683716,
+            "p95": 5.400000035762787,
+            "max": 5.700000047683716
+          },
+          "longTasksMs": {
+            "n": 0
+          },
+          "frameIntervalMs": {
+            "n": 51,
+            "min": 16.5,
+            "median": 16.69999999999999,
+            "p95": 16.700000000000045,
+            "max": 16.80000000000001
+          },
+          "messages": 23,
+          "wsBytes": 38505,
+          "resources": 133,
+          "transferBytes": 1914053,
+          "encodedBytes": 1874153,
+          "largest": [
+            {
+              "path": "/cards/JH.svg",
+              "transfer": 90843,
+              "encoded": 90543
+            },
+            {
+              "path": "/cards/QC.svg",
+              "transfer": 80075,
+              "encoded": 79775
+            },
+            {
+              "path": "/cards/QS.svg",
+              "transfer": 80069,
+              "encoded": 79769
+            },
+            {
+              "path": "/cards/QH.svg",
+              "transfer": 80007,
+              "encoded": 79707
+            },
+            {
+              "path": "/cards/QD.svg",
+              "transfer": 79953,
+              "encoded": 79653
+            }
+          ]
+        },
+        {
+          "game": "durak",
+          "cpuRate": 4,
+          "firstReadyMs": 307.5832499999997,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 2.199999988079071,
+            "median": 2.900000035762787,
+            "p95": 5.100000023841858,
+            "max": 7
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 31.19999998807907,
+            "median": 32.59999996423721,
+            "p95": 33.59999996423721,
+            "max": 34.10000002384186
+          },
+          "action": "take",
+          "actionLatency": {
+            "stateMs": 6.5,
+            "paintedMs": 20.5
+          },
+          "renderJSms": {
+            "n": 22,
+            "min": 1.699999988079071,
+            "median": 2.399999976158142,
+            "p95": 6.100000023841858,
+            "max": 6.199999988079071
+          },
+          "longTasksMs": {
+            "n": 1,
+            "min": 98,
+            "median": 98,
+            "p95": 98,
+            "max": 98
+          },
+          "frameIntervalMs": {
+            "n": 51,
+            "min": 16.59999999999991,
+            "median": 16.69999999999999,
+            "p95": 33.3,
+            "max": 100
+          },
+          "messages": 24,
+          "wsBytes": 39614,
+          "resources": 134,
+          "transferBytes": 1669152,
+          "encodedBytes": 1628952,
+          "largest": [
+            {
+              "path": "/cards/KC.svg",
+              "transfer": 79979,
+              "encoded": 79679
+            },
+            {
+              "path": "/cards/KH.svg",
+              "transfer": 79911,
+              "encoded": 79611
+            },
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/cards/back.svg",
+              "transfer": 46563,
+              "encoded": 46263
+            }
+          ]
+        },
+        {
+          "game": "colors",
+          "cpuRate": 1,
+          "firstReadyMs": 121.43887499999983,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 0.9000000357627869,
+            "median": 3.399999976158142,
+            "p95": 4,
+            "max": 4.099999964237213
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 31,
+            "median": 31.5,
+            "p95": 33.19999998807907,
+            "max": 33.39999997615814
+          },
+          "action": "play",
+          "actionLatency": {
+            "stateMs": 6.300000011920929,
+            "paintedMs": 34
+          },
+          "renderJSms": {
+            "n": 22,
+            "min": 0.6000000238418579,
+            "median": 2.399999976158142,
+            "p95": 2.899999976158142,
+            "max": 5.199999988079071
+          },
+          "longTasksMs": {
+            "n": 0
+          },
+          "frameIntervalMs": {
+            "n": 50,
+            "min": 16.599999999999966,
+            "median": 16.69999999999999,
+            "p95": 16.799999999999955,
+            "max": 16.80000000000001
+          },
+          "messages": 24,
+          "wsBytes": 41493,
+          "resources": 135,
+          "transferBytes": 1479484,
+          "encodedBytes": 1438984,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        },
+        {
+          "game": "colors",
+          "cpuRate": 4,
+          "firstReadyMs": 241.91058299999713,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 1.5,
+            "median": 2.200000047683716,
+            "p95": 3.199999988079071,
+            "max": 4.100000023841858
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 30.30000001192093,
+            "median": 32.60000002384186,
+            "p95": 33.80000001192093,
+            "max": 34
+          },
+          "action": "play",
+          "actionLatency": {
+            "stateMs": 3.699999988079071,
+            "paintedMs": 22.80000001192093
+          },
+          "renderJSms": {
+            "n": 22,
+            "min": 0.800000011920929,
+            "median": 1.600000023841858,
+            "p95": 3.199999988079071,
+            "max": 5
+          },
+          "longTasksMs": {
+            "n": 0
+          },
+          "frameIntervalMs": {
+            "n": 50,
+            "min": 16.59999999999991,
+            "median": 16.69999999999999,
+            "p95": 16.80000000000001,
+            "max": 66.69999999999999
+          },
+          "messages": 24,
+          "wsBytes": 41508,
+          "resources": 135,
+          "transferBytes": 1478587,
+          "encodedBytes": 1438087,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        },
+        {
+          "game": "chess",
+          "cpuRate": 1,
+          "firstReadyMs": 121.6494160000002,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 1.4000000357627869,
+            "median": 3.699999988079071,
+            "p95": 4.800000011920929,
+            "max": 4.899999976158142
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 30.599999964237213,
+            "median": 31.900000035762787,
+            "p95": 33.30000001192093,
+            "max": 33.5
+          },
+          "action": "move",
+          "actionLatency": {
+            "stateMs": 10.600000023841858,
+            "paintedMs": 32.5
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 1,
+            "median": 2.599999964237213,
+            "p95": 3.700000047683716,
+            "max": 8.800000011920929
+          },
+          "longTasksMs": {
+            "n": 0
+          },
+          "frameIntervalMs": {
+            "n": 49,
+            "min": 16.59999999999991,
+            "median": 16.69999999999999,
+            "p95": 16.700000000000045,
+            "max": 16.700000000000045
+          },
+          "messages": 23,
+          "wsBytes": 42633,
+          "resources": 137,
+          "transferBytes": 1463831,
+          "encodedBytes": 1422731,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        },
+        {
+          "game": "chess",
+          "cpuRate": 4,
+          "firstReadyMs": 275.8487909999967,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 2.800000011920929,
+            "median": 3.599999964237213,
+            "p95": 4.699999988079071,
+            "max": 4.900000035762787
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 31.400000035762787,
+            "median": 32.60000002384186,
+            "p95": 33.59999996423721,
+            "max": 33.69999998807907
+          },
+          "action": "move",
+          "actionLatency": {
+            "stateMs": 17,
+            "paintedMs": 32.19999998807907
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 2.199999988079071,
+            "median": 2.900000035762787,
+            "p95": 4.600000023841858,
+            "max": 16.5
+          },
+          "longTasksMs": {
+            "n": 1,
+            "min": 76,
+            "median": 76,
+            "p95": 76,
+            "max": 76
+          },
+          "frameIntervalMs": {
+            "n": 51,
+            "min": 16.59999999999991,
+            "median": 16.69999999999999,
+            "p95": 16.80000000000001,
+            "max": 83.30000000000001
+          },
+          "messages": 23,
+          "wsBytes": 42633,
+          "resources": 137,
+          "transferBytes": 1463831,
+          "encodedBytes": 1422731,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        },
+        {
+          "game": "checkers",
+          "cpuRate": 1,
+          "firstReadyMs": 121.23820800000249,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 1.5,
+            "median": 3.800000011920929,
+            "p95": 4.899999976158142,
+            "max": 5
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 31.19999998807907,
+            "median": 31.400000035762787,
+            "p95": 32.89999997615814,
+            "max": 32.90000003576279
+          },
+          "action": "move",
+          "actionLatency": {
+            "stateMs": 12.900000035762787,
+            "paintedMs": 30.5
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 1.100000023841858,
+            "median": 2.800000011920929,
+            "p95": 3.899999976158142,
+            "max": 10.800000011920929
+          },
+          "longTasksMs": {
+            "n": 0
+          },
+          "frameIntervalMs": {
+            "n": 49,
+            "min": 16.59999999999991,
+            "median": 16.69999999999999,
+            "p95": 16.700000000000045,
+            "max": 16.80000000000001
+          },
+          "messages": 23,
+          "wsBytes": 46717,
+          "resources": 127,
+          "transferBytes": 1455067,
+          "encodedBytes": 1416967,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        },
+        {
+          "game": "checkers",
+          "cpuRate": 4,
+          "firstReadyMs": 259.4577910000007,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 2.5,
+            "median": 3.800000011920929,
+            "p95": 4.900000035762787,
+            "max": 6.099999964237213
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 30.799999952316284,
+            "median": 32.59999996423721,
+            "p95": 33.39999997615814,
+            "max": 33.69999998807907
+          },
+          "action": "move",
+          "actionLatency": {
+            "stateMs": 17.100000023841858,
+            "paintedMs": 31.700000047683716
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 2.200000047683716,
+            "median": 2.900000035762787,
+            "p95": 5.100000023841858,
+            "max": 16.100000023841858
+          },
+          "longTasksMs": {
+            "n": 1,
+            "min": 76,
+            "median": 76,
+            "p95": 76,
+            "max": 76
+          },
+          "frameIntervalMs": {
+            "n": 50,
+            "min": 16.5,
+            "median": 16.69999999999999,
+            "p95": 16.800000000000068,
+            "max": 83.19999999999999
+          },
+          "messages": 23,
+          "wsBytes": 46695,
+          "resources": 127,
+          "transferBytes": 1455067,
+          "encodedBytes": 1416967,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        },
+        {
+          "game": "nardy",
+          "cpuRate": 1,
+          "firstReadyMs": 138.55462499999703,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 0.7999999523162842,
+            "median": 2.200000047683716,
+            "p95": 2.699999988079071,
+            "max": 2.800000011920929
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 30.200000047683716,
+            "median": 31.69999998807907,
+            "p95": 32.90000003576279,
+            "max": 32.90000003576279
+          },
+          "action": "move",
+          "actionLatency": {
+            "stateMs": 1.800000011920929,
+            "paintedMs": 30.900000035762787
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 0.3999999761581421,
+            "median": 1.2000000476837158,
+            "p95": 1.699999988079071,
+            "max": 1.9000000357627869
+          },
+          "longTasksMs": {
+            "n": 0
+          },
+          "frameIntervalMs": {
+            "n": 50,
+            "min": 16.5,
+            "median": 16.69999999999999,
+            "p95": 16.799999999999955,
+            "max": 16.800000000000068
+          },
+          "messages": 23,
+          "wsBytes": 36116,
+          "resources": 127,
+          "transferBytes": 1455067,
+          "encodedBytes": 1416967,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        },
+        {
+          "game": "nardy",
+          "cpuRate": 4,
+          "firstReadyMs": 260.1117499999964,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 1,
+            "median": 1.600000023841858,
+            "p95": 2.400000035762787,
+            "max": 2.5
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 19.200000047683716,
+            "median": 32.69999998807907,
+            "p95": 33.40000003576279,
+            "max": 33.40000003576279
+          },
+          "action": "move",
+          "actionLatency": {
+            "stateMs": 1.9000000357627869,
+            "paintedMs": 32.60000002384186
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 0.5999999642372131,
+            "median": 1.100000023841858,
+            "p95": 1.699999988079071,
+            "max": 1.7000000476837158
+          },
+          "longTasksMs": {
+            "n": 1,
+            "min": 68,
+            "median": 68,
+            "p95": 68,
+            "max": 68
+          },
+          "frameIntervalMs": {
+            "n": 51,
+            "min": 16.599999999999966,
+            "median": 16.699999999999932,
+            "p95": 16.80000000000001,
+            "max": 66.6
+          },
+          "messages": 24,
+          "wsBytes": 36153,
+          "resources": 127,
+          "transferBytes": 1455067,
+          "encodedBytes": 1416967,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        },
+        {
+          "game": "battleship",
+          "cpuRate": 1,
+          "firstReadyMs": 122.17445800000132,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 0.699999988079071,
+            "median": 2,
+            "p95": 2.300000011920929,
+            "max": 2.300000011920929
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 30.600000023841858,
+            "median": 31.399999976158142,
+            "p95": 33,
+            "max": 33.5
+          },
+          "action": "random",
+          "actionLatency": {
+            "stateMs": 3.899999976158142,
+            "paintedMs": 29.69999998807907
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 0.30000001192092896,
+            "median": 1.0999999642372131,
+            "p95": 1.300000011920929,
+            "max": 1.899999976158142
+          },
+          "longTasksMs": {
+            "n": 0
+          },
+          "frameIntervalMs": {
+            "n": 49,
+            "min": 16.5,
+            "median": 16.69999999999999,
+            "p95": 16.799999999999955,
+            "max": 16.80000000000001
+          },
+          "messages": 23,
+          "wsBytes": 35677,
+          "resources": 125,
+          "transferBytes": 1453765,
+          "encodedBytes": 1416265,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        },
+        {
+          "game": "battleship",
+          "cpuRate": 4,
+          "firstReadyMs": 275.70195899999817,
+          "refreshStateMs": {
+            "n": 20,
+            "min": 0.800000011920929,
+            "median": 1.5,
+            "p95": 2.199999988079071,
+            "max": 2.199999988079071
+          },
+          "refreshPaintedMs": {
+            "n": 20,
+            "min": 29.5,
+            "median": 32.200000047683716,
+            "p95": 33.80000001192093,
+            "max": 34.19999998807907
+          },
+          "action": "random",
+          "actionLatency": {
+            "stateMs": 2.800000011920929,
+            "paintedMs": 33.10000002384186
+          },
+          "renderJSms": {
+            "n": 21,
+            "min": 0.5,
+            "median": 1,
+            "p95": 1.7999999523162842,
+            "max": 2
+          },
+          "longTasksMs": {
+            "n": 1,
+            "min": 72,
+            "median": 72,
+            "p95": 72,
+            "max": 72
+          },
+          "frameIntervalMs": {
+            "n": 51,
+            "min": 16.5,
+            "median": 16.69999999999999,
+            "p95": 16.800000000000068,
+            "max": 83.19999999999999
+          },
+          "messages": 24,
+          "wsBytes": 35714,
+          "resources": 125,
+          "transferBytes": 1453765,
+          "encodedBytes": 1416265,
+          "largest": [
+            {
+              "path": "/games/poker.js",
+              "transfer": 74000,
+              "encoded": 73700
+            },
+            {
+              "path": "/games/battleship.js",
+              "transfer": 48838,
+              "encoded": 48538
+            },
+            {
+              "path": "/games/durak.js",
+              "transfer": 45921,
+              "encoded": 45621
+            },
+            {
+              "path": "/games/chess.js",
+              "transfer": 45463,
+              "encoded": 45163
+            },
+            {
+              "path": "/games/checkers.js",
+              "transfer": 45267,
+              "encoded": 44967
+            }
+          ]
+        }
+      ],
+      "db": {
+        "executions": 671,
+        "executionMs": {
+          "n": 671,
+          "min": 0.0012080000014975667,
+          "median": 0.003665999996883329,
+          "p95": 0.20195799999783048,
+          "max": 0.801792000002024
+        },
+        "counts": {
+          "store.getMeta.get": 1,
+          "store.getUser.get": 28,
+          "store.addEvent.run": 28,
+          "store.addSeen.run": 45,
+          "dynamic.all": 131,
+          "dynamic.get": 295,
+          "store.getProfile.get": 28,
+          "store.put.run": 90,
+          "store.addDecision.run": 2,
+          "store.trimDecisions.run": 2,
+          "store.del.run": 14,
+          "store.putGroup.run": 7
+        },
+        "preparedAfterStore": 426,
+        "prepareMs": {
+          "n": 426,
+          "min": 0.00204200000007404,
+          "median": 0.006041000000550412,
+          "p95": 0.02937499999825377,
+          "max": 0.17899999999644933
+        }
+      },
+      "cleanup": {
+        "sessions": 0,
+        "rooms": 0,
+        "timers": 0,
+        "subscriptions": 0
+      }
+    }
+  ],
+  "soak": [
+    {
+      "wallMs": 120106.57483299999,
+      "cpuMs": 14539.71,
+      "cpuPercentOneCore": 12.105673665422959,
+      "refreshMs": {
+        "n": 9600,
+        "min": 0.8169580000103451,
+        "median": 3.718124999999418,
+        "p95": 5.725541999992856,
+        "max": 8.997500000012224
+      },
+      "reconnectMs": {
+        "n": 120,
+        "min": 0.5668750000040745,
+        "median": 1.160875000001397,
+        "p95": 3.109834000002593,
+        "max": 4.811541000002762
+      },
+      "actions": {
+        "poker": {
+          "n": 47,
+          "min": 1.206917000003159,
+          "median": 4.067332999999053,
+          "p95": 7.191125000012107,
+          "max": 11.332957999999053
+        },
+        "durak": {
+          "n": 41,
+          "min": 0.6567079999949783,
+          "median": 1.5574580000102287,
+          "p95": 2.4209590000027674,
+          "max": 2.88200000001234
+        },
+        "colors": {
+          "n": 38,
+          "min": 0.8223329999891575,
+          "median": 1.6202090000006137,
+          "p95": 3.169583999995666,
+          "max": 3.2390829999931157
+        },
+        "chess": {
+          "n": 153,
+          "min": 0.4509169999946607,
+          "median": 2.3942089999909513,
+          "p95": 4.777791000000434,
+          "max": 10.96645899998839
+        },
+        "checkers": {
+          "n": 166,
+          "min": 0.28012499999749707,
+          "median": 1.7533750000002328,
+          "p95": 3.534125000005588,
+          "max": 26.399457999999868
+        },
+        "nardy": {
+          "n": 134,
+          "min": 0.20583299999998417,
+          "median": 1.7079589999921154,
+          "p95": 2.861332999993465,
+          "max": 5.594666999997571
+        },
+        "battleship": {
+          "n": 87,
+          "min": 0.3797080000003916,
+          "median": 1.4430409999986296,
+          "p95": 3.191958999988856,
+          "max": 3.7753340000053868
+        }
+      },
+      "botThinkMs": {
+        "poker": {
+          "n": 86,
+          "min": 0.028415999986464158,
+          "median": 0.6604999999981374,
+          "p95": 1.9457909999910044,
+          "max": 2.9225829999995767
+        },
+        "durak": {
+          "n": 104,
+          "min": 0.013791000004857779,
+          "median": 0.07708300001104362,
+          "p95": 0.24041700000088895,
+          "max": 1.194666999996116
+        },
+        "colors": {
+          "n": 93,
+          "min": 0.01862500000424916,
+          "median": 0.09104200001456775,
+          "p95": 0.21883399999933317,
+          "max": 1.0219170000054874
+        },
+        "chess": {
+          "n": 153,
+          "min": 0.32829199999105185,
+          "median": 28.631291999990935,
+          "p95": 75.13674999999057,
+          "max": 94.64504200000374
+        },
+        "checkers": {
+          "n": 162,
+          "min": 0.10116700000071432,
+          "median": 1.9624999999941792,
+          "p95": 9.0659169999999,
+          "max": 67.90937499999563
+        },
+        "nardy": {
+          "n": 137,
+          "min": 0.009500000000116415,
+          "median": 0.07237500000337604,
+          "p95": 0.9930000000022119,
+          "max": 1.668416000000434
+        },
+        "battleship": {
+          "n": 99,
+          "min": 0.019333000003825873,
+          "median": 0.0978330000070855,
+          "p95": 0.30883300000277814,
+          "max": 1.0120829999941634
+        }
+      },
+      "eventLoopMs": {
+        "p50": 11.042815,
+        "p95": 11.173887,
+        "max": 30.801919
+      },
+      "before": {
+        "heapMB": 49.154327392578125,
+        "rssMB": 302.390625
+      },
+      "underLoad": {
+        "heapMB": 51.409324645996094,
+        "rssMB": 272.390625
+      },
+      "samples": [
+        {
+          "seconds": 0.003662750000003143,
+          "heapMB": 49.14674377441406,
+          "rssMB": 303.46875,
+          "sessions": 27,
+          "timers": 37
+        },
+        {
+          "seconds": 10.013593208000005,
+          "heapMB": 50.059295654296875,
+          "rssMB": 311.71875,
+          "sessions": 27,
+          "timers": 34
+        },
+        {
+          "seconds": 20.012136542,
+          "heapMB": 50.355018615722656,
+          "rssMB": 313.09375,
+          "sessions": 27,
+          "timers": 34
+        },
+        {
+          "seconds": 30.023693250000004,
+          "heapMB": 50.55332946777344,
+          "rssMB": 309.03125,
+          "sessions": 27,
+          "timers": 35
+        },
+        {
+          "seconds": 40.04278187500001,
+          "heapMB": 50.72923278808594,
+          "rssMB": 291.671875,
+          "sessions": 27,
+          "timers": 34
+        },
+        {
+          "seconds": 50.043554958,
+          "heapMB": 50.77178192138672,
+          "rssMB": 267.765625,
+          "sessions": 27,
+          "timers": 33
+        },
+        {
+          "seconds": 60.05159725,
+          "heapMB": 50.81190490722656,
+          "rssMB": 271.03125,
+          "sessions": 27,
+          "timers": 23
+        },
+        {
+          "seconds": 70.056404167,
+          "heapMB": 51.012718200683594,
+          "rssMB": 265.984375,
+          "sessions": 27,
+          "timers": 24
+        },
+        {
+          "seconds": 80.056090875,
+          "heapMB": 51.092979431152344,
+          "rssMB": 265.5,
+          "sessions": 27,
+          "timers": 23
+        },
+        {
+          "seconds": 90.06164033299999,
+          "heapMB": 51.164573669433594,
+          "rssMB": 265.765625,
+          "sessions": 27,
+          "timers": 23
+        },
+        {
+          "seconds": 100.076317167,
+          "heapMB": 51.225067138671875,
+          "rssMB": 265.453125,
+          "sessions": 27,
+          "timers": 24
+        },
+        {
+          "seconds": 110.0712575,
+          "heapMB": 51.31786346435547,
+          "rssMB": 269.734375,
+          "sessions": 27,
+          "timers": 24
+        }
+      ],
+      "traffic": {
+        "messages": 11267,
+        "bytes": 24720771
+      },
+      "db": {
+        "executions": 3047,
+        "executionMs": {
+          "n": 3047,
+          "min": 0.0011250000025029294,
+          "median": 0.18995800000266172,
+          "p95": 1.4856250000011642,
+          "max": 22.856667000000016
+        },
+        "counts": {
+          "store.getMeta.get": 1,
+          "store.getUser.get": 27,
+          "store.addEvent.run": 65,
+          "store.addSeen.run": 167,
+          "dynamic.all": 293,
+          "dynamic.get": 835,
+          "store.getProfile.get": 27,
+          "store.put.run": 1574,
+          "store.addDecision.run": 29,
+          "store.trimDecisions.run": 29
+        },
+        "preparedAfterStore": 1128,
+        "prepareMs": {
+          "n": 1128,
+          "min": 0.0014159999991534278,
+          "median": 0.009042000005138107,
+          "p95": 0.04204100000060862,
+          "max": 0.20933300000615418
+        }
+      },
+      "cleanup": {
+        "sessions": 0,
+        "rooms": 0,
+        "timers": 0,
+        "subscriptions": 0
+      },
+      "afterCleanup": {
+        "heapMB": 51.09251403808594,
+        "rssMB": 272.609375
+      }
+    },
+    {
+      "wallMs": 120108.32829200002,
+      "cpuMs": 15161.885,
+      "cpuPercentOneCore": 12.623508474066305,
+      "refreshMs": {
+        "n": 9600,
+        "min": 0.6108750000130385,
+        "median": 3.7269580000138376,
+        "p95": 5.26804200001061,
+        "max": 12.767040999984602
+      },
+      "reconnectMs": {
+        "n": 120,
+        "min": 0.3731660000048578,
+        "median": 1.0475830000068527,
+        "p95": 3.0877500000060536,
+        "max": 5.252375000010943
+      },
+      "actions": {
+        "poker": {
+          "n": 43,
+          "min": 0.7757500000006985,
+          "median": 4.265499999979511,
+          "p95": 6.555332999996608,
+          "max": 9.529624999995576
+        },
+        "durak": {
+          "n": 36,
+          "min": 0.43112500000279397,
+          "median": 1.4565000000002328,
+          "p95": 2.9599170000001322,
+          "max": 3.5382079999835696
+        },
+        "colors": {
+          "n": 65,
+          "min": 0.2947089999797754,
+          "median": 1.5480420000094455,
+          "p95": 2.4906670000054874,
+          "max": 2.7841670000052545
+        },
+        "chess": {
+          "n": 156,
+          "min": 0.41250000000582077,
+          "median": 2.363207999995211,
+          "p95": 5.768041000002995,
+          "max": 8.185791999974754
+        },
+        "checkers": {
+          "n": 168,
+          "min": 0.298291999992216,
+          "median": 1.9145840000128374,
+          "p95": 3.7201249999925494,
+          "max": 25.45891699998174
+        },
+        "nardy": {
+          "n": 133,
+          "min": 0.27741599999717437,
+          "median": 1.70516700000735,
+          "p95": 3.548665999987861,
+          "max": 5.04879100000835
+        },
+        "battleship": {
+          "n": 93,
+          "min": 0.33820899997954257,
+          "median": 1.3972500000090804,
+          "p95": 3.33116699999664,
+          "max": 5.8229580000042915
+        }
+      },
+      "botThinkMs": {
+        "poker": {
+          "n": 84,
+          "min": 0.03462500000023283,
+          "median": 0.6160830000007991,
+          "p95": 0.9580419999838341,
+          "max": 1.5323330000101123
+        },
+        "durak": {
+          "n": 99,
+          "min": 0.01591700001154095,
+          "median": 0.06075000000419095,
+          "p95": 0.10079100000439212,
+          "max": 0.15608299997984432
+        },
+        "colors": {
+          "n": 91,
+          "min": 0.005208000016864389,
+          "median": 0.07545800000661984,
+          "p95": 0.14766600000439212,
+          "max": 0.17037500001606531
+        },
+        "chess": {
+          "n": 154,
+          "min": 0.2506670000148006,
+          "median": 52.71829200000502,
+          "p95": 77.40866700003971,
+          "max": 134.52066700000432
+        },
+        "checkers": {
+          "n": 163,
+          "min": 0.10466700000688434,
+          "median": 1.7967500000086147,
+          "p95": 7.784000000014203,
+          "max": 11.273500000010245
+        },
+        "nardy": {
+          "n": 136,
+          "min": 0.004458999988855794,
+          "median": 0.0484170000127051,
+          "p95": 0.11666600001626648,
+          "max": 0.1360839999979362
+        },
+        "battleship": {
+          "n": 91,
+          "min": 0.01454200001899153,
+          "median": 0.07958399999188259,
+          "p95": 0.1239169999898877,
+          "max": 0.875333000003593
+        }
+      },
+      "eventLoopMs": {
+        "p50": 11.042815,
+        "p95": 11.190271,
+        "max": 34.078719
+      },
+      "before": {
+        "heapMB": 50.38153839111328,
+        "rssMB": 272.921875
+      },
+      "underLoad": {
+        "heapMB": 51.48869323730469,
+        "rssMB": 228.3125
+      },
+      "samples": [
+        {
+          "seconds": 0.0037441249999974387,
+          "heapMB": 50.59642028808594,
+          "rssMB": 275.734375,
+          "sessions": 27,
+          "timers": 37
+        },
+        {
+          "seconds": 10.014571999999985,
+          "heapMB": 50.836830139160156,
+          "rssMB": 279.65625,
+          "sessions": 27,
+          "timers": 34
+        },
+        {
+          "seconds": 20.02228904199999,
+          "heapMB": 50.94822692871094,
+          "rssMB": 278.40625,
+          "sessions": 27,
+          "timers": 34
+        },
+        {
+          "seconds": 30.036671541999997,
+          "heapMB": 51.02806854248047,
+          "rssMB": 278.921875,
+          "sessions": 27,
+          "timers": 34
+        },
+        {
+          "seconds": 40.03239841699999,
+          "heapMB": 51.13188171386719,
+          "rssMB": 232.859375,
+          "sessions": 27,
+          "timers": 34
+        },
+        {
+          "seconds": 50.054133417,
+          "heapMB": 51.18382263183594,
+          "rssMB": 256.453125,
+          "sessions": 27,
+          "timers": 34
+        },
+        {
+          "seconds": 60.056603833000004,
+          "heapMB": 51.18824005126953,
+          "rssMB": 256.609375,
+          "sessions": 27,
+          "timers": 23
+        },
+        {
+          "seconds": 70.05231962500001,
+          "heapMB": 51.318206787109375,
+          "rssMB": 255.5625,
+          "sessions": 27,
+          "timers": 24
+        },
+        {
+          "seconds": 80.05657495800001,
+          "heapMB": 51.30403137207031,
+          "rssMB": 219.140625,
+          "sessions": 27,
+          "timers": 23
+        },
+        {
+          "seconds": 90.06370458299999,
+          "heapMB": 51.32585906982422,
+          "rssMB": 262.421875,
+          "sessions": 27,
+          "timers": 24
+        },
+        {
+          "seconds": 100.0701715,
+          "heapMB": 51.380767822265625,
+          "rssMB": 222.78125,
+          "sessions": 27,
+          "timers": 24
+        },
+        {
+          "seconds": 110.07405458299999,
+          "heapMB": 51.46746826171875,
+          "rssMB": 225.4375,
+          "sessions": 27,
+          "timers": 23
+        }
+      ],
+      "traffic": {
+        "messages": 11279,
+        "bytes": 24694894
+      },
+      "db": {
+        "executions": 3055,
+        "executionMs": {
+          "n": 3055,
+          "min": 0.001041000010445714,
+          "median": 0.17466699998476543,
+          "p95": 1.750499999994645,
+          "max": 31.81870900001377
+        },
+        "counts": {
+          "store.getMeta.get": 1,
+          "store.getUser.get": 27,
+          "store.addEvent.run": 65,
+          "store.addSeen.run": 167,
+          "dynamic.all": 299,
+          "dynamic.get": 835,
+          "store.getProfile.get": 27,
+          "store.put.run": 1586,
+          "store.addDecision.run": 24,
+          "store.trimDecisions.run": 24
+        },
+        "preparedAfterStore": 1134,
+        "prepareMs": {
+          "n": 1134,
+          "min": 0.0013329999928828329,
+          "median": 0.007665999990422279,
+          "p95": 0.039958000008482486,
+          "max": 0.33783399997628294
+        }
+      },
+      "cleanup": {
+        "sessions": 0,
+        "rooms": 0,
+        "timers": 0,
+        "subscriptions": 0
+      },
+      "afterCleanup": {
+        "heapMB": 51.19624328613281,
+        "rssMB": 228.59375
+      }
+    },
+    {
+      "wallMs": 120103.18166599999,
+      "cpuMs": 14813.977,
+      "cpuPercentOneCore": 12.334375155186825,
+      "refreshMs": {
+        "n": 9600,
+        "min": 0.7397909999708645,
+        "median": 3.2186250000377186,
+        "p95": 5.070125000027474,
+        "max": 7.947333999967668
+      },
+      "reconnectMs": {
+        "n": 120,
+        "min": 0.4899169999989681,
+        "median": 1.2138330000452697,
+        "p95": 3.433791999996174,
+        "max": 4.438792000000831
+      },
+      "actions": {
+        "poker": {
+          "n": 37,
+          "min": 0.82608299999265,
+          "median": 3.123665999970399,
+          "p95": 4.812417000008281,
+          "max": 5.548458000004757
+        },
+        "durak": {
+          "n": 46,
+          "min": 0.2902919999905862,
+          "median": 1.6303750000079162,
+          "p95": 2.1737909999792464,
+          "max": 3.5624169999500737
+        },
+        "colors": {
+          "n": 65,
+          "min": 0.3630000000121072,
+          "median": 1.5843750000349246,
+          "p95": 2.413791000028141,
+          "max": 3.4843329999712296
+        },
+        "chess": {
+          "n": 163,
+          "min": 0.3897080000024289,
+          "median": 1.735707999963779,
+          "p95": 3.1878750000032596,
+          "max": 5.978332999977283
+        },
+        "checkers": {
+          "n": 169,
+          "min": 0.3642499999841675,
+          "median": 1.7228330000070855,
+          "p95": 2.916917000024114,
+          "max": 3.845499999995809
+        },
+        "nardy": {
+          "n": 131,
+          "min": 0.27745799999684095,
+          "median": 1.416709000011906,
+          "p95": 2.725333000009414,
+          "max": 3.3258330000098795
+        },
+        "battleship": {
+          "n": 95,
+          "min": 0.33216700004413724,
+          "median": 1.4601670000120066,
+          "p95": 2.5856669999775477,
+          "max": 3.0704590000095777
+        }
+      },
+      "botThinkMs": {
+        "poker": {
+          "n": 82,
+          "min": 0.13095900003099814,
+          "median": 0.5686250000144355,
+          "p95": 0.8487500000046566,
+          "max": 1.2726670000120066
+        },
+        "durak": {
+          "n": 105,
+          "min": 0.011125000019092113,
+          "median": 0.06429100001696497,
+          "p95": 0.09620800003176555,
+          "max": 0.10941600002115592
+        },
+        "colors": {
+          "n": 89,
+          "min": 0.019124999991618097,
+          "median": 0.07087499997578561,
+          "p95": 0.16466599999694154,
+          "max": 0.27916700002970174
+        },
+        "chess": {
+          "n": 161,
+          "min": 0.34333299996796995,
+          "median": 43.84829200000968,
+          "p95": 75.46799999999348,
+          "max": 87.51866600004723
+        },
+        "checkers": {
+          "n": 165,
+          "min": 0.08912499999860302,
+          "median": 1.8467909999890253,
+          "p95": 7.922833000018727,
+          "max": 10.121291999996174
+        },
+        "nardy": {
+          "n": 134,
+          "min": 0.006667000008746982,
+          "median": 0.049208000011276454,
+          "p95": 0.10808299999916926,
+          "max": 0.14374999998835847
+        },
+        "battleship": {
+          "n": 91,
+          "min": 0.02595899999141693,
+          "median": 0.08537500002421439,
+          "p95": 0.12533300003269687,
+          "max": 0.8322080000070855
+        }
+      },
+      "eventLoopMs": {
+        "p50": 11.042815,
+        "p95": 11.124735,
+        "max": 29.491199
+      },
+      "before": {
+        "heapMB": 50.609169006347656,
+        "rssMB": 228.90625
+      },
+      "underLoad": {
+        "heapMB": 51.56489562988281,
+        "rssMB": 263.953125
+      },
+      "samples": [
+        {
+          "seconds": 0.003460583000036422,
+          "heapMB": 50.93785858154297,
+          "rssMB": 231.203125,
+          "sessions": 27,
+          "timers": 37
+        },
+        {
+          "seconds": 10.024169416000019,
+          "heapMB": 51.18916320800781,
+          "rssMB": 261.875,
+          "sessions": 27,
+          "timers": 34
+        },
+        {
+          "seconds": 20.027165833000037,
+          "heapMB": 51.259124755859375,
+          "rssMB": 277.71875,
+          "sessions": 27,
+          "timers": 34
+        },
+        {
+          "seconds": 30.025721250000004,
+          "heapMB": 51.288055419921875,
+          "rssMB": 277.859375,
+          "sessions": 27,
+          "timers": 34
+        },
+        {
+          "seconds": 40.034638083000026,
+          "heapMB": 51.36144256591797,
+          "rssMB": 278.078125,
+          "sessions": 27,
+          "timers": 34
+        },
+        {
+          "seconds": 50.03010591600003,
+          "heapMB": 51.36522674560547,
+          "rssMB": 279.265625,
+          "sessions": 27,
+          "timers": 33
+        },
+        {
+          "seconds": 60.03898350000003,
+          "heapMB": 51.30768585205078,
+          "rssMB": 279.40625,
+          "sessions": 27,
+          "timers": 24
+        },
+        {
+          "seconds": 70.045135833,
+          "heapMB": 51.489524841308594,
+          "rssMB": 279.6875,
+          "sessions": 27,
+          "timers": 24
+        },
+        {
+          "seconds": 80.05062554099999,
+          "heapMB": 51.411582946777344,
+          "rssMB": 249.1875,
+          "sessions": 27,
+          "timers": 24
+        },
+        {
+          "seconds": 90.05875579100004,
+          "heapMB": 51.46852111816406,
+          "rssMB": 253.28125,
+          "sessions": 27,
+          "timers": 24
+        },
+        {
+          "seconds": 100.06708583300002,
+          "heapMB": 51.53129577636719,
+          "rssMB": 263.71875,
+          "sessions": 27,
+          "timers": 23
+        },
+        {
+          "seconds": 110.06163437500003,
+          "heapMB": 51.56153106689453,
+          "rssMB": 263.75,
+          "sessions": 27,
+          "timers": 24
+        }
+      ],
+      "traffic": {
+        "messages": 11300,
+        "bytes": 24473374
+      },
+      "db": {
+        "executions": 3045,
+        "executionMs": {
+          "n": 3045,
+          "min": 0.0010840000468306243,
+          "median": 0.16866600001230836,
+          "p95": 0.8231249999953434,
+          "max": 4.398207999998704
+        },
+        "counts": {
+          "store.getMeta.get": 1,
+          "store.getUser.get": 27,
+          "store.addEvent.run": 62,
+          "store.addSeen.run": 167,
+          "dynamic.all": 275,
+          "dynamic.get": 835,
+          "store.getProfile.get": 27,
+          "store.put.run": 1607,
+          "store.addDecision.run": 22,
+          "store.trimDecisions.run": 22
+        },
+        "preparedAfterStore": 1110,
+        "prepareMs": {
+          "n": 1110,
+          "min": 0.0013749999925494194,
+          "median": 0.009084000019356608,
+          "p95": 0.04229200002737343,
+          "max": 0.1522920000134036
+        }
+      },
+      "cleanup": {
+        "sessions": 0,
+        "rooms": 0,
+        "timers": 0,
+        "subscriptions": 0
+      },
+      "afterCleanup": {
+        "heapMB": 51.23784637451172,
+        "rssMB": 263.96875
+      }
+    }
+  ]
+}

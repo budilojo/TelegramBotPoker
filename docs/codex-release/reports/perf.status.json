@@ -1,0 +1,64 @@
+{
+  "id": "perf",
+  "attemptId": "e1591183-f4a0-4eaa-bc27-e22af34d6b11",
+  "status": "partial",
+  "summary": "Вся локальная задача L выполнена: продолжены сохранённые исходная/контрольная серии, свежая серия 3×120 с с ботами и 42 экранами; legacy I повторён изолированно. Добавлена строгая проверка 210 лобби/630 страниц, 2/2 поломки пойманы. npm test 1565/1565, профильный e2e 14 сценариев, приватность 4841 перерисовка — зелёные. Безопасное улучшение/удаление не обосновано, приложение не менялось; ускорение не заявлено. Только внешний остаток: настоящие устройства/Telegram, реальная оплата и телефон не проверены. Без push/выкатки.",
+  "tests": [
+    {
+      "command": "git fetch origin redesign; git rev-list --left-right --count HEAD...origin/redesign",
+      "result": "exit 0, 0/0; сохранённые незакоммиченные файлы L продолжены без reset/stash/clean",
+      "environment": "Git/redesign, 31.10.2026"
+    },
+    {
+      "command": "node --expose-gc --disable-warning=ExperimentalWarning tools/perf-suite.mjs",
+      "result": "Свежий exit 0: 3×120 с, 42 браузерных контекста; по 9600 refresh и 120 reconnect/run, 7 ботов действительно решали. Refresh p95 4,77/4,93/4,92 мс, CPU 12,15/12,49/11,76 % одного ядра. Все cleanup=0; suite-resume.json",
+      "environment": "macOS 26.6.2 (Darwin 25.6.0) arm64, Node 24.12.0, 10 логических ядер, Playwright 1.63.0/Chromium; localhost, временная SQLite, TelegramStub, отдельно от тестов"
+    },
+    {
+      "command": "node --expose-gc --disable-warning=ExperimentalWarning tools/perf-baseline.mjs",
+      "result": "Свежий exit 0, 3 повтора; 10 столов/20 WS/400 refresh/10 ходов/10 reconnect/100 save; в каждом 450 сообщений, 825930 байт, sessionsAfterClose=0. legacy-resume.json",
+      "environment": "Та же локальная среда, 320×568, отдельно от suite и тестов, TelegramStub"
+    },
+    {
+      "command": "node --expose-gc --disable-warning=ExperimentalWarning tools/load-check.mjs",
+      "result": "Свежий exit 0: 100 таймеров → 0, комнаты → 0; 300 закрытых страниц оставляют единственную открытую; forget → 0; 1000/1000 сообщений в 50 чатов. Короткие наблюдения, без assert; load-check-resume.txt",
+      "environment": "FakeClock, память, TelegramStub, отдельно от других нагрузок"
+    },
+    {
+      "command": "node --expose-gc --disable-warning=ExperimentalWarning tools/perf-lifecycle.mjs",
+      "result": "exit 0; 30 циклов × 7 игр, 210 лобби/630 страниц, после каждого цикла все проверенные временные регистры 0; lifecycle.json",
+      "environment": "Node, SQLite :memory:, FakeClock и TelegramStub; без HTTP/сервера"
+    },
+    {
+      "command": "node tools/perf-lifecycle-teeth.mjs; git diff --exit-code -- bot/hub.js",
+      "result": "exit 0, 2/2 поломки вызвали нужный assert; положительные проходы до/после зелёные, точные байты Hub восстановлены, diff пуст",
+      "environment": "Поочерёдные локальные мутации без соседних тестов; TelegramStub"
+    },
+    {
+      "command": "E2E_PORT=8270 node --disable-warning=ExperimentalWarning tools/e2e-multiplayer.mjs",
+      "result": "Свежий exit 0: 14 сценариев (7 игр × 320/390), 4 независимых контекста, две страницы одной личности, весь поток, автоматический reconnect/reload, часы/место/разделы сохранены",
+      "environment": "Chromium 320×568/390×844, настоящий локальный App/Hub, TelegramStub, без телефона"
+    },
+    {
+      "command": "node --disable-warning=ExperimentalWarning tools/fuzz-privacy.mjs all 10",
+      "result": "Свежий exit 0: 40 партий, 4841 перерисовка (poker 1410, durak 979, colors 1063, battleship 1389), невмешательство скрытых данных в каждый view/карточку",
+      "environment": "Node/harness, FakeClock, TelegramStub, без внешней сети"
+    },
+    {
+      "command": "npm test",
+      "result": "Финальный перед коммитом: exit 0, 1565/1565, fail/cancelled/skipped/todo=0, 42,46 с; включает приватность, авторизацию, платежи/источники прав, часы/рестарты и восстановление",
+      "environment": "Node 24.12.0, память/временные SQLite и TelegramStub; разрешены локальные сокеты; шёл рядом с профильными браузерами, не используется как замер скорости"
+    },
+    {
+      "command": "git diff --check; сверка raw JSON и SHA-256; проверка запрещённых путей",
+      "result": "Ошибок нет; 3 suite серии × 3 цикла × 14 экранов, все cleanup=0; options/commit/toolSha256 совпадают. Приложение/ресурсы/зависимости/запрещённые пути не изменены",
+      "environment": "Локальное дерево redesign, сохранённые исходные JSON и текущий инструмент"
+    }
+  ],
+  "blockers": [
+    {
+      "scope": "external",
+      "reason": "Нет измерений настоящего iOS/Android WebView, мобильной сети, фона/пробуждения, нагрева/энергопотребления/GPU и поведения сутками. CPU ×4/localhost/несколько минут не заменяют устройство и не определяют ёмкость сервера. Пункт 10 единого docs/next-release/owner-inputs.md — следующий внешний шаг после отдельно разрешённой выкатки. Реальная оплата/возврат и официальный тестовый Telegram не проверены; сервер/обслуживание неизвестны и по заданию не опрашивались."
+    }
+  ]
+}

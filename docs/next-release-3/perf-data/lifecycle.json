@@ -1,0 +1,50 @@
+{
+  "cycles": 30,
+  "games": [
+    "poker",
+    "durak",
+    "colors",
+    "chess",
+    "checkers",
+    "nardy",
+    "battleship"
+  ],
+  "roomsCreated": 210,
+  "pagesOpened": 630,
+  "checkpoints": [
+    {
+      "cycle": 10,
+      "pages": 0,
+      "sessions": 0,
+      "roomSets": 0,
+      "groupSets": 0,
+      "adminPages": 0,
+      "rooms": 0,
+      "timers": 0,
+      "savedRooms": 0
+    },
+    {
+      "cycle": 20,
+      "pages": 0,
+      "sessions": 0,
+      "roomSets": 0,
+      "groupSets": 0,
+      "adminPages": 0,
+      "rooms": 0,
+      "timers": 0,
+      "savedRooms": 0
+    },
+    {
+      "cycle": 30,
+      "pages": 0,
+      "sessions": 0,
+      "roomSets": 0,
+      "groupSets": 0,
+      "adminPages": 0,
+      "rooms": 0,
+      "timers": 0,
+      "savedRooms": 0
+    }
+  ],
+  "note": "TelegramStub, SQLite :memory:, FakeClock; сохранённые пользователи/группы/профили не удаляются, память процесса не обязана стать нулевой"
+}
