@@ -232,3 +232,5 @@
 .col-order { display: flex; flex-direction: column; gap: var(--k-s4); padding: var(--k-s12) var(--k-s16); background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--k-r-md); min-width: 0; }
 .col-order-meta { font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font); color: var(--text-secondary); overflow-wrap: anywhere; }
 .col-doc-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font); color: var(--text-primary); }
+/* Additional independent slots; D replaces this list with game/category filters. */
+.col-inventory > .col-tabs { flex-wrap: wrap; }

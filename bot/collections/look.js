@@ -1,27 +1,26 @@
-/**
- * collections: чистые функции вида. Из `room.look` (снимок раздачи) делают то, что
- * уходит страницам. Идентификаторы людей наружу не идут: рубашки — по номеру места,
- * рамка — прямо в записи игрока. Старая комната без `look` читается как база.
- */
+/** Explicit public projection. No private ids, entitlements, paths or game data. */
+import { publicEntry } from '../../miniapp/collections/catalog.js';
 export const BASE_LOOK = Object.freeze({ v: 1, table: null, backs: Object.freeze([]), dealNo: 0 });
-
-const pick = (x) => (x && typeof x.item === 'string' && typeof x.color === 'string' ? { item: x.item, color: x.color } : null);
-
-/** Рамка и знак игрока (публично) — из снимка; нет записи — null (база). */
-export function frameOf(room, playerId) {
-  return pick(room?.look?.frames?.[String(playerId)]);
+export function frameOf(room, uid) {
+  if (![1, 2].includes(room?.look?.v)) return null;
+  return publicEntry(room.look.frames?.[String(uid)], ['profile', 'frame']);
 }
-
-/** Поле `look` персонального вида. `withBacks` — только покер. */
+export function badgeOf(room, uid) {
+  if (room?.look?.v !== 2) return null;
+  return publicEntry(room.look.badges?.[String(uid)], 'badge', room.game);
+}
 export function lookView(room, { withBacks = false } = {}) {
   const l = room?.look;
-  if (!l || l.v !== 1) return { v: 1, table: null, backs: [], dealNo: 0 };
+  if (![1, 2].includes(l?.v)) return { ...BASE_LOOK, backs: [] };
   const backs = [];
-  if (withBacks) {
-    room.players.forEach((p, seat) => {
-      const b = pick(l.backs?.[p.id]);
-      if (b) backs.push({ seat, item: b.item, color: b.color });
-    });
+  if (withBacks && room.game === 'poker') room.players.forEach((p, seat) => {
+    const b = publicEntry(l.backs?.[p.id], 'cardback', 'poker');
+    if (b) backs.push({ seat, ...b });
+  });
+  const out = { v: l.v, table: publicEntry(l.table, 'table', room.game), backs, dealNo: Number.isInteger(l.dealNo) ? l.dealNo : 0 };
+  if (l.v === 2) {
+    out.board = publicEntry(l.board, `${room.game === 'battleship' ? 'battleship-panel' : `${room.game}-board`}`, room.game);
+    out.deckBack = publicEntry(l.deckBack, 'unoq-cardback', room.game);
   }
-  return { v: 1, table: pick(l.table), backs, dealNo: Number.isInteger(l.dealNo) ? l.dealNo : 0 };
+  return out;
 }

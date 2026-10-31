@@ -102,12 +102,17 @@ export class Hub {
    * @returns {{session}|{error, text}}
    */
   open(args = {}, send) {
-    const r = this.openInner(args, send);
+    // Preserve the final initial game-state packet for old clients. Private cosmetics arrive first.
+    const initial = [];
+    let opening = true;
+    const r = this.openInner(args, (msg) => opening ? initial.push(msg) : send(msg));
     if (r.session && r.session.kind !== 'admin') this.pages.add(r.session);
     // collections: при подключении и переподключении — своё состояние, но только когда модуль включён.
     if (r.session && r.session.kind !== 'admin' && this.app.collections.visibleFor(r.session.user.id)) {
-      try { r.session.send(this.app.collections.stateOf(r.session.user.id)); } catch (err) { this.app.log(err); }
+      try { send(this.app.collections.stateOf(r.session.user.id)); } catch (err) { this.app.log(err); }
     }
+    opening = false;
+    for (const msg of initial) send(msg);
     return r;
   }
 

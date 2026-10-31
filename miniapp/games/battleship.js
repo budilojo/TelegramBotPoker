@@ -1,3 +1,6 @@
+import { makeHolder, dressBoard, nameWithMark, frameAvatar, deckBackImg } from '../collections/look-view.js';
+const lookHolder = makeHolder();
+let look = null;
 /**
  * Морской бой внутри Telegram — дуэль по образцу нард и шахмат: шапка,
  * плашки с часами, лобби, меню, итоги — общие (`.ch-*` из chess.css); своё —
@@ -114,6 +117,7 @@ function known(board) {
 
 export function onState(s, p) {
   state = s;
+  look = lookHolder.hold(`${s.game}:${s.room.code}`, s.room.status, s.look);
   drag = null;
   const m = s.match;
   // Новая партия — новый черновик; с сервера — флот, который он хранит (после «Случайно» или перезапуска).
@@ -184,7 +188,7 @@ function renderLobby() {
   const slots = [0, 1].map((i) => {
     const p = seated[i];
     return p
-      ? animateOnce(h(`div.lseat${p.isMe ? '.me' : ''}`, withMark(avatarEl(p), p.isHost), h('div.nm', p.name)),
+      ? animateOnce(h(`div.lseat${p.isMe ? '.me' : ''}`, withMark(avatarEl(p), p.isHost), h('div.nm', nameWithMark(p.name, p.frame, p.badge) ?? p.name)),
         `bslseat:${p.name}`, [{ transform: 'scale(0.4)', opacity: 0, offset: 0 }], { duration: 450, delay: i * 45 })
       : h('div.lseat.empty', h('div.av', '+'), h('div.nm', 'свободно'));
   });
@@ -257,7 +261,7 @@ function playerBar(side, { extra = null } = {}) {
   return h(`div.ch-bar${turn ? '.turn' : ''}${p && !p.seated ? '.away' : ''}`, { 'data-side': String(side) },
     p ? avatarEl(p, 'sm') : h('div.av.sm', '?'),
     h('div.ch-who',
-      h('div.ch-name', p ? p.name : '—', p?.isMe ? h('small', ' · вы') : null),
+      h('div.ch-name', p ? (nameWithMark(p.name, p.frame, p.badge) ?? p.name) : '—', p?.isMe ? h('small', ' · вы') : null),
       h('div.ch-eaten.bs-meta', h('span.num', extra || `на плаву ${afloat(b)} из 10`))),
     clockEl(side, turn));
 }
@@ -321,7 +325,7 @@ function boardEl({ board, mode, mini = false, spec = false, label, dead = new Se
     grid.addEventListener('pointerup', aimUp);
     grid.addEventListener('pointercancel', aimCancel);
   }
-  return frame;
+  return dressBoard(frame, look, 'battleship');
 }
 
 /** Номера потопленных кораблей поля: корабль потоплен, если все его клетки — «убил». */
@@ -738,7 +742,7 @@ function renderResults() {
     h('div', h('h1', '🏁 Итоги'), h('div.sub', `Морской бой · партий сыграно: ${s.history}`)),
     h('div.box', rows.length
       ? rows.map((r, i) => h('div.res-row',
-        h('span.n', i === 0 && rows.length > 1 && r.wins !== rows[1].wins ? '🏆 ' : '', r.name,
+        h('span.n', i === 0 && rows.length > 1 && r.wins !== rows[1].wins ? '🏆 ' : '', r.frame ? avatarEl({ name: r.name, frame: r.frame }, 'sm') : null, nameWithMark(r.name, r.frame, r.badge) ?? r.name,
           r.isHost ? ' 👑' : '', r.kicked ? ' · удалён' : r.left ? ' · вышел' : ''),
         h('span.s.num', `${r.wins} · ${r.losses}`),
         h('span.pl.num', `${r.games} ${r.games === 1 ? 'партия' : r.games < 5 ? 'партии' : 'партий'}`)))

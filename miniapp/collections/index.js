@@ -46,6 +46,7 @@ export const isOpen = () => !!root;
 function colorOf(id) {
   const it = itemById(id);
   const snap = store.snapshot();
+  if (it?.collection) return 'default';
   if (it?.kind === 'item' && snap.choice[it.slot]?.item === id && !(id in colors)) return snap.choice[it.slot].color;
   return colors[id] || DEFAULT_COLOR;
 }

@@ -88,7 +88,7 @@ test('покер, три телефона, вся история: ни чужи�
     const seats = st.look.backs.map((b) => b.seat);
     assert.equal(new Set(seats).size, seats.length);
     for (const b of st.look.backs) assert.deepEqual(Object.keys(b).sort(), ['color', 'item', 'seat']);
-    assert.deepEqual(Object.keys(st.look).sort(), ['backs', 'dealNo', 'table', 'v']);
+    assert.deepEqual(Object.keys(st.look).sort(), st.look.v === 2 ? ['backs', 'board', 'dealNo', 'deckBack', 'table', 'v'] : ['backs', 'dealNo', 'table', 'v']);
     for (const p of st.players) {
       if (p.frame) assert.deepEqual(Object.keys(p.frame).sort(), ['color', 'item']);
     }
@@ -111,7 +111,7 @@ test('покер: итоги несут только публичное офор
     assert.equal(st.room.status, 'finished');
     assert.ok(st.results.length >= 2);
     for (const r of st.results) {
-      assert.deepEqual(Object.keys(r).sort(), ['biggest', 'frame', 'hands', 'isHost', 'kicked', 'name', 'net', 'pots', 'role', 'stack']);
+      assert.deepEqual(Object.keys(r).sort(), ['badge', 'biggest', 'frame', 'hands', 'isHost', 'kicked', 'name', 'net', 'pots', 'role', 'stack']);
       if (r.frame) assert.deepEqual(Object.keys(r.frame).sort(), ['color', 'item']);
     }
     assert.deepEqual(st.results.find((r) => r.name === 'Алиса').frame, { item: PR, color: 'sapphire' });
@@ -160,7 +160,7 @@ test('дурак, три телефона, вся история: колод и 
         assert.equal(typeof st.deal.discard, 'number', 'отбой — число');
       }
       for (const p of st.players) assert.equal(typeof p.count, 'number', 'чужая рука — число карт');
-      assert.deepEqual(Object.keys(st.look).sort(), ['backs', 'dealNo', 'table', 'v']);
+      assert.deepEqual(Object.keys(st.look).sort(), st.look.v === 2 ? ['backs', 'board', 'dealNo', 'deckBack', 'table', 'v'] : ['backs', 'dealNo', 'table', 'v']);
       assert.deepEqual(st.look.backs, [], 'в дураке рубашек нет');
       for (const p of st.players) if (p.frame) assert.deepEqual(Object.keys(p.frame).sort(), ['color', 'item']);
       for (const s of st.score) if (s.frame) assert.deepEqual(Object.keys(s.frame).sort(), ['color', 'item']);
@@ -177,9 +177,10 @@ test('вид без демосреды (рабочий режим): оформл
   await t.send(ALICE, { t: 'start' });
   for (const u of PEOPLE) {
     noForeign(t, u, PEOPLE.filter((o) => o !== u));
-    assert.deepEqual(t.state(u).look, { v: 1, table: null, backs: [], dealNo: 1 });
+    assert.deepEqual(t.state(u).look, { v: 2, table: null, backs: [], dealNo: 1, board: null, deckBack: null });
     assert.ok(t.state(u).players.every((p) => p.frame === null));
-    assert.equal(col(t, u).length, 0);
+    assert.ok(col(t, u).length >= 1);
+    assert.deepEqual(col(t, u)[0].owned, []);
   }
 });
 

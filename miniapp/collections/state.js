@@ -9,7 +9,7 @@
  *  • повтор после «нет ответа» идёт с тем же `req` (сервер не удвоит), после явного отказа — с новым;
  *  • вход (`visible`) — только когда сервер прислал enabled && demo; никаких других источников.
  */
-import { COLORS, DEFAULT_COLOR, ITEMS, SLOTS, itemById, itemsOfBundle, missingForBundle, isColor } from './catalog.js';
+import { COLORS, DEFAULT_COLOR, ITEMS, SLOTS, LEGACY_SLOTS, itemById, itemsOfBundle, missingForBundle, isItemColor, publicEntry } from './catalog.js';
 import { ERRORS, isReq } from './protocol.js';
 
 /** Подпись демонстрации: строка «Настроек», витрина, получение. */
@@ -18,8 +18,8 @@ export const DEMO_NOTE = 'Демонстрация · Без оплаты';
 /** Сколько ждать ответа сервера, мс (по часам страницы; отсчёт — в `deps.setTimer`). */
 export const ANSWER_MS = 8000;
 
-const NONE = () => ({ cardback: null, table: null, profile: null });
-const empty = () => ({ enabled: false, demo: false, owned: [], choice: NONE(), pending: NONE(), shop: null });
+const NONE = () => Object.fromEntries(SLOTS.map((s) => [s, null]));
+const empty = () => ({ v: 1, appearance: { frame: null, badge: null }, enabled: false, demo: false, owned: [], choice: NONE(), pending: NONE(), shop: null });
 
 /** Подпись режима: демо, тестовая среда, продажи, закрыто. Для строки «Настроек» и витрины. */
 export const SHOP_NOTE = {
@@ -44,6 +44,8 @@ function normalizeShop(raw) {
 export function normalizeState(msg) {
   const out = empty();
   if (!msg || typeof msg !== 'object') return out;
+  out.v = msg.v === 2 ? 2 : 1;
+  out.appearance = { frame: publicEntry(msg.appearance?.frame, ['frame', 'profile']), badge: publicEntry(msg.appearance?.badge, 'badge') };
   out.enabled = msg.enabled === true;
   out.demo = msg.enabled === true && msg.demo === true;
   if (Array.isArray(msg.owned)) {
@@ -51,7 +53,7 @@ export function normalizeState(msg) {
       const id = typeof o === 'string' ? o : o?.item;
       const it = itemById(id);
       if (it && it.kind === 'item' && !out.owned.some((x) => x.item === id)) {
-        const source = Array.isArray(o?.source) ? o.source.filter((x) => ['purchase', 'admin', 'staff', 'demo'].includes(x)) : [];
+        const source = Array.isArray(o?.source) ? o.source.filter((x) => ['purchase', 'admin', 'staff', 'demo', 'owner'].includes(x)) : [];
         out.owned.push({ item: id, demo: o?.demo !== false, source });
       }
     }
@@ -59,7 +61,7 @@ export function normalizeState(msg) {
   if (out.enabled && !out.demo) out.shop = normalizeShop(msg.shop);
   for (const slot of SLOTS) {
     const c = msg.choice?.[slot];
-    if (c && typeof c === 'object' && itemById(c.item)?.slot === slot && isColor(c.color)) out.choice[slot] = { item: c.item, color: c.color };
+    if (c && typeof c === 'object' && itemById(c.item)?.slot === slot && isItemColor(c.item, c.color)) out.choice[slot] = { item: c.item, color: c.color };
     out.pending[slot] = msg.pending?.[slot] === 'next-deal' ? 'next-deal' : null;
   }
   return out;
@@ -79,6 +81,7 @@ function satisfied(snap, w) {
     const ids = itemsOfBundle(w.item).length ? itemsOfBundle(w.item) : [w.item];
     return ids.every((id) => snap.owned.some((o) => o.item === id));
   }
+  if (w.op === 'apply-bundle') return itemsOfBundle(w.item).every((id) => snap.choice[itemById(id).slot]?.item === id);
   if (w.op === 'apply') return snap.choice[w.slot]?.item === w.item && snap.choice[w.slot]?.color === w.color;
   if (w.op === 'clear') return snap.choice[w.slot] == null;
   return false;
@@ -111,9 +114,9 @@ export function createStore(deps = {}) {
 
   function fire(w0) {
     const w = { op: w0.op, item: w0.item, slot: w0.slot, color: w0.color, req: w0.req };
-    const msg = { t: 'col', op: w.op, req: w.req };
-    if (w.op === 'grant') msg.item = w.item;
-    if (w.op === 'apply') Object.assign(msg, { slot: w.slot, item: w.item, color: w.color });
+    const msg = { t: 'col', v: 2, op: w.op, req: w.req };
+    if (w.op === 'grant' || w.op === 'apply-bundle') msg.item = w.item;
+    if (w.op === 'apply' || w.op === 'apply-bundle') Object.assign(msg, { slot: w.slot, item: w.item, color: w.color });
     if (w.op === 'clear') msg.slot = w.slot;
     if (w.op === 'state') delete msg.req;
     const ok = d.send(msg);
@@ -149,7 +152,7 @@ export function createStore(deps = {}) {
       const s = server || empty();
       return {
         link: !connected ? 'offline' : server ? 'ok' : 'loading',
-        loaded: !!server,
+        loaded: !!server, v: s.v, appearance: s.appearance,
         enabled: s.enabled,
         demo: s.demo,
         shop: s.shop,
@@ -207,28 +210,33 @@ export function createStore(deps = {}) {
     },
     missing(item) {
       const have = (server?.owned || []).map((o) => o.item);
-      return itemsOfBundle(item).length ? missingForBundle(have) : (have.includes(item) ? [] : [item]);
+      return itemsOfBundle(item).length ? missingForBundle(have, item) : (have.includes(item) ? [] : [item]);
     },
 
     /** Демо-получение. Не уйдёт: вне демо, при ожидании, если уже есть, и для неполного комплекта. */
     grant(item) {
       if (!visible() || !server.demo || wait || !connected) return false;
       const it = itemById(item);
-      if (!it || api.own(item)) return false;
+      if (!it || api.own(item) || (it.collection && server.v !== 2)) return false;
       if (it.kind === 'bundle' && api.ownedSome(item)) return false; // правило цены дополнения не утверждено
       return fire({ op: 'grant', item, req: d.genReq() });
     },
 
     apply(slot, item, color) {
       if (!visible() || wait || !connected) return false;
-      if (!SLOTS.includes(slot) || itemById(item)?.slot !== slot || !isColor(color)) return false;
-      if (!api.own(item)) return false;
+      if (!SLOTS.includes(slot) || itemById(item)?.slot !== slot || !isItemColor(item, color)) return false;
+      if (!api.own(item) || (itemById(item)?.collection && server.v !== 2)) return false;
       return fire({ op: 'apply', slot, item, color, req: d.genReq() });
+    },
+
+    applyBundle(item, color = 'default') {
+      if (!visible() || wait || !connected || server.v !== 2 || !itemsOfBundle(item).length || !api.own(item)) return false;
+      return fire({ op: 'apply-bundle', item, color, req: d.genReq() });
     },
 
     clear(slot) {
       if (!visible() || wait || !connected) return false;
-      if (!SLOTS.includes(slot)) return false;
+      if (!SLOTS.includes(slot) || (!LEGACY_SLOTS.includes(slot) && server.v !== 2)) return false;
       return fire({ op: 'clear', slot, req: d.genReq() });
     },
 
@@ -261,7 +269,7 @@ export function createStore(deps = {}) {
         emit();
         return;
       }
-      if (msg.op !== 'state' && !['grant', 'apply', 'clear'].includes(msg.op)) return;
+      if (msg.op !== 'state' && !['grant', 'apply', 'clear', 'apply-bundle'].includes(msg.op)) return;
       const snap = normalizeState(msg);
       server = snap;
       if (msg.op === 'apply' && wait?.op === 'apply' && (msg.when === 'now' || msg.when === 'next-deal')) lastWhen[wait.slot] = msg.when;

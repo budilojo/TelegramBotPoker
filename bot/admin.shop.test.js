@@ -165,11 +165,12 @@ test('продажи выключены (прод по умолчанию): по
   assert.equal(t.app.payments.cfg.mode, 'off');
   t.openAdmin(OWNER);
   t.app.cosmeticsTesters.add(String(BOB.id));
-  assert.equal(t.app.collections.visibleFor(ALICE.id), false);
+  assert.equal(t.app.collections.visibleFor(ALICE.id), true);
   await grant(t, ALICE, 'graphit-table');
   assert.equal(t.app.collections.visibleFor(ALICE.id), true);
   assert.deepEqual(t.app.collections.ownedItems(ALICE.id), ['graphit-table']);
-  assert.equal(t.app.collections.visibleFor(BOB.id), false, 'тестер при выключенных продажах по-прежнему ничего не видит');
+  assert.equal(t.app.collections.visibleFor(BOB.id), true, 'витрина доступна, тестерских прав нет');
+  assert.deepEqual(t.app.collections.ownedItems(BOB.id), []);
   assert.equal(t.app.payments.open, false, 'продажи не открылись');
 });
 

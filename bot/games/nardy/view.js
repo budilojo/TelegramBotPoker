@@ -14,6 +14,7 @@ import {
   MAX_SEATS, controlRu, KIND_RU, SIDE_RU,
 } from './rules.js';
 import { avatarId } from '../../profile.js';
+import { frameOf, badgeOf, lookView } from '../../collections/look.js';
 
 function hueOf(id) {
   let h = 0x811c9dc5;
@@ -45,6 +46,7 @@ export function nardyView(room, viewerId, { now = Date.now(), botUsername = '' }
       name: p.name,
       hue: hueOf(p.id),
       avatar: avatarId(p.avatar),
+      frame: frameOf(room, p.id), badge: badgeOf(room, p.id),
       isHost: isHost(room, p.id),
       isMe: p.id === uid,
       seated: isSeated(p),
@@ -88,6 +90,7 @@ export function nardyView(room, viewerId, { now = Date.now(), botUsername = '' }
   const player = !!color && playing;
 
   return {
+    look: lookView(room),
     game: 'nardy',
     seq: room.seq,
     now,
@@ -126,7 +129,7 @@ export function nardyView(room, viewerId, { now = Date.now(), botUsername = '' }
     canShare: !!color && !!m?.over && m.over.kind !== 'aborted',
     canStart: room.status === 'lobby' && isHost(room, uid) && !startBlocker(room),
     canNext: room.status === 'playing' && !!m && !!m.over && (isSeated(meP) || isHost(room, uid)) && !startBlocker(room),
-    score: score(room).map(({ id, ...row }) => row),
+    score: score(room).map(({ id, ...row }) => ({ ...row, frame: frameOf(room, id), badge: badgeOf(room, id) })),
     history: room.history.filter((h) => !h.aborted).length,
   };
 }

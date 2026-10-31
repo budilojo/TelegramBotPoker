@@ -88,3 +88,17 @@ img.card.gr-back { aspect-ratio: 200 / 280; object-fit: contain; }
 @media (prefers-reduced-motion: reduce) {
   .gr-table *, .gr-ava *, .gr-nm * { animation: none !important; transition: none !important; }
 }
+
+/* v2 art geometry, independent of UI dimensions/tokens. Frame center is 75% clear. */
+.cv2-avatar { position: relative; overflow: visible; }
+.cv2-frame { position: absolute; width: 133.333%; height: 133.333%; left: -16.667%; top: -16.667%; pointer-events: none; user-select: none; z-index: 0; }
+.cv2-avatar > .host-mark, .cv2-avatar > .ring { z-index: 2; }
+/* Only external decoration: no overlay pixels may reach cells, coordinates or pieces. */
+.cv2-board { position: relative; isolation: isolate; }
+.cv2-board-art { position: absolute; left: -6.818%; top: -6.818%; width: 113.636%; height: 113.636%; pointer-events: none; user-select: none; z-index: 1;
+  clip-path: polygon(0 3%, 100% 3%, 100% 97%, 0 97%, 0 3%, 6% 6%, 6% 94%, 94% 94%, 94% 6%, 6% 6%); }
+/* Crop the upper/lower outer edge so ornament stays clear of player names/clocks. */
+/* Nardy has two clear windows; crop the decorative bar to preserve the existing point labels. */
+.cv2-board-art.cv2-nardy { left: -5.556%; top: -7.692%; width: 111.112%; height: 115.384%;
+  clip-path: polygon(0 3.334%, 100% 3.334%, 100% 96.666%, 0 96.666%, 0 3.334%, 5% 6.667%, 5% 93.333%, 95% 93.333%, 95% 6.667%, 5% 6.667%); }
+.cv2-deck-back { pointer-events: none; user-select: none; }

@@ -1,3 +1,6 @@
+import { makeHolder, dressBoard, nameWithMark, frameAvatar, deckBackImg } from '../collections/look-view.js';
+const lookHolder = makeHolder();
+let look = null;
 /**
  * Стол «UNOQ» внутри Telegram — одна игра хаба.
  *
@@ -96,6 +99,7 @@ const setHandOrder = (v) => {
 
 export function onState(s, p) {
   state = s;
+  look = lookHolder.hold(`${s.game}:${s.room.code}`, s.room.status, s.look);
   prev = p;
   if (held && !s.me.cards.includes(held.card)) dropHeld();
 
@@ -150,7 +154,7 @@ function renderLobby() {
   for (let i = 0; i < s.room.maxSeats; i++) {
     const p = seated[i];
     slots.push(p
-      ? animateOnce(h(`div.lseat${p.isMe ? '.me' : ''}`, withMark(avatarEl(p), p.isHost), h('div.nm', p.name)),
+      ? animateOnce(h(`div.lseat${p.isMe ? '.me' : ''}`, withMark(avatarEl(p), p.isHost), h('div.nm', nameWithMark(p.name, p.frame, p.badge) ?? p.name)),
         `cllseat:${p.name}`, [{ transform: 'scale(0.4)', opacity: 0, offset: 0 }], { duration: 450, delay: i * 45 })
       : h('div.lseat.empty', h('div.av', '+'), h('div.nm', 'свободно')));
   }
@@ -249,7 +253,7 @@ function seatEl(p, s) {
     h('div.pod', av,
       p.inDeal ? h('span.cl-count.num', String(p.count)) : null,
       p.alone ? h(`div.cl-one${p.called ? '.ok' : ''}`, p.called ? '✋' : '1') : null),
-    h('div.cl-plate', h('div.nm', p.name), sub ? h('div.sub2', sub) : null),
+    h('div.cl-plate', h('div.nm', nameWithMark(p.name, p.frame, p.badge) ?? p.name), sub ? h('div.sub2', sub) : null),
   );
 }
 
@@ -263,7 +267,7 @@ function middleEl(s) {
   const mustDraw = !!L?.myTurn && !!L?.draw && !L?.play.length;
   const deck = h(`div.cl-deck${mustDraw ? '.pulse' : ''}${d.deck ? '' : '.empty'}`,
     { onclick: mustDraw ? onDrawTap : null },
-    d.deck ? h('div.cl-stack', backImg('b2'), backImg('b1'), backImg('b0')) : h('div.cl-deck-empty', 'пусто'),
+    d.deck ? h('div.cl-stack', deckBackImg(look, 'b2') ?? backImg('b2'), deckBackImg(look, 'b1') ?? backImg('b1'), deckBackImg(look, 'b0') ?? backImg('b0')) : h('div.cl-deck-empty', 'пусто'),
     h('span.cl-deck-n.num', String(d.deck)));
 
   const pileTop = animateOnce(cardImg(d.top, 'cl-top'), `cltop:${d.no}:${d.events.at(-1)?.n ?? 0}:${d.top}`, (node) => {
@@ -626,7 +630,7 @@ function renderResults() {
       h('div.box', rows.length
         ? rows.map((r, i) => h(`div.cl-res${r.name === s.me.name ? '.me' : ''}`,
           h('span.pl.num', String(i + 1)),
-          h('div.who', h('div.nm', r.name), lineFor(s, r) ? h('div.sub2', lineFor(s, r)) : null),
+          h('div.who', h('div.nm', r.frame ? avatarEl({ name: r.name, frame: r.frame }, 'sm') : null, nameWithMark(r.name, r.frame, r.badge) ?? r.name), lineFor(s, r) ? h('div.sub2', lineFor(s, r)) : null),
           h('b.num', `${r.wins} / ${r.last}`)))
         : h('div.hint', 'Ни одной партии не сыграно.')),
       h('div.hint', 'Слева — место, справа «вышел первым / остался последним».'),

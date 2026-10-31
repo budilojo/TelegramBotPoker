@@ -206,7 +206,7 @@ test('makeReq даёт допустимый идентификатор', () => {
 test('запрос уходит без чужих полей: только t, op, req, item/slot/color', () => {
   const { store, sent } = rig(ST({ owned: [{ item: 'graphit-table', demo: true }] }));
   store.apply('table', 'graphit-table', 'bordeaux');
-  assert.deepEqual(Object.keys(sent[0]).sort(), ['color', 'item', 'op', 'req', 'slot', 't']);
+  assert.deepEqual(Object.keys(sent[0]).sort(), ['color', 'item', 'op', 'req', 'slot', 't', 'v']);
 });
 
 /* ------------------------------------------------------------ art.js */

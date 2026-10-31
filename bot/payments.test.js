@@ -27,7 +27,7 @@ const calls = (t, m) => t.tg.calls.filter((c) => c.method === m);
 
 /* ------------------------------------------------------------ выключатель */
 
-test('по умолчанию продажи закрыты: режим off, счёта нет, коллекции никому не видны', async () => {
+test('по умолчанию продажи закрыты: режим off, счёта нет, витрина видна без прав', async () => {
   const t = new Table({ admins: [String(OWNER.id)] });
   t.tg.dmOpen.add(String(ALICE.id));
   assert.equal(t.app.payments.cfg.mode, 'off');
@@ -36,13 +36,14 @@ test('по умолчанию продажи закрыты: режим off, с�
   await t.send(ALICE, { t: 'pay', op: 'buy', item: 'graphit-table', req: req() });
   assert.equal(pays(t, ALICE).at(-1).error.code, 'PAY_CLOSED');
   assert.equal(calls(t, 'createInvoiceLink').length, 0);
-  // Прод без изменений: ни игроку, ни админу коллекции не показываются, тестерского доступа нет.
+  // Витрина открыта при off, Графит бесплатно не выдаётся. Owner относится только к новым предметам.
   for (const u of [ALICE, OWNER]) {
-    assert.equal(t.app.collections.visibleFor(u.id), false);
-    assert.deepEqual(t.app.collections.ownedItems(u.id), []);
+    assert.equal(t.app.collections.visibleFor(u.id), true);
+    assert.deepEqual(t.app.collections.ownedItems(u.id).filter((id) => id.startsWith('graphit-')), []);
+    if (u.id === ALICE.id) assert.deepEqual(t.app.collections.ownedItems(u.id), []);
   }
   t.openSolo(OWNER);
-  assert.equal(t.page(OWNER).inbox.some((m) => m.t === 'col'), false, 'страница не получает состояния коллекций');
+  assert.equal(t.page(OWNER).inbox.some((m) => m.t === 'col'), true, 'страница получает витрину, продаж по-прежнему нет');
 });
 
 test('offers.json: подтверждённые владельцем цены; проекты документов по-прежнему закрывают продажи', () => {
@@ -617,11 +618,11 @@ test('журнал без имён и без initData; история не по�
   assert.deepEqual(lastCol(t, BOB).owned, []);
 });
 
-test('магазин в тестовом режиме видят все; при закрытых продажах — только тестер и тот, кто уже покупал', async () => {
+test('витрину видят все и при закрытых продажах, gate оплаты остаётся закрыт', async () => {
   const t = shop();
   assert.equal(t.app.collections.visibleFor(BOB.id), true);
   t.app.payments.cfg = cfgOf({ mode: 'live', approved: false });
-  assert.equal(t.app.collections.visibleFor(BOB.id), false);
+  assert.equal(t.app.collections.visibleFor(BOB.id), true);
   assert.equal(t.app.collections.visibleFor(OWNER.id), true, 'админ видит, чтобы проверить');
   const st = t.app.collections.stateOf(OWNER.id);
   assert.equal(st.shop.open, false);

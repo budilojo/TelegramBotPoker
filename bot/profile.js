@@ -107,6 +107,8 @@ export class Profiles {
   mine(user) {
     const p = this.raw(user.id);
     return {
+      frame: this.app.collections.personal(this.app.collections.choiceOf(user.id), 'frame'),
+      badge: this.app.collections.personal(this.app.collections.choiceOf(user.id), 'badge'),
       nickname: p.nickname,
       avatar: p.avatar,
       telegramName: cleanName(user.name),

@@ -1,3 +1,6 @@
+import { makeHolder, dressBoard, nameWithMark, frameAvatar, deckBackImg } from '../collections/look-view.js';
+const lookHolder = makeHolder();
+let look = null;
 /**
  * Шашки внутри Telegram — дуэль по образцу шахмат (games/chess.js): та же
  * доска, плашки, часы, запись, откат, ничья, «Поделиться».
@@ -111,6 +114,7 @@ const myMove = (s) => !!s?.legal?.myTurn;
 
 export function onState(s, p) {
   state = s;
+  look = lookHolder.hold(`${s.game}:${s.room.code}`, s.room.status, s.look);
   prev = p;
   drag = null; // пришла новая позиция: то, что было в руке, уже не про неё
   // Другая партия — смотреть снова текущее; откат укоротил запись — не стоять на несуществующем ходе.
@@ -170,7 +174,7 @@ function renderLobby() {
   const slots = [0, 1].map((i) => {
     const p = seated[i];
     return p
-      ? animateOnce(h(`div.lseat${p.isMe ? '.me' : ''}`, withMark(avatarEl(p), p.isHost), h('div.nm', p.name)),
+      ? animateOnce(h(`div.lseat${p.isMe ? '.me' : ''}`, withMark(avatarEl(p), p.isHost), h('div.nm', nameWithMark(p.name, p.frame, p.badge) ?? p.name)),
         `chlseat:${p.name}`, [{ transform: 'scale(0.4)', opacity: 0, offset: 0 }], { duration: 450, delay: i * 45 })
       : h('div.lseat.empty', h('div.av', '+'), h('div.nm', 'свободно'));
   });
@@ -273,7 +277,7 @@ function playerBar(color) {
   return h(`div.ch-bar${turn ? '.turn' : ''}${away ? '.away' : ''}`, { 'data-color': color },
     p ? avatarEl(p, 'sm') : h('div.av.sm', '?'),
     h('div.ch-who',
-      h('div.ch-name', p ? p.name : '—', p?.isMe ? h('small', ' · вы') : null),
+      h('div.ch-name', p ? (nameWithMark(p.name, p.frame, p.badge) ?? p.name) : '—', p?.isMe ? h('small', ' · вы') : null),
       h('div.ch-eaten.ck-have', { 'aria-label': `шашек ${have.men}, дамок ${have.kings}` },
         img(color, 'mini'), h('span.num', String(have.men)),
         have.kings ? img(`${color}K`, 'mini') : null, have.kings ? h('span.num', String(have.kings)) : null)),
@@ -332,11 +336,11 @@ function boardEl(bottom) {
   const hotRank = new Set([...hot].map((n) => n[1]));
   const order = flip ? [...FILES].reverse() : [...FILES];
   const ranks = (flip ? [1, 2, 3, 4, 5, 6, 7, 8] : [8, 7, 6, 5, 4, 3, 2, 1]);
-  return h('div.ch-frame',
+  return dressBoard(h('div.ch-frame',
     h('div.ch-ranks', ranks.map((n) => h(`span${hotRank.has(String(n)) ? '.hot' : ''}`, String(n)))),
     board,
     h('span'),
-    h('div.ch-files', order.map((c) => h(`span${hotFile.has(c) ? '.hot' : ''}`, c))));
+    h('div.ch-files', order.map((c) => h(`span${hotFile.has(c) ? '.hot' : ''}`, c)))), look, 'checkers');
 }
 
 /* ----------------------------------------------------------- выбор хода */
@@ -688,7 +692,7 @@ function renderResults() {
     h('div', h('h1', '🏁 Итоги'), h('div.sub', `Шашки · партий сыграно: ${s.history}`)),
     h('div.box', rows.length
       ? rows.map((r, i) => h('div.res-row',
-        h('span.n', i === 0 && rows.length > 1 && (r.wins !== rows[1].wins || r.losses !== rows[1].losses) ? '🏆 ' : '', r.name,
+        h('span.n', i === 0 && rows.length > 1 && (r.wins !== rows[1].wins || r.losses !== rows[1].losses) ? '🏆 ' : '', r.frame ? avatarEl({ name: r.name, frame: r.frame }, 'sm') : null, nameWithMark(r.name, r.frame, r.badge) ?? r.name,
           r.isHost ? ' 👑' : '', r.kicked ? ' · удалён' : r.left ? ' · вышел' : ''),
         h('span.s.num', `${r.wins} · ${r.draws} · ${r.losses}`),
         h('span.pl.num', `${r.games} ${r.games === 1 ? 'партия' : r.games < 5 ? 'партии' : 'партий'}`)))

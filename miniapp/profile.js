@@ -9,11 +9,14 @@
  */
 import { h, avatar, haptic, toast } from './ui.js';
 import { bus, send } from './net.js';
+import { frameAvatar, nameWithMark } from './collections/look-view.js';
+import { itemById } from './collections/catalog.js';
+import { store as collections } from './collections/state.js';
 
 /** Круг игрока: `player` — {name, hue, avatar} из вида стола. Картинку берёт только по шаблону avNN. */
 export const avatarEl = (player, cls = '') => {
   const av = avatar(player?.name, player?.hue ?? 0, cls, player?.avatar ?? null);
-  return av; // Оформление добавляет экран из серверного view, архивная примерка не участвует.
+  return itemById(player?.frame?.item)?.collection ? frameAvatar(av, player.frame) : av; // Оформление добавляет экран из серверного view, архивная примерка не участвует.
 };
 
 const NICK_MAX_DEFAULT = 16;
@@ -39,6 +42,8 @@ bus.onProfile = (msg) => {
   }
   st.patch?.();
 };
+
+collections.subscribe(() => st.patch?.());
 
 let mounted = null; // { container, root } — уже нарисованный экран
 
@@ -93,8 +98,10 @@ export function renderProfileSettings(container) {
     count.textContent = `${[...nickIn.value].length} / ${max}`;
     err.textContent = st.error || '';
     nickIn.setAttribute('aria-invalid', st.error ? 'true' : 'false');
-    previewAv.replaceChildren(avatar(draftName(), 200, '', st.avatar));
-    previewName.textContent = draftName();
+    const snap = collections.snapshot();
+    const style = snap.loaded && snap.v === 2 ? snap.appearance : st.profile;
+    previewAv.replaceChildren(frameAvatar(avatar(draftName(), 200, '', st.avatar), style?.frame));
+    previewName.replaceChildren(nameWithMark(draftName(), style?.frame, style?.badge) ?? document.createTextNode(draftName()));
     save.disabled = !dirty() || !st.profile;
     reset.disabled = !st.profile?.nickname;
     const ids = st.profile?.avatars ?? [];

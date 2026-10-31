@@ -50,7 +50,7 @@ const TIMERS = [[0, 'Выкл'], [30, '30 с'], [60, '60 с'], [90, '90 с']];
 export function onState(s, p) {
   state = s;
   prev = p;
-  look = lookHolder.hold(s.room.code, s.room.status, s.look);
+  look = lookHolder.hold(`${s.game}:${s.room.code}`, s.room.status, s.look);
   const me = s.me;
   if (picked && !me.cards.includes(picked)) picked = null;
 
@@ -99,7 +99,7 @@ function renderLobby() {
   for (let i = 0; i < s.room.maxSeats; i++) {
     const p = seated[i];
     slots.push(p
-      ? animateOnce(h(`div.lseat${p.isMe ? '.me' : ''}`, frameAvatar(withMark(avatarEl(p), p.isHost), p.frame), h('div.nm', nameWithMark(p.name, p.frame) ?? p.name)),
+      ? animateOnce(h(`div.lseat${p.isMe ? '.me' : ''}`, frameAvatar(withMark(avatarEl(p), p.isHost), p.frame), h('div.nm', nameWithMark(p.name, p.frame, p.badge) ?? p.name)),
         `dklseat:${p.name}`, [{ transform: 'scale(0.4)', opacity: 0, offset: 0 }], { duration: 450, delay: i * 45 })
       : h('div.lseat.empty', h('div.av', '+'), h('div.nm', 'свободно')));
   }
@@ -173,7 +173,7 @@ function seatEl(p, s) {
     (role === 'out' || (!p.inDeal && d?.phase === 'play')) && 'away', role === 'fool' && 'fool'].filter(Boolean).join('.');
   return h(`div.${cls}`, { 'data-seat': p.seat },
     h('div.pod', av, fan, n ? h('span.dk-count.num', String(n)) : null),
-    h('div.info', h('div.nm', p.name), h('div.sub2', p.games ? `дурак ${p.fools}` : p.inDeal ? '' : 'со след. партии')),
+    h('div.info', h('div.nm', nameWithMark(p.name, null, p.badge) ?? p.name), h('div.sub2', p.games ? `дурак ${p.fools}` : p.inDeal ? '' : 'со след. партии')),
     text ? animateOnce(h(`div.plate.${kind || 'in'}${text.length > 9 ? '.long' : ''}`, text), `dkplate:${d?.no}:${d?.bout}:${p.seat}:${text}`,
       [{ transform: 'scale(0.55)', opacity: 0, offset: 0 }], { duration: 300 }) : null,
   );
@@ -682,7 +682,7 @@ function renderResults() {
     h('div.box', rows.length
       ? rows.map((r, i) => h(`div.res-row${dressed ? '.gr' : ''}`,
           dressed ? h('span.gr-res-who', person(r)) : null,
-          h('span.n', { 'aria-label': dressed ? r.name : null, title: dressed ? r.name : null }, i === 0 ? '🏆 ' : '', nameWithMark(r.name, r.frame) ?? (dressed ? h('span.gr-nm-t', r.name) : r.name), r.isHost ? ' 👑' : '', r.kicked ? ' · удалён' : r.left ? ' · вышел' : ''),
+          h('span.n', { 'aria-label': dressed ? r.name : null, title: dressed ? r.name : null }, i === 0 ? '🏆 ' : '', nameWithMark(r.name, r.frame, r.badge) ?? (dressed ? h('span.gr-nm-t', r.name) : r.name), r.isHost ? ' 👑' : '', r.kicked ? ' · удалён' : r.left ? ' · вышел' : ''),
           h('span.s.num', `${r.games} ${r.games === 1 ? 'партия' : r.games < 5 ? 'партии' : 'партий'}`),
           h(`span.pl.num.${r.fool ? 'down' : 'up'}`, `дурак ${r.fool}`)))
       : h('div.hint', 'Ни одной партии не сыграно.')),

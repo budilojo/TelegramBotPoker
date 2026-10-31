@@ -8,7 +8,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ITEMS, itemById, itemsOfBundle } from '../../miniapp/collections/catalog.js';
+import { itemById, itemsOfBundle } from '../../miniapp/collections/catalog.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const OFFERS_FILE = path.join(HERE, 'offers.json');
@@ -23,7 +23,7 @@ export const isPrice = (x) => Number.isInteger(x) && x >= 1 && x <= MAX_PRICE;
 export const TEST_PRICE = 1;
 
 /** Что вообще можно продавать: только предметы и комплект «Графита» (О-1, О-13). */
-export const SELLABLE = new Set(ITEMS.map((x) => x.id));
+export const SELLABLE = new Set(['graphit-cardback', 'graphit-table', 'graphit-profile', 'graphit-bundle']);
 
 /** Прочитать offers.json как есть; повреждённый файл — пустые предложения (закрыто). */
 export function readOffers(file = OFFERS_FILE) {

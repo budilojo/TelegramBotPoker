@@ -17,7 +17,7 @@ import { Hub } from './hub.js';
 import { Store, NullStore } from './store.js';
 import { FakeClock, TEST_TOKEN, initDataFor, seededDecks, durakDecks } from './harness.js';
 import { ERRORS, PER_MINUTE, REQ_KEEP } from '../miniapp/collections/protocol.js';
-import { itemsOfBundle } from './../miniapp/collections/catalog.js';
+import { itemsOfBundle, SLOTS } from './../miniapp/collections/catalog.js';
 
 const CB = 'graphit-cardback';
 const TB = 'graphit-table';
@@ -25,23 +25,24 @@ const PR = 'graphit-profile';
 
 /* ----------------------------------------------------------- демосреда */
 
-test('по умолчанию демосреда выключена: состояние «недоступно», grant — COL_DEMO_OFF, apply — COL_OFF', async () => {
+test('off: витрина открыта, но демо и владение не выдаются', async () => {
   const t = new Table();
-  assert.equal(t.app.collections.enabled, false);
-  await t.cmd(ALICE, '/play');
-  t.openHub(ALICE);
-  assert.equal(col(t, ALICE).length, 0, 'при подключении в рабочем режиме ничего про коллекции не приходит');
+  assert.equal(t.app.collections.enabled, true);
+  await t.cmd(ALICE, '/play'); t.openHub(ALICE);
+  assert.deepEqual(lastCol(t, ALICE).owned, []);
   const s = await send(t, ALICE, { op: 'state' });
-  assert.deepEqual(s, { t: 'col', op: 'state', v: 1, enabled: false, demo: false, owned: [], choice: { cardback: null, table: null, profile: null }, pending: { cardback: null, table: null, profile: null } });
+  assert.equal(s.v, 1); assert.equal(s.enabled, true); assert.equal(s.demo, false);
+  assert.deepEqual(s.owned, []); assert.equal(s.shop.open, false);
+  assert.deepEqual(s.choice, { cardback: null, table: null, profile: null });
   assert.equal((await grant(t, ALICE, CB)).error.code, 'COL_DEMO_OFF');
-  assert.equal((await apply(t, ALICE, 'cardback', CB, 'sapphire')).error.code, 'COL_OFF');
-  assert.equal((await clear(t, ALICE, 'cardback')).error.code, 'COL_OFF');
+  assert.equal((await apply(t, ALICE, 'cardback', CB, 'sapphire')).error.code, 'COL_NOT_OWNED');
+  assert.equal((await clear(t, ALICE, 'cardback')).when, 'now');
 });
 
 test('демосреду включает только опция процесса строго true; «1», 1, "true", " 1" и прочее — нет', () => {
   for (const v of [undefined, null, false, 0, 1, '1', ' 1', '1 ', 'true', 'yes', '', 'on', {}, [true]]) {
     const app = new App({ api: {}, collectionsDemo: v });
-    assert.equal(app.collections.enabled, false, `collectionsDemo=${JSON.stringify(v)}`);
+    assert.equal(app.collections.demo, false, `collectionsDemo=${JSON.stringify(v)}`);
   }
   assert.equal(new App({ api: {}, collectionsDemo: true }).collections.enabled, true);
 });
@@ -63,10 +64,10 @@ test('поля тела demo, unlocked, price, item, admin, host демосре�
   const lies = { demo: true, unlocked: true, price: 0, item: CB, enabled: true, admin: true, host: true, cosmeticsUnlocked: true };
   for (const body of [{ op: 'state' }, { op: 'grant', item: CB, req: req() }, { op: 'apply', slot: 'cardback', item: CB, color: 'petrol', req: req() }]) {
     const r = await send(t, ALICE, { ...body, ...lies });
-    assert.ok(r.error || r.enabled === false, JSON.stringify(r));
-    assert.equal(r.enabled === true, false);
+    if (!r.error) { assert.equal(r.demo, false); assert.deepEqual(r.owned, []); }
+    else assert.ok(['COL_DEMO_OFF', 'COL_NOT_OWNED'].includes(r.error.code));
   }
-  assert.equal(t.app.collections.enabled, false);
+  assert.equal(t.app.collections.demo, false);
   assert.deepEqual(t.app.store.collDemoItems(ALICE.id), [], 'ничего не выдано');
 });
 
@@ -78,7 +79,7 @@ test('права администратора и cosmeticsUnlocked не заме
   assert.equal(t.app.cosmeticsUnlocked(ALICE.id), true);
   assert.equal((await grant(t, ALICE, CB)).error.code, 'COL_DEMO_OFF');
   demoOn(t);
-  assert.deepEqual(t.app.collections.ownedItems(ALICE.id), [], 'админ и тестер без демо-выдачи ничем не владеют');
+  assert.equal(t.app.collections.owns(ALICE.id, CB), false, 'доступ owner к v2 не выдаёт Графит');
   assert.equal((await apply(t, ALICE, 'cardback', CB, 'petrol')).error.code, 'COL_NOT_OWNED');
 });
 
@@ -90,11 +91,11 @@ test('демо-строки в базе при выключенной демос
   await t.cmd(ALICE, '/play');
   t.openHub(ALICE);
   const s = await send(t, ALICE, { op: 'state' });
-  assert.equal(s.enabled, false);
+  assert.equal(s.enabled, true);
   assert.deepEqual(s.owned, []);
   assert.deepEqual(s.choice, { cardback: null, table: null, profile: null });
   assert.equal(t.app.collections.owns(ALICE.id, CB), false);
-  assert.deepEqual(t.app.collections.choiceOf(ALICE.id), { cardback: null, table: null, profile: null });
+  assert.deepEqual(t.app.collections.choiceOf(ALICE.id), Object.fromEntries(SLOTS.map((s) => [s, null])));
   // Тот же вечер в демосреде видит те же строки — значит, дело именно в настройке, а не в пустой базе.
   demoOn(t);
   assert.equal(t.app.collections.owns(ALICE.id, CB), true);
@@ -129,7 +130,7 @@ test('при подключении и переподключении (демо 
   await grant(t, ALICE, PR);
   t.close(ALICE);
   t.openHub(ALICE);
-  assert.deepEqual(lastCol(t, ALICE).owned, [{ item: PR, demo: true }]);
+  assert.deepEqual(lastCol(t, ALICE).owned, [{ item: PR, demo: true, source: ['demo'] }]);
 });
 
 test('grant: предмет, комплект раскладывается на три предмета; повторный req ничего не удваивает', async () => {
@@ -609,8 +610,8 @@ async function playScript(withLook) {
     const s = JSON.parse(JSON.stringify(st));
     delete s.look;
     delete s.room.code; // случайный код стола
-    for (const p of s.players) delete p.frame;
-    for (const p of s.results?.players ?? s.results ?? []) if (p && typeof p === 'object') delete p.frame;
+    for (const p of s.players) { delete p.frame; delete p.badge; }
+    for (const p of s.results?.players ?? s.results ?? []) if (p && typeof p === 'object') { delete p.frame; delete p.badge; }
     return s;
   };
   for (let hand = 0; hand < 2; hand++) {

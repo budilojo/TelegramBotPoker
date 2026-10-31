@@ -24,6 +24,7 @@ import {
 } from './rules.js';
 import { sortHand, COLOR_SHAPE, COLORS } from './cards.js';
 import { avatarId } from '../../profile.js';
+import { frameOf, badgeOf, lookView } from '../../collections/look.js';
 
 /** Устойчивый цвет аватара, не выдающий ничьего id (как в покере и дураке). */
 function hueOf(id) {
@@ -65,6 +66,7 @@ export function colorsView(room, viewerId, { now = Date.now(), botUsername = '' 
       name: p.name,
       hue: hueOf(p.id),
       avatar: avatarId(p.avatar),
+      frame: frameOf(room, p.id), badge: badgeOf(room, p.id),
       isHost: isHost(room, p.id),
       isMe: p.id === uid,
       seated: isSeated(p),
@@ -91,6 +93,7 @@ export function colorsView(room, viewerId, { now = Date.now(), botUsername = '' 
   const legal = raw ? { ...raw, catch: raw.catch ? { seat: seat(raw.catch.id), until: raw.catch.until } : null } : null;
 
   return {
+    look: lookView(room),
     game: 'colors',
     seq: room.seq,
     now,
@@ -168,7 +171,7 @@ export function colorsView(room, viewerId, { now = Date.now(), botUsername = '' 
     legal,
     canStart: room.status === 'lobby' && isHost(room, uid) && !startBlocker(room),
     canNext: room.status === 'playing' && !!d && d.phase === 'over' && (isSeated(meP) || isHost(room, uid)) && !startBlocker(room),
-    score: score(room).map((r) => ({ name: r.name, wins: r.wins, last: r.last, games: r.games, isHost: r.isHost, kicked: r.kicked, left: r.left })),
+    score: score(room).map((r) => ({ frame: frameOf(room, r.id), badge: badgeOf(room, r.id), name: r.name, wins: r.wins, last: r.last, games: r.games, isHost: r.isHost, kicked: r.kicked, left: r.left })),
     highlights: Object.fromEntries(
       Object.entries(highlights(room)).map(([id, line]) => [String(seat(id)), line]).filter(([s]) => s !== '-1')
     ),

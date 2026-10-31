@@ -107,7 +107,7 @@ test('пустое состояние: без ника — имя из Telegram;
   const t = new Table({ store: new Store(':memory:') });
   await t.begin({ ALICE, BOB, CAROL });
   await t.send(BOB, { t: 'profile' }); // просто спросить
-  assert.deepEqual(lastProfile(t, BOB), { nickname: null, avatar: null, telegramName: 'Боб', shown: 'Боб', avatars: AVATARS, min: 2, max: NICK_MAX });
+  assert.deepEqual(lastProfile(t, BOB), { nickname: null, avatar: null, frame: null, badge: null, telegramName: 'Боб', shown: 'Боб', avatars: AVATARS, min: 2, max: NICK_MAX });
   await t.send(BOB, { t: 'profile', nickname: 'Шмель' });
   assert.equal(lastProfile(t, BOB).shown, 'Шмель');
   assert.ok(names(t.state(ALICE)).includes('Шмель'), 'за столом у соседа имя уже новое');

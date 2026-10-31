@@ -26,6 +26,7 @@ import {
   MAX_SEATS, controlRu, KIND_RU, RESULT_RU, PLACE_MS,
 } from './rules.js';
 import { avatarId } from '../../profile.js';
+import { frameOf, badgeOf, lookView } from '../../collections/look.js';
 
 function hueOf(id) {
   let h = 0x811c9dc5;
@@ -85,6 +86,7 @@ export function battleshipView(room, viewerId, { now = Date.now(), botUsername =
       name: p.name,
       hue: hueOf(p.id),
       avatar: avatarId(p.avatar),
+      frame: frameOf(room, p.id), badge: badgeOf(room, p.id),
       isHost: isHost(room, p.id),
       isMe: p.id === uid,
       seated: isSeated(p),
@@ -125,6 +127,7 @@ export function battleshipView(room, viewerId, { now = Date.now(), botUsername =
   const mine = side != null && playing && m.phase === 'battle' && mover(m) === side;
 
   return {
+    look: lookView(room),
     game: 'battleship',
     seq: room.seq,
     now,
@@ -163,7 +166,7 @@ export function battleshipView(room, viewerId, { now = Date.now(), botUsername =
     canShare: side != null && !!m?.over && m.over.kind !== 'aborted',
     canStart: room.status === 'lobby' && isHost(room, uid) && !startBlocker(room),
     canNext: room.status === 'playing' && !!m && !!m.over && (isSeated(meP) || isHost(room, uid)) && !startBlocker(room),
-    score: score(room).map(({ id, ...row }) => row),
+    score: score(room).map(({ id, ...row }) => ({ ...row, frame: frameOf(room, id), badge: badgeOf(room, id) })),
     history: room.history.filter((h) => !h.aborted).length,
   };
 }

@@ -35,7 +35,7 @@ function ownedCard(ctx, it) {
       h('span.col-inv-art', thumb(h, it.id, mine ? c.color : color)),
       h('div.col-inv-title', h('h3.col-inv-name', it.title), h('p.col-inv-sub', `В вашей коллекции · ${colorTitle(color)}`))),
     h('div.col-inv-body',
-      swatches(h, { value: color, onPick: (x) => ctx.setColor(it.id, x), label: `Цвет: ${it.title}` }),
+      it.collection ? null : swatches(h, { value: color, onPick: (x) => ctx.setColor(it.id, x), label: `Цвет: ${it.title}` }),
       same
         ? h('span.col-badge.' + st.key, { role: 'status' }, (st.key === 'pending' ? '◷ ' : '✓ ') + st.text)
         : btn(h, { text: mine ? 'Сменить цвет' : 'Применить', cls: 'primary', busy, disabled: !!snap.busy || snap.link !== 'ok', onClick: () => store.apply(slot, it.id, color) }),

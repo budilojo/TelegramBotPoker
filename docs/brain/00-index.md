@@ -52,5 +52,10 @@ B выполнен локально: `../cosmetics-v2/reports/art.md`, сесс�
 `sessions/2026-10-31-cosmetics-v2-stage-B-art.md`; ресурсы/README/manifest —
 `miniapp/collections/v2-art/`, источник `tools/build-cosmetics-v2.mjs`.
 54 предмета/6 комплектов — готовые SVG, ещё не подключённый ассортимент.
-Текущая очередь C → D → E; новый арт требует отдельного одобрения,
+Текущая очередь D → E; новый арт требует отдельного одобрения,
 живой Telegram/телефонный шаг ещё впереди. Магазин v2 пока не реализован.
+
+C выполнен локально: `../cosmetics-v2/reports/integration.md` и status.json,
+сессия `sessions/2026-10-31-cosmetics-v2-stage-C-integration.md`, решение 198.
+54 предмета/6 комплектов подключены к семи играм; owner отдельно от источников
+покупок, атомарные слоты, snapshot v2/rollback. Магазин D и независимая E впереди.

@@ -1,0 +1,69 @@
+{
+  "id": "integration",
+  "attemptId": "2193dc78-bab0-422e-a0bd-12457c01a75d",
+  "status": "done",
+  "summary": "Подключены 54 предмета и 6 комплектов к семи играм, независимые слоты/owner и атомарный комплект; публичные frozen-снимки и restart без выдачи чужих прав. Графит, покупки и цены сохранены, новые товары не продаются. 1608 тестов, 16 поломок, SQLite rollback и игровые e2e зелёные; магазин D и живые телефоны впереди.",
+  "tests": [
+    {
+      "command": "node --disable-warning=ExperimentalWarning --test bot/cosmetics.v2.test.js",
+      "result": "21/21, exit 0: семь игр/полный поток/ход/restart, атомарность, источники, 60 запрещённых покупок",
+      "environment": "Node 24.12.0, SQLite, TelegramStub"
+    },
+    {
+      "command": "node tools/cosmetics-v2-integration-teeth.mjs",
+      "result": "16/16 временных поломок пойманы assert; файлы восстановлены, контроль зелёный",
+      "environment": "Node 24.12.0, локальные фикстуры"
+    },
+    {
+      "command": "node --disable-warning=ExperimentalWarning tools/check-cosmetics-v2-storage.mjs",
+      "result": "exit 0; .backup → App/Hub 1781699 → новая версия; права/заказы/overrides/id сохранены, schema=5, integrity=ok",
+      "environment": "macOS sqlite3 + node:sqlite, временная БД"
+    },
+    {
+      "command": "node --disable-warning=ExperimentalWarning tools/e2e-cosmetics-v2.mjs",
+      "result": "exit 0: 14 сцен/3 контекста, 54/54 игровых ресурсов, шесть серий, snapshot/reload/fallback; профиль apply/clear и примерка off; 23 PNG просмотрены",
+      "environment": "Chromium 153.0.8010.12, Playwright 1.63.0, 320×568/390×844, localhost, TelegramStub"
+    },
+    {
+      "command": "E2E_PORT=18098 SHOTS=1 node --disable-warning=ExperimentalWarning tools/e2e-profile.mjs",
+      "result": "exit 0, 320/390, профиль/аватары/сосед/сжатая область",
+      "environment": "Chromium, localhost, TelegramStub"
+    },
+    {
+      "command": "E2E_PORT=18097 node --disable-warning=ExperimentalWarning tools/e2e-collections-look.mjs",
+      "result": "exit 0, прежний Графит покера/дурака, четыре цвета, freeze/reconnect/fallback/итоги/история",
+      "environment": "Chromium, localhost, TelegramStub"
+    },
+    {
+      "command": "npm run layout",
+      "result": "exit 0, no overlaps",
+      "environment": "Chromium, localhost, TelegramStub"
+    },
+    {
+      "command": "npm run kit",
+      "result": "exit 0, шкала сохранена",
+      "environment": "Node/Chromium"
+    },
+    {
+      "command": "npm run contrast",
+      "result": "exit 0, прежние документированные исключения",
+      "environment": "Node"
+    },
+    {
+      "command": "npm run colors",
+      "result": "exit 0, экран UNOQ живой",
+      "environment": "Chromium/TelegramStub"
+    },
+    {
+      "command": "npm test",
+      "result": "exit 0, 1608/1608; fail/cancelled/skipped/todo=0; 37.26 с, финально после восстановления runtime",
+      "environment": "macOS 26.6.2 arm64, Node 24.12.0, localhost разрешён"
+    },
+    {
+      "command": "git diff --check",
+      "result": "exit 0",
+      "environment": "Git, redesign"
+    }
+  ],
+  "blockers": []
+}

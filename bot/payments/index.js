@@ -13,7 +13,7 @@
  *  - новые продажи закрыты выключателем (`gate`), но выдача, история, сверка и возвраты работают всегда.
  */
 import crypto from 'node:crypto';
-import { itemById } from '../../miniapp/collections/catalog.js';
+import { ITEMS, itemById } from '../../miniapp/collections/catalog.js';
 import { PAY_ERRORS, PRECHECKOUT, ORDER_TTL_MS, PAY_OPS } from '../../miniapp/collections/pay-protocol.js';
 import { isReq } from '../../miniapp/collections/protocol.js';
 import { gate, priceOf, itemsOf, SELLABLE } from './config.js';
@@ -123,6 +123,7 @@ export class Payments {
     const g = this.gate();
     const eff = this.eff();
     const offers = {};
+    for (const it of ITEMS.filter((i) => i.collection)) offers[it.id] = { price: null };
     for (const id of SELLABLE) offers[id] = { price: g.open ? priceOf(eff, id) : null };
     return {
       open: g.open,

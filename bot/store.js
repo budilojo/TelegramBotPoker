@@ -573,6 +573,20 @@ export class Store {
   collChoiceClear(userId, slot) {
     this.db.prepare('DELETE FROM collection_choice WHERE user_id = ? AND slot = ?').run(String(userId), String(slot));
   }
+  /** All choices and replay marker commit together; profile restores its legacy pair. */
+  collApply(userId, rows, req, at, keep = 50) {
+    const apply = () => {
+      for (const r of rows) {
+        if (r.clear) this.collChoiceClear(userId, r.slot);
+        else this.collChoiceSet(userId, r.slot, r.item, r.color, at);
+        if (r.slot === 'profile' && !r.clear) for (const slot of ['frame', 'badge']) this.collChoiceClear(userId, slot);
+      }
+      this.collReqAdd(userId, req, at, keep);
+    };
+    this.db.exec('BEGIN IMMEDIATE');
+    try { apply(); this.db.exec('COMMIT'); }
+    catch (err) { this.db.exec('ROLLBACK'); throw err; }
+  }
   collReqSeen(userId, req) {
     return !!this.db.prepare('SELECT 1 FROM collection_req WHERE user_id = ? AND req = ?').get(String(userId), String(req));
   }
@@ -1190,6 +1204,19 @@ export class NullStore {
   }
   collChoiceClear(userId, slot) {
     this.collPicks.get(String(userId))?.delete(String(slot));
+  }
+  /** All choices and replay marker commit together; profile restores its legacy pair. */
+  collApply(userId, rows, req, at, keep = 50) {
+    const apply = () => {
+      for (const r of rows) {
+        if (r.clear) this.collChoiceClear(userId, r.slot);
+        else this.collChoiceSet(userId, r.slot, r.item, r.color, at);
+        if (r.slot === 'profile' && !r.clear) for (const slot of ['frame', 'badge']) this.collChoiceClear(userId, slot);
+      }
+      this.collReqAdd(userId, req, at, keep);
+    };
+    const picks = structuredClone(this.collPicks), reqs = structuredClone(this.collReqs);
+    try { apply(); } catch (err) { this.collPicks = picks; this.collReqs = reqs; throw err; }
   }
   collReqSeen(userId, req) {
     return (this.collReqs.get(String(userId)) ?? []).some((r) => r.req === String(req));

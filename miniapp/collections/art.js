@@ -7,7 +7,7 @@
  *
  * Модуль без DOM при загрузке: `artImg` обращается к `document` только когда вызван.
  */
-import { isColor } from './catalog.js';
+import { isColor, itemById } from './catalog.js';
 
 /** Все виды, которые бывают в папке art/ (по одному на цвет). */
 export const ART_KINDS = [
@@ -59,4 +59,14 @@ export function artImg(h, kind, color, { detail = false, cls = '', alt = '' } = 
 /** Базовое оформление («Классика»): нейтральная рамка с ромбом, без файлов и без цвета коллекции. */
 export function baseArt(h, ratio = '200 / 280') {
   return h('span.col-art.fallback.base', { style: { '--ratio': ratio }, 'data-art': 'base' }, h('span.col-art-base', { 'aria-hidden': 'true' }));
+}
+
+/** Local catalog descriptor only. Detail is fetched on the item route, thumbnails stay small. */
+export function itemArt(h, id, detail = false) {
+  const it = itemById(id), src = detail || it?.kind === 'bundle' ? it?.assets?.preview : it?.assets?.game;
+  const box = h('span.col-art', { 'data-art': id });
+  if (!src) return box;
+  const img = h('img', { src, alt: '', 'aria-hidden': 'true', loading: 'lazy', decoding: 'async', draggable: 'false' });
+  img.addEventListener('error', () => { box.classList.add('fallback'); box.replaceChildren(h('span.col-art-base')); }, { once: true });
+  box.append(img); return box;
 }

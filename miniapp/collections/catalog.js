@@ -6,6 +6,9 @@
  * Цены — ДЕМОНСТРАЦИОННЫЕ (Stars, из SPEC), владельцем не утверждены; в рабочем режиме
  * нигде не показываются. Идентификаторы — латиницей и навсегда.
  */
+import { V2_ITEMS, V2_COLLECTIONS } from './v2-items.js';
+export { V2_ITEMS };
+export const COLLECTIONS = [{ id: 'graphit', title: 'Графит' }, ...V2_COLLECTIONS];
 export const COLLECTION = { id: 'graphit', title: 'Графит' };
 
 /** Порядок = порядок показа. */
@@ -18,13 +21,15 @@ export const COLORS = [
 export const DEFAULT_COLOR = 'graphite';
 
 /** Что можно «надеть». */
-export const SLOTS = ['cardback', 'table', 'profile'];
+export const LEGACY_SLOTS = ['cardback', 'table', 'profile'];
+export const SLOTS = [...LEGACY_SLOTS, 'frame', 'badge', 'chess-board', 'checkers-board', 'nardy-board', 'battleship-panel', 'unoq-cardback'];
 
 export const ITEMS = [
   { id: 'graphit-cardback', kind: 'item', slot: 'cardback', title: 'Рубашка «Графит»', games: ['poker'], visibility: 'owner-closed-cards', price: 99 },
   { id: 'graphit-table', kind: 'item', slot: 'table', title: 'Стол «Графит»', games: ['poker', 'durak'], visibility: 'room', price: 199 },
   { id: 'graphit-profile', kind: 'item', slot: 'profile', title: 'Знак «Графит»', games: ['lobby', 'results'], visibility: 'public-profile', price: 79 },
   { id: 'graphit-bundle', kind: 'bundle', title: 'Коллекция «Графит»', includes: ['graphit-cardback', 'graphit-table', 'graphit-profile'], price: 249 },
+  ...V2_ITEMS,
 ];
 
 /** Бесплатное базовое оформление: доступно всегда, id зарезервированы. */
@@ -32,6 +37,7 @@ export const BASE = {
   cardback: { id: 'base-cardback', title: 'Классика' },
   table: { id: 'base-table', title: 'Классика' },
   profile: { id: 'base-profile', title: 'Без оформления' },
+  ...Object.fromEntries(SLOTS.filter((s) => !LEGACY_SLOTS.includes(s)).map((s) => [s, { id: `base-${s}`, title: 'Классика' }])),
 };
 
 const byId = new Map(ITEMS.map((x) => [x.id, x]));
@@ -50,7 +56,14 @@ export const itemsOfBundle = (bundleId) => {
   return x && x.kind === 'bundle' ? [...x.includes] : [];
 };
 /** Какие предметы комплекта в `ownedIds` отсутствуют. */
-export const missingForBundle = (ownedIds) => {
+export const missingForBundle = (ownedIds, bundle = 'graphit-bundle') => {
   const have = new Set(ownedIds || []);
-  return itemsOfBundle('graphit-bundle').filter((id) => !have.has(id));
+  return itemsOfBundle(bundle).filter((id) => !have.has(id));
+};
+
+/** Graphit colors and fixed v2 art are disjoint. No client URL/color is accepted. */
+export const isItemColor = (item, color) => itemById(item)?.collection ? color === 'default' : !!itemById(item) && isColor(color);
+export const publicEntry = (raw, slot, game = null) => {
+  const it = itemById(raw?.item);
+  return it?.kind === 'item' && (Array.isArray(slot) ? slot.includes(it.slot) : it.slot === slot) && isItemColor(it.id, raw.color) && (!game || it.games.includes(game)) ? { item: it.id, color: raw.color } : null;
 };

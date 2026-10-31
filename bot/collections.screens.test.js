@@ -107,14 +107,15 @@ test('вид не меняется посреди раздачи; лобби ж�
   assert.equal(hold.hold('R2', 'playing', look(2, 'graphite')).table.color, 'graphite', 'после «нет look» держатель начинает заново');
 });
 
-test('границы экрана: рамка и знак — только лобби и итоги; в партии их нет', () => {
+test('границы Графита сохранены; в партии разрешён отдельный v2 badge', () => {
   for (const [name, src, fns] of [
     ['покер', POKER, ['seatEl', 'heroEl', 'renderTable', 'centerEl', 'panelEl', 'openWinner']],
     ['дурак', DURAK, ['seatEl', 'heroEl', 'renderTable', 'middleEl', 'panelEl']],
   ]) {
     for (const fn of fns) {
       const b = body(src, fn);
-      assert.ok(!/frameAvatar|nameWithMark/.test(b), `${name}: ${fn} не рисует рамку и знак (в партии их нет)`);
+      if (fn === 'seatEl') assert.match(b, /nameWithMark\(p.name, null, p.badge\)/, `${name}: только v2 badge в партии, прежний Graphit скрыт`);
+      else assert.ok(!/frameAvatar|nameWithMark/.test(b), `${name}: ${fn} не добавляет старый профиль`);
     }
     for (const fn of ['renderLobby', 'renderResults']) {
       const b = body(src, fn);

@@ -14,7 +14,7 @@
  *  • файла нет / не загрузился → база, и больше его не просим;
  *  • лица карт не трогаем никогда — только рубашку места.
  */
-import { ITEMS, COLORS, itemById, isColor } from './catalog.js';
+import { ITEMS, COLORS, itemById, isColor, publicEntry } from './catalog.js';
 
 const ART_DIR = '/collections/art/';
 const KINDS = ['cardback-small', 'table-ornament', 'table-diamond', 'frame-small', 'mark'];
@@ -41,15 +41,14 @@ export const colorInfo = (color) => COLORS.find((c) => c.id === color) ?? null;
 /** Запись `{item, color}` из вида → она же, если предмет ровно тот, что положен в это поле; иначе null. */
 function entry(raw, field) {
   if (!raw || typeof raw !== 'object') return null;
-  const it = itemById(raw.item);
-  if (!it || it.kind !== 'item' || it.id !== SLOT_ITEM[field] || !ITEMS.includes(it)) return null;
-  return isColor(raw.color) ? { item: it.id, color: raw.color } : null;
+  return publicEntry(raw, { back: 'cardback', table: 'table', frame: ['profile', 'frame'] }[field]);
 }
 
 /** Стол комнаты: `{color, ornament, diamond}` (адреса могут быть null — тогда без этого слоя) либо null. */
 export function tableOf(look) {
   const e = entry(look?.table, 'table');
   if (!e) return null;
+  if (itemById(e.item)?.collection) { const src = gameAsset(e, 'table'); return src ? { color: 'v2', ornament: src, diamond: null } : null; }
   const ornament = artUrl('table-ornament', e.color);
   const diamond = artUrl('table-diamond', e.color);
   return ornament || diamond ? { color: e.color, ornament, diamond } : null;
@@ -60,7 +59,7 @@ export function backOf(look, seat) {
   if (!Array.isArray(look?.backs) || !Number.isInteger(seat)) return null;
   const raw = look.backs.find((b) => b && b.seat === seat);
   const e = entry(raw, 'back');
-  const src = e && artUrl('cardback-small', e.color);
+  const src = e && (itemById(e.item)?.collection ? gameAsset(e, 'cardback') : artUrl('cardback-small', e.color));
   return src ? { color: e.color, src } : null;
 }
 
@@ -68,6 +67,7 @@ export function backOf(look, seat) {
 export function frameOf(frame) {
   const e = entry(frame, 'frame');
   if (!e) return null;
+  if (itemById(e.item)?.collection) { const src = gameAsset(e, 'frame'); return src ? { color: 'v2', frame: src, mark: null } : null; }
   const f = artUrl('frame-small', e.color);
   const m = artUrl('mark', e.color);
   return f || m ? { color: e.color, frame: f, mark: m } : null;
@@ -89,6 +89,13 @@ export function makeHolder() {
       const dealNo = Number.isInteger(look.dealNo) ? look.dealNo : 0;
       const sameDeal = kept && kept.roomKey === roomKey && kept.dealNo === dealNo && status !== 'lobby';
       if (!sameDeal) kept = { roomKey, dealNo, look };
+      else if (look.v === 2) {
+        // A server revocation can remove a frozen decoration; it cannot add/change one mid-hand.
+        const next = { ...kept.look };
+        for (const key of ['table', 'board', 'deckBack']) if (!look[key]) next[key] = null;
+        if (Array.isArray(next.backs)) next.backs = next.backs.filter((b) => look.backs?.some((x) => x.seat === b.seat && x.item === b.item && x.color === b.color));
+        kept.look = next;
+      }
       return kept.look;
     },
     reset() { kept = null; },
@@ -121,7 +128,9 @@ export function dressTable(felt, look) {
     if (!felt || !t) return false;
     felt.classList.add('gr-table', `gr-${t.color}`);
     felt.dataset.grTable = t.color;
-    if (t.ornament) felt.append(deco(t.ornament, 'gr-orn'));
+    if (t.ornament) felt.append(deco(t.ornament, 'gr-orn', () => {
+      if (t.color === 'v2') { felt.classList.remove('gr-table', 'gr-v2'); delete felt.dataset.grTable; }
+    }));
     if (t.diamond) felt.append(deco(t.diamond, 'gr-dia'));
     return true;
   } catch { return false; }
@@ -177,7 +186,12 @@ export function backImgFor(look, seat, cls = '') {
 export function frameAvatar(av, frame) {
   try {
     const f = frameOf(frame);
-    if (!av || !f || !f.frame) return av;
+    if (!av || !f || !f.frame || av.dataset?.v2Frame) return av;
+    if (f.color === 'v2') {
+      av.classList.add('cv2-avatar'); av.dataset.v2Frame = frame.item;
+      av.append(deco(f.frame, 'cv2-frame', () => { delete av.dataset.v2Frame; }));
+      return av;
+    }
     const wrap = make('span', `gr-ava gr-${f.color}`);
     wrap.dataset.grFrame = f.color;
     wrap.append(av);
@@ -190,16 +204,44 @@ export function frameAvatar(av, frame) {
  * Имя со знаком: `<span class="gr-nm">` — знак слева, имя сокращается многоточием (знак не расширяет строку);
  * полное имя — в подписи (`aria-label` + `title`). Без знака возвращает `null` (вызывающий оставит как было).
  */
-export function nameWithMark(name, frame) {
+export function nameWithMark(name, frame, badge = null) {
   try {
+    const b = gameAsset(badge, 'badge');
     const f = frameOf(frame);
-    if (!f || !f.mark) return null;
+    const src = b || f?.mark;
+    if (!src) return null;
     const box = make('span', 'gr-nm', { 'aria-label': String(name), title: String(name) });
-    const mark = deco(f.mark, 'gr-mark', () => box.classList.add('gr-nomark'));
-    mark.dataset.grMark = f.color;
+    const mark = deco(src, 'gr-mark', () => box.classList.add('gr-nomark'));
+    mark.dataset.grMark = b ? badge.item : f.color;
+    if (b) { const title = itemById(badge.item).title; box.setAttribute('aria-label', `${name} · ${title}`); mark.title = title; }
     const text = make('span', 'gr-nm-t');
     text.textContent = String(name);
     box.append(mark, text);
     return box;
   } catch { return null; }
+}
+
+/** Resolve only catalog-owned paths; preview never supplies a public choice or a URL. */
+export function gameAsset(raw, slot, game = null) {
+  const e = publicEntry(raw, slot, game);
+  const src = e && itemById(e.item)?.assets?.game;
+  return typeof src === 'string' && src.startsWith('/collections/v2-art/') && !failed.has(src) ? src : null;
+}
+
+/** External art frame. The board, coordinates and all interactive children retain their geometry. */
+export function dressBoard(el, look, game) {
+  const slot = game === 'battleship' ? 'battleship-panel' : `${game}-board`;
+  const src = gameAsset(look?.board, slot, game);
+  if (el && src) {
+    el.classList.add('cv2-board'); el.dataset.v2Board = look.board.item;
+    el.append(deco(src, `cv2-board-art cv2-${game}`, () => { delete el.dataset.v2Board; }));
+  }
+  return el;
+}
+export function deckBackImg(look, cls = '') {
+  const src = gameAsset(look?.deckBack, 'unoq-cardback', 'colors');
+  if (!src) return null;
+  const img = make('img', `cl-img cv2-deck-back ${cls}`, { src, alt: 'Закрытая карта', draggable: 'false' });
+  img.addEventListener('error', () => { markFailed(src); img.src = '/colors/back.svg'; img.classList.remove('cv2-deck-back'); }, { once: true });
+  return img;
 }

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import {
-  COLLECTION, COLORS, DEFAULT_COLOR, SLOTS, ITEMS, BASE, itemById, isColor, slotOf, itemsOfBundle, missingForBundle,
+  COLLECTION, LEGACY_SLOTS, V2_ITEMS, COLORS, DEFAULT_COLOR, SLOTS, ITEMS, BASE, itemById, isColor, slotOf, itemsOfBundle, missingForBundle,
 } from '../miniapp/collections/catalog.js';
 import { OPS, ERRORS, isReq } from '../miniapp/collections/protocol.js';
 import { settingsRows, ROWS } from '../miniapp/settings-rows.js';
@@ -27,18 +27,22 @@ test('SPEC и каталог в design/collections не разошлись по 
 
 test('предметы: id уникальны и стабильны, комплект — три предмета', () => {
   assert.equal(COLLECTION.id, 'graphit');
-  assert.deepEqual(ITEMS.map((x) => x.id), ['graphit-cardback', 'graphit-table', 'graphit-profile', 'graphit-bundle']);
+  assert.deepEqual(ITEMS.filter((x) => !x.collection).map((x) => x.id), ['graphit-cardback', 'graphit-table', 'graphit-profile', 'graphit-bundle']);
   assert.equal(new Set(ITEMS.map((x) => x.id)).size, ITEMS.length);
-  assert.deepEqual(SLOTS, ['cardback', 'table', 'profile']);
+  assert.deepEqual(LEGACY_SLOTS, ['cardback', 'table', 'profile']);
+  assert.deepEqual(SLOTS, [...LEGACY_SLOTS, 'frame', 'badge', 'chess-board', 'checkers-board', 'nardy-board', 'battleship-panel', 'unoq-cardback']);
+  assert.equal(V2_ITEMS.length, 60);
+  assert.equal(V2_ITEMS.filter((x) => x.kind === 'item').length, 54);
   const bundle = itemById('graphit-bundle');
   assert.equal(bundle.includes.length, 3);
   assert.deepEqual(itemsOfBundle('graphit-bundle'), ['graphit-cardback', 'graphit-table', 'graphit-profile']);
   for (const id of bundle.includes) assert.equal(itemById(id).kind, 'item');
-  assert.deepEqual(ITEMS.filter((x) => x.kind === 'item').map((x) => x.slot).sort(), [...SLOTS].sort());
+  assert.deepEqual([...new Set(ITEMS.filter((x) => x.kind === 'item').map((x) => x.slot))].sort(), [...SLOTS].sort());
 });
 
 test('цены помечены как демонстрационные: число и комментарий в каталоге', () => {
-  assert.deepEqual(ITEMS.map((x) => x.price), [99, 199, 79, 249]);
+  assert.deepEqual(ITEMS.filter((x) => !x.collection).map((x) => x.price), [99, 199, 79, 249]);
+  assert.ok(V2_ITEMS.every((x) => x.price === null));
   const src = fs.readFileSync(new URL('../miniapp/collections/catalog.js', import.meta.url), 'utf8');
   assert.match(src, /ДЕМОНСТРАЦИОННЫ/);
 });
@@ -75,11 +79,11 @@ test('база не конфликтует с id предметов и цвет�
     assert.match(b.id, /^base-/);
   }
   assert.deepEqual(Object.keys(BASE).sort(), [...SLOTS].sort());
-  assert.equal(new Set(Object.values(BASE).map((b) => b.id)).size, 3);
+  assert.equal(new Set(Object.values(BASE).map((b) => b.id)).size, SLOTS.length);
 });
 
 test('протокол: операции, коды отказов и req', () => {
-  assert.deepEqual(OPS, ['state', 'grant', 'apply', 'clear']);
+  assert.deepEqual(OPS, ['state', 'grant', 'apply', 'clear', 'apply-bundle']);
   assert.deepEqual(Object.keys(ERRORS), ['COL_OFF', 'COL_DEMO_OFF', 'COL_OP', 'COL_ITEM', 'COL_COLOR', 'COL_SLOT', 'COL_NOT_OWNED', 'COL_FAST', 'COL_STALE', 'COL_BUSY']);
   for (const t of Object.values(ERRORS)) assert.match(t, /[а-яё]/i);
   assert.equal(isReq('abcdefgh'), true);
@@ -92,7 +96,8 @@ test('протокол: операции, коды отказов и req', () =>
 test('модули каталога и протокола чистые: нет DOM, импортов и сети', () => {
   for (const f of ['catalog.js', 'protocol.js']) {
     const src = fs.readFileSync(new URL(`../miniapp/collections/${f}`, import.meta.url), 'utf8');
-    assert.doesNotMatch(src, /^\s*import\s/m, f);
+    if (f === 'catalog.js') assert.match(src, /import .* from '.\/v2-items.js'/);
+    else assert.doesNotMatch(src, /^\s*import\s/m, f);
     assert.doesNotMatch(src, /\b(document|window|localStorage|fetch)\b/, f);
   }
 });

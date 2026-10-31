@@ -6,11 +6,11 @@
  * Цены — демонстрационные (SPEC), только в демо и всегда с пометкой.
  */
 import { COLORS, COLLECTION, BASE, itemById, itemsOfBundle } from './catalog.js';
-import { artImg } from './art.js';
+import { artImg, itemArt } from './art.js';
 import { DEMO_NOTE } from './state.js';
 import { buyBlock } from './purchase.js';
 export { DEMO_NOTE };
-export const SLOT_TABS = [['cardback', 'Карты'], ['table', 'Столы'], ['profile', 'Профиль']];
+export const SLOT_TABS = [['cardback', 'Карты'], ['table', 'Столы'], ['profile', 'Профиль'], ['frame', 'Рамки'], ['badge', 'Значки'], ['chess-board', 'Шахматы'], ['checkers-board', 'Шашки'], ['nardy-board', 'Нарды'], ['battleship-panel', 'Морской бой'], ['unoq-cardback', 'UNOQ']];
 
 export const colorTitle = (id) => COLORS.find((c) => c.id === id)?.title || '';
 
@@ -32,7 +32,7 @@ export const slotTitle = (slot) => SLOT_TABS.find(([s]) => s === slot)?.[1] || '
 export const itemTitle = (id) => itemById(id)?.title || id;
 
 /** Короткая вещь: «99 Stars · демонстрационная цена». Цена из каталога, ничего не придумываем. */
-export const priceNote = (it) => `${it.price} Stars · цена демонстрационная`;
+export const priceNote = (it) => it.price === null ? 'Цена не утверждена' : `${it.price} Stars · цена демонстрационная`;
 
 /** Отметка состояния предмета для витрины и карточки. */
 export function stateOf(store, snap, id) {
@@ -48,7 +48,7 @@ export function stateOf(store, snap, id) {
     return free();
   }
   const c = snap.choice[it.slot];
-  if (c?.item === id) return snap.pending[it.slot] ? { key: 'pending', text: WHEN[it.slot] } : { key: 'applied', text: 'Применено' };
+  if (c?.item === id) return snap.pending[it.slot] ? { key: 'pending', text: WHEN[it.slot] || 'Применится со следующей партии' } : { key: 'applied', text: 'Применено' };
   if (snap.owned.includes(id)) return { key: 'owned', text: 'В вашей коллекции' };
   return free();
 }
@@ -98,6 +98,7 @@ export function btn(h, { text, cls = '', onClick, disabled = false, busy = false
 export function thumb(h, id, color) {
   const it = itemById(id);
   if (!it) return artImg(h, 'x', color, {});
+  if (it.collection) return itemArt(h, id);
   const kind = it.kind === 'bundle' ? 'bundle' : `thumb-${it.slot}`;
   return artImg(h, kind, color, { cls: `thumb-${it.kind === 'bundle' ? 'bundle' : it.slot}` });
 }
@@ -105,6 +106,7 @@ export function thumb(h, id, color) {
 /** Крупная картинка предмета. */
 export function hero(h, id, color) {
   const it = itemById(id);
+  if (it?.collection) return itemArt(h, id, true);
   if (it?.kind === 'bundle') return artImg(h, 'bundle', color, { cls: 'hero-bundle' });
   if (it?.slot === 'cardback') return artImg(h, 'cardback', color, { detail: true, cls: 'hero-card' });
   if (it?.slot === 'table') return artImg(h, 'thumb-table', color, { cls: 'hero-table' });
@@ -112,8 +114,8 @@ export function hero(h, id, color) {
 }
 
 /** Состав комплекта: три строки с отметкой «в коллекции / не получено». */
-export function composition(h, snap, onOpen) {
-  return h('ul.col-list', itemsOfBundle('graphit-bundle').map((id) => {
+export function composition(h, snap, onOpen, bundle = 'graphit-bundle') {
+  return h('ul.col-list', itemsOfBundle(bundle).map((id) => {
     const owned = snap.owned.includes(id);
     return h('li', h('button.col-row', { type: 'button', onclick: () => onOpen(id) },
       h('span.col-row-title', itemTitle(id)),
@@ -127,11 +129,11 @@ export function facts(h, id) {
   if (!it) return null;
   const slot = it.kind === 'bundle' ? 'bundle' : it.slot;
   return h('div.col-facts',
-    h('p.col-purpose', PURPOSE[slot]),
+    h('p.col-purpose', it.description || PURPOSE[slot]),
     h('div.col-tags',
       h('span.col-tag', 'Пока работает приложение'),
       it.kind === 'item' ? h('span.col-tag', WHERE[it.slot]) : null,
-      h('span.col-tag', 'Все 4 цвета включены')));
+      it.collection ? null : h('span.col-tag', 'Все 4 цвета включены')));
 }
 
 export { BASE, COLLECTION };
@@ -160,6 +162,7 @@ export function renderItem(ctx) {
   actions.push(btn(h, { text: 'Примерить', cls: 'secondary', onClick: () => ctx.go({ name: 'fit', id }), disabled: locked && !snap.loaded }));
   if (own) {
     actions.push(h('div.col-owned', { role: 'status' }, '✓ Уже в вашей коллекции'));
+    if (bundle && snap.v === 2) actions.push(btn(h, { text: 'Надеть комплект', cls: 'primary', disabled: locked || waiting, onClick: () => store.applyBundle(id, color) }));
     actions.push(btn(h, { text: 'Открыть в инвентаре', cls: 'secondary', onClick: () => ctx.go({ name: 'inventory', tab: bundle ? 'cardback' : it.slot }) }));
   } else if (!snap.demo) {
     // Магазин: состав, цена сервера и условия до кнопки покупки (purchase.js); без цены — без кнопки.
@@ -179,13 +182,13 @@ export function renderItem(ctx) {
     h('div.col-titlebar', h('h2.col-name', it.title), badge(h, st)),
     facts(h, id),
     // Цвет: у комплекта его нет — у каждого предмета свой (внутри состава).
-    bundle ? null : h('section.col-block',
+    bundle || it.collection ? null : h('section.col-block',
       h('h3.col-cap', 'Цвет'),
       swatches(h, { value: color, onPick: (c) => ctx.setColor(id, c), label: `Цвет: ${it.title}` }),
       h('p.col-note', 'Выберите цвет — картинка изменится. Все 4 цвета входят в предмет, доплаты за цвет нет.')),
     bundle ? h('section.col-block',
       h('h3.col-cap', 'Состав'),
-      composition(h, snap, (x) => ctx.go({ name: 'item', id: x }))) : null,
-    snap.demo ? h('p.col-price', priceNote(it)) : null,
+      composition(h, snap, (x) => ctx.go({ name: 'item', id: x }), id)) : null,
+    snap.demo || it.collection ? h('p.col-price', priceNote(it)) : null,
     h('div.col-actions', actions));
 }

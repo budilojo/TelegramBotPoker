@@ -51,7 +51,7 @@ let prev = null;
 export function onState(s, p, { wasConnected }) {
   state = s;
   prev = p;
-  look = lookHolder.hold(s.room.code, s.room.status, s.look);
+  look = lookHolder.hold(`${s.game}:${s.room.code}`, s.room.status, s.look);
   handleState(wasConnected);
 }
 
@@ -196,7 +196,7 @@ function renderLobby() {
     slots.push(
       p
         ? animateOnce(
-          h(`div.lseat${p.isMe ? '.me' : ''}`, frameAvatar(withHost(avatarEl(p), p.isHost), p.frame), h('div.nm', nameWithMark(p.name, p.frame) ?? p.name)),
+          h(`div.lseat${p.isMe ? '.me' : ''}`, frameAvatar(withHost(avatarEl(p), p.isHost), p.frame), h('div.nm', nameWithMark(p.name, p.frame, p.badge) ?? p.name)),
           `lseat:${p.name}`, [{ transform: 'scale(0.4)', opacity: 0, offset: 0 }], { duration: 450, delay: i * 45 })
         : h('div.lseat.empty', h('div.av', '+'), h('div.nm', 'свободно'))
     );
@@ -396,7 +396,7 @@ function seatEl(p, s) {
   // A fixed-size box: where it goes is worked out by layoutTable().
   return h(`div.${cls}`, { 'data-seat': p.seat },
     h('div.pod', av, minis),
-    h('div.info', h('div.nm', p.name), counter('div.stk.num', stackKey(p), p.stack, stackMotion(s))),
+    h('div.info', h('div.nm', nameWithMark(p.name, null, p.badge) ?? p.name), counter('div.stk.num', stackKey(p), p.stack, stackMotion(s))),
     plate,
   );
 }
@@ -950,7 +950,7 @@ function renderResults() {
     h('div', h('h1', '🏁 Итоги'), h('div.sub', `Раздач сыграно: ${state.room.handNo}`)),
     h('div.box', rows.map((r) => h(`div.res-row${dressed ? '.gr' : ''}`,
       dressed ? h('span.gr-res-who', person(r)) : null,
-      h('span.n', { 'aria-label': dressed ? r.name : null, title: dressed ? r.name : null }, nameWithMark(r.name, r.frame) ?? (dressed ? h('span.gr-nm-t', r.name) : r.name), r.isHost ? ' 👑' : '', r.role === 'dealer' ? ' · дилер' : '', r.kicked ? ' · удалён' : ''),
+      h('span.n', { 'aria-label': dressed ? r.name : null, title: dressed ? r.name : null }, nameWithMark(r.name, r.frame, r.badge) ?? (dressed ? h('span.gr-nm-t', r.name) : r.name), r.isHost ? ' 👑' : '', r.role === 'dealer' ? ' · дилер' : '', r.kicked ? ' · удалён' : ''),
       h('span.s.num', fmt(r.stack)),
       h(`span.pl.num.${r.net > 0 ? 'up' : r.net < 0 ? 'down' : ''}`, r.net > 0 ? `+${fmt(r.net)}` : r.net < 0 ? `−${fmt(-r.net)}` : '0'),
     ))),
