@@ -157,17 +157,17 @@ try {
   const page = await open(W, ivan);
   await goSettings(page);
   await wait(400);
-  assert.equal(await page.locator('[data-entry="collections"]').count(), 0, 'входа в коллекции нет');
+  assert.equal(await page.locator('[data-entry="collections"]').count(), 1, 'витрина доступна при off');
   await page.evaluate(async () => (await import('/net.js')).send({ t: 'col', op: 'grant', item: 'graphit-cardback', req: 'off-0000001' }, { lock: false }));
   await wait(400);
   const log = await page.evaluate(() => window.__log.filter((x) => /"t":"col"/.test(x)));
   assert.ok(log.some((x) => /COL_DEMO_OFF/.test(x)), `grant отклонён кодом COL_DEMO_OFF: ${log.join(' | ').slice(0, 300)}`);
   assert.equal(W.app.collections.owns('101', 'graphit-cardback'), false, 'ничего не выдано');
   await page.locator('.nav-tab[data-tab="shop"]').click();
-  await page.waitForSelector('.shop-soon');
-  assert.match(await text(page, '.shop-soon'), /скоро откроется/);
-  await until(() => W.app.store.shopTabTotals(Date.now()).taps >= 1, 'счётчик нажатий вкладки «Магазин» работает');
-  step('рабочий режим: входа нет, grant отклонён (COL_DEMO_OFF), «Магазин» — «скоро», счётчик считает');
+  await page.waitForSelector('.col-show');
+  assert.match(await text(page, '.col-show'), /покупки пока закрыты/);
+  assert.equal(await page.locator('[data-act="buy"]').count(), 0, 'off не показывает покупку');
+  step('рабочий off: витрина доступна, grant отклонён (COL_DEMO_OFF), оплаты нет');
   await W.web.close();
 
   assert.deepEqual(problems, [], `ошибки в консоли страниц: ${problems.join('; ')}`);

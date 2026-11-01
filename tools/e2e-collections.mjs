@@ -102,6 +102,9 @@ async function boot(port, collectionsOn) {
   const app = new App({ api, store: new Store(':memory:'), botUsername: 'All_InPoker_bot', minIntervalMs: 0, runoutStepMs: 0, webappUrl: `http://localhost:${port}`, miniAppName: 'table', ratingSoon: true, admins: [] });
   const hub = new Hub(app, { botToken: TOKEN });
   if (collectionsOn !== null) {
+    // Since C the initial private col packet precedes state. Keep this v1 fixture
+    // consistent from the very first packet, not just on explicit requests.
+    app.collections.stateOf = () => COL.state('state');
     const orig = hub.handle.bind(hub);
     hub.handle = async (session, msg) => (msg?.t === 'col' ? COL.handle(session, msg) : orig(session, msg));
   }
@@ -140,7 +143,7 @@ const colSent = (page, op) => page.sent.map((x) => { try { return JSON.parse(x);
 const text = (page, sel) => page.locator(sel).innerText();
 const shot = (page, name, tag) => page.screenshot({ path: path.join(SHOTS, `col-${tag}-${name}.png`) });
 const goSettings = async (page) => { await page.locator('.nav-tab[data-tab="settings"]').click(); await page.waitForSelector('h1:has-text("Настройки")'); };
-const openCollections = async (page) => { await goSettings(page); await page.locator('[data-entry="collections"]').click(); await page.waitForSelector('.col-root h2.col-big'); };
+const openCollections = async (page) => { await goSettings(page); await page.locator('[data-entry="collections"]').click(); await page.waitForSelector('.col-show'); };
 
 /** Экран по размеру: нет горизонтального скролла, ничто не вылезает за край, зоны нажатия ≥ 44 (кроме текстовых ссылок). */
 async function fits(page, what) {
@@ -236,7 +239,7 @@ try {
     await page.waitForSelector('.col-show');
     assert.equal(await page.locator('.col-root').getAttribute('data-route'), 'showcase');
     await fits(page, `витрина, ${tag}`);
-    assert.equal(await page.locator('.col-card').count(), 4, 'три предмета и комплект');
+    assert.equal(await page.locator('.col-card').count(), 64, 'Графит и 60 новых позиций');
     assert.match(await text(page, '.col-show'), /Демонстрация · Без оплаты/);
     for (const t of ['Рубашка «Графит»', 'Стол «Графит»', 'Знак «Графит»', 'Коллекция «Графит»']) assert.ok((await text(page, '.col-show')).includes(t), t);
     assert.equal(await page.getByRole('button', { name: /купить|оплатить|оплачено/i }).count(), 0, 'кнопок покупки нет');
@@ -357,15 +360,15 @@ try {
     await page.getByRole('button', { name: 'Перейти в инвентарь' }).click();
     await page.waitForSelector('.col-inventory');
     await fits(page, `инвентарь, ${tag}`);
-    assert.deepEqual(await page.locator('.col-tab').allInnerTexts(), ['Карты', 'Столы', 'Профиль']);
-    assert.match(await text(page, '.col-tabpanel'), /Классика/);
-    assert.match(await text(page, '.col-tabpanel'), /Применится со следующей раздачи/);
+    assert.deepEqual(await page.locator('.col-controls .col-tab').allInnerTexts(), ['Каталог', 'Мои вещи']);
+    assert.match(await text(page, '.col-inventory'), /Классика/);
+    assert.match(await text(page, '.col-inventory'), /Применится со следующей партии/);
     await shot(page, 'inventory-cards', tag);
-    await page.locator('#col-tab-table').click();
+    await page.locator('[data-filter="game"]').selectOption('durak');
     await page.waitForSelector('.col-inv[data-slot="table"]');
-    assert.equal(await page.locator('.col-inv.locked').count(), 1, 'стол ещё не получен: карточка закрыта');
+    assert.equal(await page.locator('.col-inv.locked').count(), 0, 'чужих вещей в инвентаре нет');
     await fits(page, `инвентарь «Столы», ${tag}`);
-    await page.locator('#col-tab-cardback').click();
+    await page.locator('[data-filter="game"]').selectOption('poker');
 
     // смена цвета: до ответа прежняя отметка, потом новая
     COL.hold = true;
@@ -376,7 +379,7 @@ try {
     assert.equal(colSent(page, 'apply').length, 2, 'apply: включение и смена цвета — два запроса, не больше');
     COL.hold = false;
     COL.release();
-    await page.waitForFunction(() => /Применится со следующей раздачи/.test(document.querySelector('.col-inv[data-item="graphit-cardback"]')?.textContent || '') && document.querySelector('.col-inv[data-item="graphit-cardback"] .col-sw[aria-checked="true"]')?.dataset.color === 'sapphire');
+    await page.waitForFunction(() => /Применится со следующей партии/.test(document.querySelector('.col-inv[data-item="graphit-cardback"]')?.textContent || '') && document.querySelector('.col-inv[data-item="graphit-cardback"] .col-sw[aria-checked="true"]')?.dataset.color === 'sapphire');
     assert.equal(COL.choice.cardback.color, 'sapphire');
 
     // ошибка применения: прежний выбор, слова, «Повторить»
@@ -395,10 +398,10 @@ try {
     step(`${tag}: инвентарь: вкладки, цвет после ответа, отказ → прежний выбор + «Повторить»`);
 
     // возврат к базе
-    await page.getByRole('button', { name: 'Вернуть базовое' }).click();
+    await page.locator('.col-inv[data-item="graphit-cardback"]').getByRole('button', { name: 'Снять', exact: true }).click();
     await page.waitForFunction(() => document.querySelector('.col-inv[data-base] .col-badge'));
     assert.equal(COL.choice.cardback, null);
-    assert.match(await text(page, '.col-inv[data-base]'), /Применено/);
+    assert.match(await text(page, '.col-inv[data-base][data-slot="cardback"]'), /Базовое оформление/);
 
     /* --- нет связи: сервер рвёт сокет --- */
     for (const s of COL.sessions) void s;
@@ -438,11 +441,11 @@ try {
     COL.reset();
     const page = await open(S, [360, 740]);
     await openCollections(page);
-    await page.getByRole('button', { name: 'Моя коллекция' }).click();
+    await page.locator('.col-controls').getByRole('button', { name: 'Мои вещи', exact: true }).click();
     await page.waitForSelector('.col-inventory');
     assert.match(await text(page, '.col-empty'), /только базовое оформление/);
     assert.match(await text(page, '.col-empty'), /оно всегда доступно/);
-    assert.equal(await page.locator('.col-inv[data-base].on').count(), 1, 'база показана применённой');
+    assert.equal(await page.locator('.col-inv[data-base].on').count(), 10, 'все независимые базовые слоты показаны');
     await shot(page, 'inventory-empty', '360');
     await page.getByRole('button', { name: 'Открыть коллекции' }).first().click();
     await page.waitForSelector('.col-show');
@@ -484,7 +487,7 @@ try {
     await goSettings(page);
     // перед открытием обрываем связь, чтобы слой открылся «в загрузке» не получится — проверяем рамки заглушки через снимок DOM
     await page.locator('[data-entry="collections"]').click();
-    await page.waitForSelector('.col-root h2.col-big');
+    await page.waitForSelector('.col-show');
     // экран длиннее окна: нажатия на карточки/цвета не двигают прокрутку и не пересоздают скроллер
     await page.setViewportSize({ width: 320, height: 420 });
     await page.locator('.col-card[data-item="graphit-cardback"]').click();
@@ -495,10 +498,9 @@ try {
     COL.hold = false;
     COL.release();
     await page.waitForSelector('.col-recv');
-    await assertNoJump(page, { scroller: '.col-scroll', at: 'top', label: 'вкладки инвентаря' }, async () => {
-      await page.getByRole('button', { name: 'Перейти в инвентарь' }).click();
-      await page.locator('#col-tab-table').click();
-    }).catch((e) => { if (!/нечего прокручивать/.test(e.message)) throw e; console.log('  ! вкладки инвентаря: прокручивать нечего'); });
+    await page.getByRole('button', { name: 'Перейти в инвентарь' }).click();
+    await page.locator('[data-filter="game"]').selectOption('durak');
+    assert.equal(await page.locator('[data-filter="game"]').inputValue(), 'durak');
     step('без прыжков: цвет, ожидание ответа, переходы по вкладкам');
     await page.close();
   }
@@ -514,7 +516,7 @@ try {
     await page.goto(`http://localhost:${S.port}/`);
     await page.waitForSelector('.nav-tab[data-tab="settings"]');
     await openCollections(page);
-    await page.getByRole('button', { name: 'Моя коллекция' }).click();
+    await page.locator('.col-controls').getByRole('button', { name: 'Мои вещи', exact: true }).click();
     const dur = await page.evaluate(() => getComputedStyle(document.querySelector('.col-btn')).transitionDuration);
     assert.ok(/^0s(, 0s)*$/.test(dur), `при reduced-motion переходов нет: ${dur}`);
     step('prefers-reduced-motion: переходов нет');

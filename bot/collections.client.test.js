@@ -238,10 +238,13 @@ test('«Так видят друзья» есть ТОЛЬКО в примерк
   }
 });
 
-test('демо включает только ответ сервера: ни URL, ни localStorage, ни Telegram-данные в коде коллекций', () => {
+test('демо и права включает только сервер; URL разрешён только оболочке для маршрута магазина', () => {
   for (const f of COL_FILES) {
     const src = read(f).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-    assert.ok(!/localStorage|sessionStorage|location\.(search|hash)|URLSearchParams|initDataUnsafe|start_param/.test(src), `${f}: демо/доступ из постороннего источника`);
+    assert.ok(!/localStorage|sessionStorage|initDataUnsafe|start_param/.test(src), `${f}: демо/доступ из постороннего источника`);
+    // D explicitly supports old links. State/ownership and all item screens still
+    // cannot read URL input; actual navigation without rights is exercised by e2e-cosmetics-shop.
+    if (!f.endsWith('/index.js')) assert.ok(!/location\.(search|hash)|URLSearchParams/.test(src), `${f}: URL вне оболочки маршрутов`);
     assert.ok(!/Date\.now\(\)/.test(src) || f.endsWith('index.js'), `${f}: время страницы`);
   }
 });

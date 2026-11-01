@@ -32,6 +32,7 @@ import { confirmDrop } from '../drop.js';
 import { net, bus, send } from '../net.js';
 import { avatarEl } from '../profile.js';
 import { chatMenuItem } from '../chat.js';
+import { shopMenuItem } from '../collections/menu.js';
 
 /** Идентификатор запроса: повтор того же тапа сервер узнаёт и не плодит лобби. */
 const newReqId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -663,7 +664,7 @@ function openMenu() {
       h('button.menu-item', { onclick: openRules }, 'Правила', h('small', 'коротко, по делу')),
       h('button.menu-item', { onclick: openOrder }, 'Порядок карт в руке',
         h('small', handOrder() === 'dealt' ? 'как пришли' : 'по цвету')),
-      chatMenuItem(s),
+      chatMenuItem(s), shopMenuItem(),
       // С ботами — только играть: ни настроек, ни прерываний; конец — на экране.
       s.solo ? h('button.menu-item', { onclick: () => { closeSheet(); send({ t: 'hub' }, { lock: false }); } }, s.hubLabel || '← Игры с ботами', h('small', 'партию можно будет продолжить')) : null,
       me.isHost && !s.solo ? h('button.menu-item', { onclick: openSettings }, 'Настройки', h('small', 'накопление, таймер')) : null,

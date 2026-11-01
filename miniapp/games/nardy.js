@@ -28,6 +28,7 @@ import { dropItem } from '../drop.js';
 import { net, bus, send } from '../net.js';
 import { avatarEl } from '../profile.js';
 import { chatMenuItem } from '../chat.js';
+import { shopMenuItem } from '../collections/menu.js';
 
 const newReqId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
@@ -494,7 +495,7 @@ function openMenu() {
     else if (!me.seated && !me.kicked && s.players.filter((p) => p.seated).length < 2) item('Сесть за доску', 'со следующей партии', () => { closeSheet(); send({ t: 'sit' }); });
     if (!me.notify && s.bot) item('🔔 Напоминать о ходе', 'нажмите Start у бота', () => tg.openTelegramLink(`https://t.me/${s.bot}?start=notify`));
     item('Правила и часы', s.room.control, openRules);
-    items.push(chatMenuItem(s));
+    items.push(chatMenuItem(s), shopMenuItem());
     if (me.isHost) {
       items.push(h('div.section-label', 'Хост'));
       if (!live) item('Настройки', 'часы, цвет', openSettings);

@@ -20,7 +20,7 @@ import * as train from './train/screens.js';
 import './train/link-wire.js'; // крючки связки Обучение↔Тренировка и определения уровня (Y)
 import './learn/hook.js';
 import { activeRoute, resetRoute } from './train/route.js';
-import * as collections from './collections/index.js'; // слой «Коллекции» (только демо; вход — строка «Настроек»)
+import * as collections from './collections/index.js'; // магазин и примерка поверх текущей страницы
 
 const SCREENS = { hub, rating, admin, down, solo, ...GAMES };
 
@@ -95,7 +95,7 @@ function render() {
   if (trainOn) train.render();
   else if (!own) SCREENS[screen].render();
   const bar = !trainOn && nav.showsBar(net.state);
-  if (bar) $app.append(nav.bar(net.state));
+  if (bar && !collections.isOpen()) $app.append(nav.bar(net.state));
   // Which state is on screen — for the browser checks (tools/e2e*.mjs) and for
   // the few common things a screen needs to move out of its own way.
   document.body.dataset.screen = trainOn ? 'train' : own ? 'nav' : screen;

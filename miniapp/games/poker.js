@@ -19,6 +19,7 @@ import {
 import { dropItem } from '../drop.js';
 import { net, bus, send, serverNow } from '../net.js';
 import { chatMenuItem } from '../chat.js';
+import { shopMenuItem } from '../collections/menu.js';
 import { markDone } from '../school.js';
 import { avatarEl } from '../profile.js';
 import { makeHolder, dressTable, placeDiamond, POKER_AVOID, backImgFor, frameAvatar, nameWithMark, frameOf as frameLook } from '../collections/look-view.js';
@@ -1223,7 +1224,7 @@ function openMenu() {
       if (s.room.status === 'playing') item('Пауза', 'боты подождут', () => { closeSheet(); send({ t: 'pause' }); });
       if (s.room.status === 'paused') item('Продолжить игру', null, () => { closeSheet(); send({ t: 'resume' }); });
       if (s.room.status !== 'lobby' && s.room.status !== 'finished') item('Завершить игру', 'итоги — на экране', () => confirmFinish(), 'danger');
-      items.push(chatMenuItem(s));
+      items.push(chatMenuItem(s), shopMenuItem());
       return h('div', h('h3', 'Меню'), h('div.sub', 'Игра с ботами'), h('div.menu-list', items));
     }
     if (me.seated && !me.sittingOut && me.role === 'player' && s.room.status !== 'lobby') {
@@ -1233,7 +1234,7 @@ function openMenu() {
     }
     if (!me.notify && s.bot) item('🔔 Напоминать о ходе', 'нажмите Start у бота', () => tg.openTelegramLink(`https://t.me/${s.bot}?start=notify`));
     if (s.hub) item(s.hubLabel || '← Все игры группы', 'стол останется, как есть', () => { closeSheet(); send({ t: 'hub' }, { lock: false }); });
-    items.push(chatMenuItem(s));
+    items.push(chatMenuItem(s), shopMenuItem());
 
     if (me.isHost) {
       items.push(h('div.section-label', 'Хост'));

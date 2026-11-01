@@ -117,7 +117,8 @@ try {
    await b.page.evaluate(async()=>(await import('/collections/index.js')).open());
    await b.page.waitForSelector('.col-show');await b.page.locator('.col-card[data-item="sever-chess-board"]').click();
    await b.page.getByRole('button',{name:'Примерить',exact:true}).click();await b.page.waitForSelector('.col-fit');
-   assert.equal(await b.page.locator('.col-fit img').getAttribute('src'),itemById('sever-chess-board').assets.preview);
+   assert.equal(await b.page.locator('.col-fit [data-art="sever-chess-board"] img').getAttribute('src'),itemById('sever-chess-board').assets.preview);
+   assert.equal(await b.page.locator('.col-fit .col-sample-grid img').count(),32);
    assert.deepEqual(t.app.store.collChoices(B.id),before);assert.deepEqual(t.app.collections.ownedItems(B.id),[]);
    await b.page.screenshot({path:path.join(out,`fitting-off-${width}.png`)});
    assert.ok(await b.page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));

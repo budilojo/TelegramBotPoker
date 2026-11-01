@@ -51,17 +51,18 @@ try {
     assert.ok(box.width >= 44 && box.height >= 44, `вкладка мала: ${JSON.stringify(box)}`);
     assert.equal(taps(), width === 320 ? 0 : 1, 'до нажатия этот человек не посчитан');
     await tab(page).click();
-    await page.getByText('Магазин скоро откроется', { exact: true }).waitFor();
+    await page.waitForSelector('.col-show');
     assert.equal(await tab(page).getAttribute('aria-current'), 'page');
     await page.waitForFunction(() => true);
     for (let i = 0; i < 50 && taps() < (width === 320 ? 1 : 2); i++) await page.waitForTimeout(100);
     // Честность: ни цен, ни кнопок покупки, ни «Хочу».
-    const text = await page.locator('#app').innerText();
-    assert.ok(!/Stars|₽|\$|Хочу|Купить|Примерить/.test(text), `на экране «скоро» лишнее: ${text}`);
-    assert.equal(await page.locator('#app .lobby button, #app .lobby img').count(), 0, 'на экране нет кнопок и картинок');
-    const overflow = await page.evaluate(() => [...document.querySelectorAll('.shop-soon, .shop-soon *, .nav, .nav *')].filter((el) => { const r = el.getBoundingClientRect(); return r.width && (r.left < -1 || r.right > innerWidth + 1); }).length);
+    const text = await page.locator('.col-show').innerText();
+    assert.ok(!/Купить за|₽|\$|Хочу/.test(text), `off не предлагает реальную оплату: ${text}`);
+    assert.equal(await page.locator('[data-act="buy"]').count(), 0);
+    assert.equal(await page.locator('.col-show .col-card').count(), 64, 'off сохраняет публичный ассортимент');
+    const overflow = await page.evaluate(() => [...document.querySelectorAll('.col-root, .col-root *, .nav, .nav *')].filter((el) => { const r = el.getBoundingClientRect(); return r.width && (r.left < -1 || r.right > innerWidth + 1); }).length);
     assert.equal(overflow, 0, 'горизонтального выхода за край нет');
-    await page.screenshot({ path: path.join(OUT, `soon-${width}.png`) });
+    await page.screenshot({ path: path.join(OUT, `catalog-${width}.png`) });
     assert.equal(taps(), width === 320 ? 1 : 2, 'ровно одно нажатие записано');
     // Повторное нажатие подряд: и активная вкладка, и частота — счёт не растёт.
     await tab(page).click();
@@ -69,15 +70,15 @@ try {
     assert.equal(taps(), width === 320 ? 1 : 2, 'нажатие по уже открытой вкладке не считается');
     // Обновление состояния не выбрасывает с экрана, прокрутка не прыгает.
     await page.setViewportSize({ width, height: 200 });
-    await assertNoJump(page, { scroller: '.lobby', label: `«скоро» ${width}` }, async () => {
+    await assertNoJump(page, { scroller: '.col-scroll', label: `магазин ${width}` }, async () => {
       await page.evaluate(async () => { const { send } = await import('/net.js'); send({ t: 'refresh' }, { lock: false }); });
       await page.waitForTimeout(400);
     });
-    await page.getByText('Магазин скоро откроется', { exact: true }).waitFor();
+    await page.waitForSelector('.col-show');
     await page.setViewportSize({ width, height: width === 320 ? 568 : 844 });
     // Другие вкладки живы; «Игры» возвращает хаб.
     await page.locator('.nav-tab[data-tab="games"]').click();
-    assert.equal(await page.getByText('Магазин скоро откроется', { exact: true }).count(), 0);
+    assert.equal(await page.locator('.col-root').count(), 0);
     // Клавиатура прячет панель вместе с вкладкой.
     await page.evaluate(() => { const i = document.createElement('input'); i.id = 'kb'; document.body.append(i); i.focus(); });
     assert.equal(await tab(page).isVisible(), false, 'при вводе вкладки нет');

@@ -106,7 +106,7 @@ try {
     await page.locator('[data-act="support"]').click();
     assert.equal(await page.evaluate(() => window.__openedTelegram), 'https://t.me/All_InPoker_bot?start=support');
     await shot(page, `support-settings-${size[0]}.png`);
-    await page.locator('[data-entry="collections"]').click();
+    await page.locator('.nav-tab[data-tab="shop"]').click();
     await page.waitForSelector('.col-show');
     assert.match(await page.locator('.col-show').innerText(), /Тестовая среда · звёзды ненастоящие/);
     for (const [item, price] of Object.entries(CONFIRMED)) {
@@ -194,6 +194,16 @@ try {
     await page.waitForSelector('.col-doc-text');
     await layoutOk(page, `${size[0]}: документ`);
     step(`${size[0]} px: «Мои покупки», «Поддержка» (ответ в личку), условия покупки`);
+    // Hidden offers cannot be purchased through an old item entry, even in the stub's open test gate.
+    S.app.store.pay.setOfferHidden('graphit-cardback', true, 'fixture-owner', Date.now());
+    col.pushState('101');
+    await page.evaluate(async () => { const m = await import('/collections/index.js'); m.close(); m.open({ name: 'item', id: 'graphit-cardback' }); });
+    await page.waitForSelector('.col-item');
+    assert.equal(await page.locator('[data-act="buy"]').count(), 0, 'hidden item entry has no purchase action');
+    const beforeInvoices = S.api.calls.filter(c => c.method === 'createInvoiceLink').length;
+    await page.evaluate(async () => (await import('/collections/pay.js')).pay.buy('graphit-cardback'));
+    await wait(100);
+    assert.equal(S.api.calls.filter(c => c.method === 'createInvoiceLink').length, beforeInvoices, 'server also rejects hidden item');
     await page.close();
     await S.web.close();
   }
@@ -203,11 +213,11 @@ try {
   const page = await open(W, ivan, [360, 740]);
   await goSettings(page);
   await wait(400);
-  assert.equal(await page.locator('[data-entry="collections"]').count(), 0, 'при закрытых продажах входа нет');
+  assert.equal(await page.locator('[data-entry="collections"]').count(), 1, 'off сохраняет вход в публичную витрину');
   await page.evaluate(async () => (await import('/net.js')).send({ t: 'pay', op: 'buy', item: 'graphit-table', req: 'off-0000001' }, { lock: false }));
   await wait(300);
   assert.equal(W.api.calls.filter((c) => c.method === 'createInvoiceLink').length, 0, 'счёт не выставлен');
-  step('режим off: входа нет, счёт не выставляется');
+  step('режим off: публичная витрина доступна, счёт не выставляется');
   await W.web.close();
 
   assert.deepEqual(problems, [], `ошибки в консоли страниц: ${problems.join('; ')}`);

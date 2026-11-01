@@ -7,7 +7,7 @@
  *  • одновременно в пути один запрос: второй нажим не уходит (защита от двойного нажатия);
  *  • успех — только после ответа сервера; до ответа «прежний вид» (server не меняется);
  *  • повтор после «нет ответа» идёт с тем же `req` (сервер не удвоит), после явного отказа — с новым;
- *  • вход (`visible`) — только когда сервер прислал enabled && demo; никаких других источников.
+ *  • вход (`visible`) — enabled && (demo || shop); витрина при off не выдаёт прав.
  */
 import { COLORS, DEFAULT_COLOR, ITEMS, SLOTS, LEGACY_SLOTS, itemById, itemsOfBundle, missingForBundle, isItemColor, publicEntry } from './catalog.js';
 import { ERRORS, isReq } from './protocol.js';

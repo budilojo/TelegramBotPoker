@@ -1,0 +1,104 @@
+{
+  "id": "shop",
+  "attemptId": "1c5cbd30-c5f4-4b83-8abe-ec00bef2e7b3",
+  "status": "done",
+  "summary": "Реализованы Магазин из нижней панели, каталог/фильтры/Мои вещи, локальная примерка семи игр и надевание после ack с возвратом к столу. Права/покупки/id/цены Графита сохранены, новые вещи не продаются. Полный npm test 1611/1611, полный e2e и 7/7 поломок зелёные; телефоны/живой Telegram не проверены.",
+  "tests": [
+    {
+      "command": "node --disable-warning=ExperimentalWarning --test bot/collections.client.test.js bot/cosmetics.shop.test.js",
+      "result": "26/26, exit 0; каталог/источники/stale choice/серверные права",
+      "environment": "macOS 26.6.2 arm64, Node 24.12.0, временная SQLite/TelegramStub"
+    },
+    {
+      "command": "node tools/cosmetics-shop-teeth.mjs",
+      "result": "7/7 временных поломок пойманы assert, восстановлены finally, Node-контроль зелёный",
+      "environment": "macOS 26.6.2 arm64, Node 24.12.0, временная SQLite/TelegramStub + Chromium"
+    },
+    {
+      "command": "SHOP_TEETH=1 node --disable-warning=ExperimentalWarning tools/e2e-cosmetics-shop.mjs",
+      "result": "exit 0: восстановленный браузерный контроль после всех поломок",
+      "environment": "Chromium 153.0.8010.12, Playwright 1.63.0, localhost/TelegramStub, 320×568 и 390×844"
+    },
+    {
+      "command": "node --disable-warning=ExperimentalWarning tools/e2e-cosmetics-shop.mjs",
+      "result": "exit 0: каталог/фильтры/примерка/надеть/снять/комплект/owner/off/отказ/reconnect/ссылки/фокус; 14 игровых сцен, 44 PNG + 4 листа просмотрены",
+      "environment": "Chromium 153.0.8010.12, Playwright 1.63.0, localhost/TelegramStub, 320×568 и 390×844"
+    },
+    {
+      "command": "E2E_PORT=18120 node --disable-warning=ExperimentalWarning tools/e2e-collections.mjs",
+      "result": "exit 0: прежний Графит, цвета/получение/ack/ошибка/повтор/timeout/reduced motion на 320/360/390/430",
+      "environment": "Chromium 153.0.8010.12, Playwright 1.63.0, localhost/TelegramStub, 320×568 и 390×844; управляемая v1-фикстура"
+    },
+    {
+      "command": "E2E_PORT=18130 node --disable-warning=ExperimentalWarning tools/e2e-payments.mjs",
+      "result": "exit 0: 75/50/100/175, нижний Магазин, окно ≠ право, успешное подтверждение/отмена/история/документы/бот/скрытый товар",
+      "environment": "Chromium 153.0.8010.12, Playwright 1.63.0, localhost/TelegramStub, 320×568 и 390×844; только временные cfgOf/readyLegal и TelegramStub"
+    },
+    {
+      "command": "E2E_PORT=18140 node --disable-warning=ExperimentalWarning tools/e2e-collections-flow.mjs",
+      "result": "exit 0: серверный путь Графита и public off без выдачи",
+      "environment": "Chromium 153.0.8010.12, Playwright 1.63.0, localhost/TelegramStub, 320×568 и 390×844"
+    },
+    {
+      "command": "E2E_PORT=18150 node --disable-warning=ExperimentalWarning tools/e2e-nav.mjs",
+      "result": "exit 0: нижние разделы/клавиатура/шторки/рейтинг скоро",
+      "environment": "Chromium 153.0.8010.12, Playwright 1.63.0, localhost/TelegramStub, 320×568 и 390×844"
+    },
+    {
+      "command": "E2E_PORT=18160 node --disable-warning=ExperimentalWarning tools/e2e-tablenav.mjs",
+      "result": "exit 0: возврат/место/ход/часы, удалённый стол",
+      "environment": "Chromium 153.0.8010.12, Playwright 1.63.0, localhost/TelegramStub, 320×568 и 390×844"
+    },
+    {
+      "command": "node --disable-warning=ExperimentalWarning tools/e2e-cosmetics-v2.mjs",
+      "result": "exit 0: 54/54 game assets, семь игр × две ширины × три контекста; остальные серии синтетическими view, не выдачей прав",
+      "environment": "Chromium 153.0.8010.12, Playwright 1.63.0, localhost/TelegramStub, 320×568 и 390×844"
+    },
+    {
+      "command": "node --disable-warning=ExperimentalWarning tools/check-cosmetics-v2-storage.mjs",
+      "result": "exit 0: .backup → App/Hub 1781699 → новый App, покупки/источники/overrides/old+new+unknown id сохранены; schema=5/integrity=ok",
+      "environment": "macOS 26.6.2 arm64, Node 24.12.0, временная SQLite/TelegramStub"
+    },
+    {
+      "command": "npm run layout",
+      "result": "exit 0, no overlaps",
+      "environment": "Chromium 153.0.8010.12, Playwright 1.63.0, localhost/TelegramStub, 320×568 и 390×844"
+    },
+    {
+      "command": "npm run kit",
+      "result": "exit 0, шкала сохранена",
+      "environment": "Node + Chromium"
+    },
+    {
+      "command": "npm run contrast",
+      "result": "exit 0, прежние документированные исключения",
+      "environment": "Node"
+    },
+    {
+      "command": "npm run colors",
+      "result": "exit 0, экран UNOQ живой",
+      "environment": "Chromium 153.0.8010.12, Playwright 1.63.0, localhost/TelegramStub, 320×568 и 390×844"
+    },
+    {
+      "command": "npm run preview",
+      "result": "exit 0: 105 снимков, без служебных слов/JS-ошибок; четыре стандартных снимка отдельно просмотрены",
+      "environment": "Chromium 153.0.8010.12, Playwright 1.63.0, localhost/TelegramStub, 320×568 и 390×844"
+    },
+    {
+      "command": "E2E_PORT=18200 npm run e2e",
+      "result": "exit 0: полный последовательный прогон, включая новый магазин",
+      "environment": "Chromium 153.0.8010.12, Playwright 1.63.0, localhost/TelegramStub, 320×568 и 390×844"
+    },
+    {
+      "command": "npm test",
+      "result": "exit 0: 1611/1611; fail/cancelled/skipped/todo=0; 38.24 с, финальный код восстановлен",
+      "environment": "macOS 26.6.2 arm64, Node 24.12.0, временная SQLite/TelegramStub"
+    },
+    {
+      "command": "git diff --check",
+      "result": "exit 0",
+      "environment": "Git, redesign"
+    }
+  ],
+  "blockers": []
+}

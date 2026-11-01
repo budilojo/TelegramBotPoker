@@ -6,6 +6,8 @@
 import { itemById, itemsOfBundle } from './catalog.js';
 import { artImg, itemArt } from './art.js';
 import { swatches, colorTitle } from './item.js';
+import { fittingSamples } from './samples.js';
+import { GAMES, gamesOf } from './shop-model.js';
 
 const backs = (h, color, n = 2, cls = '') => h(`div.col-backs${cls ? '.' + cls : ''}`, Array.from({ length: n }, () => artImg(h, 'cardback', color, { cls: 'card-s' })));
 
@@ -43,16 +45,21 @@ export function renderFitting(ctx) {
   const id = ctx.route.id;
   const it = itemById(id);
   if (!it) return h('div.col-empty', h('p', 'Такого предмета нет.'));
+  const games = gamesOf(it), game = games.includes(ctx.route.game) ? ctx.route.game : games.includes(ctx.filters?.game) ? ctx.filters.game : games[0];
+  const gamePicker = () => h('label.col-filter', h('span', 'Игра для примерки'), h('select', { 'aria-label': 'Игра для примерки', onchange: e => ctx.setGame(e.target.value) },
+    games.map(id => h('option', { value: id, selected: game === id }, GAMES.find(([g]) => g === id)[1]))));
   if (it.collection) return h('div.col-fit',
     h('p.col-note.strong', 'Это только примерка: она не меняет вашу партию и ничего не отправляет.'),
-    h('h3.col-cap', it.title),
-    h('div.col-hero', itemArt(h, id, true)),
+    gamePicker(),
+    h('p.col-note', 'Образец с вымышленной позицией. Общий стол выбирает хост.'),
+    ...fittingSamples(h, id, game),
     h('p.col-note', it.description),
     h('div.col-actions', h('button.col-btn.secondary', { type: 'button', onclick: () => ctx.back() }, 'Назад к карточке')));
   const color = ctx.color(id);
   const slots = it.kind === 'bundle' ? itemsOfBundle(id).map((x) => itemById(x).slot) : [it.slot];
   return h('div.col-fit',
     h('p.col-note.strong', 'Это только примерка: она не меняет вашу партию и ничего не отправляет.'),
+    gamePicker(),
     h('section.col-block',
       h('h3.col-cap', `Цвет: ${colorTitle(color)}`),
       swatches(h, { value: color, onPick: (c) => ctx.setColor(id, c), label: 'Цвет примерки' })),

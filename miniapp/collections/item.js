@@ -9,6 +9,7 @@ import { COLORS, COLLECTION, BASE, itemById, itemsOfBundle } from './catalog.js'
 import { artImg, itemArt } from './art.js';
 import { DEMO_NOTE } from './state.js';
 import { buyBlock } from './purchase.js';
+import { gameNames, personal, sourceText } from './shop-model.js';
 export { DEMO_NOTE };
 export const SLOT_TABS = [['cardback', 'Карты'], ['table', 'Столы'], ['profile', 'Профиль'], ['frame', 'Рамки'], ['badge', 'Значки'], ['chess-board', 'Шахматы'], ['checkers-board', 'Шашки'], ['nardy-board', 'Нарды'], ['battleship-panel', 'Морской бой'], ['unoq-cardback', 'UNOQ']];
 
@@ -48,7 +49,7 @@ export function stateOf(store, snap, id) {
     return free();
   }
   const c = snap.choice[it.slot];
-  if (c?.item === id) return snap.pending[it.slot] ? { key: 'pending', text: WHEN[it.slot] || 'Применится со следующей партии' } : { key: 'applied', text: 'Применено' };
+  if (snap.owned.includes(id) && c?.item === id) return snap.pending[it.slot] ? { key: 'pending', text: 'Применится со следующей партии' } : { key: 'applied', text: 'Применено' };
   if (snap.owned.includes(id)) return { key: 'owned', text: 'В вашей коллекции' };
   return free();
 }
@@ -132,7 +133,7 @@ export function facts(h, id) {
     h('p.col-purpose', it.description || PURPOSE[slot]),
     h('div.col-tags',
       h('span.col-tag', 'Пока работает приложение'),
-      it.kind === 'item' ? h('span.col-tag', WHERE[it.slot]) : null,
+      h('span.col-tag', gameNames(it)),
       it.collection ? null : h('span.col-tag', 'Все 4 цвета включены')));
 }
 
@@ -162,7 +163,19 @@ export function renderItem(ctx) {
   actions.push(btn(h, { text: 'Примерить', cls: 'secondary', onClick: () => ctx.go({ name: 'fit', id }), disabled: locked && !snap.loaded }));
   if (own) {
     actions.push(h('div.col-owned', { role: 'status' }, '✓ Уже в вашей коллекции'));
-    if (bundle && snap.v === 2) actions.push(btn(h, { text: 'Надеть комплект', cls: 'primary', disabled: locked || waiting, onClick: () => store.applyBundle(id, color) }));
+    actions.push(h('p.col-note', sourceText(snap.sources[id] || (bundle ? snap.sources[it.includes[0]] : []))));
+    if (!bundle) {
+      const same = snap.choice[it.slot]?.item === id && snap.choice[it.slot]?.color === color;
+      actions.push(btn(h, { text: same ? 'Надето' : 'Надеть', cls: 'primary', busy: snap.busy?.op === 'apply', disabled: locked || waiting || same || (!!it.collection && snap.v !== 2), onClick: () => store.apply(it.slot, id, color) }));
+      if (same) actions.push(btn(h, { text: 'Снять', cls: 'secondary', disabled: locked || waiting, onClick: () => store.clear(it.slot) }));
+      actions.push(h('p.col-note', `${slotTitle(it.slot)} · ${snap.pending[it.slot] ? 'Применится со следующей партии' : 'В лобби — сразу; в начатой партии — со следующей партии'}`));
+      if (!personal(it.slot)) actions.push(h('p.col-note', 'Общий стол выбирает хост. Ваш выбор сохранится для ваших столов.'));
+    }
+    if (bundle && snap.v === 2) {
+      const applied = it.includes.every(x => snap.choice[itemById(x).slot]?.item === x && snap.choice[itemById(x).slot]?.color === color);
+      actions.push(btn(h, { text: applied ? 'Комплект надет' : 'Надеть комплект', cls: 'primary', disabled: locked || waiting || applied, onClick: () => store.applyBundle(id, color) }));
+      if (applied) actions.push(h('p.col-note', { role: 'status' }, it.includes.some(x => snap.pending[itemById(x).slot]) ? 'Применится со следующей партии' : 'Комплект применён'));
+    }
     actions.push(btn(h, { text: 'Открыть в инвентаре', cls: 'secondary', onClick: () => ctx.go({ name: 'inventory', tab: bundle ? 'cardback' : it.slot }) }));
   } else if (!snap.demo) {
     // Магазин: состав, цена сервера и условия до кнопки покупки (purchase.js); без цены — без кнопки.
@@ -177,9 +190,10 @@ export function renderItem(ctx) {
     actions.push(h('p.col-note.demo', DEMO_NOTE));
   }
 
+  if (it.collection && snap.v !== 2) actions.push(h('p.col-note', { role: 'status' }, 'Сервер ещё не поддерживает эти вещи. Переоткройте Mini App после обновления.'));
   return h('div.col-item',
     h('div.col-hero', hero(h, id, color)),
-    h('div.col-titlebar', h('h2.col-name', it.title), badge(h, st)),
+    h('div.col-titlebar', h('h2.col-name', it.title), h('span', { role: 'status', 'aria-live': 'polite' }, badge(h, st))),
     facts(h, id),
     // Цвет: у комплекта его нет — у каждого предмета свой (внутри состава).
     bundle || it.collection ? null : h('section.col-block',

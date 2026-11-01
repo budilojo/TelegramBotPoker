@@ -27,6 +27,7 @@ let look = null;
 import { net, bus, send } from '../net.js';
 import { avatarEl } from '../profile.js';
 import { chatMenuItem } from '../chat.js';
+import { shopMenuItem } from '../collections/menu.js';
 
 /** Идентификатор запроса: повтор того же тапа сервер узнаёт и не плодит лобби. */
 const newReqId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -714,7 +715,7 @@ function openMenu() {
       // С ботами — только играть: правила, назад и конец серии.
       item(s.hubLabel || '← Игры с ботами', 'партию можно будет продолжить', () => { closeSheet(); send({ t: 'hub' }, { lock: false }); });
       item('Правила', s.room.variantName, openRules);
-      items.push(chatMenuItem(s));
+      items.push(chatMenuItem(s), shopMenuItem());
       if (s.room.status !== 'lobby') item('Завершить игру', 'итоги — на экране', () => confirmFinish(), 'danger');
       return h('div', h('h3', 'Меню'), h('div.sub', `🃏 Дурак с ботами · ${s.room.variantName}`), h('div.menu-list', items));
     }
@@ -723,7 +724,7 @@ function openMenu() {
     else if (!me.seated && !me.kicked) item('Сесть за стол', 'со следующей партии', () => { closeSheet(); send({ t: 'sit' }); });
     if (!me.notify && s.bot) item('🔔 Напоминать о ходе', 'нажмите Start у бота', () => tg.openTelegramLink(`https://t.me/${s.bot}?start=notify`));
     item('Правила', s.room.variantName, openRules);
-    items.push(chatMenuItem(s));
+    items.push(chatMenuItem(s), shopMenuItem());
     if (me.isHost) {
       items.push(h('div.section-label', 'Хост'));
       item('Настройки', 'вариант, таймер хода', openSettings);

@@ -234,3 +234,60 @@
 .col-doc-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font); color: var(--text-primary); }
 /* Additional independent slots; D replaces this list with game/category filters. */
 .col-inventory > .col-tabs { flex-wrap: wrap; }
+
+/* v2 store: stable scroller, two views and labelled native keyboard controls. */
+.col-root .col-scroll { padding-bottom: var(--k-s24); }
+.col-root .col-foot { position: static; flex: none; max-height: 35%; overflow-y: auto; pointer-events: auto; }
+.col-controls { display: flex; flex-direction: column; gap: var(--k-s12); padding-bottom: var(--k-s16); }
+.col-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--k-s8); }
+.col-filter { display: flex; flex-direction: column; gap: var(--k-s4); min-width: 0; color: var(--text-secondary); font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font); }
+.col-filter select { width: 100%; min-width: 0; min-height: var(--k-tap); padding: var(--k-s8); border: 1px solid var(--text-secondary); border-radius: var(--k-r-md); background: var(--bg-surface); color: var(--text-primary); font: inherit; }
+.col-filter select:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 2px; }
+.col-tab[aria-pressed="true"] { background: var(--bg-elevated); border-bottom-color: var(--text-primary); font-weight: var(--k-w-semibold); }
+.col-return { flex: none; padding: var(--k-s8) var(--k-s16); }
+.col-return:empty, .col-navigation:empty { display: none; }
+.col-return .col-btn { width: 100%; }
+.col-navigation { flex: none; }
+.col-hero > .col-art:not(.hero-card):not(.hero-frame) { width: min(100%, 320px); }
+.col-inv.on { padding: var(--k-s12); border-width: 1px; }
+.col-inv-art .col-art { --ratio: 1 / 1; }
+
+/* Fitting samples use catalog art on public, static sample content. Never the active room. */
+.col-sample { position: relative; width: 100%; max-width: 400px; aspect-ratio: 1; margin-inline: auto; background: var(--bg-surface); overflow: hidden; border-radius: var(--k-r-lg); }
+.col-sample > .col-art { position: absolute; inset: 0; background: transparent; border-radius: 0; pointer-events: none; }
+.col-sample > .col-art img { object-fit: fill; }
+.col-sample-content { position: absolute; inset: 6%; }
+.col-sample-grid { display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); }
+.col-sample-cell { position: relative; display: flex; align-items: center; justify-content: center; background: var(--ch-light); color: var(--bg-main); }
+.col-sample-cell.dark { background: var(--ch-dark); }
+.col-sample-cell img { width: 92%; height: 92%; }
+.col-sample-cell i { width: 72%; height: 72%; border-radius: var(--k-r-pill); background: var(--text-primary); border: 2px solid var(--bg-main); }
+.col-sample-cell i.black { background: var(--bg-main); border-color: var(--text-primary); }
+.col-sample-cell i.king::after { content: '×'; color: var(--text-primary); display: block; text-align: center; }
+.col-sample.nardy { aspect-ratio: 4 / 3; }
+.col-sample-points { display: grid; grid-template-columns: repeat(12, 1fr); grid-template-rows: 1fr 1fr; column-gap: var(--k-s4); }
+.col-sample-point { position: relative; background: var(--ch-dark); clip-path: polygon(0 0, 100% 0, 50% 90%); }
+.col-sample-point:nth-child(even) { background: var(--ch-light); }
+.col-sample-point:nth-child(n+13) { transform: rotate(180deg); }
+.col-sample-point i { display: block; border-radius: var(--k-r-pill); width: 85%; aspect-ratio: 1; margin-inline: auto; background: var(--bg-main); border: 1px solid var(--text-primary); }
+.col-sample-point i.white { background: var(--text-primary); border-color: var(--bg-main); }
+.col-sample-dice { position: absolute; inset: 42% 30%; text-align: center; background: var(--bg-surface); color: var(--text-primary); font: var(--k-w-semibold) var(--k-fs-body)/var(--k-lh-body) var(--k-font); }
+.col-sample.sea .col-sample-content { display: grid; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(10, 1fr); background: var(--bg-main); }
+.col-sea-cell { border: 1px solid var(--text-secondary); display: flex; align-items: center; justify-content: center; color: var(--text-primary); font-size: var(--k-fs-caption); }
+.col-sea-cell.ship { background: var(--color-muted); }
+.col-sample.table { aspect-ratio: 3 / 2; background: var(--table-felt); }
+.col-sample.table .col-sample-content { display: flex; gap: var(--k-s8); align-items: center; justify-content: center; }
+.col-sample.table .col-sample-content img { width: 18%; }
+.col-sample-hand { display: flex; justify-content: center; gap: var(--k-s12); padding: var(--k-s16); background: var(--table-felt); border-radius: var(--k-r-lg); }
+.col-sample-hand .col-art { width: 64px; --ratio: 5 / 7; background: transparent; }
+.col-sample-hand > img { width: 64px; }
+.col-sample-profile { display: flex; align-items: center; gap: var(--k-s16); padding: var(--k-s24); background: var(--bg-surface); border-radius: var(--k-r-lg); }
+.col-sample-avatar { position: relative; width: 64px; height: 64px; flex: none; }
+.col-sample-avatar > img { width: 100%; height: 100%; border-radius: var(--k-r-pill); }
+.col-sample-avatar .col-art { position: absolute; inset: -16.6667%; background: transparent; overflow: visible; }
+.col-sample-name { display: flex; gap: var(--k-s8); align-items: center; }
+.col-sample-name .col-art { width: 32px; }
+.col-controls { gap: var(--k-s8); padding-bottom: var(--k-s8); }
+/* A failed decorative frame leaves the classic sample intact, without an extra mark over pieces or face. */
+.col-sample > .col-art.fallback, .col-sample-avatar .col-art.fallback { background: transparent; border: 0; }
+.col-sample > .col-art.fallback .col-art-base, .col-sample-avatar .col-art.fallback .col-art-base { display: none; }

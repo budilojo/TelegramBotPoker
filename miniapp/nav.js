@@ -53,7 +53,7 @@ export function back() {
   return true;
 }
 
-function go(tab, s) {
+export function go(tab, s) {
   haptic.soft();
   const now = activeTab(s);
   if (tab === now) return scrollTop();
@@ -70,8 +70,9 @@ function go(tab, s) {
   if (tab === 'shop') {
     // Магазин готов (сервер прислал «коллекции видны»): вкладка открывает его витрину,
     // а не экран «скоро». Витрина лежит слоем поверх страницы, «Назад» возвращает на то же место.
-    if (collectionsStore.visible) {
+    if (collectionsStore.visible || !collectionsStore.snapshot().loaded) {
       haptic.soft();
+      send({ t: 'shop', op: 'tab' }, { lock: false });
       import('./collections/index.js').then((m) => m.open());
       return;
     }
@@ -95,13 +96,12 @@ const ICONS = {
 };
 const TABS = [['games', 'Игры'], ['rating', 'Рейтинг'], ['shop', 'Магазин'], ['settings', 'Настройки']];
 
-export function bar(s) {
-  const active = activeTab(s);
+export function bar(s, { active = activeTab(s), onPick = (id) => go(id, s) } = {}) {
   return h('nav.nav', { 'aria-label': 'Разделы' },
     TABS.map(([id, label]) => h(`button.nav-tab${id === active ? '.on' : ''}`, {
       'aria-current': id === active ? 'page' : null,
       'data-tab': id,
-      onclick: () => go(id, s),
+      onclick: () => onPick(id),
     },
     h('span.nav-ico', { html: ICONS[id] }),
     h('span.nav-label', label))));
