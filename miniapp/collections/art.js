@@ -7,7 +7,7 @@
  *
  * Модуль без DOM при загрузке: `artImg` обращается к `document` только когда вызван.
  */
-import { isColor, itemById } from './catalog.js';
+import { isColor, itemById, itemsOfBundle } from './catalog.js';
 import { markFailed, isFailed } from './look-view.js';
 
 /** Все виды, которые бывают в папке art/ (по одному на цвет). */
@@ -67,6 +67,12 @@ export function itemArt(h, id, detail = false) {
   const it = itemById(id), src = detail || it?.kind === 'bundle' ? it?.assets?.preview : it?.assets?.game;
   const ratio = ['cardback', 'unoq-cardback'].includes(it?.slot) ? '5 / 7' : it?.slot === 'table' || it?.kind === 'bundle' ? '3 / 2' : it?.slot === 'nardy-board' ? '4 / 3' : '1 / 1';
   const box = h('span.col-art', { 'data-art': id, style: { '--ratio': ratio } });
+  // Bundles have no game SVG. Compose their nine existing small assets instead
+  // of downloading six detailed bundle previews on the catalog route.
+  if (it?.collection && it.kind === 'bundle' && !detail) {
+    box.append(h('span.col-bundle-mini', itemsOfBundle(id).map(part => itemArt(h, part, false))));
+    return box;
+  }
   const fallback = () => { box.classList.add('fallback'); box.replaceChildren(h('span.col-art-base', { 'aria-hidden': 'true' })); box.setAttribute('aria-label', 'Изображение недоступно · классика'); box.setAttribute('role', 'img'); };
   if (!src || isFailed(src)) { fallback(); return box; }
   const img = h('img', { src, alt: '', 'aria-hidden': 'true', loading: 'lazy', decoding: 'async', draggable: 'false' });

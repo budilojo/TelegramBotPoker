@@ -219,7 +219,9 @@ function freeAt(x, y, size, tier) {
 }
 
 export function placeFab() {
-  if (!fab) return;
+  // Inert game content is excluded from hit testing under a sheet/shop.
+  // Keep the last valid dock there; otherwise the return frame can cover an action.
+  if (!fab || $app()?.inert) return;
   const size = fab.offsetWidth || 48;
   const vw = document.documentElement.clientWidth;
   const vh = (window.visualViewport?.height || innerHeight) - 0;

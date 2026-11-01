@@ -4,6 +4,8 @@
  * упасть. Файл после каждой поломки возвращается как был. Запуск: node tools/payments-teeth.mjs
  */
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 const TESTS = ['bot/payments.test.js', 'bot/payments.client.test.js', 'bot/payments.final.test.js'];
@@ -58,7 +60,8 @@ const CASES = [
   { name: 'возврат не снимает надетую вещь в базе', file: PAY,
     from: '        this.app.collections.dropUnowned(p.userId);\n', to: '' },
   { name: 'снятие вида не учитывает другой источник права', file: 'bot/collections/index.js',
-    from: '      if (!owned.has(r.item)) this.app.store.collChoiceClear', to: '      if (true) this.app.store.collChoiceClear' },
+    from: '      if (SLOTS.includes(r.slot) && itemById(r.item)?.slot === r.slot && !owned.has(r.item)) this.app.store.collChoiceClear',
+    to: '      if (SLOTS.includes(r.slot) && itemById(r.item)?.slot === r.slot) this.app.store.collChoiceClear' },
   { name: 'двойной возврат возможен', file: PAY,
     from: "    if (ref?.state === 'done') return { error: `По заказу", to: "    if (false) return { error: `По заказу",
     also: { file: PAY, from: "    if (ref.state === 'done') return 'Возврат уже выполнен — повторять нельзя.';", to: '' } },
@@ -96,7 +99,8 @@ const CASES = [
   { name: 'pre_checkout обходит недоступную поддержку (I)', file: PAY,
     from: "this.gateOpts());\n    if (!g.open) return { ok: false, why: 'closed', o };", to: "{ ...this.gateOpts(), botSupport: true });\n    if (!g.open) return { ok: false, why: 'closed', o };" },
   { name: '«Ночной казино-клуб» попадает в продаваемое', file: 'bot/payments/config.js',
-    from: 'export const SELLABLE = new Set(ITEMS.map((x) => x.id));', to: "export const SELLABLE = new Set([...ITEMS.map((x) => x.id), 'night-cardback']);" },
+    from: "export const SELLABLE = new Set(['graphit-cardback', 'graphit-table', 'graphit-profile', 'graphit-bundle']);",
+    to: "export const SELLABLE = new Set(['graphit-cardback', 'graphit-table', 'graphit-profile', 'graphit-bundle', 'night-cardback']);" },
   { name: 'клиент считает вещь купленной по статусу окна оплаты', file: 'miniapp/collections/pay.js',
     from: "      phase = { name: 'confirming', item, order, since: d.now() };", to: "      phase = { name: status === 'paid' ? 'done' : 'confirming', item, order, since: d.now() }; if (status === 'paid') return emit();" },
   { name: 'клиент шлёт цену в запросе покупки', file: 'miniapp/collections/pay.js',
@@ -119,7 +123,10 @@ for (const c of CASES) {
   let r = null;
   try { if (!missing) r = run(); } finally { for (const [f, src] of saved) fs.writeFileSync(f, src); }
   if (missing) { console.log(`?? ${c.name}: место поломки не найдено`); bad++; continue; }
-  const fell = r.status !== 0 && (!c.expect || (r.stdout + r.stderr).includes(c.expect));
+  const output = r.stdout + r.stderr;
+  const fell = r.status === 1 && /AssertionError|ERR_ASSERTION/.test(output)
+    && !/SyntaxError|ReferenceError|TypeError/.test(output) && (!c.expect || output.includes(c.expect));
+  if (!fell) fs.writeFileSync(path.join(os.tmpdir(), `payments-teeth-failed-${CASES.indexOf(c)}.log`), output);
   const n = (r.stdout.match(/^✖ /gm) || []).length;
   console.log(`${fell ? 'упал ' : 'НЕ УПАЛ'}  ${c.name}${fell ? ` (красных: ${n})` : ''}`);
   if (!fell) bad++;

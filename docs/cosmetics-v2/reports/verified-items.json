@@ -1,0 +1,1016 @@
+[
+  {
+    "id": "sever-cardback",
+    "kind": "item",
+    "slot": "cardback",
+    "games": [
+      "poker"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/sever-cardback-preview.svg",
+    "game": "/collections/v2-art/sever-cardback-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "sever-table",
+    "kind": "item",
+    "slot": "table",
+    "games": [
+      "poker",
+      "durak"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/sever-table-preview.svg",
+    "game": "/collections/v2-art/sever-table-game.svg",
+    "realServerScenes": 4,
+    "includes": []
+  },
+  {
+    "id": "sever-frame",
+    "kind": "item",
+    "slot": "frame",
+    "games": [
+      "poker",
+      "durak",
+      "colors",
+      "chess",
+      "checkers",
+      "nardy",
+      "battleship"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/sever-frame-preview.svg",
+    "game": "/collections/v2-art/sever-frame-game.svg",
+    "realServerScenes": 14,
+    "includes": []
+  },
+  {
+    "id": "sever-badge",
+    "kind": "item",
+    "slot": "badge",
+    "games": [
+      "poker",
+      "durak",
+      "colors",
+      "chess",
+      "checkers",
+      "nardy",
+      "battleship"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/sever-badge-preview.svg",
+    "game": "/collections/v2-art/sever-badge-game.svg",
+    "realServerScenes": 14,
+    "includes": []
+  },
+  {
+    "id": "sever-chess-board",
+    "kind": "item",
+    "slot": "chess-board",
+    "games": [
+      "chess"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/sever-chess-board-preview.svg",
+    "game": "/collections/v2-art/sever-chess-board-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "sever-checkers-board",
+    "kind": "item",
+    "slot": "checkers-board",
+    "games": [
+      "checkers"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/sever-checkers-board-preview.svg",
+    "game": "/collections/v2-art/sever-checkers-board-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "sever-nardy-board",
+    "kind": "item",
+    "slot": "nardy-board",
+    "games": [
+      "nardy"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/sever-nardy-board-preview.svg",
+    "game": "/collections/v2-art/sever-nardy-board-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "sever-battleship-panel",
+    "kind": "item",
+    "slot": "battleship-panel",
+    "games": [
+      "battleship"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/sever-battleship-panel-preview.svg",
+    "game": "/collections/v2-art/sever-battleship-panel-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "sever-unoq-cardback",
+    "kind": "item",
+    "slot": "unoq-cardback",
+    "games": [
+      "colors"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/sever-unoq-cardback-preview.svg",
+    "game": "/collections/v2-art/sever-unoq-cardback-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "sever-bundle",
+    "kind": "bundle",
+    "slot": null,
+    "games": [
+      "poker",
+      "durak",
+      "colors",
+      "chess",
+      "checkers",
+      "nardy",
+      "battleship"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/sever-bundle-preview.svg",
+    "game": null,
+    "realServerScenes": 14,
+    "includes": [
+      "sever-cardback",
+      "sever-table",
+      "sever-frame",
+      "sever-badge",
+      "sever-chess-board",
+      "sever-checkers-board",
+      "sever-nardy-board",
+      "sever-battleship-panel",
+      "sever-unoq-cardback"
+    ]
+  },
+  {
+    "id": "obsidian-cardback",
+    "kind": "item",
+    "slot": "cardback",
+    "games": [
+      "poker"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/obsidian-cardback-preview.svg",
+    "game": "/collections/v2-art/obsidian-cardback-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "obsidian-table",
+    "kind": "item",
+    "slot": "table",
+    "games": [
+      "poker",
+      "durak"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/obsidian-table-preview.svg",
+    "game": "/collections/v2-art/obsidian-table-game.svg",
+    "realServerScenes": 4,
+    "includes": []
+  },
+  {
+    "id": "obsidian-frame",
+    "kind": "item",
+    "slot": "frame",
+    "games": [
+      "poker",
+      "durak",
+      "colors",
+      "chess",
+      "checkers",
+      "nardy",
+      "battleship"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/obsidian-frame-preview.svg",
+    "game": "/collections/v2-art/obsidian-frame-game.svg",
+    "realServerScenes": 14,
+    "includes": []
+  },
+  {
+    "id": "obsidian-badge",
+    "kind": "item",
+    "slot": "badge",
+    "games": [
+      "poker",
+      "durak",
+      "colors",
+      "chess",
+      "checkers",
+      "nardy",
+      "battleship"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/obsidian-badge-preview.svg",
+    "game": "/collections/v2-art/obsidian-badge-game.svg",
+    "realServerScenes": 14,
+    "includes": []
+  },
+  {
+    "id": "obsidian-chess-board",
+    "kind": "item",
+    "slot": "chess-board",
+    "games": [
+      "chess"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/obsidian-chess-board-preview.svg",
+    "game": "/collections/v2-art/obsidian-chess-board-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "obsidian-checkers-board",
+    "kind": "item",
+    "slot": "checkers-board",
+    "games": [
+      "checkers"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/obsidian-checkers-board-preview.svg",
+    "game": "/collections/v2-art/obsidian-checkers-board-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "obsidian-nardy-board",
+    "kind": "item",
+    "slot": "nardy-board",
+    "games": [
+      "nardy"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/obsidian-nardy-board-preview.svg",
+    "game": "/collections/v2-art/obsidian-nardy-board-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "obsidian-battleship-panel",
+    "kind": "item",
+    "slot": "battleship-panel",
+    "games": [
+      "battleship"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/obsidian-battleship-panel-preview.svg",
+    "game": "/collections/v2-art/obsidian-battleship-panel-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "obsidian-unoq-cardback",
+    "kind": "item",
+    "slot": "unoq-cardback",
+    "games": [
+      "colors"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/obsidian-unoq-cardback-preview.svg",
+    "game": "/collections/v2-art/obsidian-unoq-cardback-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "obsidian-bundle",
+    "kind": "bundle",
+    "slot": null,
+    "games": [
+      "poker",
+      "durak",
+      "colors",
+      "chess",
+      "checkers",
+      "nardy",
+      "battleship"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/obsidian-bundle-preview.svg",
+    "game": null,
+    "realServerScenes": 14,
+    "includes": [
+      "obsidian-cardback",
+      "obsidian-table",
+      "obsidian-frame",
+      "obsidian-badge",
+      "obsidian-chess-board",
+      "obsidian-checkers-board",
+      "obsidian-nardy-board",
+      "obsidian-battleship-panel",
+      "obsidian-unoq-cardback"
+    ]
+  },
+  {
+    "id": "chertezh-cardback",
+    "kind": "item",
+    "slot": "cardback",
+    "games": [
+      "poker"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/chertezh-cardback-preview.svg",
+    "game": "/collections/v2-art/chertezh-cardback-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "chertezh-table",
+    "kind": "item",
+    "slot": "table",
+    "games": [
+      "poker",
+      "durak"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/chertezh-table-preview.svg",
+    "game": "/collections/v2-art/chertezh-table-game.svg",
+    "realServerScenes": 4,
+    "includes": []
+  },
+  {
+    "id": "chertezh-frame",
+    "kind": "item",
+    "slot": "frame",
+    "games": [
+      "poker",
+      "durak",
+      "colors",
+      "chess",
+      "checkers",
+      "nardy",
+      "battleship"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/chertezh-frame-preview.svg",
+    "game": "/collections/v2-art/chertezh-frame-game.svg",
+    "realServerScenes": 14,
+    "includes": []
+  },
+  {
+    "id": "chertezh-badge",
+    "kind": "item",
+    "slot": "badge",
+    "games": [
+      "poker",
+      "durak",
+      "colors",
+      "chess",
+      "checkers",
+      "nardy",
+      "battleship"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/chertezh-badge-preview.svg",
+    "game": "/collections/v2-art/chertezh-badge-game.svg",
+    "realServerScenes": 14,
+    "includes": []
+  },
+  {
+    "id": "chertezh-chess-board",
+    "kind": "item",
+    "slot": "chess-board",
+    "games": [
+      "chess"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/chertezh-chess-board-preview.svg",
+    "game": "/collections/v2-art/chertezh-chess-board-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "chertezh-checkers-board",
+    "kind": "item",
+    "slot": "checkers-board",
+    "games": [
+      "checkers"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/chertezh-checkers-board-preview.svg",
+    "game": "/collections/v2-art/chertezh-checkers-board-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "chertezh-nardy-board",
+    "kind": "item",
+    "slot": "nardy-board",
+    "games": [
+      "nardy"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/chertezh-nardy-board-preview.svg",
+    "game": "/collections/v2-art/chertezh-nardy-board-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "chertezh-battleship-panel",
+    "kind": "item",
+    "slot": "battleship-panel",
+    "games": [
+      "battleship"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/chertezh-battleship-panel-preview.svg",
+    "game": "/collections/v2-art/chertezh-battleship-panel-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "chertezh-unoq-cardback",
+    "kind": "item",
+    "slot": "unoq-cardback",
+    "games": [
+      "colors"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/chertezh-unoq-cardback-preview.svg",
+    "game": "/collections/v2-art/chertezh-unoq-cardback-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "chertezh-bundle",
+    "kind": "bundle",
+    "slot": null,
+    "games": [
+      "poker",
+      "durak",
+      "colors",
+      "chess",
+      "checkers",
+      "nardy",
+      "battleship"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/chertezh-bundle-preview.svg",
+    "game": null,
+    "realServerScenes": 14,
+    "includes": [
+      "chertezh-cardback",
+      "chertezh-table",
+      "chertezh-frame",
+      "chertezh-badge",
+      "chertezh-chess-board",
+      "chertezh-checkers-board",
+      "chertezh-nardy-board",
+      "chertezh-battleship-panel",
+      "chertezh-unoq-cardback"
+    ]
+  },
+  {
+    "id": "terracotta-cardback",
+    "kind": "item",
+    "slot": "cardback",
+    "games": [
+      "poker"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/terracotta-cardback-preview.svg",
+    "game": "/collections/v2-art/terracotta-cardback-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "terracotta-table",
+    "kind": "item",
+    "slot": "table",
+    "games": [
+      "poker",
+      "durak"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/terracotta-table-preview.svg",
+    "game": "/collections/v2-art/terracotta-table-game.svg",
+    "realServerScenes": 4,
+    "includes": []
+  },
+  {
+    "id": "terracotta-frame",
+    "kind": "item",
+    "slot": "frame",
+    "games": [
+      "poker",
+      "durak",
+      "colors",
+      "chess",
+      "checkers",
+      "nardy",
+      "battleship"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/terracotta-frame-preview.svg",
+    "game": "/collections/v2-art/terracotta-frame-game.svg",
+    "realServerScenes": 14,
+    "includes": []
+  },
+  {
+    "id": "terracotta-badge",
+    "kind": "item",
+    "slot": "badge",
+    "games": [
+      "poker",
+      "durak",
+      "colors",
+      "chess",
+      "checkers",
+      "nardy",
+      "battleship"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/terracotta-badge-preview.svg",
+    "game": "/collections/v2-art/terracotta-badge-game.svg",
+    "realServerScenes": 14,
+    "includes": []
+  },
+  {
+    "id": "terracotta-chess-board",
+    "kind": "item",
+    "slot": "chess-board",
+    "games": [
+      "chess"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/terracotta-chess-board-preview.svg",
+    "game": "/collections/v2-art/terracotta-chess-board-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "terracotta-checkers-board",
+    "kind": "item",
+    "slot": "checkers-board",
+    "games": [
+      "checkers"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/terracotta-checkers-board-preview.svg",
+    "game": "/collections/v2-art/terracotta-checkers-board-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "terracotta-nardy-board",
+    "kind": "item",
+    "slot": "nardy-board",
+    "games": [
+      "nardy"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/terracotta-nardy-board-preview.svg",
+    "game": "/collections/v2-art/terracotta-nardy-board-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "terracotta-battleship-panel",
+    "kind": "item",
+    "slot": "battleship-panel",
+    "games": [
+      "battleship"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/terracotta-battleship-panel-preview.svg",
+    "game": "/collections/v2-art/terracotta-battleship-panel-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "terracotta-unoq-cardback",
+    "kind": "item",
+    "slot": "unoq-cardback",
+    "games": [
+      "colors"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/terracotta-unoq-cardback-preview.svg",
+    "game": "/collections/v2-art/terracotta-unoq-cardback-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "terracotta-bundle",
+    "kind": "bundle",
+    "slot": null,
+    "games": [
+      "poker",
+      "durak",
+      "colors",
+      "chess",
+      "checkers",
+      "nardy",
+      "battleship"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/terracotta-bundle-preview.svg",
+    "game": null,
+    "realServerScenes": 14,
+    "includes": [
+      "terracotta-cardback",
+      "terracotta-table",
+      "terracotta-frame",
+      "terracotta-badge",
+      "terracotta-chess-board",
+      "terracotta-checkers-board",
+      "terracotta-nardy-board",
+      "terracotta-battleship-panel",
+      "terracotta-unoq-cardback"
+    ]
+  },
+  {
+    "id": "orbita-cardback",
+    "kind": "item",
+    "slot": "cardback",
+    "games": [
+      "poker"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/orbita-cardback-preview.svg",
+    "game": "/collections/v2-art/orbita-cardback-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "orbita-table",
+    "kind": "item",
+    "slot": "table",
+    "games": [
+      "poker",
+      "durak"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/orbita-table-preview.svg",
+    "game": "/collections/v2-art/orbita-table-game.svg",
+    "realServerScenes": 4,
+    "includes": []
+  },
+  {
+    "id": "orbita-frame",
+    "kind": "item",
+    "slot": "frame",
+    "games": [
+      "poker",
+      "durak",
+      "colors",
+      "chess",
+      "checkers",
+      "nardy",
+      "battleship"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/orbita-frame-preview.svg",
+    "game": "/collections/v2-art/orbita-frame-game.svg",
+    "realServerScenes": 14,
+    "includes": []
+  },
+  {
+    "id": "orbita-badge",
+    "kind": "item",
+    "slot": "badge",
+    "games": [
+      "poker",
+      "durak",
+      "colors",
+      "chess",
+      "checkers",
+      "nardy",
+      "battleship"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/orbita-badge-preview.svg",
+    "game": "/collections/v2-art/orbita-badge-game.svg",
+    "realServerScenes": 14,
+    "includes": []
+  },
+  {
+    "id": "orbita-chess-board",
+    "kind": "item",
+    "slot": "chess-board",
+    "games": [
+      "chess"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/orbita-chess-board-preview.svg",
+    "game": "/collections/v2-art/orbita-chess-board-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "orbita-checkers-board",
+    "kind": "item",
+    "slot": "checkers-board",
+    "games": [
+      "checkers"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/orbita-checkers-board-preview.svg",
+    "game": "/collections/v2-art/orbita-checkers-board-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "orbita-nardy-board",
+    "kind": "item",
+    "slot": "nardy-board",
+    "games": [
+      "nardy"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/orbita-nardy-board-preview.svg",
+    "game": "/collections/v2-art/orbita-nardy-board-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "orbita-battleship-panel",
+    "kind": "item",
+    "slot": "battleship-panel",
+    "games": [
+      "battleship"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/orbita-battleship-panel-preview.svg",
+    "game": "/collections/v2-art/orbita-battleship-panel-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "orbita-unoq-cardback",
+    "kind": "item",
+    "slot": "unoq-cardback",
+    "games": [
+      "colors"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/orbita-unoq-cardback-preview.svg",
+    "game": "/collections/v2-art/orbita-unoq-cardback-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "orbita-bundle",
+    "kind": "bundle",
+    "slot": null,
+    "games": [
+      "poker",
+      "durak",
+      "colors",
+      "chess",
+      "checkers",
+      "nardy",
+      "battleship"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/orbita-bundle-preview.svg",
+    "game": null,
+    "realServerScenes": 14,
+    "includes": [
+      "orbita-cardback",
+      "orbita-table",
+      "orbita-frame",
+      "orbita-badge",
+      "orbita-chess-board",
+      "orbita-checkers-board",
+      "orbita-nardy-board",
+      "orbita-battleship-panel",
+      "orbita-unoq-cardback"
+    ]
+  },
+  {
+    "id": "porcelain-cardback",
+    "kind": "item",
+    "slot": "cardback",
+    "games": [
+      "poker"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/porcelain-cardback-preview.svg",
+    "game": "/collections/v2-art/porcelain-cardback-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "porcelain-table",
+    "kind": "item",
+    "slot": "table",
+    "games": [
+      "poker",
+      "durak"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/porcelain-table-preview.svg",
+    "game": "/collections/v2-art/porcelain-table-game.svg",
+    "realServerScenes": 4,
+    "includes": []
+  },
+  {
+    "id": "porcelain-frame",
+    "kind": "item",
+    "slot": "frame",
+    "games": [
+      "poker",
+      "durak",
+      "colors",
+      "chess",
+      "checkers",
+      "nardy",
+      "battleship"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/porcelain-frame-preview.svg",
+    "game": "/collections/v2-art/porcelain-frame-game.svg",
+    "realServerScenes": 14,
+    "includes": []
+  },
+  {
+    "id": "porcelain-badge",
+    "kind": "item",
+    "slot": "badge",
+    "games": [
+      "poker",
+      "durak",
+      "colors",
+      "chess",
+      "checkers",
+      "nardy",
+      "battleship"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/porcelain-badge-preview.svg",
+    "game": "/collections/v2-art/porcelain-badge-game.svg",
+    "realServerScenes": 14,
+    "includes": []
+  },
+  {
+    "id": "porcelain-chess-board",
+    "kind": "item",
+    "slot": "chess-board",
+    "games": [
+      "chess"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/porcelain-chess-board-preview.svg",
+    "game": "/collections/v2-art/porcelain-chess-board-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "porcelain-checkers-board",
+    "kind": "item",
+    "slot": "checkers-board",
+    "games": [
+      "checkers"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/porcelain-checkers-board-preview.svg",
+    "game": "/collections/v2-art/porcelain-checkers-board-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "porcelain-nardy-board",
+    "kind": "item",
+    "slot": "nardy-board",
+    "games": [
+      "nardy"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/porcelain-nardy-board-preview.svg",
+    "game": "/collections/v2-art/porcelain-nardy-board-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "porcelain-battleship-panel",
+    "kind": "item",
+    "slot": "battleship-panel",
+    "games": [
+      "battleship"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/porcelain-battleship-panel-preview.svg",
+    "game": "/collections/v2-art/porcelain-battleship-panel-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "porcelain-unoq-cardback",
+    "kind": "item",
+    "slot": "unoq-cardback",
+    "games": [
+      "colors"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/porcelain-unoq-cardback-preview.svg",
+    "game": "/collections/v2-art/porcelain-unoq-cardback-game.svg",
+    "realServerScenes": 2,
+    "includes": []
+  },
+  {
+    "id": "porcelain-bundle",
+    "kind": "bundle",
+    "slot": null,
+    "games": [
+      "poker",
+      "durak",
+      "colors",
+      "chess",
+      "checkers",
+      "nardy",
+      "battleship"
+    ],
+    "price": null,
+    "source": "tools/build-cosmetics-v2.mjs",
+    "preview": "/collections/v2-art/porcelain-bundle-preview.svg",
+    "game": null,
+    "realServerScenes": 14,
+    "includes": [
+      "porcelain-cardback",
+      "porcelain-table",
+      "porcelain-frame",
+      "porcelain-badge",
+      "porcelain-chess-board",
+      "porcelain-checkers-board",
+      "porcelain-nardy-board",
+      "porcelain-battleship-panel",
+      "porcelain-unoq-cardback"
+    ]
+  }
+]

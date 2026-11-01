@@ -304,7 +304,7 @@ test('вещь скрыли: новый счёт не выставить, неп
 test('набор с пересечениями: при частичном владении не продаётся, конкурирующие счета не оплатить дважды', async () => {
   const t = shop();
   await purchase(t, ALICE, 'graphit-cardback');
-  assert.equal((await buy(t, ALICE, 'graphit-bundle')).error.code, 'PAY_PARTIAL');
+  assert.equal((await buy(t, ALICE, 'graphit-bundle')).error?.code, 'PAY_PARTIAL');
   // Боб: два живых счёта — рубашка и комплект (в нём та же рубашка).
   const c = await buy(t, BOB, 'graphit-cardback');
   const k = await buy(t, BOB, 'graphit-bundle');
@@ -437,7 +437,7 @@ test('возврат не трогает независимый источник
   await t.send(ALICE, { t: 'col', op: 'apply', slot: 'table', item: 'graphit-table', color: 'sapphire', req: req('a') });
   await refund(t, r.order.id);
   assert.ok(owned(t, ALICE).includes('graphit-table'));
-  assert.equal(t.app.collections.choiceOf(ALICE.id).table.color, 'sapphire');
+  assert.equal(t.app.collections.choiceOf(ALICE.id).table?.color, 'sapphire', 'независимый источник сохраняет надетый вид');
   assert.equal(t.app.store.collChoices(ALICE.id).length, 1, 'выбор в базе не тронут');
 });
 

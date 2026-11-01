@@ -1,0 +1,901 @@
+{
+  "chromium": "153.0.8010.12",
+  "scenes": [
+    {
+      "game": "poker",
+      "collection": "sever",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "poker",
+      "collection": "obsidian",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "poker",
+      "collection": "chertezh",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "poker",
+      "collection": "terracotta",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "poker",
+      "collection": "orbita",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "poker",
+      "collection": "porcelain",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "durak",
+      "collection": "sever",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "durak",
+      "collection": "obsidian",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "durak",
+      "collection": "chertezh",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "durak",
+      "collection": "terracotta",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "durak",
+      "collection": "orbita",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "durak",
+      "collection": "porcelain",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "colors",
+      "collection": "sever",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "colors",
+      "collection": "obsidian",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "colors",
+      "collection": "chertezh",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "colors",
+      "collection": "terracotta",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "colors",
+      "collection": "orbita",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "colors",
+      "collection": "porcelain",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "chess",
+      "collection": "sever",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "chess",
+      "collection": "obsidian",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "chess",
+      "collection": "chertezh",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "chess",
+      "collection": "terracotta",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "chess",
+      "collection": "orbita",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "chess",
+      "collection": "porcelain",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "checkers",
+      "collection": "sever",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "checkers",
+      "collection": "obsidian",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "checkers",
+      "collection": "chertezh",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "checkers",
+      "collection": "terracotta",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "checkers",
+      "collection": "orbita",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "checkers",
+      "collection": "porcelain",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "nardy",
+      "collection": "sever",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "nardy",
+      "collection": "obsidian",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "nardy",
+      "collection": "chertezh",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "nardy",
+      "collection": "terracotta",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "nardy",
+      "collection": "orbita",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "nardy",
+      "collection": "porcelain",
+      "width": 320,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "battleship",
+      "collection": "sever",
+      "width": 320,
+      "messages": [
+        18,
+        11,
+        11
+      ]
+    },
+    {
+      "game": "battleship",
+      "collection": "obsidian",
+      "width": 320,
+      "messages": [
+        18,
+        11,
+        11
+      ]
+    },
+    {
+      "game": "battleship",
+      "collection": "chertezh",
+      "width": 320,
+      "messages": [
+        18,
+        11,
+        11
+      ]
+    },
+    {
+      "game": "battleship",
+      "collection": "terracotta",
+      "width": 320,
+      "messages": [
+        18,
+        11,
+        11
+      ]
+    },
+    {
+      "game": "battleship",
+      "collection": "orbita",
+      "width": 320,
+      "messages": [
+        18,
+        11,
+        11
+      ]
+    },
+    {
+      "game": "battleship",
+      "collection": "porcelain",
+      "width": 320,
+      "messages": [
+        18,
+        11,
+        11
+      ]
+    },
+    {
+      "game": "poker",
+      "collection": "sever",
+      "width": 390,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "poker",
+      "collection": "obsidian",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "poker",
+      "collection": "chertezh",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "poker",
+      "collection": "terracotta",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "poker",
+      "collection": "orbita",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "poker",
+      "collection": "porcelain",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "durak",
+      "collection": "sever",
+      "width": 390,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "durak",
+      "collection": "obsidian",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "durak",
+      "collection": "chertezh",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "durak",
+      "collection": "terracotta",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "durak",
+      "collection": "orbita",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "durak",
+      "collection": "porcelain",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "colors",
+      "collection": "sever",
+      "width": 390,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "colors",
+      "collection": "obsidian",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "colors",
+      "collection": "chertezh",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "colors",
+      "collection": "terracotta",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "colors",
+      "collection": "orbita",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "colors",
+      "collection": "porcelain",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "chess",
+      "collection": "sever",
+      "width": 390,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "chess",
+      "collection": "obsidian",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "chess",
+      "collection": "chertezh",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "chess",
+      "collection": "terracotta",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "chess",
+      "collection": "orbita",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "chess",
+      "collection": "porcelain",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "checkers",
+      "collection": "sever",
+      "width": 390,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "checkers",
+      "collection": "obsidian",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "checkers",
+      "collection": "chertezh",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "checkers",
+      "collection": "terracotta",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "checkers",
+      "collection": "orbita",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "checkers",
+      "collection": "porcelain",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "nardy",
+      "collection": "sever",
+      "width": 390,
+      "messages": [
+        14,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "nardy",
+      "collection": "obsidian",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "nardy",
+      "collection": "chertezh",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "nardy",
+      "collection": "terracotta",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "nardy",
+      "collection": "orbita",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "nardy",
+      "collection": "porcelain",
+      "width": 390,
+      "messages": [
+        13,
+        7,
+        7
+      ]
+    },
+    {
+      "game": "battleship",
+      "collection": "sever",
+      "width": 390,
+      "messages": [
+        18,
+        11,
+        11
+      ]
+    },
+    {
+      "game": "battleship",
+      "collection": "obsidian",
+      "width": 390,
+      "messages": [
+        17,
+        11,
+        11
+      ]
+    },
+    {
+      "game": "battleship",
+      "collection": "chertezh",
+      "width": 390,
+      "messages": [
+        17,
+        11,
+        11
+      ]
+    },
+    {
+      "game": "battleship",
+      "collection": "terracotta",
+      "width": 390,
+      "messages": [
+        17,
+        11,
+        11
+      ]
+    },
+    {
+      "game": "battleship",
+      "collection": "orbita",
+      "width": 390,
+      "messages": [
+        17,
+        11,
+        11
+      ]
+    },
+    {
+      "game": "battleship",
+      "collection": "porcelain",
+      "width": 390,
+      "messages": [
+        17,
+        11,
+        11
+      ]
+    }
+  ],
+  "rendered": [
+    "chertezh-badge",
+    "chertezh-battleship-panel",
+    "chertezh-cardback",
+    "chertezh-checkers-board",
+    "chertezh-chess-board",
+    "chertezh-frame",
+    "chertezh-nardy-board",
+    "chertezh-table",
+    "chertezh-unoq-cardback",
+    "obsidian-badge",
+    "obsidian-battleship-panel",
+    "obsidian-cardback",
+    "obsidian-checkers-board",
+    "obsidian-chess-board",
+    "obsidian-frame",
+    "obsidian-nardy-board",
+    "obsidian-table",
+    "obsidian-unoq-cardback",
+    "orbita-badge",
+    "orbita-battleship-panel",
+    "orbita-cardback",
+    "orbita-checkers-board",
+    "orbita-chess-board",
+    "orbita-frame",
+    "orbita-nardy-board",
+    "orbita-table",
+    "orbita-unoq-cardback",
+    "porcelain-badge",
+    "porcelain-battleship-panel",
+    "porcelain-cardback",
+    "porcelain-checkers-board",
+    "porcelain-chess-board",
+    "porcelain-frame",
+    "porcelain-nardy-board",
+    "porcelain-table",
+    "porcelain-unoq-cardback",
+    "sever-badge",
+    "sever-battleship-panel",
+    "sever-cardback",
+    "sever-checkers-board",
+    "sever-chess-board",
+    "sever-frame",
+    "sever-nardy-board",
+    "sever-table",
+    "sever-unoq-cardback",
+    "terracotta-badge",
+    "terracotta-battleship-panel",
+    "terracotta-cardback",
+    "terracotta-checkers-board",
+    "terracotta-chess-board",
+    "terracotta-frame",
+    "terracotta-nardy-board",
+    "terracotta-table",
+    "terracotta-unoq-cardback"
+  ]
+}

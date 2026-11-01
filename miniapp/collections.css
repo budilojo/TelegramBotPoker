@@ -84,6 +84,8 @@
 /* Рамка с пропорцией стоит на месте до загрузки: экран не прыгает; нет файла — запасной вид. */
 .col-art { display: block; position: relative; aspect-ratio: var(--ratio, 1 / 1); background: var(--bg-surface); border-radius: var(--k-r-md); overflow: hidden; }
 .col-art > img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.col-bundle-mini { position: absolute; inset: var(--k-s4); display: grid; grid-template: repeat(3, minmax(0, 1fr)) / repeat(3, minmax(0, 1fr)); gap: var(--k-s4); }
+.col-bundle-mini > .col-art { width: 100%; height: 100%; min-width: 0; min-height: 0; aspect-ratio: auto; }
 .col-art.fallback { background: var(--bg-surface); border: 1px solid var(--text-secondary); }
 .col-art-base { position: absolute; left: 50%; top: 50%; width: 28%; aspect-ratio: 1; transform: translate(-50%, -50%) rotate(45deg); border: 2px solid var(--text-secondary); border-radius: var(--k-r-sm); }
 .col-hero { display: flex; justify-content: center; }
@@ -210,7 +212,7 @@
   .col-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .col-grid .col-card { flex-direction: column; }
   .col-grid .col-card-art { width: 100%; justify-content: center; }
-  .col-grid .col-card-art .col-art { width: 96px; }
+  .col-grid .col-card-art > .col-art { width: 96px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .col-root *, .col-root *::before, .col-root *::after { transition: none !important; animation: none !important; }

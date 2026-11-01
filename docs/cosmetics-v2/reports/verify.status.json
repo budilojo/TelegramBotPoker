@@ -1,0 +1,123 @@
+{
+  "id": "verify",
+  "attemptId": "df7d1004-1675-46cb-b817-a61926c8f176",
+  "status": "partial",
+  "summary": "Локальная независимая приёмка завершена: 54 предмета и 6 комплектов работают в семи играх; исправлены ранние большие preview, устаревшие платёжные поломки и перекрытие Raise чатом после магазина. 1611/1611, полный e2e и остальные проверки зелёные; покупки, источники прав, старые id и цены Графита сохранены. Partial только по живому Telegram/телефонам, отдельному утверждению нового арта и новых цен; продажи/рейтинг закрыты, push/выкатки нет.",
+  "tests": [
+    {
+      "command": "npm test",
+      "result": "exit 0: 1611/1611, fail/cancelled/skipped/todo=0, 54,03 с; окончательный код после всех поломок",
+      "environment": "macOS 26.6.2 (25G83) arm64; Node 24.12.0, npm 11.6.2; Playwright 1.63.0, Chromium 153.0.8010.12; localhost/TelegramStub, временные SQLite"
+    },
+    {
+      "command": "COSMETICS_SHOP_SHOTS=docs/cosmetics-v2/reports/verify-shop-screens npm run e2e",
+      "result": "exit 0: все 33 сценарных файла после последнего исправления; 14 возвратов из магазина без перекрытия действий",
+      "environment": "macOS 26.6.2 (25G83) arm64; Node 24.12.0, npm 11.6.2; Playwright 1.63.0, Chromium 153.0.8010.12; localhost/TelegramStub, временные SQLite"
+    },
+    {
+      "command": "node --disable-warning=ExperimentalWarning tools/verify-cosmetics-v2.mjs",
+      "result": "exit 0: повтор окончательного кода, 84 реальные партии, 252 контекста, 54/54 предмета и 6 комплектов, 2461 сообщение; старый nc-look не подмешивается",
+      "environment": "macOS 26.6.2 (25G83) arm64; Node 24.12.0, npm 11.6.2; Playwright 1.63.0, Chromium 153.0.8010.12; localhost/TelegramStub, временные SQLite"
+    },
+    {
+      "command": "COSMETICS_SHOP_SHOTS=docs/cosmetics-v2/reports/verify-shop-screens node --disable-warning=ExperimentalWarning tools/e2e-cosmetics-shop.mjs",
+      "result": "exit 0: 320/390, каталог/фильтры/scroll/Back/права/ack/отказ/reconnect/примерка, 14 возвратов, lazy bundle preview; 48 PNG + 4 листа просмотрены",
+      "environment": "macOS 26.6.2 (25G83) arm64; Node 24.12.0, npm 11.6.2; Playwright 1.63.0, Chromium 153.0.8010.12; localhost/TelegramStub, временные SQLite"
+    },
+    {
+      "command": "node tools/cosmetics-verify-teeth.mjs --dock --perf",
+      "result": "exit 0: 7/7 временных поломок пойманы настоящим AssertionError; все файлы восстановлены, браузерные контроли зелёные",
+      "environment": "macOS 26.6.2 (25G83) arm64; Node 24.12.0, npm 11.6.2; Playwright 1.63.0, Chromium 153.0.8010.12; localhost/TelegramStub, временные SQLite"
+    },
+    {
+      "command": "node tools/payments-teeth.mjs",
+      "result": "exit 0: 45/45 поломок, две устаревшие точки обновлены; случайный crash не засчитывается, восстановленные тесты зелёные",
+      "environment": "macOS 26.6.2 (25G83) arm64; Node 24.12.0, npm 11.6.2; Playwright 1.63.0, Chromium 153.0.8010.12; localhost/TelegramStub, временные SQLite"
+    },
+    {
+      "command": "node tools/cosmetics-v2-integration-teeth.mjs",
+      "result": "exit 0: 16/16 поломок; восстановленный контроль зелёный",
+      "environment": "macOS 26.6.2 (25G83) arm64; Node 24.12.0, npm 11.6.2; Playwright 1.63.0, Chromium 153.0.8010.12; localhost/TelegramStub, временные SQLite"
+    },
+    {
+      "command": "node tools/cosmetics-shop-teeth.mjs",
+      "result": "exit 0: 7/7 поломок; восстановленный контроль зелёный",
+      "environment": "macOS 26.6.2 (25G83) arm64; Node 24.12.0, npm 11.6.2; Playwright 1.63.0, Chromium 153.0.8010.12; localhost/TelegramStub, временные SQLite"
+    },
+    {
+      "command": "E2E_PORT=18650 node tools/cosmetics-legacy-teeth.mjs --browser",
+      "result": "exit 0: 7/7 возвратов архивного пути пойманы, четыре также браузером; файлы восстановлены",
+      "environment": "macOS 26.6.2 (25G83) arm64; Node 24.12.0, npm 11.6.2; Playwright 1.63.0, Chromium 153.0.8010.12; localhost/TelegramStub, временные SQLite"
+    },
+    {
+      "command": "node tools/check-cosmetics-v2.mjs --sheet docs/cosmetics-v2/reports/verify-art-sheets",
+      "result": "exit 0: 114 SVG, 72 прозрачных слоя, 7134768 защищённых пикселей; четыре листа просмотрены",
+      "environment": "macOS 26.6.2 (25G83) arm64; Node 24.12.0, npm 11.6.2; Playwright 1.63.0, Chromium 153.0.8010.12; localhost/TelegramStub, временные SQLite"
+    },
+    {
+      "command": "node tools/cosmetics-v2-art-teeth.mjs --browser",
+      "result": "exit 0: 31/31 поломок в tmp-копиях, восстановленная группа 7/7, исходный пакет неизменен",
+      "environment": "macOS 26.6.2 (25G83) arm64; Node 24.12.0, npm 11.6.2; Playwright 1.63.0, Chromium 153.0.8010.12; localhost/TelegramStub, временные SQLite"
+    },
+    {
+      "command": "node --disable-warning=ExperimentalWarning tools/check-cosmetics-v2-storage.mjs",
+      "result": "exit 0: SQLite .backup → старый App/Hub 1781699 → новый App, покупки/независимые источники/overrides/old+new+unknown id сохранены; schema=5, integrity=ok",
+      "environment": "macOS 26.6.2 (25G83) arm64; Node 24.12.0, npm 11.6.2; Playwright 1.63.0, Chromium 153.0.8010.12; localhost/TelegramStub, временные SQLite"
+    },
+    {
+      "command": "node --expose-gc --disable-warning=ExperimentalWarning tools/perf-lifecycle.mjs",
+      "result": "exit 0: 30 циклов, 210 комнат, 630 страниц; временные регистры нулевые после каждого цикла",
+      "environment": "macOS 26.6.2 (25G83) arm64; Node 24.12.0, npm 11.6.2; Playwright 1.63.0, Chromium 153.0.8010.12; localhost/TelegramStub, временные SQLite"
+    },
+    {
+      "command": "COSMETICS_PERF_OUT=docs/cosmetics-v2/reports/verify-performance/performance.json node --disable-warning=ExperimentalWarning tools/perf-cosmetics-v2.mjs",
+      "result": "exit 0: изолированные 3+3 контекста, CPU ×4; каталог 78,2/82,2/81,2 мс против 14,9/21,8/19,7 мс при 64 вместо 4 карточек; до магазина 0 v2 SVG, в каталоге 0 detail; по 180 открытий/закрытий без накопления подписок/слушателей/интервалов",
+      "environment": "macOS 26.6.2 (25G83) arm64; Node 24.12.0, npm 11.6.2; Playwright 1.63.0, Chromium 153.0.8010.12; localhost/TelegramStub, временные SQLite"
+    },
+    {
+      "command": "npm run layout",
+      "result": "exit 0, no overlaps; повтор после E-03",
+      "environment": "macOS 26.6.2 (25G83) arm64; Node 24.12.0, npm 11.6.2; Playwright 1.63.0, Chromium 153.0.8010.12; localhost/TelegramStub, временные SQLite"
+    },
+    {
+      "command": "npm run kit",
+      "result": "exit 0, шкала сохранена; повтор после E-03",
+      "environment": "macOS 26.6.2 (25G83) arm64; Node 24.12.0, npm 11.6.2; Playwright 1.63.0, Chromium 153.0.8010.12; localhost/TelegramStub, временные SQLite"
+    },
+    {
+      "command": "npm run contrast",
+      "result": "exit 0, прежние документированные исключения; повтор после E-03",
+      "environment": "macOS 26.6.2 (25G83) arm64; Node 24.12.0, npm 11.6.2; Playwright 1.63.0, Chromium 153.0.8010.12; localhost/TelegramStub, временные SQLite"
+    },
+    {
+      "command": "COLORS_PORT=18699 npm run colors",
+      "result": "exit 0, экран UNOQ живой; повтор после E-03",
+      "environment": "macOS 26.6.2 (25G83) arm64; Node 24.12.0, npm 11.6.2; Playwright 1.63.0, Chromium 153.0.8010.12; localhost/TelegramStub, временные SQLite"
+    },
+    {
+      "command": "npm run preview",
+      "result": "exit 0, 105 свежих снимков, без служебных слов и JS-ошибок; восемь листов просмотрены после E-03",
+      "environment": "macOS 26.6.2 (25G83) arm64; Node 24.12.0, npm 11.6.2; Playwright 1.63.0, Chromium 153.0.8010.12; localhost/TelegramStub, временные SQLite"
+    },
+    {
+      "command": "SHOP_DOCK_TEETH=1 COSMETICS_SHOP_SHOTS=docs/cosmetics-v2/reports/verify-regressions node --disable-warning=ExperimentalWarning tools/e2e-cosmetics-shop.mjs",
+      "result": "exit 0 после E-03; до исправления новый assert дал ожидаемый exit 1: y=440 вместо 302; до/после просмотрены",
+      "environment": "macOS 26.6.2 (25G83) arm64; Node 24.12.0, npm 11.6.2; Playwright 1.63.0, Chromium 153.0.8010.12; localhost/TelegramStub, временные SQLite"
+    },
+    {
+      "command": "git diff --check",
+      "result": "exit 0; запрещённые пути, утверждённый план, Graphit SVG/цены/серверные права и материалы A–D дополнительно побайтно сверены без изменений",
+      "environment": "macOS 26.6.2 (25G83) arm64; Node 24.12.0, npm 11.6.2; Playwright 1.63.0, Chromium 153.0.8010.12; localhost/TelegramStub, временные SQLite"
+    }
+  ],
+  "blockers": [
+    {
+      "scope": "external",
+      "reason": "Живой Telegram, iOS/Android, настоящие safe-area/клавиатура/пальцевые жесты/VoiceOver/TalkBack, официальная платёжная среда и production не проверены; использованы только localhost/заглушки. Телефонный чек-лист и пределы замеров в FINAL.md."
+    },
+    {
+      "scope": "owner",
+      "reason": "Новый арт шести коллекций отдельно не утверждён: approved=false. Новые цены не утверждены: price=null и счета запрещены. Старое одобрение относится только к прежним SVG Графита; цены 75/50/100/175 и поддержка в боте уже согласованы."
+    }
+  ]
+}

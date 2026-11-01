@@ -64,7 +64,7 @@ for (const padding of [0, 100]) test(`M: ранняя копия до заказ
   const r = await restored.app.payments.reconcile();
   assert.equal(r.refunds, 1, 'возврат найден в этом же проходе');
   assert.equal(r.unknownOut, 0, 'исходящий платёж не потерян из-за порядка списка');
-  assert.equal(restored.app.store.pay.order(p.order.id).state, 'refunded');
+  assert.equal(restored.app.store.pay.order(p.order.id)?.state, 'refunded', 'восстановленный заказ сохранён с возвратом');
   assert.deepEqual(restored.app.collections.ownedItems(ALICE.id), []);
   const all = restored.page(ALICE).inbox.slice(start).filter((m) => m.t === 'col');
   assert.ok(all.length > 0);
@@ -94,7 +94,7 @@ test('M: сбой записи возврата при сверке откаты
     assert.deepEqual(restored.app.collections.ownedItems(ALICE.id), []);
   } finally { db.refundDone = done; }
   assert.equal((await restored.app.payments.reconcile()).refunds, 1);
-  assert.equal(db.order(p.order.id).state, 'refunded');
+  assert.equal(db.order(p.order.id)?.state, 'refunded', 'повтор сверки сохраняет заказ с возвратом');
 });
 
 test('M: подтверждённые цены одинаковы в файле, пульте, карточках и счёте TelegramStub', async (ctx) => {

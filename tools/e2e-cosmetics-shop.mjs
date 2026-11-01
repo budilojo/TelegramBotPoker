@@ -12,20 +12,22 @@ const t = new Table({ admins: [String(H.id)], nardyDice: () => [5, 3], battleshi
 const web = startServer({ hub: t.hub, port: 0, host: '127.0.0.1', root: path.resolve('miniapp'), log: () => {} });
 await new Promise(r => web.server.once('listening', r));
 const url = `http://127.0.0.1:${web.server.address().port}`, browser = await chromium.launch();
-const out = path.resolve('docs/cosmetics-v2/reports/shop-screens'); fs.mkdirSync(out, { recursive: true });
+const out = path.resolve(process.env.COSMETICS_SHOP_SHOTS || 'docs/cosmetics-v2/reports/shop-screens'); fs.mkdirSync(out, { recursive: true });
 const problems = [];
 const teeth = process.env.SHOP_TEETH === '1';
+const dockTeeth = process.env.SHOP_DOCK_TEETH === '1';
 const sdk = data => `window.Telegram={WebApp:{initData:${JSON.stringify(data)},initDataUnsafe:{start_param:new URLSearchParams(${JSON.stringify(data)}).get('start_param')},ready(){},expand(){},close(){},disableVerticalSwipes(){},setHeaderColor(){},setBackgroundColor(){},setBottomBarColor(){},onEvent(){},openTelegramLink(){},BackButton:{show(){},hide(){},onClick(f){window.__back=f}},HapticFeedback:{impactOccurred(){},notificationOccurred(){},selectionChanged(){}}}};
 window.__sent=[];window.__heldCol=[];const WS=window.WebSocket;window.WebSocket=class extends WS{constructor(...a){super(...a);window.__ws=this}send(m){window.__sent.push(JSON.parse(m));super.send(m)}set onmessage(f){super.onmessage=e=>{if(window.__holdCol&&JSON.parse(e.data).t==='col')window.__heldCol.push(()=>f(e));else f(e)}}};`;
 async function open(who, code, width, reduced = false, holdCol = false) {
   const context = await browser.newContext({ viewport: { width, height: width === 320 ? 568 : 844 }, reducedMotion: reduced ? 'reduce' : 'no-preference' });
   const page = await context.newPage(); page.setDefaultTimeout(7000);
   if (holdCol) await page.addInitScript(() => window.__holdCol = true);
-  const frames = []; page.on('pageerror', e => problems.push(e.message));
+  const frames = [], requests = []; page.on('pageerror', e => problems.push(e.message));
+  page.on('request', r => requests.push(new URL(r.url()).pathname));
   page.on('websocket', ws => ws.on('framereceived', ({ payload }) => frames.push(JSON.parse(String(payload)))));
   await page.route('https://telegram.org/**', r => r.fulfill({ contentType: 'text/javascript', body: sdk(initDataFor(who, { startParam: code, clock: t.clock, token: TEST_TOKEN })) }));
   await page.goto(url); await page.waitForSelector('.lobby,.game-card');
-  return { page, context, frames };
+  return { page, context, frames, requests };
 }
 async function until(f, label) { const end = Date.now() + 7000; while (!await f()) { if (Date.now() > end) throw Error(label); await new Promise(r => setTimeout(r, 25)); } }
 const send = (p, m) => p.evaluate(async m => (await import('/net.js')).send(m, { lock: false }), m);
@@ -54,7 +56,7 @@ async function tab(p, name) { await p.locator('.col-controls').getByRole('button
 async function card(p, id) { await p.locator(`.col-card[data-item="${id}"]`).click(); await p.waitForSelector('.col-item'); }
 try {
  console.log('Chromium', browser.version());
- for (const width of teeth ? [320] : [320, 390]) {
+ for (const width of dockTeeth ? [] : teeth ? [320] : [320, 390]) {
   t.chatId = -94000 - width; await t.cmd(H, '/game'); const code = `g_${t.group.code}`;
   const host = await open(H, code, width, width === 320), guest = await open(B, code, width);
   const p = host.page, b = guest.page;
@@ -65,6 +67,9 @@ try {
    assert.match(await p.locator('.col-show').innerText(), /Доступ владельца/);
    assert.equal(await p.locator('[data-result-count]').count(), 1, 'catalog count uses its own attribute');
    assert.equal(await p.locator('[data-result-count]').innerText(), 'Найдено: 64', 'catalog count is not a clock');
+   assert.equal(await p.locator('.col-bundle-mini').count(), 6, 'six bundles use small asset compositions');
+   assert.equal(await p.locator('.col-bundle-mini img').count(), 54, 'nine small items in every bundle');
+   assert.deepEqual(host.requests.filter(src => /v2-art\/.*-preview.svg$/.test(src)), [], 'catalog never fetches detailed previews, including bundles');
    await layout(p, 'catalog'); await shot(p, `catalog-${width}`);
    // Native filters support keyboard; category options are populated, no empty sections.
    await select(p, 'game', 'chess'); await select(p, 'category', 'boards'); await select(p, 'collection', 'sever');
@@ -114,7 +119,13 @@ try {
    await p.locator('.nav-tab[data-tab="shop"]').click(); await tab(p, 'Каталог');
    // Bundle action is atomic and preserves Graphit data; server validates all nine rights.
    await select(p, 'game', ''); await select(p, 'category', 'bundles'); await select(p, 'collection', 'orbita');
-   await card(p, 'orbita-bundle'); await p.getByRole('button', { name: 'Надеть комплект', exact: true }).click();
+   assert.ok(!host.requests.includes('/collections/v2-art/orbita-bundle-preview.svg'), 'unopened bundle has no detail request');
+   await p.locator('.col-card[data-item="orbita-bundle"]').scrollIntoViewIfNeeded();
+   await shot(p, `bundle-${width}`);
+   await card(p, 'orbita-bundle');
+   await p.waitForFunction(() => [...document.images].some(e => e.getAttribute('src') === '/collections/v2-art/orbita-bundle-preview.svg' && e.complete && e.naturalWidth));
+   await shot(p, `bundle-item-${width}`);
+   await p.getByRole('button', { name: 'Надеть комплект', exact: true }).click();
    await until(() => itemById('orbita-bundle').includes.every(id => t.app.collections.choiceOf(H.id)[itemById(id).slot]?.item === id), 'bundle');
    assert.equal(await p.locator('.col-list li').count(), 9);
    await back(p); await back(p);
@@ -164,7 +175,7 @@ try {
  }
  // Seven games: menu -> store -> personal and shared equip -> return, then pending and frozen room.
  let n = 0;
- for (const width of teeth ? [] : [320, 390]) for (const g of GAME_LIST) {
+ for (const width of teeth ? [] : dockTeeth ? [320] : [320, 390]) for (const g of GAME_LIST.filter(g => !dockTeeth || g.id === 'poker')) {
   t.chatId = -95000 - ++n; await t.cmd(H, '/game'); t.openHub(H); await t.send(H, { t: 'create', game: g.id, settings: {} });
   const room = t.app.roomByCode(t.page(H).session.code); t.openRoom(B, room); await t.send(B, { t: 'sit' });
   // New room starts with clean shared slots, retaining rights.
@@ -174,7 +185,12 @@ try {
    await send(p, { t: 'start' }); await until(() => room.status === 'playing', 'playing');
    if (g.id === 'battleship') for (const x of [p, other.page]) { await send(x, { t: 'random' }); await x.waitForTimeout(50); await send(x, { t: 'ready' }); }
    const turn = structuredClone(room.turn), look = structuredClone(room.look), count = room.players.length;
+   await p.waitForTimeout(250); // let the normal game dock settle before opening the overlay
+   const dock = await p.locator('.chat-fab').boundingBox();
+   assert.ok(dock, 'seated player has a chat dock');
    await p.getByRole('button', { name: 'Меню', exact: true }).click(); await p.locator('[data-act="shop"]').click(); await p.waitForSelector('.col-show');
+   await p.evaluate(async () => (await import('/chat.js')).placeFab());
+   assert.deepEqual(await p.locator('.chat-fab').boundingBox(), dock, 'shop must not reposition chat through inert game content');
    await p.locator('[data-filter="game"]').selectOption(g.id); await select(p, 'collection', 'sever'); await select(p, 'category', 'profile');
    t.app.collections.limits.clear(); await card(p, 'sever-frame'); await p.getByRole('button', { name: 'Надеть', exact: true }).click(); await p.getByRole('button', { name: 'Надето', exact: true }).waitFor();
    assert.match(await p.locator('.col-item').innerText(), /Применится со следующей партии/); await back(p);
@@ -188,6 +204,14 @@ try {
    await p.locator('[data-act="return-table"]').click(); assert.equal(await p.locator('.col-root').count(), 0);
    assert.equal(await p.evaluate(() => document.activeElement.getAttribute('aria-label')), 'Меню', 'return restores focus to game menu');
    assert.deepEqual(room.turn, turn); assert.deepEqual(room.look, look);
+   const blocked = await p.evaluate(() => {
+    const b = document.querySelector('.chat-fab').getBoundingClientRect();
+    return [...document.querySelectorAll('#app button')].filter(el => {
+     const r = el.getBoundingClientRect();
+     return r.width && r.height && r.left < b.right && b.left < r.right && r.top < b.bottom && b.top < r.bottom;
+    }).map(el => el.textContent.trim());
+   });
+   assert.deepEqual(blocked, [], 'chat never covers game actions on the first return frame');
    await shot(p, `${g.id}-return-${width}`);
    // All received packets: no decoration/private data leaked to other viewer.
    for (const x of [other, spy]) for (const m of x.frames.filter(m => m.t === 'state')) {
