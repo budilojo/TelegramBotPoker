@@ -2,6 +2,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ROOT, parseArgs, run } from './codex-release-run.mjs';
+import { contextBrief } from './brain-context.mjs';
 
 export const PROFILE = {
   stateDir: '.release-run/cosmetics-v2',
@@ -16,8 +17,11 @@ export const PROFILE = {
     { id: 'verify', letter: 'E', scope: 'Независимая итоговая проверка', task: 'docs/cosmetics-v2/06-verify.md' },
   ],
   buildPrompt(root, step, attemptId) {
+    const route = { audit: 'shop', art: 'art', integration: 'games', shop: 'shop', verify: 'audit' }[step.id] || 'audit';
     return `Ты отдельный исполнитель Codex ${step.letter}: ${step.scope}.
-Рабочая копия ${root}, ветка redesign. Прочитай AGENTS.md, docs/brain/00-index.md, status.md, tasks.md, последние релевантные сессии; целиком docs/cosmetics-v2/00-plan.md, 01-design.md, ${step.task} и отчёты предыдущих этапов docs/cosmetics-v2/reports/.
+Рабочая копия ${root}, ветка redesign.
+${contextBrief(root, route)}
+Прочитай docs/brain/00-index.md и последнюю сессию по правилам маршрута; целиком docs/cosmetics-v2/00-plan.md, 01-design.md и ${step.task}. Из docs/cosmetics-v2/reports/ сначала статусы предыдущих этапов, полные отчёты по зависимостям/неопределённостям. Для E всё задание независимой приёмки обязательно; карту использовать для навигации по всем областям, объём приёмки не сокращать.
 Реализуй своё задание целиком. Следующий агент начнёт после тебя; общие файлы принадлежат только текущему этапу. Не запускай субагентов или другие запускаторы. Не путай подготовку пакета с выполнением: сейчас нужно реализовать задание.
 Сохраняй чужую работу. Сервер/SSH, deploy, реальные деньги, счета, возвраты и открытие продаж/рейтинга запрещены. Не читай секреты, не меняй server/, public/, deploy/, .env и tools/*run.mjs или тест контроллера. Цены Графита 75/50/100/175 сохраняются, новые товары без утверждённых цен не продаются. Видимость оформления другим игрокам не означает выдачу прав всем. Поддержка в боте уже согласована. Утверждение арта Графита относится только к прежним SVG.
 При повторной попытке изучи git log/diff и продолжи сохранённое, без reset/clean/stash. Перед каждым коммитом полный npm test; коммит по-русски. Не делай push: контроллер сам проверит точный коммит и отправит только redesign обычным push. main и серверную ветку не менять.

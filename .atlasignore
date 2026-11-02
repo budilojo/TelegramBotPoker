@@ -1,0 +1,11 @@
+.git/
+.tools/
+.release-run/
+node_modules/
+data/
+backups/
+preview/
+.env*
+docs/
+server/
+public/
