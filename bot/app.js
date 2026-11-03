@@ -197,10 +197,12 @@ export class App {
   constructor({
     api, store = new NullStore(), minIntervalMs = 1000, botUsername = '', onError = null, deck = null, durakDeck = null,
     clock = REAL_CLOCK, runoutStepMs = 1500, webappUrl = '', miniAppName = '', admins = [], ratingSoon = RATING_SOON,
-    botRng = Math.random, collectionsDemo = false, sales = null,
+    botRng = Math.random, collectionsDemo = false, sales = null, skillShadow = null,
   } = {}) {
     this.api = api;
     this.store = store;
+    // Наблюдатель, явно подключаемый сервером. Публичных очков не меняет.
+    this.skillShadow = skillShadow;
     this.botUsername = botUsername;
     /** Когда человек последний раз просил «поделиться»: заготовка — запрос к Telegram, чаще раза в две секунды не нужна. */
     this.lastShare = new Map();
@@ -749,6 +751,19 @@ export class App {
     const seen = (room.rated ||= {});
     const fresh = [];
     for (const r of rounds) {
+      // Не пересчитывать старую историю при первом включении наблюдателя.
+      // Незавершённую запись можно повторить и после старого начисления.
+      const observed = room.skillObserved?.[r.id];
+      if (this.skillShadow && ((!seen[r.id] && !observed) || observed === 'pending')) {
+        try {
+          (room.skillObserved ||= {})[r.id] = 'pending';
+          this.skillShadow.apply({ ...r, game: room.game, round: String(r.id),
+            hasBots: room.players.some(p => !!p.bot), at: this.clock.now() });
+          room.skillObserved[r.id] = true;
+        } catch (error) {
+          this.log(error); // отказ наблюдателя не мешает партии/старым очкам
+        }
+      }
       if (seen[r.id]) continue;
       let out;
       try {

@@ -25,6 +25,8 @@ import { fileURLToPath } from 'node:url';
 import { Bot } from 'grammy';
 import { App } from './app.js';
 import { Store } from './store.js';
+import { SkillShadow } from './skill-rating.js';
+import { GAME_LIST } from './games/index.js';
 import { Hub } from './hub.js';
 import { AdminBot } from './admin-bot.js';
 import { Broadcaster, castReport } from './broadcast.js';
@@ -132,6 +134,9 @@ const onError = (err) => {
 const app = new App({
   api: bot.api,
   store,
+  // Только сбор для калибровки. Не открывает рейтинг и не меняет старые очки.
+  skillShadow: process.env.SKILL_RATING_SHADOW === '1'
+    ? new SkillShadow(store.db, GAME_LIST.map(g => g.id)) : null,
   onError,
   minIntervalMs: DRAW_INTERVAL_MS,
   botUsername: me.username,

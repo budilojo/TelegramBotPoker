@@ -1,0 +1,1027 @@
+{
+  "kind": "synthetic rating benchmark; not gameplay, not humans",
+  "assumption": "80 latent strengths; Gumbel ranking, optionally replaced with random ranking; random seating; no draws or collusion in the main matrix",
+  "trainingPerSeed": 4000,
+  "validationPerSeed": 1000,
+  "seeds": [
+    117,
+    503,
+    20261103,
+    43291,
+    97733
+  ],
+  "steps": [
+    8,
+    16,
+    24,
+    32
+  ],
+  "population": 80,
+  "generatedOutcomes": 150000,
+  "ratingReplays": 600000,
+  "baselineBrier": 0.25,
+  "summary": [
+    {
+      "seats": 2,
+      "randomRankingProbability": 0,
+      "samples": [
+        {
+          "seed": 117,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.17634231197808894,
+              "poolDrift": 0
+            },
+            {
+              "step": 16,
+              "brier": 0.16692485430275436,
+              "poolDrift": 2.9103830456733704e-11
+            },
+            {
+              "step": 24,
+              "brier": 0.1651763927020275,
+              "poolDrift": 0
+            },
+            {
+              "step": 32,
+              "brier": 0.16534496327465117,
+              "poolDrift": -2.9103830456733704e-11
+            }
+          ],
+          "referenceBrier": 0.25
+        },
+        {
+          "seed": 503,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.17734055541923638,
+              "poolDrift": 0
+            },
+            {
+              "step": 16,
+              "brier": 0.16798193908149878,
+              "poolDrift": 2.9103830456733704e-11
+            },
+            {
+              "step": 24,
+              "brier": 0.16617329541936665,
+              "poolDrift": -1.4551915228366852e-11
+            },
+            {
+              "step": 32,
+              "brier": 0.16616186842191125,
+              "poolDrift": 0
+            }
+          ],
+          "referenceBrier": 0.25
+        },
+        {
+          "seed": 20261103,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.18556784940740692,
+              "poolDrift": 1.4551915228366852e-11
+            },
+            {
+              "step": 16,
+              "brier": 0.17792902250591658,
+              "poolDrift": -1.4551915228366852e-11
+            },
+            {
+              "step": 24,
+              "brier": 0.17717985732288893,
+              "poolDrift": 1.4551915228366852e-11
+            },
+            {
+              "step": 32,
+              "brier": 0.177947216066111,
+              "poolDrift": 0
+            }
+          ],
+          "referenceBrier": 0.25
+        },
+        {
+          "seed": 43291,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.19117188896569107,
+              "poolDrift": 2.9103830456733704e-11
+            },
+            {
+              "step": 16,
+              "brier": 0.18635268158152693,
+              "poolDrift": -4.3655745685100555e-11
+            },
+            {
+              "step": 24,
+              "brier": 0.1872580036315678,
+              "poolDrift": -1.4551915228366852e-11
+            },
+            {
+              "step": 32,
+              "brier": 0.1892556408186324,
+              "poolDrift": 1.4551915228366852e-11
+            }
+          ],
+          "referenceBrier": 0.25
+        },
+        {
+          "seed": 97733,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.18568826671887878,
+              "poolDrift": 0
+            },
+            {
+              "step": 16,
+              "brier": 0.1786646945207195,
+              "poolDrift": 5.820766091346741e-11
+            },
+            {
+              "step": 24,
+              "brier": 0.17778772337180515,
+              "poolDrift": 0
+            },
+            {
+              "step": 32,
+              "brier": 0.17811181141828322,
+              "poolDrift": -1.4551915228366852e-11
+            }
+          ],
+          "referenceBrier": 0.25
+        }
+      ],
+      "models": [
+        {
+          "step": 8,
+          "meanBrier": 0.18322217449786043,
+          "minBrier": 0.17634231197808894,
+          "maxBrier": 0.19117188896569107,
+          "maxAbsPoolDrift": 2.9103830456733704e-11
+        },
+        {
+          "step": 16,
+          "meanBrier": 0.17557063839848325,
+          "minBrier": 0.16692485430275436,
+          "maxBrier": 0.18635268158152693,
+          "maxAbsPoolDrift": 5.820766091346741e-11
+        },
+        {
+          "step": 24,
+          "meanBrier": 0.17471505448953123,
+          "minBrier": 0.1651763927020275,
+          "maxBrier": 0.1872580036315678,
+          "maxAbsPoolDrift": 1.4551915228366852e-11
+        },
+        {
+          "step": 32,
+          "meanBrier": 0.17536429999991782,
+          "minBrier": 0.16534496327465117,
+          "maxBrier": 0.1892556408186324,
+          "maxAbsPoolDrift": 2.9103830456733704e-11
+        }
+      ]
+    },
+    {
+      "seats": 2,
+      "randomRankingProbability": 0.5,
+      "samples": [
+        {
+          "seed": 117,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.2347013461727524,
+              "poolDrift": -2.9103830456733704e-11
+            },
+            {
+              "step": 16,
+              "brier": 0.23624193382750186,
+              "poolDrift": -2.9103830456733704e-11
+            },
+            {
+              "step": 24,
+              "brier": 0.23922354791781897,
+              "poolDrift": 0
+            },
+            {
+              "step": 32,
+              "brier": 0.24229666655319343,
+              "poolDrift": -1.4551915228366852e-11
+            }
+          ],
+          "referenceBrier": 0.25
+        },
+        {
+          "seed": 503,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.23055304981231342,
+              "poolDrift": -1.4551915228366852e-11
+            },
+            {
+              "step": 16,
+              "brier": 0.22936607164099354,
+              "poolDrift": 4.3655745685100555e-11
+            },
+            {
+              "step": 24,
+              "brier": 0.2303179176916389,
+              "poolDrift": 1.4551915228366852e-11
+            },
+            {
+              "step": 32,
+              "brier": 0.23171936481687605,
+              "poolDrift": -1.4551915228366852e-11
+            }
+          ],
+          "referenceBrier": 0.25
+        },
+        {
+          "seed": 20261103,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.23300953086789436,
+              "poolDrift": 0
+            },
+            {
+              "step": 16,
+              "brier": 0.2321328343841088,
+              "poolDrift": 2.9103830456733704e-11
+            },
+            {
+              "step": 24,
+              "brier": 0.23320248299113142,
+              "poolDrift": 0
+            },
+            {
+              "step": 32,
+              "brier": 0.23480552969106638,
+              "poolDrift": 2.9103830456733704e-11
+            }
+          ],
+          "referenceBrier": 0.25
+        },
+        {
+          "seed": 43291,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.2380893686786341,
+              "poolDrift": -1.4551915228366852e-11
+            },
+            {
+              "step": 16,
+              "brier": 0.2392475283464547,
+              "poolDrift": 0
+            },
+            {
+              "step": 24,
+              "brier": 0.2412103933847975,
+              "poolDrift": 4.3655745685100555e-11
+            },
+            {
+              "step": 32,
+              "brier": 0.24317635331057194,
+              "poolDrift": 4.3655745685100555e-11
+            }
+          ],
+          "referenceBrier": 0.25
+        },
+        {
+          "seed": 97733,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.235487648693553,
+              "poolDrift": 1.4551915228366852e-11
+            },
+            {
+              "step": 16,
+              "brier": 0.23636706021209,
+              "poolDrift": 0
+            },
+            {
+              "step": 24,
+              "brier": 0.23863258344730562,
+              "poolDrift": 2.9103830456733704e-11
+            },
+            {
+              "step": 32,
+              "brier": 0.24100607473275748,
+              "poolDrift": -1.4551915228366852e-11
+            }
+          ],
+          "referenceBrier": 0.25
+        }
+      ],
+      "models": [
+        {
+          "step": 8,
+          "meanBrier": 0.23436818884502944,
+          "minBrier": 0.23055304981231342,
+          "maxBrier": 0.2380893686786341,
+          "maxAbsPoolDrift": 2.9103830456733704e-11
+        },
+        {
+          "step": 16,
+          "meanBrier": 0.23467108568222977,
+          "minBrier": 0.22936607164099354,
+          "maxBrier": 0.2392475283464547,
+          "maxAbsPoolDrift": 4.3655745685100555e-11
+        },
+        {
+          "step": 24,
+          "meanBrier": 0.23651738508653847,
+          "minBrier": 0.2303179176916389,
+          "maxBrier": 0.2412103933847975,
+          "maxAbsPoolDrift": 4.3655745685100555e-11
+        },
+        {
+          "step": 32,
+          "meanBrier": 0.2386007978208931,
+          "minBrier": 0.23171936481687605,
+          "maxBrier": 0.24317635331057194,
+          "maxAbsPoolDrift": 4.3655745685100555e-11
+        }
+      ]
+    },
+    {
+      "seats": 4,
+      "randomRankingProbability": 0,
+      "samples": [
+        {
+          "seed": 117,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.17841707749229554,
+              "poolDrift": -2.9103830456733704e-11
+            },
+            {
+              "step": 16,
+              "brier": 0.17733564337545107,
+              "poolDrift": 0
+            },
+            {
+              "step": 24,
+              "brier": 0.17830707797188144,
+              "poolDrift": 0
+            },
+            {
+              "step": 32,
+              "brier": 0.179441943462134,
+              "poolDrift": 2.9103830456733704e-11
+            }
+          ],
+          "referenceBrier": 0.25
+        },
+        {
+          "seed": 503,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.17716077972841135,
+              "poolDrift": -5.820766091346741e-11
+            },
+            {
+              "step": 16,
+              "brier": 0.1750346031560544,
+              "poolDrift": 1.4551915228366852e-11
+            },
+            {
+              "step": 24,
+              "brier": 0.17524112407493356,
+              "poolDrift": -1.4551915228366852e-11
+            },
+            {
+              "step": 32,
+              "brier": 0.17575645454597266,
+              "poolDrift": -2.9103830456733704e-11
+            }
+          ],
+          "referenceBrier": 0.25
+        },
+        {
+          "seed": 20261103,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.17498217161434912,
+              "poolDrift": 1.4551915228366852e-11
+            },
+            {
+              "step": 16,
+              "brier": 0.17269909541068226,
+              "poolDrift": 1.4551915228366852e-11
+            },
+            {
+              "step": 24,
+              "brier": 0.1730763935150407,
+              "poolDrift": 2.9103830456733704e-11
+            },
+            {
+              "step": 32,
+              "brier": 0.17376393031479634,
+              "poolDrift": 0
+            }
+          ],
+          "referenceBrier": 0.25
+        },
+        {
+          "seed": 43291,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.17481986365389482,
+              "poolDrift": -1.4551915228366852e-11
+            },
+            {
+              "step": 16,
+              "brier": 0.17268272779890675,
+              "poolDrift": -1.4551915228366852e-11
+            },
+            {
+              "step": 24,
+              "brier": 0.17285561726495124,
+              "poolDrift": 0
+            },
+            {
+              "step": 32,
+              "brier": 0.17330453775517254,
+              "poolDrift": 2.9103830456733704e-11
+            }
+          ],
+          "referenceBrier": 0.25
+        },
+        {
+          "seed": 97733,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.16940401745005246,
+              "poolDrift": 0
+            },
+            {
+              "step": 16,
+              "brier": 0.16709030675482525,
+              "poolDrift": -2.9103830456733704e-11
+            },
+            {
+              "step": 24,
+              "brier": 0.16753745650942037,
+              "poolDrift": -1.4551915228366852e-11
+            },
+            {
+              "step": 32,
+              "brier": 0.1683846474254204,
+              "poolDrift": 0
+            }
+          ],
+          "referenceBrier": 0.25
+        }
+      ],
+      "models": [
+        {
+          "step": 8,
+          "meanBrier": 0.17495678198780068,
+          "minBrier": 0.16940401745005246,
+          "maxBrier": 0.17841707749229554,
+          "maxAbsPoolDrift": 5.820766091346741e-11
+        },
+        {
+          "step": 16,
+          "meanBrier": 0.17296847529918397,
+          "minBrier": 0.16709030675482525,
+          "maxBrier": 0.17733564337545107,
+          "maxAbsPoolDrift": 2.9103830456733704e-11
+        },
+        {
+          "step": 24,
+          "meanBrier": 0.17340353386724544,
+          "minBrier": 0.16753745650942037,
+          "maxBrier": 0.17830707797188144,
+          "maxAbsPoolDrift": 2.9103830456733704e-11
+        },
+        {
+          "step": 32,
+          "meanBrier": 0.17413030270069918,
+          "minBrier": 0.1683846474254204,
+          "maxBrier": 0.179441943462134,
+          "maxAbsPoolDrift": 2.9103830456733704e-11
+        }
+      ]
+    },
+    {
+      "seats": 4,
+      "randomRankingProbability": 0.5,
+      "samples": [
+        {
+          "seed": 117,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.23513548304137052,
+              "poolDrift": 0
+            },
+            {
+              "step": 16,
+              "brier": 0.2370260060576946,
+              "poolDrift": -1.4551915228366852e-11
+            },
+            {
+              "step": 24,
+              "brier": 0.23904529062720598,
+              "poolDrift": -1.4551915228366852e-11
+            },
+            {
+              "step": 32,
+              "brier": 0.240992698555157,
+              "poolDrift": -1.4551915228366852e-11
+            }
+          ],
+          "referenceBrier": 0.25
+        },
+        {
+          "seed": 503,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.23486882507338316,
+              "poolDrift": 2.9103830456733704e-11
+            },
+            {
+              "step": 16,
+              "brier": 0.2354836894994561,
+              "poolDrift": -5.820766091346741e-11
+            },
+            {
+              "step": 24,
+              "brier": 0.2362433365477263,
+              "poolDrift": 2.9103830456733704e-11
+            },
+            {
+              "step": 32,
+              "brier": 0.23706256376142623,
+              "poolDrift": -1.4551915228366852e-11
+            }
+          ],
+          "referenceBrier": 0.25
+        },
+        {
+          "seed": 20261103,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.2309097484299743,
+              "poolDrift": 2.9103830456733704e-11
+            },
+            {
+              "step": 16,
+              "brier": 0.23193954508908982,
+              "poolDrift": 2.9103830456733704e-11
+            },
+            {
+              "step": 24,
+              "brier": 0.23338175303820646,
+              "poolDrift": 1.4551915228366852e-11
+            },
+            {
+              "step": 32,
+              "brier": 0.23469235483535913,
+              "poolDrift": 0
+            }
+          ],
+          "referenceBrier": 0.25
+        },
+        {
+          "seed": 43291,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.23321009641693208,
+              "poolDrift": -1.4551915228366852e-11
+            },
+            {
+              "step": 16,
+              "brier": 0.23466498233072194,
+              "poolDrift": 1.4551915228366852e-11
+            },
+            {
+              "step": 24,
+              "brier": 0.23618531107520818,
+              "poolDrift": 2.9103830456733704e-11
+            },
+            {
+              "step": 32,
+              "brier": 0.23758198604226025,
+              "poolDrift": 1.4551915228366852e-11
+            }
+          ],
+          "referenceBrier": 0.25
+        },
+        {
+          "seed": 97733,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.2318723057384172,
+              "poolDrift": -1.4551915228366852e-11
+            },
+            {
+              "step": 16,
+              "brier": 0.2324039874674692,
+              "poolDrift": -5.820766091346741e-11
+            },
+            {
+              "step": 24,
+              "brier": 0.23334024172670553,
+              "poolDrift": -1.4551915228366852e-11
+            },
+            {
+              "step": 32,
+              "brier": 0.23450629529715003,
+              "poolDrift": 1.4551915228366852e-11
+            }
+          ],
+          "referenceBrier": 0.25
+        }
+      ],
+      "models": [
+        {
+          "step": 8,
+          "meanBrier": 0.23319929174001547,
+          "minBrier": 0.2309097484299743,
+          "maxBrier": 0.23513548304137052,
+          "maxAbsPoolDrift": 2.9103830456733704e-11
+        },
+        {
+          "step": 16,
+          "meanBrier": 0.23430364208888635,
+          "minBrier": 0.23193954508908982,
+          "maxBrier": 0.2370260060576946,
+          "maxAbsPoolDrift": 5.820766091346741e-11
+        },
+        {
+          "step": 24,
+          "meanBrier": 0.23563918660301048,
+          "minBrier": 0.23334024172670553,
+          "maxBrier": 0.23904529062720598,
+          "maxAbsPoolDrift": 2.9103830456733704e-11
+        },
+        {
+          "step": 32,
+          "meanBrier": 0.2369671796982705,
+          "minBrier": 0.23450629529715003,
+          "maxBrier": 0.240992698555157,
+          "maxAbsPoolDrift": 1.4551915228366852e-11
+        }
+      ]
+    },
+    {
+      "seats": 8,
+      "randomRankingProbability": 0,
+      "samples": [
+        {
+          "seed": 117,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.170701350803894,
+              "poolDrift": 0
+            },
+            {
+              "step": 16,
+              "brier": 0.17086260531355707,
+              "poolDrift": -1.4551915228366852e-11
+            },
+            {
+              "step": 24,
+              "brier": 0.17137842137603926,
+              "poolDrift": -1.4551915228366852e-11
+            },
+            {
+              "step": 32,
+              "brier": 0.17189382631645928,
+              "poolDrift": -2.9103830456733704e-11
+            }
+          ],
+          "referenceBrier": 0.25
+        },
+        {
+          "seed": 503,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.16995790154985044,
+              "poolDrift": 1.4551915228366852e-11
+            },
+            {
+              "step": 16,
+              "brier": 0.17016178578827348,
+              "poolDrift": -1.4551915228366852e-11
+            },
+            {
+              "step": 24,
+              "brier": 0.17071533254521154,
+              "poolDrift": -1.4551915228366852e-11
+            },
+            {
+              "step": 32,
+              "brier": 0.17124470573006992,
+              "poolDrift": 0
+            }
+          ],
+          "referenceBrier": 0.25
+        },
+        {
+          "seed": 20261103,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.17434129332151257,
+              "poolDrift": -4.3655745685100555e-11
+            },
+            {
+              "step": 16,
+              "brier": 0.17448161172126236,
+              "poolDrift": 1.4551915228366852e-11
+            },
+            {
+              "step": 24,
+              "brier": 0.17500112845056193,
+              "poolDrift": 2.9103830456733704e-11
+            },
+            {
+              "step": 32,
+              "brier": 0.17550904775945914,
+              "poolDrift": -2.9103830456733704e-11
+            }
+          ],
+          "referenceBrier": 0.25
+        },
+        {
+          "seed": 43291,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.17226351774130483,
+              "poolDrift": 0
+            },
+            {
+              "step": 16,
+              "brier": 0.17242888014541044,
+              "poolDrift": 1.4551915228366852e-11
+            },
+            {
+              "step": 24,
+              "brier": 0.17315950096962618,
+              "poolDrift": -1.4551915228366852e-11
+            },
+            {
+              "step": 32,
+              "brier": 0.17394064951838423,
+              "poolDrift": 1.4551915228366852e-11
+            }
+          ],
+          "referenceBrier": 0.25
+        },
+        {
+          "seed": 97733,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.16582186472327817,
+              "poolDrift": -1.4551915228366852e-11
+            },
+            {
+              "step": 16,
+              "brier": 0.16590119334507797,
+              "poolDrift": -2.9103830456733704e-11
+            },
+            {
+              "step": 24,
+              "brier": 0.16648595271399996,
+              "poolDrift": 0
+            },
+            {
+              "step": 32,
+              "brier": 0.16711601748495827,
+              "poolDrift": 1.4551915228366852e-11
+            }
+          ],
+          "referenceBrier": 0.25
+        }
+      ],
+      "models": [
+        {
+          "step": 8,
+          "meanBrier": 0.17061718562796802,
+          "minBrier": 0.16582186472327817,
+          "maxBrier": 0.17434129332151257,
+          "maxAbsPoolDrift": 4.3655745685100555e-11
+        },
+        {
+          "step": 16,
+          "meanBrier": 0.17076721526271627,
+          "minBrier": 0.16590119334507797,
+          "maxBrier": 0.17448161172126236,
+          "maxAbsPoolDrift": 2.9103830456733704e-11
+        },
+        {
+          "step": 24,
+          "meanBrier": 0.17134806721108778,
+          "minBrier": 0.16648595271399996,
+          "maxBrier": 0.17500112845056193,
+          "maxAbsPoolDrift": 2.9103830456733704e-11
+        },
+        {
+          "step": 32,
+          "meanBrier": 0.17194084936186618,
+          "minBrier": 0.16711601748495827,
+          "maxBrier": 0.17550904775945914,
+          "maxAbsPoolDrift": 2.9103830456733704e-11
+        }
+      ]
+    },
+    {
+      "seats": 8,
+      "randomRankingProbability": 0.5,
+      "samples": [
+        {
+          "seed": 117,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.23268026496687322,
+              "poolDrift": -1.4551915228366852e-11
+            },
+            {
+              "step": 16,
+              "brier": 0.23359181057004108,
+              "poolDrift": 1.4551915228366852e-11
+            },
+            {
+              "step": 24,
+              "brier": 0.2343662214260902,
+              "poolDrift": 1.4551915228366852e-11
+            },
+            {
+              "step": 32,
+              "brier": 0.23508111667117484,
+              "poolDrift": -1.4551915228366852e-11
+            }
+          ],
+          "referenceBrier": 0.25
+        },
+        {
+          "seed": 503,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.23057884994578698,
+              "poolDrift": -1.4551915228366852e-11
+            },
+            {
+              "step": 16,
+              "brier": 0.23154682011561697,
+              "poolDrift": 2.9103830456733704e-11
+            },
+            {
+              "step": 24,
+              "brier": 0.23252462789874945,
+              "poolDrift": 0
+            },
+            {
+              "step": 32,
+              "brier": 0.23346595733434117,
+              "poolDrift": -2.9103830456733704e-11
+            }
+          ],
+          "referenceBrier": 0.25
+        },
+        {
+          "seed": 20261103,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.23049293677162463,
+              "poolDrift": -2.9103830456733704e-11
+            },
+            {
+              "step": 16,
+              "brier": 0.23116103386737927,
+              "poolDrift": -1.4551915228366852e-11
+            },
+            {
+              "step": 24,
+              "brier": 0.23209125791367377,
+              "poolDrift": 0
+            },
+            {
+              "step": 32,
+              "brier": 0.2331322526309777,
+              "poolDrift": 4.3655745685100555e-11
+            }
+          ],
+          "referenceBrier": 0.25
+        },
+        {
+          "seed": 43291,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.23224166478167024,
+              "poolDrift": -2.9103830456733704e-11
+            },
+            {
+              "step": 16,
+              "brier": 0.2334527295299103,
+              "poolDrift": -1.4551915228366852e-11
+            },
+            {
+              "step": 24,
+              "brier": 0.2348271373752625,
+              "poolDrift": -2.9103830456733704e-11
+            },
+            {
+              "step": 32,
+              "brier": 0.2362296488126617,
+              "poolDrift": 1.4551915228366852e-11
+            }
+          ],
+          "referenceBrier": 0.25
+        },
+        {
+          "seed": 97733,
+          "models": [
+            {
+              "step": 8,
+              "brier": 0.22948727812426237,
+              "poolDrift": 1.4551915228366852e-11
+            },
+            {
+              "step": 16,
+              "brier": 0.23036303726751195,
+              "poolDrift": 1.4551915228366852e-11
+            },
+            {
+              "step": 24,
+              "brier": 0.23149173770728687,
+              "poolDrift": 1.4551915228366852e-11
+            },
+            {
+              "step": 32,
+              "brier": 0.23278260371515844,
+              "poolDrift": 0
+            }
+          ],
+          "referenceBrier": 0.25
+        }
+      ],
+      "models": [
+        {
+          "step": 8,
+          "meanBrier": 0.23109619891804348,
+          "minBrier": 0.22948727812426237,
+          "maxBrier": 0.23268026496687322,
+          "maxAbsPoolDrift": 2.9103830456733704e-11
+        },
+        {
+          "step": 16,
+          "meanBrier": 0.2320230862700919,
+          "minBrier": 0.23036303726751195,
+          "maxBrier": 0.23359181057004108,
+          "maxAbsPoolDrift": 2.9103830456733704e-11
+        },
+        {
+          "step": 24,
+          "meanBrier": 0.23306019646421255,
+          "minBrier": 0.23149173770728687,
+          "maxBrier": 0.2348271373752625,
+          "maxAbsPoolDrift": 2.9103830456733704e-11
+        },
+        {
+          "step": 32,
+          "meanBrier": 0.23413831583286276,
+          "minBrier": 0.23278260371515844,
+          "maxBrier": 0.2362296488126617,
+          "maxAbsPoolDrift": 4.3655745685100555e-11
+        }
+      ]
+    }
+  ],
+  "residualAttack": {
+    "description": "200 arranged wins over fresh accounts seeded at 1000; no admission protections",
+    "initial": 1000,
+    "after": 1615.455881572836
+  },
+  "limitations": "K is a sensitivity parameter, not measured luck of the seven games. Pairwise results within a table are dependent. No claim of human calibration or resistance to collusion."
+}

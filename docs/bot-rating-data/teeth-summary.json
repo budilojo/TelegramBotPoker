@@ -1,0 +1,181 @@
+{
+  "cases": [
+    {
+      "name": "нормирование размера стола",
+      "file": "bot/skill-rating.js",
+      "pattern": "каждый размер",
+      "caught": true,
+      "exit": 1
+    },
+    {
+      "name": "нулевая сумма",
+      "file": "bot/skill-rating.js",
+      "pattern": "каждый размер",
+      "caught": true,
+      "exit": 1
+    },
+    {
+      "name": "ничья",
+      "file": "bot/skill-rating.js",
+      "pattern": "ничья с равным",
+      "caught": true,
+      "exit": 1
+    },
+    {
+      "name": "отсутствие подарка на дне",
+      "file": "bot/skill-rating.js",
+      "pattern": "нижней границе",
+      "caught": true,
+      "exit": 1
+    },
+    {
+      "name": "не округлять внутренний рейтинг",
+      "file": "bot/skill-rating.js",
+      "pattern": "нижней границе",
+      "caught": true,
+      "exit": 1
+    },
+    {
+      "name": "разделение игр",
+      "file": "bot/skill-rating.js",
+      "pattern": "семь игр",
+      "caught": true,
+      "exit": 1
+    },
+    {
+      "name": "реестр игр",
+      "file": "bot/skill-rating.js",
+      "pattern": "семь игр",
+      "caught": true,
+      "exit": 1
+    },
+    {
+      "name": "повтор после перезапуска",
+      "file": "bot/skill-rating.js",
+      "pattern": "переживают перезапуск",
+      "caught": true,
+      "exit": 1
+    },
+    {
+      "name": "подмена записанного результата",
+      "file": "bot/skill-rating.js",
+      "pattern": "переживают перезапуск",
+      "caught": true,
+      "exit": 1
+    },
+    {
+      "name": "атомарность партии",
+      "file": "bot/skill-rating.js",
+      "pattern": "ошибка записи второго",
+      "caught": true,
+      "exit": 1
+    },
+    {
+      "name": "боты без калибровки",
+      "file": "bot/skill-rating.js",
+      "pattern": "боты без калибровки",
+      "caught": true,
+      "exit": 1
+    },
+    {
+      "name": "отменённая партия",
+      "file": "bot/skill-rating.js",
+      "pattern": "боты без калибровки",
+      "caught": true,
+      "exit": 1
+    },
+    {
+      "name": "слишком короткая партия",
+      "file": "bot/skill-rating.js",
+      "pattern": "боты без калибровки",
+      "caught": true,
+      "exit": 1
+    },
+    {
+      "name": "не пересчитывать старую историю",
+      "file": "bot/app.js",
+      "pattern": "первое включение",
+      "caught": true,
+      "exit": 1
+    },
+    {
+      "name": "повтор неудачной теневой записи",
+      "file": "bot/app.js",
+      "pattern": "отказ наблюдателя",
+      "caught": true,
+      "exit": 1
+    },
+    {
+      "name": "бот в смешанном столе",
+      "file": "bot/app.js",
+      "pattern": "настоящие страницы",
+      "caught": true,
+      "exit": 1
+    },
+    {
+      "name": "разделённые места покера",
+      "file": "bot/games/poker/index.js",
+      "pattern": "покерные разделённые",
+      "caught": true,
+      "exit": 1
+    },
+    {
+      "name": "учёт разделённых мест наблюдателем",
+      "file": "bot/skill-rating.js",
+      "pattern": "покерные разделённые",
+      "caught": true,
+      "exit": 1
+    },
+    {
+      "name": "не угадывать места при ничьей",
+      "file": "bot/skill-rating.js",
+      "pattern": "неизвестное разделение",
+      "caught": true,
+      "exit": 1
+    },
+    {
+      "name": "таймер 30 секунд",
+      "file": "tools/unoq-research/lobby.mjs",
+      "pattern": "ровно 30 секунд",
+      "caught": true,
+      "exit": 1
+    },
+    {
+      "name": "сложность закреплена после старта",
+      "file": "tools/unoq-research/lobby.mjs",
+      "pattern": "сложность до старта",
+      "caught": true,
+      "exit": 1
+    },
+    {
+      "name": "однократный старт",
+      "file": "tools/unoq-research/lobby.mjs",
+      "pattern": "реентерабельный",
+      "caught": true,
+      "exit": 1
+    },
+    {
+      "name": "назначение без перебора размера состава",
+      "file": "tools/unoq-research/lobby.mjs",
+      "pattern": "состав назначен сервером",
+      "caught": true,
+      "exit": 1
+    },
+    {
+      "name": "отдельные seeds контрольной выборки",
+      "file": "tools/unoq-research/simulator.mjs",
+      "pattern": "полный цикл",
+      "caught": true,
+      "exit": 1
+    },
+    {
+      "name": "проверка всех приватных сообщений",
+      "file": "tools/unoq-research/simulator.mjs",
+      "pattern": "приватность отклоняет",
+      "caught": true,
+      "exit": 1
+    }
+  ],
+  "passed": 25,
+  "total": 25
+}

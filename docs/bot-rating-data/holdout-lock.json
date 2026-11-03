@@ -1,0 +1,32 @@
+{
+  "version": "unoq-research-1",
+  "hashes": {
+    "tools/unoq-research/strategies.mjs": "4e9d7189b5ae090c22f2f801dafcb9a8d2dfb9f5e9b82559c1f69a64eefa8ade",
+    "tools/unoq-research/simulator.mjs": "04444b5e4a4a8d765fb0fb5957b987a37842c5a5884ee7a41ac27cdf2fe5b172",
+    "tools/unoq-research/stats.mjs": "ebe3e9b379c4971b7ea178761d48f5460f0502263df0b3b7286e19c80e17712b",
+    "tools/unoq-research/run.mjs": "3b3120e34afa1516d218c31527390ea035d360af4a574e0be94eef82135150fd",
+    "tools/unoq-research/lobby.mjs": "5b00d6709d374602230e523d9d0b6d9d28f105723d2d0628e37f17ba2cccb179",
+    "bot/games/colors/rules.js": "1599867a97260ce788b736cc8cfbe271c7605da76fb6a2bb02b9a37c48a69c54",
+    "bot/games/colors/view.js": "e3113472e17ae25ccad5d0274f422122c17eca1c4a76e446c7f5f43e73f20ae3",
+    "bot/games/colors/cards.js": "a83c87149520128a6f2789991a650333a359487f80820851ee12f8c29b3b504a",
+    "bot/games/colors/index.js": "c85c64cea64e3b41423823f42ed212bbe9b84a58f6bd091050a7f6534e459161",
+    "bot/games/colors/bot.js": "6bb2707981aab113ff38df1e0637c46984325a12a0481eb82111a63a2174f010",
+    "bot/rating.js": "cd9fba57aad6a441628f98b73167ca0fe6b188f822ed61577c35a625bb9d99dc",
+    "bot/store.js": "e217204e4985b9051062e0498a063caba54d6542b19b200d468ccbf362bd1c82"
+  },
+  "selected": {
+    "id": 6,
+    "model": "baseline",
+    "lineup": "B"
+  },
+  "selectionRule": "Among 12 noncontrol main cells choose largest mean nominal points; tie -> lower scenario id. No tuning. Test 10000 fresh games of selected cell.",
+  "mainSummarySha256": "950d9a22f2101084e45d3dca40012bdf2f728f5b00834072e17910488b0a84da",
+  "criteria": {
+    "inflation": "nominal lower 95% CI > 0",
+    "advantage": "win lower 95% CI > 0.30 (fair 0.25 + practical 0.05)",
+    "equalLevel": "style comparison corrected interval entirely inside +/-0.05 for each model",
+    "noRepair": "No strategies modified after lock; repair requires new holdout seed namespace."
+  },
+  "seedBase": 100000000,
+  "n": 10000
+}

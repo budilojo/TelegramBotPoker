@@ -319,6 +319,9 @@ export default {
       draw,
       loserId: players.at(-1).id,
       places: players.map((r) => ({ id: r.id, name: r.name })),
+      // Теневой расчёт: равные net/stack делят место, порядок посадки не решает.
+      // Старые очки используют прежние places/draw, это поле ими игнорируется.
+      ranks: players.map(r => players.findIndex(other => other.net === r.net && other.stack === r.stack) + 1),
     }];
   },
 

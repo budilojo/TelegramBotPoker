@@ -1,0 +1,28 @@
+{
+  "sourceHashesVerified": 12,
+  "uniqueDealSeeds": 41500,
+  "exactReplays": 62,
+  "phases": [
+    {
+      "phase": "pilot",
+      "launched": 1500,
+      "completed": 1500,
+      "views": 672760,
+      "sha256": "ee307e6855c09f2d8f60c5bb73728f4c9875384e3013984a6b068487226f9e40"
+    },
+    {
+      "phase": "main",
+      "launched": 30000,
+      "completed": 30000,
+      "views": 13860612,
+      "sha256": "93e9296e5f73c40fb679b0f5cb4d843b8951298d9c121c89f9d8dae847f40ea5"
+    },
+    {
+      "phase": "holdout",
+      "launched": 10000,
+      "completed": 10000,
+      "views": 4571996,
+      "sha256": "fe30b35a7a2b1e5523592ff73283a3ff0569fdf102c2eec81980da51eaae8cb9"
+    }
+  ]
+}

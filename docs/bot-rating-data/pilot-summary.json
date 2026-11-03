@@ -1,0 +1,2762 @@
+{
+  "phase": "pilot",
+  "version": "unoq-research-1",
+  "node": "v24.12.0",
+  "launched": 1500,
+  "completed": 1500,
+  "rawSha256": "ee307e6855c09f2d8f60c5bb73728f4c9875384e3013984a6b068487226f9e40",
+  "gzipSha256": "17dcdfa7d28fb89ec9fd90591abface138db92c73cd314c0076f0ddf5e4d3e48",
+  "sourceHashes": {
+    "tools/unoq-research/strategies.mjs": "4e9d7189b5ae090c22f2f801dafcb9a8d2dfb9f5e9b82559c1f69a64eefa8ade",
+    "tools/unoq-research/simulator.mjs": "04444b5e4a4a8d765fb0fb5957b987a37842c5a5884ee7a41ac27cdf2fe5b172",
+    "tools/unoq-research/stats.mjs": "ebe3e9b379c4971b7ea178761d48f5460f0502263df0b3b7286e19c80e17712b",
+    "tools/unoq-research/run.mjs": "3b3120e34afa1516d218c31527390ea035d360af4a574e0be94eef82135150fd",
+    "tools/unoq-research/lobby.mjs": "5b00d6709d374602230e523d9d0b6d9d28f105723d2d0628e37f17ba2cccb179",
+    "bot/games/colors/rules.js": "1599867a97260ce788b736cc8cfbe271c7605da76fb6a2bb02b9a37c48a69c54",
+    "bot/games/colors/view.js": "e3113472e17ae25ccad5d0274f422122c17eca1c4a76e446c7f5f43e73f20ae3",
+    "bot/games/colors/cards.js": "a83c87149520128a6f2789991a650333a359487f80820851ee12f8c29b3b504a",
+    "bot/games/colors/index.js": "c85c64cea64e3b41423823f42ed212bbe9b84a58f6bd091050a7f6534e459161",
+    "bot/games/colors/bot.js": "6bb2707981aab113ff38df1e0637c46984325a12a0481eb82111a63a2174f010",
+    "bot/rating.js": "cd9fba57aad6a441628f98b73167ca0fe6b188f822ed61577c35a625bb9d99dc",
+    "bot/store.js": "e217204e4985b9051062e0498a063caba54d6542b19b200d468ccbf362bd1c82"
+  },
+  "scenarios": [
+    {
+      "scenario": 0,
+      "model": "simple",
+      "launched": 100,
+      "completed": 100,
+      "wins": 24,
+      "places": [
+        24,
+        26,
+        23,
+        27
+      ],
+      "draws": 0,
+      "winRate": 0.24,
+      "winCi95": [
+        0.16691211265459965,
+        0.3323251872329213
+      ],
+      "winIncludingMissingBounds": [
+        0.24,
+        0.24
+      ],
+      "statuses": {
+        "completed": 100,
+        "limit": 0,
+        "aborted": 0,
+        "error": 0
+      },
+      "reasons": {},
+      "seats": [
+        {
+          "seat": 0,
+          "n": 25,
+          "wins": 5
+        },
+        {
+          "seat": 1,
+          "n": 25,
+          "wins": 7
+        },
+        {
+          "seat": 2,
+          "n": 25,
+          "wins": 8
+        },
+        {
+          "seat": 3,
+          "n": 25,
+          "wins": 4
+        }
+      ],
+      "actions": {
+        "n": 100,
+        "mean": 102.82,
+        "sd": 36.41854894240992,
+        "median": 96,
+        "p25": 72,
+        "p75": 127,
+        "p95": 163,
+        "min": 41,
+        "max": 197,
+        "ci95": [
+          95.68196440728765,
+          109.95803559271233
+        ]
+      },
+      "seconds": {
+        "n": 100,
+        "mean": 237.0524999999999,
+        "sd": 81.59865608884164,
+        "median": 225.65,
+        "p25": 170.75,
+        "p75": 293.15,
+        "p95": 394.2,
+        "min": 112.6,
+        "max": 445.3,
+        "ci95": [
+          221.05916340658695,
+          253.04583659341284
+        ]
+      },
+      "rating": {
+        "ratingActual": {
+          "n": 100,
+          "mean": 0,
+          "sd": 0,
+          "median": 0,
+          "p25": 0,
+          "p75": 0,
+          "p95": 0,
+          "min": 0,
+          "max": 0,
+          "ci95": [
+            0,
+            0
+          ]
+        },
+        "nominal": {
+          "n": 100,
+          "mean": 6.6,
+          "sd": 11.243853539789745,
+          "median": 6,
+          "p25": -10,
+          "p75": 12,
+          "p95": 20,
+          "min": -10,
+          "max": 20,
+          "ci95": [
+            4.3962047062012095,
+            8.803795293798789
+          ]
+        },
+        "fromZero": {
+          "n": 100,
+          "mean": 9.3,
+          "sd": 7.469128382072351,
+          "median": 6,
+          "p25": 0,
+          "p75": 12,
+          "p95": 20,
+          "min": 0,
+          "max": 20,
+          "ci95": [
+            7.83605083711382,
+            10.763949162886181
+          ]
+        },
+        "centered": {
+          "n": 100,
+          "mean": -0.4,
+          "sd": 11.243853539789745,
+          "median": -1,
+          "p25": -17,
+          "p75": 5,
+          "p95": 13,
+          "min": -17,
+          "max": 13,
+          "ci95": [
+            -2.60379529379879,
+            1.8037952937987902
+          ]
+        },
+        "pairwise24": {
+          "n": 100,
+          "mean": -0.24,
+          "sd": 9.057749625752985,
+          "median": -4,
+          "p25": -12,
+          "p75": 4,
+          "p95": 12,
+          "min": -12,
+          "max": 12,
+          "ci95": [
+            -2.015318926647585,
+            1.535318926647585
+          ]
+        }
+      },
+      "views": 45228,
+      "pointsPerHourNominal": 100.23096149587121,
+      "lineup": "A",
+      "dailyReplay": {
+        "stableBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 334,
+          "statuses": {
+            "ok": 50,
+            "FARMED": 50
+          },
+          "netPerDay": 66.8
+        },
+        "rotatingBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 394,
+          "statuses": {
+            "ok": 77,
+            "GAINED": 23
+          },
+          "netPerDay": 78.8
+        }
+      }
+    },
+    {
+      "scenario": 1,
+      "model": "simple",
+      "launched": 100,
+      "completed": 100,
+      "wins": 27,
+      "places": [
+        27,
+        26,
+        16,
+        31
+      ],
+      "draws": 0,
+      "winRate": 0.27,
+      "winCi95": [
+        0.1926946091766482,
+        0.3643230022623127
+      ],
+      "winIncludingMissingBounds": [
+        0.27,
+        0.27
+      ],
+      "statuses": {
+        "completed": 100,
+        "limit": 0,
+        "aborted": 0,
+        "error": 0
+      },
+      "reasons": {},
+      "seats": [
+        {
+          "seat": 0,
+          "n": 25,
+          "wins": 5
+        },
+        {
+          "seat": 1,
+          "n": 25,
+          "wins": 9
+        },
+        {
+          "seat": 2,
+          "n": 25,
+          "wins": 5
+        },
+        {
+          "seat": 3,
+          "n": 25,
+          "wins": 8
+        }
+      ],
+      "actions": {
+        "n": 100,
+        "mean": 106.66,
+        "sd": 40.692296940613105,
+        "median": 99,
+        "p25": 77,
+        "p75": 125,
+        "p95": 178,
+        "min": 38,
+        "max": 268,
+        "ci95": [
+          98.68430979963983,
+          114.63569020036016
+        ]
+      },
+      "seconds": {
+        "n": 100,
+        "mean": 240.79399999999995,
+        "sd": 88.85476695203816,
+        "median": 227.15,
+        "p25": 175.75,
+        "p75": 282.65,
+        "p95": 403.95,
+        "min": 102.1,
+        "max": 659.75,
+        "ci95": [
+          223.37846567740047,
+          258.20953432259944
+        ]
+      },
+      "rating": {
+        "ratingActual": {
+          "n": 100,
+          "mean": 0,
+          "sd": 0,
+          "median": 0,
+          "p25": 0,
+          "p75": 0,
+          "p95": 0,
+          "min": 0,
+          "max": 0,
+          "ci95": [
+            0,
+            0
+          ]
+        },
+        "nominal": {
+          "n": 100,
+          "mean": 6.38,
+          "sd": 11.955118087448923,
+          "median": 12,
+          "p25": -10,
+          "p75": 20,
+          "p95": 20,
+          "min": -10,
+          "max": 20,
+          "ci95": [
+            4.036796854860011,
+            8.723203145139989
+          ]
+        },
+        "fromZero": {
+          "n": 100,
+          "mean": 9.48,
+          "sd": 7.87077447962339,
+          "median": 12,
+          "p25": 0,
+          "p75": 20,
+          "p95": 20,
+          "min": 0,
+          "max": 20,
+          "ci95": [
+            7.937328201993816,
+            11.022671798006185
+          ]
+        },
+        "centered": {
+          "n": 100,
+          "mean": -0.62,
+          "sd": 11.955118087448923,
+          "median": 5,
+          "p25": -17,
+          "p75": 13,
+          "p95": 13,
+          "min": -17,
+          "max": 13,
+          "ci95": [
+            -2.963203145139989,
+            1.7232031451399887
+          ]
+        },
+        "pairwise24": {
+          "n": 100,
+          "mean": -0.08,
+          "sd": 9.546991699223925,
+          "median": 4,
+          "p25": -12,
+          "p75": 12,
+          "p95": 12,
+          "min": -12,
+          "max": 12,
+          "ci95": [
+            -1.9512103730478896,
+            1.7912103730478894
+          ]
+        }
+      },
+      "views": 46668,
+      "pointsPerHourNominal": 95.38443648928131,
+      "lineup": "B",
+      "dailyReplay": {
+        "stableBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 362,
+          "statuses": {
+            "ok": 50,
+            "FARMED": 50
+          },
+          "netPerDay": 72.4
+        },
+        "rotatingBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 390,
+          "statuses": {
+            "ok": 81,
+            "GAINED": 19
+          },
+          "netPerDay": 78
+        }
+      }
+    },
+    {
+      "scenario": 2,
+      "model": "simple",
+      "launched": 100,
+      "completed": 100,
+      "wins": 19,
+      "places": [
+        19,
+        29,
+        22,
+        30
+      ],
+      "draws": 0,
+      "winRate": 0.19,
+      "winCi95": [
+        0.1251465399270426,
+        0.27779024070807856
+      ],
+      "winIncludingMissingBounds": [
+        0.19,
+        0.19
+      ],
+      "statuses": {
+        "completed": 100,
+        "limit": 0,
+        "aborted": 0,
+        "error": 0
+      },
+      "reasons": {},
+      "seats": [
+        {
+          "seat": 0,
+          "n": 25,
+          "wins": 6
+        },
+        {
+          "seat": 1,
+          "n": 25,
+          "wins": 8
+        },
+        {
+          "seat": 2,
+          "n": 25,
+          "wins": 3
+        },
+        {
+          "seat": 3,
+          "n": 25,
+          "wins": 2
+        }
+      ],
+      "actions": {
+        "n": 100,
+        "mean": 102.75,
+        "sd": 45.9249222628464,
+        "median": 90,
+        "p25": 73,
+        "p75": 118,
+        "p95": 199,
+        "min": 42,
+        "max": 274,
+        "ci95": [
+          93.7487152364821,
+          111.7512847635179
+        ]
+      },
+      "seconds": {
+        "n": 100,
+        "mean": 236.695,
+        "sd": 103.36019873151456,
+        "median": 210.35,
+        "p25": 172.3,
+        "p75": 266.65,
+        "p95": 467.15,
+        "min": 115.75,
+        "max": 670.45,
+        "ci95": [
+          216.43640104862314,
+          256.9535989513769
+        ]
+      },
+      "rating": {
+        "ratingActual": {
+          "n": 100,
+          "mean": 0,
+          "sd": 0,
+          "median": 0,
+          "p25": 0,
+          "p75": 0,
+          "p95": 0,
+          "min": 0,
+          "max": 0,
+          "ci95": [
+            0,
+            0
+          ]
+        },
+        "nominal": {
+          "n": 100,
+          "mean": 5.6,
+          "sd": 11.206058967172961,
+          "median": 6,
+          "p25": -10,
+          "p75": 12,
+          "p95": 20,
+          "min": -10,
+          "max": 20,
+          "ci95": [
+            3.4036124424340994,
+            7.7963875575659
+          ]
+        },
+        "fromZero": {
+          "n": 100,
+          "mean": 8.6,
+          "sd": 7.227892102295406,
+          "median": 6,
+          "p25": 0,
+          "p75": 12,
+          "p95": 20,
+          "min": 0,
+          "max": 20,
+          "ci95": [
+            7.1833331479501,
+            10.0166668520499
+          ]
+        },
+        "centered": {
+          "n": 100,
+          "mean": -1.4,
+          "sd": 11.206058967172961,
+          "median": -1,
+          "p25": -17,
+          "p75": 5,
+          "p95": 13,
+          "min": -17,
+          "max": 13,
+          "ci95": [
+            -3.5963875575659,
+            0.7963875575659003
+          ]
+        },
+        "pairwise24": {
+          "n": 100,
+          "mean": -1.04,
+          "sd": 8.855655044242987,
+          "median": -4,
+          "p25": -12,
+          "p75": 4,
+          "p95": 12,
+          "min": -12,
+          "max": 12,
+          "ci95": [
+            -2.7757083886716254,
+            0.6957083886716253
+          ]
+        }
+      },
+      "views": 45260,
+      "pointsPerHourNominal": 85.17290183569573,
+      "lineup": "C",
+      "dailyReplay": {
+        "stableBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 262,
+          "statuses": {
+            "ok": 50,
+            "FARMED": 50
+          },
+          "netPerDay": 52.4
+        },
+        "rotatingBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 294,
+          "statuses": {
+            "ok": 80,
+            "GAINED": 20
+          },
+          "netPerDay": 58.8
+        }
+      }
+    },
+    {
+      "scenario": 3,
+      "model": "simple",
+      "launched": 100,
+      "completed": 100,
+      "wins": 13,
+      "places": [
+        13,
+        23,
+        32,
+        32
+      ],
+      "draws": 0,
+      "winRate": 0.13,
+      "winCi95": [
+        0.07757093858414264,
+        0.20980521894809878
+      ],
+      "winIncludingMissingBounds": [
+        0.13,
+        0.13
+      ],
+      "statuses": {
+        "completed": 100,
+        "limit": 0,
+        "aborted": 0,
+        "error": 0
+      },
+      "reasons": {},
+      "seats": [
+        {
+          "seat": 0,
+          "n": 25,
+          "wins": 6
+        },
+        {
+          "seat": 1,
+          "n": 25,
+          "wins": 4
+        },
+        {
+          "seat": 2,
+          "n": 25,
+          "wins": 2
+        },
+        {
+          "seat": 3,
+          "n": 25,
+          "wins": 1
+        }
+      ],
+      "actions": {
+        "n": 100,
+        "mean": 100.09,
+        "sd": 42.756320343230314,
+        "median": 92,
+        "p25": 68,
+        "p75": 120,
+        "p95": 178,
+        "min": 39,
+        "max": 274,
+        "ci95": [
+          91.70976121272686,
+          108.47023878727315
+        ]
+      },
+      "seconds": {
+        "n": 100,
+        "mean": 236.97200000000004,
+        "sd": 95.91060582172814,
+        "median": 211.85,
+        "p25": 172.1,
+        "p75": 266.75,
+        "p95": 465.15,
+        "min": 101.95,
+        "max": 608.75,
+        "ci95": [
+          218.17352125894132,
+          255.77047874105875
+        ]
+      },
+      "rating": {
+        "ratingActual": {
+          "n": 100,
+          "mean": 0,
+          "sd": 0,
+          "median": 0,
+          "p25": 0,
+          "p75": 0,
+          "p95": 0,
+          "min": 0,
+          "max": 0,
+          "ci95": [
+            0,
+            0
+          ]
+        },
+        "nominal": {
+          "n": 100,
+          "mean": 4.08,
+          "sd": 10.636016570354169,
+          "median": 6,
+          "p25": -10,
+          "p75": 12,
+          "p95": 20,
+          "min": -10,
+          "max": 20,
+          "ci95": [
+            1.9953407522105833,
+            6.164659247789417
+          ]
+        },
+        "fromZero": {
+          "n": 100,
+          "mean": 7.28,
+          "sd": 6.639459634821513,
+          "median": 6,
+          "p25": 0,
+          "p75": 12,
+          "p95": 20,
+          "min": 0,
+          "max": 20,
+          "ci95": [
+            5.978665911574984,
+            8.581334088425017
+          ]
+        },
+        "centered": {
+          "n": 100,
+          "mean": -2.92,
+          "sd": 10.636016570354169,
+          "median": -1,
+          "p25": -17,
+          "p75": 5,
+          "p95": 13,
+          "min": -17,
+          "max": 13,
+          "ci95": [
+            -5.004659247789417,
+            -0.8353407522105831
+          ]
+        },
+        "pairwise24": {
+          "n": 100,
+          "mean": -2.64,
+          "sd": 8.203867035943126,
+          "median": -4,
+          "p25": -12,
+          "p75": 4,
+          "p95": 12,
+          "min": -12,
+          "max": 12,
+          "ci95": [
+            -4.247957939044853,
+            -1.0320420609551473
+          ]
+        }
+      },
+      "views": 43948,
+      "pointsPerHourNominal": 61.982006312982115,
+      "lineup": "mix",
+      "dailyReplay": {
+        "stableBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 260,
+          "statuses": {
+            "ok": 50,
+            "FARMED": 50
+          },
+          "netPerDay": 52
+        },
+        "rotatingBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 246,
+          "statuses": {
+            "ok": 81,
+            "GAINED": 19
+          },
+          "netPerDay": 49.2
+        }
+      }
+    },
+    {
+      "scenario": 4,
+      "model": "simple",
+      "launched": 100,
+      "completed": 100,
+      "wins": 21,
+      "places": [
+        21,
+        21,
+        30,
+        28
+      ],
+      "draws": 0,
+      "winRate": 0.21,
+      "winCi95": [
+        0.14165549531645788,
+        0.2998014930196232
+      ],
+      "winIncludingMissingBounds": [
+        0.21,
+        0.21
+      ],
+      "statuses": {
+        "completed": 100,
+        "limit": 0,
+        "aborted": 0,
+        "error": 0
+      },
+      "reasons": {},
+      "seats": [
+        {
+          "seat": 0,
+          "n": 25,
+          "wins": 5
+        },
+        {
+          "seat": 1,
+          "n": 25,
+          "wins": 7
+        },
+        {
+          "seat": 2,
+          "n": 25,
+          "wins": 3
+        },
+        {
+          "seat": 3,
+          "n": 25,
+          "wins": 6
+        }
+      ],
+      "actions": {
+        "n": 100,
+        "mean": 103.24,
+        "sd": 38.95740227375526,
+        "median": 96,
+        "p25": 71,
+        "p75": 124,
+        "p95": 169,
+        "min": 32,
+        "max": 220,
+        "ci95": [
+          95.60434915434396,
+          110.87565084565603
+        ]
+      },
+      "seconds": {
+        "n": 100,
+        "mean": 242.6465000000001,
+        "sd": 90.47259930498292,
+        "median": 229.95,
+        "p25": 170.45,
+        "p75": 296.05,
+        "p95": 398.05,
+        "min": 90.45,
+        "max": 581.65,
+        "ci95": [
+          224.91387053622344,
+          260.37912946377674
+        ]
+      },
+      "rating": {
+        "ratingActual": {
+          "n": 100,
+          "mean": 0,
+          "sd": 0,
+          "median": 0,
+          "p25": 0,
+          "p75": 0,
+          "p95": 0,
+          "min": 0,
+          "max": 0,
+          "ci95": [
+            0,
+            0
+          ]
+        },
+        "nominal": {
+          "n": 100,
+          "mean": 5.72,
+          "sd": 11.024380694486641,
+          "median": 6,
+          "p25": -10,
+          "p75": 12,
+          "p95": 20,
+          "min": -10,
+          "max": 20,
+          "ci95": [
+            3.559221383880618,
+            7.880778616119382
+          ]
+        },
+        "fromZero": {
+          "n": 100,
+          "mean": 8.52,
+          "sd": 7.27869452164287,
+          "median": 6,
+          "p25": 0,
+          "p75": 12,
+          "p95": 20,
+          "min": 0,
+          "max": 20,
+          "ci95": [
+            7.0933758737579975,
+            9.946624126242002
+          ]
+        },
+        "centered": {
+          "n": 100,
+          "mean": -1.28,
+          "sd": 11.024380694486641,
+          "median": -1,
+          "p25": -17,
+          "p75": 5,
+          "p95": 13,
+          "min": -17,
+          "max": 13,
+          "ci95": [
+            -3.440778616119382,
+            0.8807786161193818
+          ]
+        },
+        "pairwise24": {
+          "n": 100,
+          "mean": -1.2,
+          "sd": 8.835191342614268,
+          "median": -4,
+          "p25": -12,
+          "p75": 4,
+          "p95": 12,
+          "min": -12,
+          "max": 12,
+          "ci95": [
+            -2.931697503152396,
+            0.5316975031523963
+          ]
+        }
+      },
+      "views": 45240,
+      "pointsPerHourNominal": 84.86419544481372,
+      "lineup": "control",
+      "dailyReplay": {
+        "stableBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 200,
+          "statuses": {
+            "ok": 50,
+            "FARMED": 50
+          },
+          "netPerDay": 40
+        },
+        "rotatingBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 326,
+          "statuses": {
+            "ok": 78,
+            "GAINED": 22
+          },
+          "netPerDay": 65.2
+        }
+      }
+    },
+    {
+      "scenario": 5,
+      "model": "baseline",
+      "launched": 100,
+      "completed": 100,
+      "wins": 19,
+      "places": [
+        19,
+        27,
+        28,
+        26
+      ],
+      "draws": 0,
+      "winRate": 0.19,
+      "winCi95": [
+        0.1251465399270426,
+        0.27779024070807856
+      ],
+      "winIncludingMissingBounds": [
+        0.19,
+        0.19
+      ],
+      "statuses": {
+        "completed": 100,
+        "limit": 0,
+        "aborted": 0,
+        "error": 0
+      },
+      "reasons": {},
+      "seats": [
+        {
+          "seat": 0,
+          "n": 25,
+          "wins": 5
+        },
+        {
+          "seat": 1,
+          "n": 25,
+          "wins": 5
+        },
+        {
+          "seat": 2,
+          "n": 25,
+          "wins": 5
+        },
+        {
+          "seat": 3,
+          "n": 25,
+          "wins": 4
+        }
+      ],
+      "actions": {
+        "n": 100,
+        "mean": 99.56,
+        "sd": 37.07495002278383,
+        "median": 96,
+        "p25": 66,
+        "p75": 124,
+        "p95": 164,
+        "min": 36,
+        "max": 194,
+        "ci95": [
+          92.29330979553437,
+          106.82669020446563
+        ]
+      },
+      "seconds": {
+        "n": 100,
+        "mean": 232.168,
+        "sd": 83.53615666708082,
+        "median": 208.45,
+        "p25": 169.9,
+        "p75": 284.1,
+        "p95": 386.25,
+        "min": 100.95,
+        "max": 472.55,
+        "ci95": [
+          215.79491329325216,
+          248.54108670674785
+        ]
+      },
+      "rating": {
+        "ratingActual": {
+          "n": 100,
+          "mean": 0,
+          "sd": 0,
+          "median": 0,
+          "p25": 0,
+          "p75": 0,
+          "p95": 0,
+          "min": 0,
+          "max": 0,
+          "ci95": [
+            0,
+            0
+          ]
+        },
+        "nominal": {
+          "n": 100,
+          "mean": 6.12,
+          "sd": 10.707573077598923,
+          "median": 6,
+          "p25": -10,
+          "p75": 12,
+          "p95": 20,
+          "min": -10,
+          "max": 20,
+          "ci95": [
+            4.021315676790611,
+            8.21868432320939
+          ]
+        },
+        "fromZero": {
+          "n": 100,
+          "mean": 8.72,
+          "sd": 7.029634241961498,
+          "median": 6,
+          "p25": 0,
+          "p75": 12,
+          "p95": 20,
+          "min": 0,
+          "max": 20,
+          "ci95": [
+            7.342191688575547,
+            10.097808311424455
+          ]
+        },
+        "centered": {
+          "n": 100,
+          "mean": -0.88,
+          "sd": 10.707573077598923,
+          "median": -1,
+          "p25": -17,
+          "p75": 5,
+          "p95": 13,
+          "min": -17,
+          "max": 13,
+          "ci95": [
+            -2.978684323209389,
+            1.2186843232093891
+          ]
+        },
+        "pairwise24": {
+          "n": 100,
+          "mean": -0.88,
+          "sd": 8.576783320173844,
+          "median": -4,
+          "p25": -12,
+          "p75": 4,
+          "p95": 12,
+          "min": -12,
+          "max": 12,
+          "ci95": [
+            -2.5610495307540733,
+            0.8010495307540734
+          ]
+        }
+      },
+      "views": 43692,
+      "pointsPerHourNominal": 94.89679886978395,
+      "lineup": "A",
+      "dailyReplay": {
+        "stableBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 306,
+          "statuses": {
+            "ok": 50,
+            "FARMED": 50
+          },
+          "netPerDay": 61.2
+        },
+        "rotatingBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 312,
+          "statuses": {
+            "ok": 76,
+            "GAINED": 24
+          },
+          "netPerDay": 62.4
+        }
+      }
+    },
+    {
+      "scenario": 6,
+      "model": "baseline",
+      "launched": 100,
+      "completed": 100,
+      "wins": 33,
+      "places": [
+        33,
+        21,
+        22,
+        24
+      ],
+      "draws": 0,
+      "winRate": 0.33,
+      "winCi95": [
+        0.24562983793895452,
+        0.4269483966028862
+      ],
+      "winIncludingMissingBounds": [
+        0.33,
+        0.33
+      ],
+      "statuses": {
+        "completed": 100,
+        "limit": 0,
+        "aborted": 0,
+        "error": 0
+      },
+      "reasons": {},
+      "seats": [
+        {
+          "seat": 0,
+          "n": 25,
+          "wins": 10
+        },
+        {
+          "seat": 1,
+          "n": 25,
+          "wins": 12
+        },
+        {
+          "seat": 2,
+          "n": 25,
+          "wins": 4
+        },
+        {
+          "seat": 3,
+          "n": 25,
+          "wins": 7
+        }
+      ],
+      "actions": {
+        "n": 100,
+        "mean": 100.74,
+        "sd": 39.299065709715855,
+        "median": 91,
+        "p25": 71,
+        "p75": 125,
+        "p95": 170,
+        "min": 39,
+        "max": 250,
+        "ci95": [
+          93.03738312089568,
+          108.4426168791043
+        ]
+      },
+      "seconds": {
+        "n": 100,
+        "mean": 224.82000000000005,
+        "sd": 84.22421225094915,
+        "median": 205.15,
+        "p25": 165.7,
+        "p75": 269.95,
+        "p95": 343.05,
+        "min": 105.1,
+        "max": 598.45,
+        "ci95": [
+          208.312054398814,
+          241.3279456011861
+        ]
+      },
+      "rating": {
+        "ratingActual": {
+          "n": 100,
+          "mean": 0,
+          "sd": 0,
+          "median": 0,
+          "p25": 0,
+          "p75": 0,
+          "p95": 0,
+          "min": 0,
+          "max": 0,
+          "ci95": [
+            0,
+            0
+          ]
+        },
+        "nominal": {
+          "n": 100,
+          "mean": 8.04,
+          "sd": 11.437948534010228,
+          "median": 12,
+          "p25": 6,
+          "p75": 20,
+          "p95": 20,
+          "min": -10,
+          "max": 20,
+          "ci95": [
+            5.798162087333995,
+            10.281837912666003
+          ]
+        },
+        "fromZero": {
+          "n": 100,
+          "mean": 10.44,
+          "sd": 7.860295314060563,
+          "median": 12,
+          "p25": 6,
+          "p75": 20,
+          "p95": 20,
+          "min": 0,
+          "max": 20,
+          "ci95": [
+            8.899382118444128,
+            11.98061788155587
+          ]
+        },
+        "centered": {
+          "n": 100,
+          "mean": 1.04,
+          "sd": 11.437948534010228,
+          "median": 5,
+          "p25": -1,
+          "p75": 13,
+          "p95": 13,
+          "min": -17,
+          "max": 13,
+          "ci95": [
+            -1.2018379126660044,
+            3.2818379126660044
+          ]
+        },
+        "pairwise24": {
+          "n": 100,
+          "mean": 1.04,
+          "sd": 9.42157421061155,
+          "median": 4,
+          "p25": -4,
+          "p75": 12,
+          "p95": 12,
+          "min": -12,
+          "max": 12,
+          "ci95": [
+            -0.8066285452798636,
+            2.886628545279864
+          ]
+        }
+      },
+      "views": 44416,
+      "pointsPerHourNominal": 128.74299439551638,
+      "lineup": "B",
+      "dailyReplay": {
+        "stableBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 402,
+          "statuses": {
+            "ok": 50,
+            "FARMED": 50
+          },
+          "netPerDay": 80.4
+        },
+        "rotatingBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 486,
+          "statuses": {
+            "ok": 74,
+            "GAINED": 26
+          },
+          "netPerDay": 97.2
+        }
+      }
+    },
+    {
+      "scenario": 7,
+      "model": "baseline",
+      "launched": 100,
+      "completed": 100,
+      "wins": 28,
+      "places": [
+        28,
+        17,
+        23,
+        32
+      ],
+      "draws": 0,
+      "winRate": 0.28,
+      "winCi95": [
+        0.2013955916759837,
+        0.37488212361345724
+      ],
+      "winIncludingMissingBounds": [
+        0.28,
+        0.28
+      ],
+      "statuses": {
+        "completed": 100,
+        "limit": 0,
+        "aborted": 0,
+        "error": 0
+      },
+      "reasons": {},
+      "seats": [
+        {
+          "seat": 0,
+          "n": 25,
+          "wins": 11
+        },
+        {
+          "seat": 1,
+          "n": 25,
+          "wins": 3
+        },
+        {
+          "seat": 2,
+          "n": 25,
+          "wins": 4
+        },
+        {
+          "seat": 3,
+          "n": 25,
+          "wins": 10
+        }
+      ],
+      "actions": {
+        "n": 100,
+        "mean": 94.22,
+        "sd": 38.22542915839447,
+        "median": 87,
+        "p25": 68,
+        "p75": 114,
+        "p95": 161,
+        "min": 39,
+        "max": 218,
+        "ci95": [
+          86.72781588495468,
+          101.71218411504532
+        ]
+      },
+      "seconds": {
+        "n": 100,
+        "mean": 217.7575,
+        "sd": 82.41736644461933,
+        "median": 197.55,
+        "p25": 154.85,
+        "p75": 258.3,
+        "p95": 385.2,
+        "min": 102.95,
+        "max": 552.85,
+        "ci95": [
+          201.6036961768546,
+          233.91130382314537
+        ]
+      },
+      "rating": {
+        "ratingActual": {
+          "n": 100,
+          "mean": 0,
+          "sd": 0,
+          "median": 0,
+          "p25": 0,
+          "p75": 0,
+          "p95": 0,
+          "min": 0,
+          "max": 0,
+          "ci95": [
+            0,
+            0
+          ]
+        },
+        "nominal": {
+          "n": 100,
+          "mean": 5.82,
+          "sd": 12.01377996680932,
+          "median": 6,
+          "p25": -10,
+          "p75": 20,
+          "p95": 20,
+          "min": -10,
+          "max": 20,
+          "ci95": [
+            3.4652991265053736,
+            8.174700873494627
+          ]
+        },
+        "fromZero": {
+          "n": 100,
+          "mean": 9.02,
+          "sd": 8.002499609497018,
+          "median": 6,
+          "p25": 0,
+          "p75": 20,
+          "p95": 20,
+          "min": 0,
+          "max": 20,
+          "ci95": [
+            7.451510076538584,
+            10.588489923461415
+          ]
+        },
+        "centered": {
+          "n": 100,
+          "mean": -1.18,
+          "sd": 12.01377996680932,
+          "median": -1,
+          "p25": -17,
+          "p75": 13,
+          "p95": 13,
+          "min": -17,
+          "max": 13,
+          "ci95": [
+            -3.534700873494627,
+            1.1747008734946267
+          ]
+        },
+        "pairwise24": {
+          "n": 100,
+          "mean": -0.72,
+          "sd": 9.654726167724146,
+          "median": -4,
+          "p25": -12,
+          "p75": 12,
+          "p95": 12,
+          "min": -12,
+          "max": 12,
+          "ci95": [
+            -2.6123263288739325,
+            1.1723263288739325
+          ]
+        }
+      },
+      "views": 41548,
+      "pointsPerHourNominal": 96.21712225755715,
+      "lineup": "C",
+      "dailyReplay": {
+        "stableBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 234,
+          "statuses": {
+            "ok": 50,
+            "FARMED": 50
+          },
+          "netPerDay": 46.8
+        },
+        "rotatingBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 332,
+          "statuses": {
+            "ok": 82,
+            "GAINED": 18
+          },
+          "netPerDay": 66.4
+        }
+      }
+    },
+    {
+      "scenario": 8,
+      "model": "baseline",
+      "launched": 100,
+      "completed": 100,
+      "wins": 28,
+      "places": [
+        28,
+        32,
+        20,
+        20
+      ],
+      "draws": 0,
+      "winRate": 0.28,
+      "winCi95": [
+        0.2013955916759837,
+        0.37488212361345724
+      ],
+      "winIncludingMissingBounds": [
+        0.28,
+        0.28
+      ],
+      "statuses": {
+        "completed": 100,
+        "limit": 0,
+        "aborted": 0,
+        "error": 0
+      },
+      "reasons": {},
+      "seats": [
+        {
+          "seat": 0,
+          "n": 25,
+          "wins": 7
+        },
+        {
+          "seat": 1,
+          "n": 25,
+          "wins": 11
+        },
+        {
+          "seat": 2,
+          "n": 25,
+          "wins": 6
+        },
+        {
+          "seat": 3,
+          "n": 25,
+          "wins": 4
+        }
+      ],
+      "actions": {
+        "n": 100,
+        "mean": 101.76,
+        "sd": 37.21928467226568,
+        "median": 97,
+        "p25": 80,
+        "p75": 126,
+        "p95": 166,
+        "min": 37,
+        "max": 239,
+        "ci95": [
+          94.46502020423593,
+          109.05497979576408
+        ]
+      },
+      "seconds": {
+        "n": 100,
+        "mean": 228.33449999999996,
+        "sd": 79.53043401170969,
+        "median": 210.2,
+        "p25": 171.35,
+        "p75": 265.7,
+        "p95": 366.05,
+        "min": 105.75,
+        "max": 507.3,
+        "ci95": [
+          212.74653493370488,
+          243.92246506629505
+        ]
+      },
+      "rating": {
+        "ratingActual": {
+          "n": 100,
+          "mean": 0,
+          "sd": 0,
+          "median": 0,
+          "p25": 0,
+          "p75": 0,
+          "p95": 0,
+          "min": 0,
+          "max": 0,
+          "ci95": [
+            0,
+            0
+          ]
+        },
+        "nominal": {
+          "n": 100,
+          "mean": 8.64,
+          "sd": 10.571086925566306,
+          "median": 12,
+          "p25": 6,
+          "p75": 20,
+          "p95": 20,
+          "min": -10,
+          "max": 20,
+          "ci95": [
+            6.568066962589005,
+            10.711933037410997
+          ]
+        },
+        "fromZero": {
+          "n": 100,
+          "mean": 10.64,
+          "sd": 7.252335047166778,
+          "median": 12,
+          "p25": 6,
+          "p75": 20,
+          "p95": 20,
+          "min": 0,
+          "max": 20,
+          "ci95": [
+            9.218542330755312,
+            12.061457669244689
+          ]
+        },
+        "centered": {
+          "n": 100,
+          "mean": 1.64,
+          "sd": 10.571086925566306,
+          "median": 5,
+          "p25": -1,
+          "p75": 13,
+          "p95": 13,
+          "min": -17,
+          "max": 13,
+          "ci95": [
+            -0.43193303741099576,
+            3.7119330374109953
+          ]
+        },
+        "pairwise24": {
+          "n": 100,
+          "mean": 1.44,
+          "sd": 8.72511757901731,
+          "median": 4,
+          "p25": -4,
+          "p75": 12,
+          "p95": 12,
+          "min": -12,
+          "max": 12,
+          "ci95": [
+            -0.27012304548739285,
+            3.1501230454873927
+          ]
+        }
+      },
+      "views": 44836,
+      "pointsPerHourNominal": 136.22120178947995,
+      "lineup": "mix",
+      "dailyReplay": {
+        "stableBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 426,
+          "statuses": {
+            "ok": 50,
+            "FARMED": 50
+          },
+          "netPerDay": 85.2
+        },
+        "rotatingBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 518,
+          "statuses": {
+            "ok": 70,
+            "GAINED": 30
+          },
+          "netPerDay": 103.6
+        }
+      }
+    },
+    {
+      "scenario": 9,
+      "model": "baseline",
+      "launched": 100,
+      "completed": 100,
+      "wins": 19,
+      "places": [
+        19,
+        20,
+        35,
+        26
+      ],
+      "draws": 0,
+      "winRate": 0.19,
+      "winCi95": [
+        0.1251465399270426,
+        0.27779024070807856
+      ],
+      "winIncludingMissingBounds": [
+        0.19,
+        0.19
+      ],
+      "statuses": {
+        "completed": 100,
+        "limit": 0,
+        "aborted": 0,
+        "error": 0
+      },
+      "reasons": {},
+      "seats": [
+        {
+          "seat": 0,
+          "n": 25,
+          "wins": 4
+        },
+        {
+          "seat": 1,
+          "n": 25,
+          "wins": 7
+        },
+        {
+          "seat": 2,
+          "n": 25,
+          "wins": 7
+        },
+        {
+          "seat": 3,
+          "n": 25,
+          "wins": 1
+        }
+      ],
+      "actions": {
+        "n": 100,
+        "mean": 97.67,
+        "sd": 34.660271846084015,
+        "median": 90,
+        "p25": 74,
+        "p75": 115,
+        "p95": 156,
+        "min": 44,
+        "max": 238,
+        "ci95": [
+          90.87658671816753,
+          104.46341328183247
+        ]
+      },
+      "seconds": {
+        "n": 100,
+        "mean": 229.10400000000004,
+        "sd": 76.8549856692604,
+        "median": 217.25,
+        "p25": 169.75,
+        "p75": 263.35,
+        "p95": 381.85,
+        "min": 125.25,
+        "max": 503.05,
+        "ci95": [
+          214.040422808825,
+          244.16757719117507
+        ]
+      },
+      "rating": {
+        "ratingActual": {
+          "n": 100,
+          "mean": 0,
+          "sd": 0,
+          "median": 0,
+          "p25": 0,
+          "p75": 0,
+          "p95": 0,
+          "min": 0,
+          "max": 0,
+          "ci95": [
+            0,
+            0
+          ]
+        },
+        "nominal": {
+          "n": 100,
+          "mean": 5.7,
+          "sd": 10.584436831041273,
+          "median": 6,
+          "p25": -10,
+          "p75": 12,
+          "p95": 20,
+          "min": -10,
+          "max": 20,
+          "ci95": [
+            3.6254503811159107,
+            7.774549618884089
+          ]
+        },
+        "fromZero": {
+          "n": 100,
+          "mean": 8.3,
+          "sd": 6.999999999999998,
+          "median": 6,
+          "p25": 0,
+          "p75": 12,
+          "p95": 20,
+          "min": 0,
+          "max": 20,
+          "ci95": [
+            6.928000000000001,
+            9.672
+          ]
+        },
+        "centered": {
+          "n": 100,
+          "mean": -1.3,
+          "sd": 10.584436831041273,
+          "median": -1,
+          "p25": -17,
+          "p75": 5,
+          "p95": 13,
+          "min": -17,
+          "max": 13,
+          "ci95": [
+            -3.3745496188840898,
+            0.7745496188840895
+          ]
+        },
+        "pairwise24": {
+          "n": 100,
+          "mean": -1.44,
+          "sd": 8.499934640271595,
+          "median": -4,
+          "p25": -12,
+          "p75": 4,
+          "p95": 12,
+          "min": -12,
+          "max": 12,
+          "ci95": [
+            -3.1059871894932325,
+            0.2259871894932326
+          ]
+        }
+      },
+      "views": 42812,
+      "pointsPerHourNominal": 89.56631049654304,
+      "lineup": "control",
+      "dailyReplay": {
+        "stableBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 318,
+          "statuses": {
+            "ok": 50,
+            "FARMED": 50
+          },
+          "netPerDay": 63.6
+        },
+        "rotatingBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 296,
+          "statuses": {
+            "ok": 76,
+            "GAINED": 24
+          },
+          "netPerDay": 59.2
+        }
+      }
+    },
+    {
+      "scenario": 10,
+      "model": "adaptive",
+      "launched": 100,
+      "completed": 100,
+      "wins": 27,
+      "places": [
+        27,
+        26,
+        19,
+        28
+      ],
+      "draws": 0,
+      "winRate": 0.27,
+      "winCi95": [
+        0.1926946091766482,
+        0.3643230022623127
+      ],
+      "winIncludingMissingBounds": [
+        0.27,
+        0.27
+      ],
+      "statuses": {
+        "completed": 100,
+        "limit": 0,
+        "aborted": 0,
+        "error": 0
+      },
+      "reasons": {},
+      "seats": [
+        {
+          "seat": 0,
+          "n": 25,
+          "wins": 9
+        },
+        {
+          "seat": 1,
+          "n": 25,
+          "wins": 9
+        },
+        {
+          "seat": 2,
+          "n": 25,
+          "wins": 5
+        },
+        {
+          "seat": 3,
+          "n": 25,
+          "wins": 4
+        }
+      ],
+      "actions": {
+        "n": 100,
+        "mean": 105.91,
+        "sd": 41.10127796681084,
+        "median": 102,
+        "p25": 75,
+        "p75": 131,
+        "p95": 180,
+        "min": 35,
+        "max": 263,
+        "ci95": [
+          97.85414951850507,
+          113.96585048149493
+        ]
+      },
+      "seconds": {
+        "n": 100,
+        "mean": 234.55800000000002,
+        "sd": 79.71069143655029,
+        "median": 227.7,
+        "p25": 180.35,
+        "p75": 283.95,
+        "p95": 363.55,
+        "min": 97.35,
+        "max": 525.7,
+        "ci95": [
+          218.93470447843617,
+          250.18129552156387
+        ]
+      },
+      "rating": {
+        "ratingActual": {
+          "n": 100,
+          "mean": 0,
+          "sd": 0,
+          "median": 0,
+          "p25": 0,
+          "p75": 0,
+          "p95": 0,
+          "min": 0,
+          "max": 0,
+          "ci95": [
+            0,
+            0
+          ]
+        },
+        "nominal": {
+          "n": 100,
+          "mean": 6.86,
+          "sd": 11.600261230078427,
+          "median": 12,
+          "p25": -10,
+          "p75": 20,
+          "p95": 20,
+          "min": -10,
+          "max": 20,
+          "ci95": [
+            4.586348798904629,
+            9.133651201095372
+          ]
+        },
+        "fromZero": {
+          "n": 100,
+          "mean": 9.66,
+          "sd": 7.717512552629893,
+          "median": 12,
+          "p25": 0,
+          "p75": 20,
+          "p95": 20,
+          "min": 0,
+          "max": 20,
+          "ci95": [
+            8.147367539684542,
+            11.172632460315459
+          ]
+        },
+        "centered": {
+          "n": 100,
+          "mean": -0.14,
+          "sd": 11.600261230078427,
+          "median": 5,
+          "p25": -17,
+          "p75": 13,
+          "p95": 13,
+          "min": -17,
+          "max": 13,
+          "ci95": [
+            -2.4136512010953717,
+            2.1336512010953714
+          ]
+        },
+        "pairwise24": {
+          "n": 100,
+          "mean": 0.16,
+          "sd": 9.34060322928175,
+          "median": 4,
+          "p25": -12,
+          "p75": 12,
+          "p95": 12,
+          "min": -12,
+          "max": 12,
+          "ci95": [
+            -1.6707582329392234,
+            1.9907582329392233
+          ]
+        }
+      },
+      "views": 46212,
+      "pointsPerHourNominal": 105.28739160463509,
+      "lineup": "A",
+      "dailyReplay": {
+        "stableBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 360,
+          "statuses": {
+            "ok": 50,
+            "FARMED": 50
+          },
+          "netPerDay": 72
+        },
+        "rotatingBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 396,
+          "statuses": {
+            "ok": 78,
+            "GAINED": 22
+          },
+          "netPerDay": 79.2
+        }
+      }
+    },
+    {
+      "scenario": 11,
+      "model": "adaptive",
+      "launched": 100,
+      "completed": 100,
+      "wins": 33,
+      "places": [
+        33,
+        22,
+        20,
+        25
+      ],
+      "draws": 0,
+      "winRate": 0.33,
+      "winCi95": [
+        0.24562983793895452,
+        0.4269483966028862
+      ],
+      "winIncludingMissingBounds": [
+        0.33,
+        0.33
+      ],
+      "statuses": {
+        "completed": 100,
+        "limit": 0,
+        "aborted": 0,
+        "error": 0
+      },
+      "reasons": {},
+      "seats": [
+        {
+          "seat": 0,
+          "n": 25,
+          "wins": 6
+        },
+        {
+          "seat": 1,
+          "n": 25,
+          "wins": 8
+        },
+        {
+          "seat": 2,
+          "n": 25,
+          "wins": 12
+        },
+        {
+          "seat": 3,
+          "n": 25,
+          "wins": 7
+        }
+      ],
+      "actions": {
+        "n": 100,
+        "mean": 103.9,
+        "sd": 36.884340111415106,
+        "median": 94,
+        "p25": 78,
+        "p75": 120,
+        "p95": 181,
+        "min": 49,
+        "max": 213,
+        "ci95": [
+          96.67066933816264,
+          111.12933066183737
+        ]
+      },
+      "seconds": {
+        "n": 100,
+        "mean": 230.53499999999997,
+        "sd": 81.14535701225587,
+        "median": 205.6,
+        "p25": 173.2,
+        "p75": 265.95,
+        "p95": 418.15,
+        "min": 125,
+        "max": 480.15,
+        "ci95": [
+          214.63051002559783,
+          246.4394899744021
+        ]
+      },
+      "rating": {
+        "ratingActual": {
+          "n": 100,
+          "mean": 0,
+          "sd": 0,
+          "median": 0,
+          "p25": 0,
+          "p75": 0,
+          "p95": 0,
+          "min": 0,
+          "max": 0,
+          "ci95": [
+            0,
+            0
+          ]
+        },
+        "nominal": {
+          "n": 100,
+          "mean": 7.94,
+          "sd": 11.583530628361194,
+          "median": 12,
+          "p25": -10,
+          "p75": 20,
+          "p95": 20,
+          "min": -10,
+          "max": 20,
+          "ci95": [
+            5.669627996841207,
+            10.210372003158794
+          ]
+        },
+        "fromZero": {
+          "n": 100,
+          "mean": 10.44,
+          "sd": 7.90642239900672,
+          "median": 12,
+          "p25": 0,
+          "p75": 20,
+          "p95": 20,
+          "min": 0,
+          "max": 20,
+          "ci95": [
+            8.890341209794682,
+            11.989658790205317
+          ]
+        },
+        "centered": {
+          "n": 100,
+          "mean": 0.94,
+          "sd": 11.583530628361194,
+          "median": 5,
+          "p25": -17,
+          "p75": 13,
+          "p95": 13,
+          "min": -17,
+          "max": 13,
+          "ci95": [
+            -1.3303720031587938,
+            3.2103720031587937
+          ]
+        },
+        "pairwise24": {
+          "n": 100,
+          "mean": 1.04,
+          "sd": 9.489941511884563,
+          "median": 4,
+          "p25": -12,
+          "p75": 12,
+          "p95": 12,
+          "min": -12,
+          "max": 12,
+          "ci95": [
+            -0.8200285363293742,
+            2.9000285363293745
+          ]
+        }
+      },
+      "views": 45520,
+      "pointsPerHourNominal": 123.98984969744292,
+      "lineup": "B",
+      "dailyReplay": {
+        "stableBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 384,
+          "statuses": {
+            "ok": 50,
+            "FARMED": 50
+          },
+          "netPerDay": 76.8
+        },
+        "rotatingBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 480,
+          "statuses": {
+            "ok": 75,
+            "GAINED": 25
+          },
+          "netPerDay": 96
+        }
+      }
+    },
+    {
+      "scenario": 12,
+      "model": "adaptive",
+      "launched": 100,
+      "completed": 100,
+      "wins": 19,
+      "places": [
+        19,
+        22,
+        26,
+        33
+      ],
+      "draws": 0,
+      "winRate": 0.19,
+      "winCi95": [
+        0.1251465399270426,
+        0.27779024070807856
+      ],
+      "winIncludingMissingBounds": [
+        0.19,
+        0.19
+      ],
+      "statuses": {
+        "completed": 100,
+        "limit": 0,
+        "aborted": 0,
+        "error": 0
+      },
+      "reasons": {},
+      "seats": [
+        {
+          "seat": 0,
+          "n": 25,
+          "wins": 3
+        },
+        {
+          "seat": 1,
+          "n": 25,
+          "wins": 5
+        },
+        {
+          "seat": 2,
+          "n": 25,
+          "wins": 5
+        },
+        {
+          "seat": 3,
+          "n": 25,
+          "wins": 6
+        }
+      ],
+      "actions": {
+        "n": 100,
+        "mean": 101.84,
+        "sd": 38.757396166096584,
+        "median": 93,
+        "p25": 72,
+        "p75": 128,
+        "p95": 166,
+        "min": 42,
+        "max": 248,
+        "ci95": [
+          94.24355035144507,
+          109.43644964855494
+        ]
+      },
+      "seconds": {
+        "n": 100,
+        "mean": 233.4224999999999,
+        "sd": 82.77698417947155,
+        "median": 219.95,
+        "p25": 173.05,
+        "p75": 269.7,
+        "p95": 373.85,
+        "min": 118.65,
+        "max": 636.35,
+        "ci95": [
+          217.19821110082347,
+          249.64678889917633
+        ]
+      },
+      "rating": {
+        "ratingActual": {
+          "n": 100,
+          "mean": 0,
+          "sd": 0,
+          "median": 0,
+          "p25": 0,
+          "p75": 0,
+          "p95": 0,
+          "min": 0,
+          "max": 0,
+          "ci95": [
+            0,
+            0
+          ]
+        },
+        "nominal": {
+          "n": 100,
+          "mean": 4.7,
+          "sd": 11.368483814582504,
+          "median": 6,
+          "p25": -10,
+          "p75": 12,
+          "p95": 20,
+          "min": -10,
+          "max": 20,
+          "ci95": [
+            2.471777172341829,
+            6.928222827658171
+          ]
+        },
+        "fromZero": {
+          "n": 100,
+          "mean": 8,
+          "sd": 7.3195462684347845,
+          "median": 6,
+          "p25": 0,
+          "p75": 12,
+          "p95": 20,
+          "min": 0,
+          "max": 20,
+          "ci95": [
+            6.565368931386782,
+            9.434631068613218
+          ]
+        },
+        "centered": {
+          "n": 100,
+          "mean": -2.3,
+          "sd": 11.368483814582504,
+          "median": -1,
+          "p25": -17,
+          "p75": 5,
+          "p95": 13,
+          "min": -17,
+          "max": 13,
+          "ci95": [
+            -4.528222827658171,
+            -0.07177717234182879
+          ]
+        },
+        "pairwise24": {
+          "n": 100,
+          "mean": -1.84,
+          "sd": 8.942826254274507,
+          "median": -4,
+          "p25": -12,
+          "p75": 4,
+          "p95": 12,
+          "min": -12,
+          "max": 12,
+          "ci95": [
+            -3.592793945837804,
+            -0.0872060541621964
+          ]
+        }
+      },
+      "views": 44796,
+      "pointsPerHourNominal": 72.48658548340458,
+      "lineup": "C",
+      "dailyReplay": {
+        "stableBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 204,
+          "statuses": {
+            "ok": 50,
+            "FARMED": 50
+          },
+          "netPerDay": 40.8
+        },
+        "rotatingBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 312,
+          "statuses": {
+            "ok": 83,
+            "GAINED": 17
+          },
+          "netPerDay": 62.4
+        }
+      }
+    },
+    {
+      "scenario": 13,
+      "model": "adaptive",
+      "launched": 100,
+      "completed": 100,
+      "wins": 21,
+      "places": [
+        21,
+        31,
+        29,
+        19
+      ],
+      "draws": 0,
+      "winRate": 0.21,
+      "winCi95": [
+        0.14165549531645788,
+        0.2998014930196232
+      ],
+      "winIncludingMissingBounds": [
+        0.21,
+        0.21
+      ],
+      "statuses": {
+        "completed": 100,
+        "limit": 0,
+        "aborted": 0,
+        "error": 0
+      },
+      "reasons": {},
+      "seats": [
+        {
+          "seat": 0,
+          "n": 25,
+          "wins": 6
+        },
+        {
+          "seat": 1,
+          "n": 25,
+          "wins": 4
+        },
+        {
+          "seat": 2,
+          "n": 25,
+          "wins": 4
+        },
+        {
+          "seat": 3,
+          "n": 25,
+          "wins": 7
+        }
+      ],
+      "actions": {
+        "n": 100,
+        "mean": 102.78,
+        "sd": 38.37338618986821,
+        "median": 95,
+        "p25": 76,
+        "p75": 118,
+        "p95": 172,
+        "min": 39,
+        "max": 232,
+        "ci95": [
+          95.25881630678583,
+          110.30118369321417
+        ]
+      },
+      "seconds": {
+        "n": 100,
+        "mean": 235.06949999999998,
+        "sd": 85.27738130579371,
+        "median": 214.15,
+        "p25": 176.65,
+        "p75": 263.95,
+        "p95": 422.9,
+        "min": 100.8,
+        "max": 527.15,
+        "ci95": [
+          218.35513326406442,
+          251.78386673593553
+        ]
+      },
+      "rating": {
+        "ratingActual": {
+          "n": 100,
+          "mean": 0,
+          "sd": 0,
+          "median": 0,
+          "p25": 0,
+          "p75": 0,
+          "p95": 0,
+          "min": 0,
+          "max": 0,
+          "ci95": [
+            0,
+            0
+          ]
+        },
+        "nominal": {
+          "n": 100,
+          "mean": 7.76,
+          "sd": 9.942379448145656,
+          "median": 12,
+          "p25": 6,
+          "p75": 12,
+          "p95": 20,
+          "min": -10,
+          "max": 20,
+          "ci95": [
+            5.811293628163451,
+            9.708706371836548
+          ]
+        },
+        "fromZero": {
+          "n": 100,
+          "mean": 9.66,
+          "sd": 6.799019537158768,
+          "median": 12,
+          "p25": 6,
+          "p75": 12,
+          "p95": 20,
+          "min": 0,
+          "max": 20,
+          "ci95": [
+            8.327392170716882,
+            10.992607829283118
+          ]
+        },
+        "centered": {
+          "n": 100,
+          "mean": 0.76,
+          "sd": 9.942379448145656,
+          "median": 5,
+          "p25": -1,
+          "p75": 5,
+          "p95": 13,
+          "min": -17,
+          "max": 13,
+          "ci95": [
+            -1.1887063718365487,
+            2.7087063718365485
+          ]
+        },
+        "pairwise24": {
+          "n": 100,
+          "mean": 0.32,
+          "sd": 8.232578790109063,
+          "median": 4,
+          "p25": -4,
+          "p75": 4,
+          "p95": 12,
+          "min": -12,
+          "max": 12,
+          "ci95": [
+            -1.293585442861376,
+            1.9335854428613761
+          ]
+        }
+      },
+      "views": 45204,
+      "pointsPerHourNominal": 118.84144901826907,
+      "lineup": "mix",
+      "dailyReplay": {
+        "stableBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 374,
+          "statuses": {
+            "ok": 50,
+            "FARMED": 50
+          },
+          "netPerDay": 74.8
+        },
+        "rotatingBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 402,
+          "statuses": {
+            "ok": 69,
+            "GAINED": 31
+          },
+          "netPerDay": 80.4
+        }
+      }
+    },
+    {
+      "scenario": 14,
+      "model": "adaptive",
+      "launched": 100,
+      "completed": 100,
+      "wins": 21,
+      "places": [
+        21,
+        23,
+        26,
+        30
+      ],
+      "draws": 0,
+      "winRate": 0.21,
+      "winCi95": [
+        0.14165549531645788,
+        0.2998014930196232
+      ],
+      "winIncludingMissingBounds": [
+        0.21,
+        0.21
+      ],
+      "statuses": {
+        "completed": 100,
+        "limit": 0,
+        "aborted": 0,
+        "error": 0
+      },
+      "reasons": {},
+      "seats": [
+        {
+          "seat": 0,
+          "n": 25,
+          "wins": 4
+        },
+        {
+          "seat": 1,
+          "n": 25,
+          "wins": 8
+        },
+        {
+          "seat": 2,
+          "n": 25,
+          "wins": 5
+        },
+        {
+          "seat": 3,
+          "n": 25,
+          "wins": 4
+        }
+      ],
+      "actions": {
+        "n": 100,
+        "mean": 108.54,
+        "sd": 50.2012958100695,
+        "median": 98,
+        "p25": 73,
+        "p75": 123,
+        "p95": 205,
+        "min": 33,
+        "max": 282,
+        "ci95": [
+          98.70054602122639,
+          118.37945397877363
+        ]
+      },
+      "seconds": {
+        "n": 100,
+        "mean": 249.34650000000002,
+        "sd": 112.89874167352197,
+        "median": 215.05,
+        "p25": 170.35,
+        "p75": 286.55,
+        "p95": 507.55,
+        "min": 91.7,
+        "max": 635.95,
+        "ci95": [
+          227.2183466319897,
+          271.4746533680103
+        ]
+      },
+      "rating": {
+        "ratingActual": {
+          "n": 100,
+          "mean": 0,
+          "sd": 0,
+          "median": 0,
+          "p25": 0,
+          "p75": 0,
+          "p95": 0,
+          "min": 0,
+          "max": 0,
+          "ci95": [
+            0,
+            0
+          ]
+        },
+        "nominal": {
+          "n": 100,
+          "mean": 5.52,
+          "sd": 11.281951260416983,
+          "median": 6,
+          "p25": -10,
+          "p75": 12,
+          "p95": 20,
+          "min": -10,
+          "max": 20,
+          "ci95": [
+            3.308737552958271,
+            7.731262447041728
+          ]
+        },
+        "fromZero": {
+          "n": 100,
+          "mean": 8.52,
+          "sd": 7.377935984673449,
+          "median": 6,
+          "p25": 0,
+          "p75": 12,
+          "p95": 20,
+          "min": 0,
+          "max": 20,
+          "ci95": [
+            7.073924547004004,
+            9.966075452995996
+          ]
+        },
+        "centered": {
+          "n": 100,
+          "mean": -1.48,
+          "sd": 11.281951260416983,
+          "median": -1,
+          "p25": -17,
+          "p75": 5,
+          "p95": 13,
+          "min": -17,
+          "max": 13,
+          "ci95": [
+            -3.6912624470417286,
+            0.7312624470417286
+          ]
+        },
+        "pairwise24": {
+          "n": 100,
+          "mean": -1.2,
+          "sd": 8.980337668844344,
+          "median": -4,
+          "p25": -12,
+          "p75": 4,
+          "p95": 12,
+          "min": -12,
+          "max": 12,
+          "ci95": [
+            -2.9601461830934914,
+            0.5601461830934913
+          ]
+        }
+      },
+      "views": 47380,
+      "pointsPerHourNominal": 79.69632619667811,
+      "lineup": "control",
+      "dailyReplay": {
+        "stableBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 360,
+          "statuses": {
+            "ok": 50,
+            "FARMED": 50
+          },
+          "netPerDay": 72
+        },
+        "rotatingBotIds": {
+          "model": "20 sequential games/day, same focal, initial rating0, current all-gainers guard applies to bots too",
+          "endPoints": 354,
+          "statuses": {
+            "ok": 80,
+            "GAINED": 20
+          },
+          "netPerDay": 70.8
+        }
+      }
+    }
+  ],
+  "contrasts": [],
+  "disagreement": {
+    "sampledViews": 0,
+    "AB": 0,
+    "AC": 0,
+    "BC": 0
+  }
+}
