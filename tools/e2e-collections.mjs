@@ -24,6 +24,7 @@ import { Store } from '../bot/store.js';
 import { startServer } from '../bot/server.js';
 import { TelegramStub, dmUpdate, user } from '../bot/tg-stub.js';
 import { signInitData } from '../bot/webapp-auth.js';
+import { ITEMS, SLOTS } from '../miniapp/collections/catalog.js';
 import { assertNoJump } from './lib/scroll-probe.mjs';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -156,10 +157,15 @@ async function fits(page, what) {
     const root = document.querySelector('.col-root');
     if (!root) return ['слоя нет'];
     const vw = innerWidth;
+    const outside = (el, rect) => {
+      const row = el.parentElement?.closest('.col-chips');
+      const clip = row && getComputedStyle(row).overflowX === 'auto' ? row.getBoundingClientRect() : rect;
+      return Math.min(rect.right, clip.right) > vw + 0.5 || Math.max(rect.left, clip.left) < -0.5;
+    };
     for (const el of root.querySelectorAll('button, [role="radio"], [role="switch"], [role="tab"]')) {
       const q = el.getBoundingClientRect();
       if (!q.width || !q.height) continue;
-      if (q.right > vw + 0.5 || q.left < -0.5) out.push(`«${(el.textContent || el.getAttribute('aria-label') || '').trim().slice(0, 24)}» за краем: ${Math.round(q.left)}…${Math.round(q.right)}`);
+      if (outside(el, q)) out.push(`«${(el.textContent || el.getAttribute('aria-label') || '').trim().slice(0, 24)}» за краем: ${Math.round(q.left)}…${Math.round(q.right)}`);
       if (q.height < 44 - 0.5 || q.width < 44 - 0.5) out.push(`зона мала ${Math.round(q.width)}×${Math.round(q.height)}: «${(el.textContent || el.getAttribute('aria-label') || '').trim().slice(0, 24)}»`);
     }
     // подписи цветов не рвутся по буквам: «Графи/т» — дефект
@@ -172,7 +178,7 @@ async function fits(page, what) {
     for (const el of root.querySelectorAll('.col-scroll *')) {
       if (el.closest('.col-sr') || el.classList.contains('col-sr')) continue;
       const q = el.getBoundingClientRect();
-      if (q.width && q.right > vw + 0.5) out.push(`выходит вправо: ${el.className || el.tagName}`);
+      if (q.width && outside(el, q)) out.push(`выходит за край: ${el.className || el.tagName}`);
     }
     return out;
   });
@@ -239,13 +245,13 @@ try {
     await page.waitForSelector('.col-show');
     assert.equal(await page.locator('.col-root').getAttribute('data-route'), 'showcase');
     await fits(page, `витрина, ${tag}`);
-    assert.equal(await page.locator('.col-card').count(), 64, 'Графит и 60 новых позиций');
+    assert.equal(await page.locator('.col-card').count(), ITEMS.length, 'все позиции каталога, включая талисманы');
     assert.match(await text(page, '.col-show'), /Демонстрация · Без оплаты/);
     for (const t of ['Рубашка «Графит»', 'Стол «Графит»', 'Знак «Графит»', 'Коллекция «Графит»']) assert.ok((await text(page, '.col-show')).includes(t), t);
     assert.equal(await page.getByRole('button', { name: /купить|оплатить|оплачено/i }).count(), 0, 'кнопок покупки нет');
     assert.equal((await text(page, '.col-show')).includes('дурак') && /рубашк\S* дурак/i.test(await text(page, '.col-show')), false);
     await shot(page, 'showcase', tag);
-    step(`${tag}: вход есть, витрина: 4 карточки, подпись демонстрации, без кнопок оплаты`);
+    step(`${tag}: вход есть, витрина: все позиции, подпись демонстрации, без кнопок оплаты`);
 
     /* --- карточка рубашки --- */
     await page.locator('.col-card[data-item="graphit-cardback"]').click();
@@ -445,7 +451,7 @@ try {
     await page.waitForSelector('.col-inventory');
     assert.match(await text(page, '.col-empty'), /только базовое оформление/);
     assert.match(await text(page, '.col-empty'), /оно всегда доступно/);
-    assert.equal(await page.locator('.col-inv[data-base].on').count(), 10, 'все независимые базовые слоты показаны');
+    assert.equal(await page.locator('.col-inv[data-base].on').count(), SLOTS.length, 'все независимые базовые слоты показаны');
     await shot(page, 'inventory-empty', '360');
     await page.getByRole('button', { name: 'Открыть коллекции' }).first().click();
     await page.waitForSelector('.col-show');

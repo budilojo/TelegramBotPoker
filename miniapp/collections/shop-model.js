@@ -1,7 +1,11 @@
 /** Shop projections use the one shared catalog; they never grant ownership. */
 import { COLLECTIONS, ITEMS, itemsOfBundle, itemById } from './catalog.js';
 export const GAMES = [['poker', 'Покер'], ['durak', 'Дурак'], ['colors', 'UNOQ'], ['chess', 'Шахматы'], ['checkers', 'Шашки'], ['nardy', 'Нарды'], ['battleship', 'Морской бой']];
-export const COLLECTION_FILTERS = [['', 'Все'], ...['sever', 'obsidian', 'chertezh'].map(id => [id, COLLECTIONS.find(c => c.id === id).title]), ['talismans', 'Талисманы']];
+export const COLLECTION_FILTERS = [
+  ['', 'Все'],
+  ...COLLECTIONS.filter(({ id }) => id !== 'graphit').map(({ id, title }) => [id, title]),
+  ['talismans', 'Талисманы'],
+];
 export const CATEGORIES = [['cards', 'Карты'], ['tables', 'Столы'], ['boards', 'Доски'], ['profile', 'Профиль'], ['bundles', 'Комплекты']];
 export const categoryOf = it => it.kind === 'bundle' ? 'bundles' : it.slot === 'talisman' ? 'talismans' : ['cardback', 'unoq-cardback'].includes(it.slot) ? 'cards' : it.slot === 'table' ? 'tables' : ['profile', 'frame', 'badge'].includes(it.slot) ? 'profile' : 'boards';
 export const collectionOf = it => it.collection || 'graphit';

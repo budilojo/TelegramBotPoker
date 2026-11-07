@@ -48,6 +48,9 @@ const app = new App({
   api, botUsername: 'All_InPoker_bot', minIntervalMs: 0, runoutStepMs: 0,
   webappUrl: `http://localhost:${PORT}`, miniAppName: 'table', durakDeck: durakDecks(17),
 });
+app.store.pay.adminGrant(String(max.id), 'sever-talisman', String(ivan.id), app.clock.now());
+app.store.collApply(String(max.id), [{ slot: 'talisman', item: 'sever-talisman', color: 'default' }],
+  'durak-e2e-talisman', app.clock.now(), 20);
 const hub = new Hub(app, { botToken: TOKEN });
 app.attachHub(hub);
 const web = startServer({ hub, port: PORT, root: path.join(ROOT, 'miniapp'), log: () => {} });
@@ -221,6 +224,21 @@ for (let guard = 0; room().deal.phase === 'play' && guard < 800; guard++) {
     await page.waitForSelector('.dk-role.go');
     await playCard(page, low(d.hands[d.attacker]));
     await until(moved, `${u.first_name} ходит`);
+    if (!moves) {
+      await pm.waitForSelector('.dk-pair');
+      const token = pm.locator('.table-talisman');
+      assert.ok(await token.evaluate(async el => {
+        await el.decode();
+        const r = el.getBoundingClientRect();
+        const blockers = [...document.querySelectorAll('.dk-pair, .dk-card, .panel button')];
+        return r.width <= innerWidth * .1 && blockers.every(x => {
+          const box = x.getBoundingClientRect();
+          return r.right <= box.left || r.left >= box.right || r.bottom <= box.top || r.top >= box.bottom;
+        });
+      }), 'личный талисман не закрывает стол, карты и кнопки');
+      for (const page of [pi, pd]) assert.equal(await page.locator('.table-talisman').count(), 0);
+      step('личный талисман в Дураке помещается на узком экране и виден только владельцу');
+    }
   } else if (!allCovered(d) && !d.bout.taking) {
     const u = byId(d.defender);
     const page = pageOf(u);

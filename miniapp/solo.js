@@ -12,6 +12,7 @@ import { $app, h, haptic, showSheet, closeSheet, refreshSheet, fmt } from './ui.
 import { bus, send } from './net.js';
 import { GAMES } from './games/index.js';
 import { gameCatalog } from './catalog.js';
+import { tournamentEntry } from './tournament.js';
 import { schoolItems } from './school.js';
 import { openRoute } from './train/route.js';
 
@@ -40,6 +41,7 @@ export function render() {
       ? h('button.k-btn.k-btn--primary.k-btn--block.solo-resume', { onclick: () => { haptic.tap(); send({ t: 'resume' }); } },
         `▶ Продолжить: ${s.resume.icon} ${s.resume.title}`)
       : null,
+    tournamentEntry(s),
     gameCatalog({
       games: s.games, key: 'solo', empty: 'Игр пока нет.',
       card: (g) => h(`button.game-card.g-${g.id}`, { onclick: () => openForm(g) },
@@ -51,7 +53,7 @@ export function render() {
     }),
     s.groups
       ? null
-      : h('div.hint', 'Играть с друзьями — в группе: добавьте бота в группу и напишите там /game.'),
+      : h('div.hint', 'Для обычной игры с друзьями добавьте бота в группу и напишите там /game.'),
   ));
 }
 

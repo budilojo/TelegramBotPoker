@@ -18,6 +18,7 @@ test('cohorts, first gift, installed and hidden, and a deduplicated weekly NSM',
     store.noteProductUse('1', 'cosmetic', 'sever-talisman', now);
     store.noteProductUse('1', 'tournament', 'some-id', now);
     store.noteProductUse('2', 'tournament', 'some-id', daysAgo(1));
+    store.noteProductUse('2', 'cosmetic', 'porcelain-frame', now);
     store.noteProductUse('3', 'cosmetic', 'chertezh-frame', daysAgo(7));
     store.noteProductUse('5', 'cosmetic', 'chertezh-frame', now);
     const { activity: a } = productMetrics(store.db, now, []);
@@ -26,5 +27,7 @@ test('cohorts, first gift, installed and hidden, and a deduplicated weekly NSM',
     assert.deepEqual(a.d7, { cohort: 1, returned: 1 });
     assert.deepEqual(a.installed, { installed: 1, hidden: 1 });
     assert.equal(a.collections[0].top[0].players, 1);
+    assert.deepEqual(a.collections.map(c => c.collection), ['sever', 'obsidian', 'chertezh', 'terracotta', 'orbita', 'porcelain']);
+    assert.equal(a.collections.find(c => c.collection === 'porcelain').top[0].players, 1);
   } finally { store.close(); }
 });

@@ -29,6 +29,7 @@ import { signInitData } from '../bot/webapp-auth.js';
 import { stack, durakDecks } from '../bot/harness.js';
 import { assertNoJump } from './lib/scroll-probe.mjs';
 import { allCovered, waitingThrowers } from '../bot/games/durak/rules.js';
+import { beats, rankIndex } from '../bot/games/durak/cards.js';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.E2E_PORT || 8097);
@@ -536,8 +537,7 @@ step('дурак: стол «Сапфир» у всех, рубашки обыч
 
 // Партию доигрываем быстро, сообщениями (защитник берёт, остальные пасуют): нужны итоги с играми.
 const byId = (id) => PEOPLE.find((u) => String(u.id) === String(id));
-const RANKS = ['6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-const lowest = (cards) => cards.reduce((a, b) => (RANKS.indexOf(b.slice(0, -1)) < RANKS.indexOf(a.slice(0, -1)) ? b : a));
+const lowest = (cards) => cards.reduce((a, b) => (rankIndex(b) < rankIndex(a) ? b : a));
 for (let guard = 0; durakRoom().deal.phase === 'play' && guard < 600; guard++) {
   const d = durakRoom().deal;
   const seq = durakRoom().seq;
@@ -547,12 +547,14 @@ for (let guard = 0; durakRoom().deal.phase === 'play' && guard < 600; guard++) {
     who = byId(d.defender);
     const at = d.table.findIndex((x) => !x.d);
     const a = d.table[at].a;
-    const ok = d.hands[d.defender].filter((c) => (c.slice(-1) === a.slice(-1) ? RANKS.indexOf(c.slice(0, -1)) > RANKS.indexOf(a.slice(0, -1)) : c.slice(-1) === d.trump && a.slice(-1) !== d.trump));
+    const ok = d.hands[d.defender].filter((c) => beats(a, c, d.trump));
     msg = ok.length ? { t: 'defend', card: lowest(ok), target: at } : { t: 'take' };
   }
   else if (d.table.length) { who = byId(waitingThrowers(d)[0]); msg = { t: 'pass' }; }
   await wait(70); // не чаще лимита сообщений страницы
-  await sendFrom(who, msg);
+  // Как в интерфейсе: ход отправляется после получения актуального вида стола.
+  await pageOf(who).waitForFunction((s) => document.body.dataset.seq === String(s), seq);
+  assert.ok(await sendFrom(who, msg), 'страница отправила ход по WebSocket');
   await until(() => durakRoom().seq !== seq, `ход в дураке (${JSON.stringify(msg)})`);
 }
 assert.equal(durakRoom().deal.phase, 'over', 'партия дурака доиграна');

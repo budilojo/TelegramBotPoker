@@ -4,13 +4,30 @@ import { send } from './net.js';
 const sendAction = (t) => { haptic.tap(); send({ t }); };
 const DEFAULT_LEVELS = '25 50 300\n50 100 300\n100 200 300\n200 400 300';
 
+const TOUR_STATUS = { lobby: 'Регистрация', playing: 'В игре', paused: 'Пауза', finished: 'Итоги' };
+
+export function tournamentEntry(state) {
+  const mine = state.myTournaments ?? [];
+  const row = (title, subtitle, onclick) => h('button.set-row.tour-entry', { type: 'button', onclick },
+    h('div.set-body', h('div.set-title', title), h('div.set-sub', subtitle)));
+  return h('section.set-block',
+    h('div.section-label', 'Турниры'),
+    mine.map(t => row(t.title, TOUR_STATUS[t.status], () => {
+      haptic.tap();
+      send({ t: 'tournament-resume', code: t.code });
+    })),
+    mine.some(t => t.host && t.status !== 'finished') ? null : row('Создать турнир', 'Покер на одном столе · до 8 игроков', tournamentCreate));
+}
+
 export function tournamentCreate() {
   const input = (label, field) => h('label.tour-input', h('span', label), field);
+  const draft = { name: '', seats: '8', stack: '10000', schedule: DEFAULT_LEVELS };
+  const update = key => e => { draft[key] = e.target.value; };
   showSheet('tournament-create', () => {
-    const name = h('input.inp', { required: true, maxlength: 40, placeholder: 'Вечерний холдем' });
-    const seats = h('input.inp', { type: 'number', min: 2, max: 8, required: true, value: 8 });
-    const stack = h('input.inp', { type: 'number', min: 2, max: 100_000_000, required: true, value: 10000 });
-    const schedule = h('textarea.inp', { required: true, rows: 4, maxlength: 600 }, DEFAULT_LEVELS);
+    const name = h('input.inp', { required: true, maxlength: 40, placeholder: 'Вечерний холдем', value: draft.name, oninput: update('name') });
+    const seats = h('input.inp', { type: 'number', min: 2, max: 8, required: true, value: draft.seats, oninput: update('seats') });
+    const stack = h('input.inp', { type: 'number', min: 2, max: 100_000_000, required: true, value: draft.stack, oninput: update('stack') });
+    const schedule = h('textarea.inp', { required: true, rows: 4, maxlength: 600, oninput: update('schedule') }, draft.schedule);
     return h('form.tour-form', { onsubmit: e => {
       e.preventDefault();
       const levels = schedule.value.trim().split(/\n/).map(line => {

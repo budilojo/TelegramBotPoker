@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { Table, user } from './harness.js';
 import { Store } from './store.js';
-import { ITEMS } from '../miniapp/collections/catalog.js';
+import { COLLECTIONS, ITEMS } from '../miniapp/collections/catalog.js';
 import { productMetrics } from './product-metrics.js';
 
 test('all approved item art has local WebP alpha, and each series offers two talismans', () => {
-  for (const collection of ['sever', 'obsidian', 'chertezh']) {
+  for (const { id: collection } of COLLECTIONS.filter(({ id }) => id !== 'graphit')) {
     const items = ITEMS.filter(i => i.collection === collection);
     assert.equal(items.filter(i => i.slot === 'talisman').length, 2);
     for (const source of new Set(items.flatMap(i => [i.assets.preview, i.assets.game]).filter(Boolean))) {
@@ -25,7 +25,7 @@ test('personal talisman is owned, only sent to its owner, and hidden usage is ex
   const host = user(9101, 'Нина'), guest = user(9102, 'Коля');
   const store = new Store();
   const t = new Table({ store });
-  const id = 'sever-talisman-alt';
+  const id = 'porcelain-talisman-alt';
   try {
     await t.seat([host, guest]);
     const equip = (req) => ({ t: 'col', op: 'apply', v: 2, slot: 'talisman', item: id, color: 'default', req });

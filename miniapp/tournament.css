@@ -12,3 +12,5 @@
 .tour-input { min-width: 0; }
 .tour-form .inp { width: 100%; min-height: var(--k-tap); font: inherit; }
 .tour-form textarea.inp { padding: var(--k-s8); resize: vertical; }
+
+.tour-entry { overflow-wrap: anywhere; text-align: left; }

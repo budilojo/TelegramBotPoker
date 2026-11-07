@@ -49,6 +49,25 @@ export function parkTournament(room, now) {
   }
 }
 
+/** Reconcile overdue blinds before a scheduled deal, including timers tied on restart. */
+export function advanceTournamentLevels(room, now) {
+  const t = room.tournament;
+  let deadline = t?.clock?.deadline;
+  if (room.status !== 'playing' || deadline == null || now < deadline) return false;
+  while (now >= deadline) {
+    const next = t.levels[t.index + 1];
+    if (!next) {
+      t.clock = { key: `level:${t.index}`, done: true, remaining: 0, deadline: null };
+      return true;
+    }
+    t.index++;
+    deadline += next.seconds * 1000;
+    t.clock = { key: `level:${t.index}`, remaining: next.seconds * 1000, deadline };
+    room.pendingBlinds = { sb: next.small, bb: next.big };
+  }
+  return true;
+}
+
 export function tournamentClock(app, room, now) {
   const t = room.tournament;
   if (!t) return null;
@@ -61,19 +80,20 @@ export function tournamentClock(app, room, now) {
   return {
     id: 'tournament', timer: t.clock,
     fire: () => {
-      if (room.status !== 'playing' || app.down || app.roomByCode(room.code) !== room || t.clock?.key !== key) return;
-      const time = app.clock.now();
-      if (time < t.clock.deadline) return app.syncClocks();
-      const next = t.levels[t.index + 1];
-      if (next) {
-        const boundary = t.clock.deadline;
-        t.index++;
-        t.clock = { key: `level:${t.index}`, remaining: next.seconds * 1000, deadline: boundary + next.seconds * 1000 };
-        room.pendingBlinds = { sb: next.small, bb: next.big };
-      } else t.clock = { key, done: true, remaining: 0, deadline: null };
-      return app.draw(room);
+      if (app.down || app.roomByCode(room.code) !== room || t.clock?.key !== key) return;
+      if (advanceTournamentLevels(room, app.clock.now())) return app.draw(room);
+      app.syncClocks();
     },
   };
+}
+
+export const tournamentMember = (room, uid) => !!room?.tournament && !room.gone
+  && room.players.some(p => p.id === String(uid));
+
+export function myTournaments(app, uid) {
+  return [...app.rooms.values()].filter(room => tournamentMember(room, uid))
+    .sort((a, b) => Number(a.status === 'finished') - Number(b.status === 'finished') || b.createdAt - a.createdAt)
+    .slice(0, 6).map(({ code, title, status, hostId }) => ({ code, title, status, host: hostId === String(uid) }));
 }
 
 function topUpAllowed(room, player, rebuy, now) {

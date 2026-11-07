@@ -11,6 +11,7 @@ import { Store } from '../bot/store.js';
 import { startServer } from '../bot/server.js';
 import { TelegramStub, user } from '../bot/tg-stub.js';
 import { signInitData } from '../bot/webapp-auth.js';
+import { ITEMS } from '../miniapp/collections/catalog.js';
 import { assertNoJump } from './lib/scroll-probe.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -59,8 +60,13 @@ try {
     const text = await page.locator('.col-show').innerText();
     assert.ok(!/Купить за|₽|\$|Хочу/.test(text), `off не предлагает реальную оплату: ${text}`);
     assert.equal(await page.locator('[data-act="buy"]').count(), 0);
-    assert.equal(await page.locator('.col-show .col-card').count(), 64, 'off сохраняет публичный ассортимент');
-    const overflow = await page.evaluate(() => [...document.querySelectorAll('.col-root, .col-root *, .nav, .nav *')].filter((el) => { const r = el.getBoundingClientRect(); return r.width && (r.left < -1 || r.right > innerWidth + 1); }).length);
+    assert.equal(await page.locator('.col-show .col-card').count(), ITEMS.length, 'off сохраняет публичный ассортимент');
+    const overflow = await page.evaluate(() => [...document.querySelectorAll('.col-root, .col-root *, .nav, .nav *')].filter(el => {
+      const r = el.getBoundingClientRect();
+      const row = el.parentElement?.closest('.col-chips');
+      const clip = row && getComputedStyle(row).overflowX === 'auto' ? row.getBoundingClientRect() : r;
+      return r.width && (Math.max(r.left, clip.left) < -1 || Math.min(r.right, clip.right) > innerWidth + 1);
+    }).length);
     assert.equal(overflow, 0, 'горизонтального выхода за край нет');
     await page.screenshot({ path: path.join(OUT, `catalog-${width}.png`) });
     assert.equal(taps(), width === 320 ? 1 : 2, 'ровно одно нажатие записано');

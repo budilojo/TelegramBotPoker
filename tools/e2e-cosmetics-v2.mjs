@@ -8,7 +8,7 @@ import { GAME_LIST } from '../bot/games/index.js';
 import { startServer } from '../bot/server.js';
 import { BOARD_SLOT } from '../bot/collections/index.js';
 import { V2_ITEMS,itemById } from '../miniapp/collections/catalog.js';
-const root=path.resolve(import.meta.dirname,'..'),out=path.join(root,'docs/cosmetics-v2/reports/integration-screens');fs.mkdirSync(out,{recursive:true});
+const root=path.resolve(import.meta.dirname,'..'),out=process.env.COSMETICS_V2_SHOTS || path.join(root,'docs/cosmetics-v2/reports/integration-screens');fs.mkdirSync(out,{recursive:true});
 const H=user(700101001,'Алиса'),B=user(700101002,'Боб'),S=user(700101003,'Зритель');
 const t=new Table({admins:[String(H.id)],nardyDice:()=>[5,3],battleshipFleetRand:()=>.37});
 const web=startServer({hub:t.hub,port:0,host:'127.0.0.1',root:path.join(root,'miniapp'),log:()=>{}});await new Promise(r=>web.server.once('listening',r));

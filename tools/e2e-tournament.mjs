@@ -33,11 +33,24 @@ const settings = p => p.locator('[data-tab="settings"]').click();
 const names = p => p.locator('.tour-player strong').allTextContents();
 try {
   const ph = await open(host);
-  await settings(ph);
   await ph.getByRole('button', { name: 'Создать турнир' }).click();
   await ph.getByLabel('Название').fill('Осенний кубок');
   await ph.getByLabel('Мест за столом').fill('2');
   await ph.getByLabel('Уровни блайндов').fill('25 50 10\n50 100 20');
+  await ph.locator('.tour-form').evaluate(async oldForm => {
+    const { send } = await import('/net.js');
+    const replaced = new Promise(resolve => {
+      const observer = new MutationObserver(() => {
+        if (!oldForm.isConnected) { observer.disconnect(); resolve(); }
+      });
+      observer.observe(oldForm.parentElement, { childList: true, subtree: true });
+    });
+    send({ t: 'refresh' }, { lock: false });
+    await replaced;
+  });
+  assert.equal(await ph.getByLabel('Название').inputValue(), 'Осенний кубок');
+  assert.equal(await ph.getByLabel('Мест за столом').inputValue(), '2');
+  assert.equal(await ph.getByLabel('Уровни блайндов').inputValue(), '25 50 10\n50 100 20');
   await ph.locator('form').getByRole('button', { name: 'Создать турнир' }).click();
   await ph.getByRole('heading', { name: 'Осенний кубок' }).waitFor();
   const route = new URL(ph.url()).pathname;
@@ -48,11 +61,20 @@ try {
   assert.ok(share.endsWith(`startapp=t_${room.code}`));
   await ph.keyboard.press('Escape');
 
+  const fromTelegram = await open(user(8003, 'Наблюдатель'), '/', `t_${room.code}`);
+  await fromTelegram.getByRole('heading', { name: 'Осенний кубок' }).waitFor();
+  assert.equal(new URL(fromTelegram.url()).pathname, route);
+  await fromTelegram.close();
+
   const pg = await open(guest, route);
   await pg.getByRole('button', { name: 'Занять место' }).click();
   await ph.locator('.tour-player', { hasText: 'Илья' }).waitFor();
   await pg.locator('.tour-player', { hasText: 'Илья' }).waitFor();
   assert.deepEqual(await names(pg), ['Вера', 'Илья']);
+  await pg.getByRole('button', { name: '← К играм' }).click();
+  await pg.getByRole('button', { name: /Осенний кубок/ }).click();
+  await pg.getByRole('heading', { name: 'Осенний кубок' }).waitFor();
+  assert.equal(new URL(pg.url()).pathname, route, 'return from the games screen to the same tournament');
   await ph.getByRole('button', { name: 'Начать турнир' }).click();
   await pg.locator('[data-count]').waitFor();
   await t.clock.advance(10_000);

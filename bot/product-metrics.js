@@ -1,6 +1,6 @@
 /** Aggregate-only product metrics, with no names, hands, or per-player rows sent to admin. */
 import { ymd, ymdBack } from './fmt.js';
-import { itemById } from '../miniapp/collections/catalog.js';
+import { COLLECTIONS, itemById } from '../miniapp/collections/catalog.js';
 
 export const PRODUCT_SCHEMA = `
 CREATE TABLE IF NOT EXISTS product_use (
@@ -54,7 +54,7 @@ export function productMetrics(db, now, rooms) {
     const item = itemById(row.item);
     return item ? [{ title: item.title, collection: item.collection ?? 'graphit', players: row.players }] : [];
   });
-  const collections = ['sever', 'obsidian', 'chertezh'].map(collection => ({
+  const collections = COLLECTIONS.filter(({ id }) => id !== 'graphit').map(({ id: collection }) => ({
     collection, top: top.filter(item => item.collection === collection).slice(0, 10),
   }));
   return { tournaments, activity: { dau, wau, nsm, d1: retention(1), d7: retention(7), total, converted, installed: { ...installed }, top: top.slice(0, 10), collections } };

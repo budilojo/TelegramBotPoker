@@ -168,6 +168,7 @@ try {
   assert.match(await text(page, '.col-show'), /покупки пока закрыты/);
   assert.equal(await page.locator('[data-act="buy"]').count(), 0, 'off не показывает покупку');
   step('рабочий off: витрина доступна, grant отклонён (COL_DEMO_OFF), оплаты нет');
+  await page.close();
   await W.web.close();
 
   assert.deepEqual(problems, [], `ошибки в консоли страниц: ${problems.join('; ')}`);

@@ -168,7 +168,7 @@ for (const size of [[320, 640], [390, 844]]) {
   step(`${tag}: нашёл «Максик» по нику, выдал знак (заказа нет), забрал — купленный стол на месте`);
 
   // A non-sellable v2 item appears immediately for an already connected recipient.
-  const recipient = await open(s, max, size, 'solo', '/?collections=1#collections/item/sever-frame');
+  const recipient = await open(s, max, size, 'solo', '/?collections=1#collections/item/porcelain-talisman');
   await recipient.locator('.nav-tab[data-tab="settings"]').waitFor();
   if (shopEnabled) {
     await recipient.locator('.col-item').waitFor();
@@ -182,10 +182,10 @@ for (const size of [[320, 640], [390, 844]]) {
   await recipient.locator('[data-entry="collections"]').click();
   if (shopEnabled) await recipient.locator('.col-controls').getByRole('button', { name: 'Мои вещи', exact: true }).click();
   await recipient.locator('.col-inventory').waitFor();
-  const gift = recipient.locator('.col-inv[data-item="sever-frame"]');
+  const gift = recipient.locator('.col-inv[data-item="porcelain-talisman"]');
   assert.equal(await gift.count(), 0);
-  assert.equal(await pa.locator('.ashop-item[data-item="sever-frame"]').count(), 0, 'not a sale offer');
-  await pa.locator('.ashop-give[data-item="sever-frame"] [data-act="ashop-grant"]').click();
+  assert.equal(await pa.locator('.ashop-item[data-item="porcelain-talisman"]').count(), 0, 'not a sale offer');
+  await pa.locator('.ashop-give[data-item="porcelain-talisman"] [data-act="ashop-grant"]').click();
   await gift.getByRole('button', { name: 'Надеть' }).waitFor();
   assert.match(await gift.innerText(), /Подарок владельца/);
   assert.equal(await recipient.locator('.col-controls .col-tab', { hasText: 'Каталог' }).count(), shopEnabled ? 1 : 0);

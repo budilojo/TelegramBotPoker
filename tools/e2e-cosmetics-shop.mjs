@@ -6,7 +6,7 @@ import { chromium } from 'playwright';
 import { Table, user, initDataFor, TEST_TOKEN } from '../bot/harness.js';
 import { GAME_LIST } from '../bot/games/index.js';
 import { startServer } from '../bot/server.js';
-import { itemById } from '../miniapp/collections/catalog.js';
+import { ITEMS, itemById } from '../miniapp/collections/catalog.js';
 const H = user(700201001, 'Владелец'), B = user(700201002, 'Друг'), S = user(700201003, 'Зритель');
 const t = new Table({ admins: [String(H.id)], nardyDice: () => [5, 3], battleshipFleetRand: () => .37 });
 const web = startServer({ hub: t.hub, port: 0, host: '127.0.0.1', root: path.resolve('miniapp'), log: () => {} });
@@ -67,11 +67,11 @@ try {
   const p = host.page, b = guest.page;
   try {
    await p.locator('.nav-tab[data-tab="shop"]').click(); await p.waitForSelector('.col-show');
-   assert.equal(await p.locator('.col-card').count(), 70); assert.equal(await p.locator('.col-root .nav-tab').count(), 4);
+   assert.equal(await p.locator('.col-card').count(), ITEMS.length); assert.equal(await p.locator('.col-root .nav-tab').count(), 4);
    assert.equal(await p.locator('.nav-tab[data-tab="shop"]').getAttribute('aria-current'), 'page');
    assert.match(await p.locator('.col-show').innerText(), /Доступ владельца/);
    assert.equal(await p.locator('[data-result-count]').count(), 1, 'catalog count uses its own attribute');
-   assert.equal(await p.locator('[data-result-count]').innerText(), 'Найдено: 70', 'catalog count is not a clock');
+   assert.equal(await p.locator('[data-result-count]').innerText(), `Найдено: ${ITEMS.length}`, 'catalog count is not a clock');
    assert.equal(await p.locator('.col-bundle-mini').count(), 6, 'six bundles use small asset compositions');
    assert.equal(await p.locator('.col-bundle-mini img').count(), 54, 'nine small items in every bundle');
    assert.deepEqual(host.requests.filter(src => /v2-art\/.*-preview.svg$/.test(src)), [], 'catalog never fetches detailed previews, including bundles');
@@ -93,11 +93,12 @@ try {
    await p.locator('.nav-tab[data-tab="shop"]').click();
    await p.waitForSelector('.col-show');
    assert.equal(await p.locator('.col-card').count(), 1, 'URL restored the filters after reload');
-   assert.equal(await p.locator('[data-chips="collection"] button').count(), 5);
+   assert.deepEqual(await p.locator('[data-chips="collection"] button').allTextContents(),
+     ['Все', 'Север', 'Обсидиан', 'Чертёж', 'Терракота', 'Орбита', 'Фарфор', 'Талисманы']);
    await select(p, 'collection', 'talismans');
    assert.equal(await p.locator('[data-result-count]').innerText(), 'Найдено: 0');
    await select(p, 'game', ''); await select(p, 'category', '');
-   assert.equal(await p.locator('.col-card').count(), 6, 'two talismans per collection');
+   assert.equal(await p.locator('.col-card').count(), 12, 'two talismans per collection');
    await select(p, 'collection', '');
    await p.locator('.col-scroll').evaluate(e => e.scrollTop = 1100);
    const chosen = p.locator('.col-card[data-item="obsidian-frame"]'); await chosen.scrollIntoViewIfNeeded();
@@ -133,12 +134,18 @@ try {
    await p.locator('.nav-tab[data-tab="rating"]').click(); await p.waitForSelector('.ranked'); assert.match(await p.locator('.ranked').innerText(), /скоро/i);
    await p.locator('.nav-tab[data-tab="shop"]').click(); await tab(p, 'Каталог');
    // Bundle action is atomic and preserves Graphit data; server validates all nine rights.
-   await select(p, 'game', ''); await select(p, 'category', 'bundles'); await select(p, 'collection', '');
+   await select(p, 'game', ''); await select(p, 'category', 'bundles'); await select(p, 'collection', 'orbita');
+   assert.equal(await p.locator('.col-card').count(), 1);
+   assert.equal(new URL(p.url()).searchParams.get('shopCategory'), 'orbita');
    assert.ok(!host.requests.includes('/collections/v2-art/orbita-bundle-preview.svg'), 'unopened bundle has no detail request');
    await p.locator('.col-card[data-item="orbita-bundle"]').scrollIntoViewIfNeeded();
    await shot(p, `bundle-${width}`);
    await card(p, 'orbita-bundle');
-   await p.waitForFunction(() => [...document.images].some(e => e.getAttribute('src') === '/collections/v2-art/orbita-bundle-preview.svg' && e.complete && e.naturalWidth));
+   const art = p.locator('.col-hero .col-bundle-mini img');
+   assert.equal(await art.count(), itemById('orbita-bundle').includes.length);
+   await p.waitForFunction(() => [...document.querySelectorAll('.col-hero .col-bundle-mini img')].every(
+     e => e.getAttribute('src').startsWith('/collections/raster/orbita-') && e.complete && e.naturalWidth > 0));
+   assert.ok(!host.requests.includes('/collections/v2-art/orbita-bundle-preview.svg'), 'raster bundle reuses its item art');
    await shot(p, `bundle-item-${width}`);
    await p.getByRole('button', { name: 'Надеть комплект', exact: true }).click();
    await until(() => itemById('orbita-bundle').includes.every(id => t.app.collections.choiceOf(H.id)[itemById(id).slot]?.item === id), 'bundle');
@@ -184,7 +191,7 @@ try {
      assert.equal(await loading.page.locator('.nav-tab[data-tab="shop"]').count(), 0, 'server flag is required before showing the entry');
      await loading.page.evaluate(() => { window.__holdCol = false; window.__heldCol.splice(0).forEach(f => f()); });
      await loading.page.locator('.nav-tab[data-tab="shop"]').click();
-     await loading.page.waitForSelector('.col-show'); assert.equal(await loading.page.locator('.col-card').count(), 70);
+     await loading.page.waitForSelector('.col-show'); assert.equal(await loading.page.locator('.col-card').count(), ITEMS.length);
     } finally { await loading.context.close(); }
    }
    console.log(`store ${width}: catalog/filters/scroll/focus, ack/clear/refusal/reconnect, bundle, off/owner, fallback OK`);

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Table, user, stack, initDataFor } from './harness.js';
+import { FakeClock, Table, user, stack, initDataFor } from './harness.js';
 import { Store } from './store.js';
 import { productMetrics } from './product-metrics.js';
 
@@ -9,9 +9,9 @@ const config = { t: 'tournament-create', name: 'Вечерний турнир', 
   levels: [{ small: 5, big: 10, seconds: 10 }, { small: 10, big: 20, seconds: 20 }] };
 const open = (t, person, room) => t.open(person, { initData: initDataFor(person, { clock: t.clock }), room: `t_${room.code}` });
 
-async function setup(t) {
+async function setup(t, options = config) {
   t.openSolo(owner);
-  await t.send(owner, config);
+  await t.send(owner, options);
   const room = t.app.roomByCode(t.state(owner).room.code);
   assert.ok(open(t, guest, room).session);
   assert.ok(open(t, viewer, room).session);
@@ -115,4 +115,46 @@ test('tournament survives restart and maintenance with its current blind time an
     assert.equal(next.state(guest).tournament.deadline, t.clock.now() + 8000);
     assert.deepEqual(restored.players.map(p => p.stack), room.players.map(p => p.stack));
   } finally { store.close(); }
+});
+
+test('an auto-deal tied with a blind deadline after restart uses the new blinds', async () => {
+  const store = new Store();
+  try {
+    const before = new Table({ store });
+    const room = await setup(before, { ...config, levels: [{ ...config.levels[0], seconds: 15 }, config.levels[1]] });
+    await before.send(owner, { t: 'start' });
+    const actor = room.hand.actorId === String(owner.id) ? owner : guest;
+    await before.act(actor, 'fold');
+    assert.equal(room.autoNext.deadline, room.tournament.clock.deadline);
+    const after = new Table({ store, clock: new FakeClock(before.clock.now()) });
+    after.app.load();
+    await after.app.resume();
+    await after.clock.advance(15_000);
+    const restored = after.app.roomByCode(room.code);
+    assert.equal(restored.handNo, 2);
+    assert.equal(restored.tournament.index, 1);
+    assert.equal(restored.settings.bigBlind, 20, 'the next hand posts the next level even when its timer fires first');
+  } finally { store.close(); }
+});
+
+test('the last stack wins after the rebuy window and only participants get a resume shortcut', async () => {
+  const t = new Table({ deck: stack({ [owner.id]: 'As Ah', [guest.id]: 'Kd Kc' }, '2s 7h 9d Jc 3s') });
+  const room = await setup(t);
+  await t.send(owner, { t: 'start' });
+  const actor = room.hand.actorId === String(owner.id) ? owner : guest;
+  await t.act(actor, 'allin');
+  await t.act(actor === owner ? guest : owner, 'call');
+  assert.equal(t.state(guest).tournament.canRebuy, true);
+  await t.clock.advance(15_000);
+  assert.equal(t.state(guest).room.status, 'finished');
+  assert.equal(t.state(viewer).tournament.leaders[0].name, 'Вера');
+  assert.equal(t.state(viewer).tournament.leaders[1].eliminated, true);
+  await t.send(viewer, { t: 'hub' });
+  assert.deepEqual(t.state(viewer).myTournaments, []);
+  await t.send(viewer, { t: 'tournament-resume', code: room.code, user: guest.id });
+  assert.equal(t.lastError(viewer)?.code, 'NO_ROOM');
+  await t.send(guest, { t: 'hub' });
+  assert.deepEqual(t.state(guest).myTournaments, [{ code: room.code, title: config.name, status: 'finished', host: false }]);
+  await t.send(guest, { t: 'tournament-resume', code: room.code });
+  assert.equal(t.state(guest).room.status, 'finished');
 });

@@ -22,7 +22,7 @@
  */
 import { checkInitData } from './webapp-auth.js';
 import { GAMES, GAME_LIST, gameOf } from './games/index.js';
-import { createTournament, TOURNAMENT_CODE, TOUR_ERRORS } from './games/poker/tournament.js';
+import { createTournament, myTournaments, tournamentMember, TOURNAMENT_CODE, TOUR_ERRORS } from './games/poker/tournament.js';
 import { productMetrics } from './product-metrics.js';
 import { HUB_PREFIX, MAX_LIVE_PER_GROUP, RATING_SOON_TEXT, TOO_MANY_GAMES_TEXT, SOLO_CODE } from './app.js';
 import { AUDIENCES, ERRORS as CAST_ERRORS } from './broadcast.js';
@@ -427,6 +427,7 @@ export class Hub {
     }));
     session.send({ t: 'state', state: {
       kind: 'home', now: this.app.clock.now(), bot: this.app.botUsername, me: this.app.profiles.me(session.user), groups,
+      myTournaments: myTournaments(this.app, session.user.id),
       solo: true, // кнопка «Играть с ботом»
       rankGames: GAME_LIST.map((g) => ({ id: g.id, title: g.title, icon: g.icon })),
       // Тот же текст, что на хабе группы: один закрытый рейтинг — одно
@@ -446,6 +447,7 @@ export class Hub {
     const live = this.app.soloOf(session.user.id);
     session.send({ t: 'state', state: {
       kind: 'solo',
+      myTournaments: myTournaments(this.app, session.user.id),
       now: this.app.clock.now(),
       bot: this.app.botUsername,
       me: this.app.profiles.me(session.user),
@@ -615,8 +617,13 @@ export class Hub {
       this.refuse(session, 'DOWN', `⏸ Идёт обслуживание. ${this.app.downText}`);
       return void this.resend(session);
     }
-    if (msg.t === 'tournament-create') {
+    if (msg.t === 'tournament-create' || msg.t === 'tournament-resume') {
       if (!['hub', 'home', 'solo', 'rating'].includes(session.kind)) return this.refuse(session, 'BAD_REQUEST');
+      if (msg.t === 'tournament-resume') {
+        const room = this.app.roomByCode(typeof msg.code === 'string' ? msg.code : '');
+        if (!tournamentMember(room, session.user.id)) return this.refuse(session, 'NO_ROOM', 'Турнир не найден.');
+        return this.enterRoom(session, room);
+      }
       const room = createTournament(this.app, session.user, msg);
       if (room.error) return this.refuse(session, room.error, TOUR_ERRORS[room.error]);
       this.enterRoom(session, room);
@@ -1068,6 +1075,7 @@ export function hubView(app, group, user, { home = false } = {}) {
     : null;
   return {
     kind: 'hub',
+    myTournaments: myTournaments(app, uid),
     bot: app.botUsername,
     group: { title: group.title || '', code: group.code },
     again,
@@ -1126,6 +1134,7 @@ export function ratingView(app, user, {
   };
   return {
     kind: 'rating',
+    myTournaments: myTournaments(app, uid),
     now,
     bot: app.botUsername,
     me: app.profiles.me(user),

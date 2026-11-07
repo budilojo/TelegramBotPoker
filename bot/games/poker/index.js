@@ -11,7 +11,7 @@
  * street by street, the turn timer and the automatic deal.
  */
 import * as R from '../../room.js';
-import { TOUR_ERRORS, parkTournament, tournamentClock, tournamentView, topUp } from './tournament.js';
+import { advanceTournamentLevels, TOUR_ERRORS, parkTournament, tournamentClock, tournamentView, topUp } from './tournament.js';
 import { tableView } from '../../view.js';
 import { renderCard, renderResults, renderTurnPing } from '../../render.js';
 import { num } from '../../fmt.js';
@@ -230,9 +230,11 @@ async function onTurnTimeout(app, code, key) {
 async function onAutoNext(app, code, key) {
   const room = app.roomByCode(code);
   if (!room) return;
-  const r = R.autoNextHand(room, key, app.clock.now(), app.dealOpts(room));
+  const now = app.clock.now();
+  const advanced = advanceTournamentLevels(room, now);
+  const r = R.autoNextHand(room, key, now, app.dealOpts(room));
   if (!r.error) await app.afterDeal(room, r);
-  else if (r.error === 'NOT_ENOUGH_PLAYERS') await app.draw(room);
+  else if (advanced || r.error === 'NOT_ENOUGH_PLAYERS') await app.draw(room);
   app.syncClocks();
 }
 

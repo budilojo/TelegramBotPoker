@@ -9,6 +9,7 @@ import { $app, h, haptic, showSheet, closeSheet, refreshSheet } from './ui.js';
 import { bus, send } from './net.js';
 import { GAMES } from './games/index.js';
 import { gameCatalog } from './catalog.js';
+import { tournamentEntry } from './tournament.js';
 
 /** Форма «новое лобби» у каждой игры своя — хаб берёт её у игры. */
 const LOBBY = Object.fromEntries(Object.entries(GAMES).map(([id, g]) => [id, g.lobby]));
@@ -40,6 +41,7 @@ export function render() {
     // Человек вышел из партии посмотреть другой раздел, а место за столом осталось его: путь назад — первая
     // кнопка экрана, а не строка в списке ниже. Сервер отдаёт `inside` только про самого человека.
     ...backToTable(s),
+    tournamentEntry(s),
 
     gameCatalog({ games: s.games, key: `hub:${s.group?.code || ''}`, card: (g) => gameRow(g, live(g.id)), empty: 'Игр пока нет.' }),
 
@@ -103,6 +105,7 @@ function gameRow(g, live) {
 function renderHome(s) {
   $app.append(h('div.lobby.hub',
     h('div', h('h1', '🎮 Ваши группы'), h('div.sub', 'Где играем?')),
+    tournamentEntry(s),
     h('div.lobby-list', s.groups.map((g) => h('div.lrow',
       h('div.lr-icon', '👥'),
       h('div.lr-body',
