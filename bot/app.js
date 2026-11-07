@@ -34,6 +34,7 @@ import { salesConfig } from './payments/config.js';
 import { PAY_IN_DM } from './payments/texts.js';
 import { Support, OPEN_KB } from './support.js';
 import { GAMES, GAME_LIST, HIDDEN_DRAFTS, gameOf } from './games/index.js';
+import { parkTournament } from './games/poker/tournament.js';
 import { apply as rateRound } from './rating.js';
 
 /**
@@ -396,7 +397,7 @@ export class App {
         at: this.clock.now(),
         kind,
         game: room.game,
-        chatId: room.chatId,
+        chatId: room.tournament ? null : room.chatId,
         code: room.code,
         n: room.players.filter((p) => !p.kicked && !p.left).length,
       });
@@ -414,7 +415,7 @@ export class App {
     return {
       playing: playing.length,
       lobbies: rooms.length - playing.length,
-      groups: new Set(rooms.filter((r) => !r.solo).map((r) => r.chatId)).size,
+      groups: new Set(rooms.filter((r) => !r.solo && !r.tournament).map((r) => r.chatId)).size,
       solo: rooms.filter((r) => r.solo).length,
       online: this.hub?.people ?? 0,
       byGame,
@@ -537,7 +538,7 @@ export class App {
   /** A `web_app` button — private chats only. */
   webAppButton(room, text = '🃏 Открыть стол') {
     if (!this.webappUrl) return null;
-    return { text, web_app: { url: `${this.webappUrl}/?room=${room.code}` } };
+    return { text, web_app: { url: room.tournament ? `${this.webappUrl}/tournament/${room.code}` : `${this.webappUrl}/?room=${room.code}` } };
   }
 
   /* -------------------------------------------------------------- drawing */
@@ -558,7 +559,7 @@ export class App {
     // (аудит, E-03). После карточки стол пишется ещё раз — с её номером.
     this.save(room);
     // Партия с ботами живёт только в приложении: ни карточки, ни лички.
-    if (room.solo) return Promise.resolve();
+    if (room.solo || room.tournament) return Promise.resolve();
     this.track(this.pingTurns(room));
     const produce = async () => {
       const view = gameOf(room).card(room, { link: this.tableLink(room) });
@@ -745,7 +746,7 @@ export class App {
    */
   rate(room) {
     // С ботами — тренировка: в рейтинг людей она не идёт.
-    if (room.solo) return [];
+    if (room.solo || room.tournament) return [];
     const rounds = gameOf(room).rounds?.(room) ?? [];
     if (!rounds.length) return [];
     const seen = (room.rated ||= {});
@@ -797,7 +798,7 @@ export class App {
    * идут без группы: им объявлять некому.
    */
   announcements(room) {
-    return room.solo ? [] : gameOf(room).announcements?.(room) ?? [];
+    return room.solo || room.tournament ? [] : gameOf(room).announcements?.(room) ?? [];
   }
 
   async say(room, texts) {
@@ -808,8 +809,16 @@ export class App {
   /** A hand was dealt (or the game ended instead). */
   async afterDeal(room, r) {
     if (r?.finished) return this.finishUp(room);
+    if (room.tournament) {
+      for (const p of room.players.filter(p => p.inHand && !p.bot)) {
+        if (this.hub?.isPresent(room.code, p.id)) this.noteSeen(p.id);
+        try { this.store.noteProductUse?.(p.id, 'tournament', room.code, this.clock.now()); }
+        catch (err) { this.log(err); }
+      }
+    }
     this.note('round', room); // раздача в покере, партия в дураке
     this.collections.freeze(room); // collections: снимок оформления этой раздачи, один раз
+    this.collections.recordUse(room);
     // Blinds alone can put everybody all-in: then the board is turned over at
     // once, and that may even end the game on the spot.
     const revealing = gameOf(room).beginShow?.(this, room);
@@ -889,6 +898,7 @@ export class App {
   freezeClocks() {
     const now = this.clock.now();
     for (const room of this.rooms.values()) {
+      parkTournament(room, now);
       for (const t of [room.turn, room.autoNext]) {
         if (t && t.deadline != null) {
           t.remaining = Math.max(0, t.deadline - now);
@@ -910,6 +920,11 @@ export class App {
    * сбивает и ничего не дублирует.
    */
   coreClocks(room, now) {
+    if (room.tournament) {
+      if (room.status === 'finished') return [];
+      const at = room.idleAt ?? room.createdAt;
+      return [{ id: 'idle', timer: { key: `tournament-idle:${at}`, deadline: at + IDLE_PLAY_MS }, fire: () => this.dropGame(room) }];
+    }
     if (room.solo) {
       // Брошенная партия с ботами: тихо убрать через три часа без единого действия.
       const at = room.solo.seenAt ?? room.createdAt ?? now;
@@ -1532,7 +1547,7 @@ export class App {
     // The card says the game is over; the results go below it as their own
     // message — the one message of the evening worth a notification.
     const g = gameOf(room);
-    if (room.solo) {
+    if (room.solo || room.tournament) {
       // Итоги партии с ботами — на экране игрока, не в чате.
       this.note('finished', room);
       g.onFinish?.(room);

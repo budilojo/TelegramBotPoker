@@ -11,7 +11,7 @@ import { DEMO_NOTE } from './state.js';
 import { buyBlock } from './purchase.js';
 import { gameNames, personal, sourceText } from './shop-model.js';
 export { DEMO_NOTE };
-export const SLOT_TABS = [['cardback', 'Карты'], ['table', 'Столы'], ['profile', 'Профиль'], ['frame', 'Рамки'], ['badge', 'Значки'], ['chess-board', 'Шахматы'], ['checkers-board', 'Шашки'], ['nardy-board', 'Нарды'], ['battleship-panel', 'Морской бой'], ['unoq-cardback', 'UNOQ']];
+export const SLOT_TABS = [['cardback', 'Карты'], ['table', 'Столы'], ['profile', 'Профиль'], ['frame', 'Рамки'], ['badge', 'Значки'], ['chess-board', 'Шахматы'], ['checkers-board', 'Шашки'], ['nardy-board', 'Нарды'], ['battleship-panel', 'Морской бой'], ['unoq-cardback', 'UNOQ'], ['talisman', 'Талисманы']];
 
 export const colorTitle = (id) => COLORS.find((c) => c.id === id)?.title || '';
 

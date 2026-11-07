@@ -86,9 +86,9 @@ try {
    }
    // Return from local fixture to authoritative server state; reconnect reload uses frozen server snapshot.
    await h.page.reload();await h.page.waitForSelector(selector);assert.deepEqual(room.turn,turn);
-   assert.ok((await h.page.locator(selector).first().getAttribute('src')).includes(`sever-${slot}`));
-   // SVG failure keeps the game interactive and is remembered after redraw.
-   await spy.page.route('**/collections/v2-art/*-game.svg',r=>r.fulfill({status:404,body:''}));
+   assert.equal(await h.page.locator(selector).first().getAttribute('src'), itemById(`sever-${slot}`).assets.game);
+   // Asset failure keeps the game interactive and is remembered after redraw.
+   await spy.page.route(/\/collections\/(?:v2-art\/.*-game\.svg|raster\/.*\.webp)$/,r=>r.fulfill({status:404,body:''}));
    await spy.page.reload();await until(()=>spy.page.locator(selector).count().then(n=>n===0),'fallback removes failed art');
    assert.ok(await spy.page.locator('.top,.ch-head').count());
    for(const p of pages)for(const m of p.frames.filter(m=>m.t==='state'&&m.state.game)){

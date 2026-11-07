@@ -4,9 +4,11 @@ import { ITEMS } from '../miniapp/collections/catalog.js';
 import { filteredItems, GAMES, gamesOf, sourceText } from '../miniapp/collections/shop-model.js';
 import { stateOf } from '../miniapp/collections/item.js';
 
-test('shop: all 64 stable positions reachable, game scope preserves legacy profile', () => {
-  assert.equal(filteredItems().length, 64);
+test('shop: all 70 positions reachable, game scope preserves legacy profile', () => {
+  assert.equal(filteredItems().length, 70);
   assert.deepEqual(['cards', 'tables', 'boards', 'profile', 'bundles'].map(category => filteredItems({ category }).length), [13, 7, 24, 13, 7]);
+  assert.equal(filteredItems({ collection: 'talismans' }).length, 6);
+  assert.equal(filteredItems({ game: 'chess', collection: 'talismans' }).length, 0);
   for (const [game] of GAMES) for (const collection of ['sever', 'obsidian', 'chertezh', 'terracotta', 'orbita', 'porcelain']) {
     const positions = filteredItems({ game, collection });
     assert.ok(positions.some(it => it.slot === 'frame'));

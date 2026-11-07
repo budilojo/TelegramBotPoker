@@ -13,23 +13,27 @@ export function fittingSamples(h, id, game) {
       h('span.col-sample-name', badge ? itemArt(h, badge.id, true) : null, 'Вы'))));
   for (const x of entries.filter(x => !['frame', 'badge'].includes(x.slot))) {
     let body;
+    const frame = x.assets.preview?.startsWith('/collections/raster/') ? '.raster-frame' : '';
     if (['cardback', 'unoq-cardback'].includes(x.slot)) {
       body = h('div.col-sample-hand', itemArt(h, x.id, true), itemArt(h, x.id), image(h, game === 'colors' ? '/colors/R5.svg' : '/cards/AS.svg'));
+    } else if (x.slot === 'talisman') {
+      body = h('div.col-sample-profile', h('span.col-sample-name', itemArt(h, x.id, true), 'Вы'),
+        h('span.col-note', 'Талисман видите только вы'));
     } else if (['chess-board', 'checkers-board'].includes(x.slot)) {
       const cells = Array.from({ length: 64 }, (_, i) => {
         const dark = (Math.floor(i / 8) + i % 8) % 2 === 1;
         const pc = game === 'chess' && (i < 16 || i >= 48) ? `${i < 16 ? 'b' : 'w'}${i < 8 || i >= 56 ? 'RNBQKBNR'[i % 8] : 'P'}` : null;
         return h(`span.col-sample-cell${dark ? '.dark' : ''}`, pc ? image(h, `/chess/${pc}.svg`) : game === 'checkers' && dark && (i < 24 || i >= 40) ? h(`i${i < 24 ? '.black' : ''}${i === 17 ? '.king' : ''}`) : null);
       });
-      body = h('div.col-sample', { 'data-sample': game, role: 'img', 'aria-label': `Образец: ${GAMES.find(([g]) => g === game)[1]}` },
+      body = h(`div.col-sample${frame}`, { 'data-sample': game, role: 'img', 'aria-label': `Образец: ${GAMES.find(([g]) => g === game)[1]}` },
         h('div.col-sample-content.col-sample-grid', cells), itemArt(h, x.id, true));
     } else if (x.slot === 'nardy-board') {
-      body = h('div.col-sample.nardy', { 'data-sample': game, role: 'img', 'aria-label': 'Образец доски нард с шашками и кубиками' },
+      body = h(`div.col-sample.nardy${frame}`, { 'data-sample': game, role: 'img', 'aria-label': 'Образец доски нард с шашками и кубиками' },
         h('div.col-sample-content.col-sample-points', Array.from({ length: 24 }, (_, i) => h('span.col-sample-point', [0, 5, 12, 17].includes(i) ? Array.from({ length: 3 }, () => h(i < 12 ? 'i' : 'i.white')) : null))),
         itemArt(h, x.id, true), h('span.col-sample-dice', '⚄ ⚂'));
     } else if (x.slot === 'battleship-panel') {
       body = h('div.col-block', ['Ваше поле · образец', 'Поле соперника · образец'].map((title, side) => h('section.col-block', h('h3.col-cap', title),
-        h('div.col-sample.sea', { 'data-sample': game, role: 'img', 'aria-label': title },
+        h(`div.col-sample.sea${frame}`, { 'data-sample': game, role: 'img', 'aria-label': title },
           h('div.col-sample-content', Array.from({ length: 100 }, (_, i) => h(`span.col-sea-cell${!side && [22, 23, 24].includes(i) ? '.ship' : ''}`, i === 45 ? '×' : i === 64 ? '•' : ''))), itemArt(h, x.id, true)))));
     } else if (x.slot === 'table') {
       body = h('div.col-sample.table', { 'data-sample': game, role: 'img', 'aria-label': 'Образец общего стола' }, itemArt(h, x.id, true),

@@ -30,7 +30,7 @@ test('предметы: id уникальны и стабильны, компл�
   assert.deepEqual(ITEMS.filter((x) => !x.collection).map((x) => x.id), ['graphit-cardback', 'graphit-table', 'graphit-profile', 'graphit-bundle']);
   assert.equal(new Set(ITEMS.map((x) => x.id)).size, ITEMS.length);
   assert.deepEqual(LEGACY_SLOTS, ['cardback', 'table', 'profile']);
-  assert.deepEqual(SLOTS, [...LEGACY_SLOTS, 'frame', 'badge', 'chess-board', 'checkers-board', 'nardy-board', 'battleship-panel', 'unoq-cardback']);
+  assert.deepEqual(SLOTS, [...LEGACY_SLOTS, 'frame', 'badge', 'chess-board', 'checkers-board', 'nardy-board', 'battleship-panel', 'unoq-cardback', 'talisman']);
   assert.equal(V2_ITEMS.length, 60);
   assert.equal(V2_ITEMS.filter((x) => x.kind === 'item').length, 54);
   const bundle = itemById('graphit-bundle');
@@ -83,7 +83,7 @@ test('база не конфликтует с id предметов и цвет�
 });
 
 test('протокол: операции, коды отказов и req', () => {
-  assert.deepEqual(OPS, ['state', 'grant', 'apply', 'clear', 'apply-bundle']);
+  assert.deepEqual(OPS, ['state', 'grant', 'apply', 'clear', 'apply-bundle', 'hide-talisman']);
   assert.deepEqual(Object.keys(ERRORS), ['COL_OFF', 'COL_DEMO_OFF', 'COL_OP', 'COL_ITEM', 'COL_COLOR', 'COL_SLOT', 'COL_NOT_OWNED', 'COL_FAST', 'COL_STALE', 'COL_BUSY']);
   for (const t of Object.values(ERRORS)) assert.match(t, /[а-яё]/i);
   assert.equal(isReq('abcdefgh'), true);

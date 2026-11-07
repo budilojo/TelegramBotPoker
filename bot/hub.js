@@ -22,6 +22,8 @@
  */
 import { checkInitData } from './webapp-auth.js';
 import { GAMES, GAME_LIST, gameOf } from './games/index.js';
+import { createTournament, TOURNAMENT_CODE, TOUR_ERRORS } from './games/poker/tournament.js';
+import { productMetrics } from './product-metrics.js';
 import { HUB_PREFIX, MAX_LIVE_PER_GROUP, RATING_SOON_TEXT, TOO_MANY_GAMES_TEXT, SOLO_CODE } from './app.js';
 import { AUDIENCES, ERRORS as CAST_ERRORS } from './broadcast.js';
 import { PER_DAY, sign } from './rating.js';
@@ -106,7 +108,10 @@ export class Hub {
     const initial = [];
     let opening = true;
     const r = this.openInner(args, (msg) => opening ? initial.push(msg) : send(msg));
-    if (r.session && r.session.kind !== 'admin') this.pages.add(r.session);
+    if (r.session && r.session.kind !== 'admin') {
+      this.pages.add(r.session);
+      if (r.session.visible !== false) this.app.noteSeen(r.session.user.id);
+    }
     // collections: при подключении и переподключении — своё состояние, но только когда модуль включён.
     if (r.session && r.session.kind !== 'admin' && this.app.collections.visibleFor(r.session.user.id)) {
       try { send(this.app.collections.stateOf(r.session.user.id)); } catch (err) { this.app.log(err); }
@@ -116,7 +121,7 @@ export class Hub {
     return r;
   }
 
-  openInner({ initData, room: wanted, back, visible } = {}, send) {
+  openInner({ initData, room: wanted, back, visible, leftTournament } = {}, send) {
     const opts = { now: this.app.clock.now(), maxAgeSec: this.maxAgeSec };
     let auth = checkInitData(initData, this.botToken, opts);
     // Подпись админ-бота — вторая дверь, и ведёт она только в админку.
@@ -131,9 +136,6 @@ export class Hub {
     if (!auth.ok) {
       return { error: 'AUTH', text: auth.reason === 'EXPIRED' ? 'Сессия устарела — откройте стол заново.' : 'Откройте стол из Telegram.' };
     }
-    // Владелец, зашедший посмотреть цифры, — не игрок: в «сколько людей
-    // открывало приложение» он не попадает, иначе цифры врут про себя.
-    if (!viaAdmin) this.app.noteSeen(auth.user.id);
     const asked = String(wanted || '').trim();
     // Страница, которая сама переподключилась в фоне, — не «кто-то за столом»:
     // иначе забытый телефон с открытым приложением держит брошенный стол вечно.
@@ -144,7 +146,8 @@ export class Hub {
       this.enterRoom(session, room, { quiet });
     };
     // The signed start_param wins over anything in the page's own URL.
-    const code = String(auth.startParam || asked || '').trim();
+    const signed = String(auth.startParam || '').trim();
+    const code = leftTournament === true && TOURNAMENT_CODE.test(signed) && !TOURNAMENT_CODE.test(asked) ? '' : signed || asked;
 
     // Страница из лички админ-бота не садится за стол и не открывает хаб:
     // тот бот про игры ничего не знает, и его подпись на это не даёт права.
@@ -157,6 +160,14 @@ export class Hub {
       const session = { id: this.nextId++, user: auth.user, kind: 'admin', group: null, code: null, send, visible: true };
       this.adminPages.add(session);
       this.pushAdmin(session);
+      return { session };
+    }
+    const tournamentCode = TOURNAMENT_CODE.exec(code)?.[1] || TOURNAMENT_CODE.exec(asked)?.[1];
+    if (tournamentCode) {
+      const room = this.app.roomByCode(tournamentCode);
+      if (!room?.tournament) return { error: 'NO_ROOM', text: 'Турнир не найден.' };
+      const session = { id: this.nextId++, user: auth.user, kind: 'room', group: null, code: null, send, visible: true };
+      enter(session, room);
       return { session };
     }
     // Opened without a group or a room — from the bot's profile or a button in
@@ -357,6 +368,13 @@ export class Hub {
     if (this.app.down) return void session.send({ t: 'state', state: this.downState() });
     try {
       const state = gameOf(room).view(room, session.user.id, { now: this.app.clock.now(), botUsername: this.app.botUsername });
+      const talisman = this.app.collections.talismanFor(room, session.user.id);
+      if (talisman) state.talisman = talisman;
+      if (room.tournament) {
+        const a = this.app;
+        state.tournament.share = a.miniAppName ? `https://t.me/${a.botUsername}/${a.miniAppName}?startapp=t_${room.code}`
+          : a.botUsername ? `https://t.me/${a.botUsername}?start=t_${room.code}` : `${a.webappUrl}/tournament/${room.code}`;
+      }
       if (session.group) state.hub = true; // it came from the group's hub: offer the way back
       if (!room.solo && this.rematchGroup(session, room, state.room?.status)) state.canRematch = true; // «+ Новое лобби» на итогах
       if (room.solo) {
@@ -567,6 +585,7 @@ export class Hub {
       // открыли во время обслуживания.
       const wasHidden = session.visible === false;
       session.visible = !!msg.visible;
+      if (wasHidden && session.visible && session.kind !== 'admin') this.app.noteSeen(session.user.id);
       // Человек вернулся к экрану стола — это признак жизни (свёрнутая страница им не была).
       if (wasHidden && session.visible && session.kind === 'room') {
         const room = this.app.roomByCode(session.code);
@@ -595,6 +614,14 @@ export class Hub {
       // ни в хабе. Отказ объясняется, как любой другой.
       this.refuse(session, 'DOWN', `⏸ Идёт обслуживание. ${this.app.downText}`);
       return void this.resend(session);
+    }
+    if (msg.t === 'tournament-create') {
+      if (!['hub', 'home', 'solo', 'rating'].includes(session.kind)) return this.refuse(session, 'BAD_REQUEST');
+      const room = createTournament(this.app, session.user, msg);
+      if (room.error) return this.refuse(session, room.error, TOUR_ERRORS[room.error]);
+      this.enterRoom(session, room);
+      this.app.note('created', room);
+      return this.app.draw(room);
     }
     // Рейтинговые столы: спросить можно с любого экрана хаба, но только когда
     // рейтинг открыт. Пока закрыт — отказ словами, список не собирается.
@@ -665,6 +692,7 @@ export class Hub {
     }
     if (msg.t === 'chat-sync') return void syncChat(room, this.chats, session);
     if (room.solo) room.solo.seenAt = app.clock.now(); // партия с ботами жива, пока её трогают
+    if (msg.t === 'hub' && room.tournament && !session.group) return this.pushSolo(session);
     if (msg.t === 'hub' && room.solo) return this.pushSolo(session);
     if (msg.t === 'hub') {
       if (!session.group || !app.groupByCode(session.group)) return this.refuse(session, 'NOT_FROM_HUB');
@@ -675,6 +703,7 @@ export class Hub {
     // тот же хост — тот, кто нажал. Только со страницы, открытой из хаба группы,
     // и только для игры этой же группы.
     // «Сыграть ещё» за столом с ботами: та же игра, те же соперники и уровень.
+    if (room.tournament && ['again', 'drop', 'share'].includes(msg.t)) return this.refuse(session, 'TOUR_ACTION', TOUR_ERRORS.TOUR_ACTION);
     if (msg.t === 'again' && room.solo) {
       // Эту страницу сперва отцепляем от старой партии: иначе её удаление скажет
       // странице «Игру удалили» — и вместо новой партии человек увидит тупик.
@@ -1156,6 +1185,7 @@ export function adminView(app) {
     live: app.liveNow(),
     stats: app.store.stats(now),
     shopTab: shopTabSummary(app.store, now),
+    product: productMetrics(app.store.db, now, app.rooms.values()),
     down: { on: app.down, text: app.maintenance.text || '', since: app.maintenance.since || null },
     sessions,
     casts: app.casts ? { list: app.casts.list(10), sizes: app.casts.sizes(), audiences: AUDIENCES, sending: app.casts.busy } : null,

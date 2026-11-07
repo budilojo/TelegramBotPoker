@@ -67,11 +67,11 @@ try {
   const p = host.page, b = guest.page;
   try {
    await p.locator('.nav-tab[data-tab="shop"]').click(); await p.waitForSelector('.col-show');
-   assert.equal(await p.locator('.col-card').count(), 64); assert.equal(await p.locator('.col-root .nav-tab').count(), 4);
+   assert.equal(await p.locator('.col-card').count(), 70); assert.equal(await p.locator('.col-root .nav-tab').count(), 4);
    assert.equal(await p.locator('.nav-tab[data-tab="shop"]').getAttribute('aria-current'), 'page');
    assert.match(await p.locator('.col-show').innerText(), /Доступ владельца/);
    assert.equal(await p.locator('[data-result-count]').count(), 1, 'catalog count uses its own attribute');
-   assert.equal(await p.locator('[data-result-count]').innerText(), 'Найдено: 64', 'catalog count is not a clock');
+   assert.equal(await p.locator('[data-result-count]').innerText(), 'Найдено: 70', 'catalog count is not a clock');
    assert.equal(await p.locator('.col-bundle-mini').count(), 6, 'six bundles use small asset compositions');
    assert.equal(await p.locator('.col-bundle-mini img').count(), 54, 'nine small items in every bundle');
    assert.deepEqual(host.requests.filter(src => /v2-art\/.*-preview.svg$/.test(src)), [], 'catalog never fetches detailed previews, including bundles');
@@ -96,7 +96,9 @@ try {
    assert.equal(await p.locator('[data-chips="collection"] button').count(), 5);
    await select(p, 'collection', 'talismans');
    assert.equal(await p.locator('[data-result-count]').innerText(), 'Найдено: 0');
-   await select(p, 'game', ''); await select(p, 'collection', ''); await select(p, 'category', '');
+   await select(p, 'game', ''); await select(p, 'category', '');
+   assert.equal(await p.locator('.col-card').count(), 6, 'two talismans per collection');
+   await select(p, 'collection', '');
    await p.locator('.col-scroll').evaluate(e => e.scrollTop = 1100);
    const chosen = p.locator('.col-card[data-item="obsidian-frame"]'); await chosen.scrollIntoViewIfNeeded();
    const scroll = await p.locator('.col-scroll').evaluate(e => e.scrollTop); await chosen.click(); await back(p);
@@ -156,8 +158,10 @@ try {
    // Legacy/programmatic item entry still opens new store; broken image remembers fallback across redraw.
    await b.evaluate(async () => (await import('/collections/index.js')).close());
    let failedRequests = 0;
-   b.on('request', r => { if (r.url().endsWith('/sever-chess-board-preview.svg')) failedRequests++; });
-   await b.route('**/sever-chess-board-preview.svg', r => r.fulfill({ status: 404, body: '' }));
+   b.on('request', r => { if (r.url().endsWith('/sever-board.webp')) failedRequests++; });
+   await b.route('**/sever-board.webp', r => r.fulfill({ status: 404, body: '' }));
+   await b.goto(url);
+   await b.locator('.nav-tab[data-tab="shop"]').waitFor();
    await b.evaluate(async () => (await import('/collections/index.js')).open({ name: 'fit', id: 'sever-chess-board' }));
    await b.waitForSelector('[data-art="sever-chess-board"].fallback'); assert.equal(await b.locator('.col-sample .col-art-base').isVisible(), false, 'failed ornament leaves classic board without extra marks'); await layout(b, 'fallback'); await shot(b, `fallback-${width}`);
    await b.getByRole('combobox', { name: 'Игра для примерки' }).selectOption('chess');
@@ -180,7 +184,7 @@ try {
      assert.equal(await loading.page.locator('.nav-tab[data-tab="shop"]').count(), 0, 'server flag is required before showing the entry');
      await loading.page.evaluate(() => { window.__holdCol = false; window.__heldCol.splice(0).forEach(f => f()); });
      await loading.page.locator('.nav-tab[data-tab="shop"]').click();
-     await loading.page.waitForSelector('.col-show'); assert.equal(await loading.page.locator('.col-card').count(), 64);
+     await loading.page.waitForSelector('.col-show'); assert.equal(await loading.page.locator('.col-card').count(), 70);
     } finally { await loading.context.close(); }
    }
    console.log(`store ${width}: catalog/filters/scroll/focus, ack/clear/refusal/reconnect, bundle, off/owner, fallback OK`);

@@ -19,7 +19,7 @@ import {
 } from '../ui.js';
 import { dropItem } from '../drop.js';
 const DEFAULT_BACK = '/cards/back.svg';
-import { makeHolder, dressTable, placeDiamond, DURAK_AVOID, frameAvatar, nameWithMark, frameOf as frameLook } from '../collections/look-view.js';
+import { makeHolder, dressTable, placeDiamond, DURAK_AVOID, frameAvatar, nameWithMark, frameOf as frameLook, talismanImg } from '../collections/look-view.js';
 
 /* Оформление «Графит»: стол хоста — на всю партию; рамка и знак — только лобби и итоги. Рубашек у дурака нет. */
 const lookHolder = makeHolder();
@@ -337,8 +337,9 @@ function heroEl(s) {
     cards.length ? rows.map((row) => h('div.dk-row', row.map((c) => cardEl(c, k++)))) : h('div.dk-empty-hand', 'Карт нет'));
   const cls = ['hero', 'dk-hero', myMove && 'turn'].filter(Boolean).join('.');
   return h(`div.${cls}`,
-    h(`div.dk-role${myMove ? '.go' : ''}${role.kind ? '.' + role.kind : ''}`, role.text,
-      myMove && d?.deadline ? h('span.num', { 'data-count': d.deadline, style: { marginLeft: '8px' } }) : null),
+    h('div.talisman-label.dk-talisman-label', talismanImg(s.talisman, 'durak'),
+      h(`div.dk-role${myMove ? '.go' : ''}${role.kind ? '.' + role.kind : ''}`, role.text,
+        myMove && d?.deadline ? h('span.num', { 'data-count': d.deadline, style: { marginLeft: '8px' } }) : null)),
     hand);
 }
 

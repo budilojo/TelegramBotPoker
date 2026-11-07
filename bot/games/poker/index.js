@@ -11,6 +11,7 @@
  * street by street, the turn timer and the automatic deal.
  */
 import * as R from '../../room.js';
+import { TOUR_ERRORS, parkTournament, tournamentClock, tournamentView, topUp } from './tournament.js';
 import { tableView } from '../../view.js';
 import { renderCard, renderResults, renderTurnPing } from '../../render.js';
 import { num } from '../../fmt.js';
@@ -244,7 +245,7 @@ export default {
   blurb: 'Техасский холдем, фишки',
   minPlayers: 2,
   maxPlayers: R.MAX_SEATS,
-  errors: ERRORS,
+  errors: { ...ERRORS, ...TOUR_ERRORS },
   bot,
 
   create({ chatId, title, host, settings = null }) {
@@ -261,7 +262,11 @@ export default {
     return room;
   },
 
-  serialize: (room, now) => R.serialize(room, now),
+  serialize(room, now = Date.now()) {
+    const copy = R.serialize(room, now);
+    parkTournament(copy, now);
+    return copy;
+  },
 
   deserialize(data) {
     const room = R.deserialize(data);
@@ -271,6 +276,11 @@ export default {
 
   view(room, viewerId, ctx) {
     const v = { game: 'poker', ...tableView(room, viewerId, ctx) };
+    if (room.tournament) {
+      v.tournament = tournamentView(room, v, viewerId);
+      v.room.maxSeats = room.tournament.seats;
+      v.canNext = false;
+    }
     if (room.learn && String(viewerId) === room.solo?.owner) {
       v.learn = S.learnView(room, v);
       if (S.lessonOf(room)) v.canNext = false; // после урока — «Дальше» или «Ещё раз», а не просто раздача
@@ -338,7 +348,7 @@ export default {
     const s = room.settings;
     return {
       seated: seated.length,
-      max: R.MAX_SEATS,
+      max: room.tournament?.seats ?? R.MAX_SEATS,
       names: seated.map((p) => p.name),
       detail: `блайнды ${num(s.smallBlind)}/${num(s.bigBlind)}`,
     };
@@ -370,7 +380,8 @@ export default {
       { id: 'turn', timer: turn, fire: () => onTurnTimeout(app, code, turn.key) },
       { id: 'next', timer: next, fire: () => onAutoNext(app, code, next.key) },
       { id: 'reveal', keep: true },
-    ];
+      tournamentClock(app, room, now),
+    ].filter(Boolean);
   },
 
   /**
@@ -379,6 +390,18 @@ export default {
    * that follows from the move (group card, timers, reveal) is taken care of.
    */
   async handle({ app, session, room, uid, msg, refuse, push }) {
+    if (room.tournament) {
+      if (['tour-rebuy', 'tour-addon'].includes(msg.t)) {
+        if (msg.seq !== room.seq) { refuse('STALE'); return push(); }
+        const r = topUp(room, uid, msg.t === 'tour-rebuy', app.clock.now());
+        return r.error ? refuse(r.error) : app.afterChange(room);
+      }
+      if (!['sit', 'start', 'act', 'pause', 'resume', 'finish'].includes(msg.t)) return refuse('TOUR_ACTION');
+      if (msg.t === 'sit') {
+        if (room.status !== 'lobby') return refuse('TOUR_LOCKED');
+        if (room.players.length >= room.tournament.seats && !room.players.some(p => p.id === uid)) return refuse('TOUR_FULL');
+      }
+    }
     if (!ACTIONS.has(msg.t)) return refuse('BAD_REQUEST');
     if (room.solo && !SOLO_ACTIONS.has(msg.t)) return refuse('SOLO_ONLY');
     const target = () => {

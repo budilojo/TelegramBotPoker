@@ -10,7 +10,9 @@ import { tg, toast, haptic, openShare } from './ui.js';
 
 export const initData = tg?.initData || '';
 /** What the link opened: a room code, or `g_<code>` — a group's hub. Signed by Telegram. */
+const tournamentPath = () => /^\/tournament\/([a-z2-9]{10})$/.exec(location.pathname)?.[1];
 export const startCode = tg?.initDataUnsafe?.start_param || new URLSearchParams(location.search).get('room') || '';
+let leftTournament = false;
 
 /** Live connection facts every screen may read. */
 export const net = {
@@ -70,7 +72,7 @@ export function connect() {
     // allows it only for a room of the group this page was opened for.
     // `back` — страница переподключается, а не открывается; `visible` — видна ли она:
     // свёрнутая страница стол «живым» не делает (иначе брошенный стол не закрыть).
-    ws.send(JSON.stringify({ t: 'hello', initData, room: net.inside || startCode, back: connectedOnce, visible: !document.hidden }));
+    ws.send(JSON.stringify({ t: 'hello', initData, room: tournamentPath() ? `t_${tournamentPath()}` : leftTournament ? '' : net.inside || startCode, leftTournament, back: connectedOnce, visible: !document.hidden }));
   };
   ws.onmessage = (e) => {
     let msg;
@@ -89,6 +91,18 @@ export function connect() {
       // Where this page is now — asked for again after a reconnect. The server
       // lets a page back only into its own group's games (or its own groups).
       const st = net.state;
+      if (st.tournament) {
+        leftTournament = false;
+        const url = new URL(location.href);
+        url.pathname = `/tournament/${st.room.code}`;
+        if (location.pathname !== url.pathname) history.replaceState(history.state, '', url);
+      } else if (tournamentPath() && st.kind !== 'down') {
+        leftTournament = true;
+        const url = new URL(location.href);
+        url.pathname = '/';
+        if (url.searchParams.get('room')?.startsWith('t_')) url.searchParams.delete('room');
+        history.replaceState(history.state, '', url);
+      }
       if (startCode.startsWith('g_')) net.inside = st.kind === 'hub' ? null : st.room?.code || null;
       else if (startCode === 'solo') net.inside = st.kind === 'solo' ? null : st.room?.code || null;
       else if (startCode === 'admin') net.inside = null;

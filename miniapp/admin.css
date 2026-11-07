@@ -280,3 +280,9 @@
   .tabs { grid-template-columns: repeat(3, 1fr); }
   .tab span:not(.tab-i) { font-size: var(--k-fs-caption); }
 }
+
+.product-list summary {
+  min-height: var(--k-tap);
+  align-content: center;
+  cursor: pointer;
+}

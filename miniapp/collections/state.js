@@ -48,6 +48,7 @@ export function normalizeState(msg) {
   out.appearance = { frame: publicEntry(msg.appearance?.frame, ['frame', 'profile']), badge: publicEntry(msg.appearance?.badge, 'badge') };
   out.enabled = msg.enabled === true;
   out.shopEnabled = msg.shopEnabled !== false;
+  out.talismanHidden = msg.talismanHidden === true;
   out.demo = msg.enabled === true && msg.demo === true;
   if (Array.isArray(msg.owned)) {
     for (const o of msg.owned) {
@@ -84,6 +85,7 @@ function satisfied(snap, w) {
   }
   if (w.op === 'apply-bundle') return itemsOfBundle(w.item).every((id) => snap.choice[itemById(id).slot]?.item === id);
   if (w.op === 'apply') return snap.choice[w.slot]?.item === w.item && snap.choice[w.slot]?.color === w.color;
+  if (w.op === 'hide-talisman') return snap.talismanHidden === w.hidden;
   if (w.op === 'clear') return snap.choice[w.slot] == null;
   return false;
 }
@@ -114,11 +116,12 @@ export function createStore(deps = {}) {
   }
 
   function fire(w0) {
-    const w = { op: w0.op, item: w0.item, slot: w0.slot, color: w0.color, req: w0.req };
+    const w = { op: w0.op, item: w0.item, slot: w0.slot, color: w0.color, hidden: w0.hidden, req: w0.req };
     const msg = { t: 'col', v: 2, op: w.op, req: w.req };
     if (w.op === 'grant' || w.op === 'apply-bundle') msg.item = w.item;
     if (w.op === 'apply' || w.op === 'apply-bundle') Object.assign(msg, { slot: w.slot, item: w.item, color: w.color });
     if (w.op === 'clear') msg.slot = w.slot;
+    if (w.op === 'hide-talisman') msg.hidden = w.hidden;
     if (w.op === 'state') delete msg.req;
     const ok = d.send(msg);
     if (!ok) {
@@ -159,6 +162,7 @@ export function createStore(deps = {}) {
         demo: s.demo,
         shop: s.shop,
         shopEnabled: api.shopEnabled,
+        talismanHidden: s.talismanHidden === true,
         visible: visible(),
         owned: s.owned.map((o) => o.item),
         sources: Object.fromEntries(s.owned.map((o) => [o.item, o.source || []])),
@@ -182,7 +186,7 @@ export function createStore(deps = {}) {
           const w = wait;
           wait = null;
           if (w.op !== 'state') {
-            lost = { op: w.op, item: w.item, slot: w.slot, color: w.color, req: w.req };
+            lost = { op: w.op, item: w.item, slot: w.slot, color: w.color, hidden: w.hidden, req: w.req };
             error = { text: 'Связь прервалась до ответа сервера. Прежнее оформление сохранено. Повторите.', code: 'LINK', again: true };
           }
         }
@@ -237,6 +241,11 @@ export function createStore(deps = {}) {
       return fire({ op: 'apply-bundle', item, color, req: d.genReq() });
     },
 
+    hideTalisman(hidden) {
+      if (!visible() || wait || !connected || server.v !== 2) return false;
+      return fire({ op: 'hide-talisman', hidden, req: d.genReq() });
+    },
+
     clear(slot) {
       if (!visible() || wait || !connected) return false;
       if (!SLOTS.includes(slot) || (!LEGACY_SLOTS.includes(slot) && server.v !== 2)) return false;
@@ -266,13 +275,13 @@ export function createStore(deps = {}) {
         // Явный отказ: сервер ответил, ничего не изменив. Повтор — с новым req.
         const w = wait;
         if (w) { d.clearTimer(w.timer); wait = null; }
-        lost = w && w.op !== 'state' ? { op: w.op, item: w.item, slot: w.slot, color: w.color, req: d.genReq() } : null;
+        lost = w && w.op !== 'state' ? { op: w.op, item: w.item, slot: w.slot, color: w.color, hidden: w.hidden, req: d.genReq() } : null;
         error = { text, code, again: !!lost && code !== 'COL_OFF' && code !== 'COL_DEMO_OFF' };
         if (!error.again) lost = null;
         emit();
         return;
       }
-      if (msg.op !== 'state' && !['grant', 'apply', 'clear', 'apply-bundle'].includes(msg.op)) return;
+      if (msg.op !== 'state' && !['grant', 'apply', 'clear', 'apply-bundle', 'hide-talisman'].includes(msg.op)) return;
       const snap = normalizeState(msg);
       server = snap;
       if (msg.op === 'apply' && wait?.op === 'apply' && (msg.when === 'now' || msg.when === 'next-deal')) lastWhen[wait.slot] = msg.when;

@@ -23,6 +23,7 @@ const TYPES = {
   '.css': 'text/css; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
+  '.webp': 'image/webp',
   '.json': 'application/json; charset=utf-8',
 };
 
@@ -81,7 +82,8 @@ export function startServer({ hub, port, root, host = '0.0.0.0', log = console.e
       res.end(JSON.stringify({ ok: true, sessions: hub.sessions }));
       return;
     }
-    const file = files.get(pathname === '/' ? '/index.html' : pathname);
+    const page = pathname === '/' || /^\/tournament\/[a-z2-9]{10}$/.test(pathname);
+    const file = files.get(page ? '/index.html' : pathname);
     if (!file) {
       res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' }).end('Not found');
       return;
@@ -91,7 +93,7 @@ export function startServer({ hub, port, root, host = '0.0.0.0', log = console.e
       'content-type': TYPES[ext],
       // Card pictures never change for a given name; the app itself should be
       // picked up fresh after every restart of the bot.
-      'cache-control': ext === '.svg' || ext === '.png' ? 'public, max-age=86400' : 'no-cache',
+      'cache-control': ['.svg', '.png', '.webp'].includes(ext) ? 'public, max-age=86400' : 'no-cache',
       'x-content-type-options': 'nosniff',
       'referrer-policy': 'no-referrer',
     });

@@ -1,3 +1,4 @@
+import { withRaster, TALISMANS } from './raster.js';
 /**
  * Каталог коллекции «Графит» — общий чистый модуль (без DOM и зависимостей).
  * Его читают и сервер (`bot/collections/**`), и клиент (`miniapp/collections/*`).
@@ -22,14 +23,15 @@ export const DEFAULT_COLOR = 'graphite';
 
 /** Что можно «надеть». */
 export const LEGACY_SLOTS = ['cardback', 'table', 'profile'];
-export const SLOTS = [...LEGACY_SLOTS, 'frame', 'badge', 'chess-board', 'checkers-board', 'nardy-board', 'battleship-panel', 'unoq-cardback'];
+export const SLOTS = [...LEGACY_SLOTS, 'frame', 'badge', 'chess-board', 'checkers-board', 'nardy-board', 'battleship-panel', 'unoq-cardback', 'talisman'];
 
 export const ITEMS = [
   { id: 'graphit-cardback', kind: 'item', slot: 'cardback', title: 'Рубашка «Графит»', games: ['poker'], visibility: 'owner-closed-cards', price: 99 },
   { id: 'graphit-table', kind: 'item', slot: 'table', title: 'Стол «Графит»', games: ['poker', 'durak'], visibility: 'room', price: 199 },
   { id: 'graphit-profile', kind: 'item', slot: 'profile', title: 'Знак «Графит»', games: ['lobby', 'results'], visibility: 'public-profile', price: 79 },
   { id: 'graphit-bundle', kind: 'bundle', title: 'Коллекция «Графит»', includes: ['graphit-cardback', 'graphit-table', 'graphit-profile'], price: 249 },
-  ...V2_ITEMS,
+  ...V2_ITEMS.map(withRaster),
+  ...TALISMANS,
 ];
 
 /** Бесплатное базовое оформление: доступно всегда, id зарезервированы. */

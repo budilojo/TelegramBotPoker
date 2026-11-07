@@ -889,7 +889,7 @@ export function syncAutoNext(room, now) {
     return null;
   }
   const key = `next:${h.no}`;
-  if (room.autoNext?.key !== key) room.autoNext = { key, deadline: null, remaining: AUTO_NEXT_MS };
+  if (room.autoNext?.key !== key) room.autoNext = { key, deadline: null, remaining: room.tournament ? 15_000 : AUTO_NEXT_MS };
   const a = room.autoNext;
   if (room.status === 'paused') {
     if (a.deadline != null) {
@@ -929,7 +929,7 @@ function afterHandMaybeOver(room) {
   if (!h || h.phase !== 'complete') return;
   if (room.history.length > HISTORY_DEPTH) room.history.length = HISTORY_DEPTH;
   const contenders = room.players.filter((p) => !p.kicked && !p.left);
-  if (gameOverCheck({ players: contenders })) return finish(room);
+  if (!room.tournament && gameOverCheck({ players: contenders })) return finish(room);
   if ((h.timeouts || 0) > 0 && !(h.voluntary || 0) && room.status === 'playing') {
     room.status = 'paused';
     setLevelClock(room, false);

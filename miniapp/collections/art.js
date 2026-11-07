@@ -69,7 +69,7 @@ export function itemArt(h, id, detail = false) {
   const box = h('span.col-art', { 'data-art': id, style: { '--ratio': ratio } });
   // Bundles have no game SVG. Compose their nine existing small assets instead
   // of downloading six detailed bundle previews on the catalog route.
-  if (it?.collection && it.kind === 'bundle' && !detail) {
+  if (it?.collection && it.kind === 'bundle' && (!detail || it.assets.preview?.startsWith('/collections/raster/'))) {
     box.append(h('span.col-bundle-mini', itemsOfBundle(id).map(part => itemArt(h, part, false))));
     return box;
   }

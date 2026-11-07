@@ -17,6 +17,7 @@ import { renderRanked, resetRanked } from './rating.js';
 import { renderProfileSettings } from './profile.js';
 import { settingsRows } from './settings-rows.js';
 import { store as collectionsStore } from './collections/state.js';
+import { tournamentCreate } from './tournament.js';
 
 /** На каких состояниях сервера панель есть. */
 const KINDS = new Set(['home', 'hub', 'solo', 'rating']);
@@ -129,6 +130,12 @@ function shopSoon() {
 /** Блок строк из реестра `settings-rows.js`; пока строк нет — ничего, вид «Настроек» прежний. */
 function extraRows(s) {
   const rows = settingsRows(s);
+  const snap = collectionsStore.snapshot();
+  if (snap.v === 2 && snap.visible) rows.push(h('button.set-row', {
+    type: 'button', 'aria-pressed': String(snap.talismanHidden), disabled: !!snap.busy || snap.link !== 'ok',
+    onclick: () => collectionsStore.hideTalisman(!snap.talismanHidden),
+  }, h('div.set-body', h('div.set-title', 'Скрывать талисман за столом'),
+    h('div.set-sub', snap.talismanHidden ? 'Талисман скрыт' : 'Талисман виден, если надет'))));
   return rows.length ? [h('section.set-block.set-extra', rows)] : [];
 }
 
@@ -150,6 +157,11 @@ function settings(s) {
           h('div.set-title', 'Напоминание «ваш ход»'),
           h('div.set-sub', 'Бот напишет в личку, когда подошла ваша очередь, а приложение закрыто. Если не приходит — откройте бота и нажмите Start.')),
         h('button.btn.sm', { onclick: () => { haptic.tap(); tg?.openTelegramLink?.(`https://t.me/${s.bot}?start=notify`); } }, 'Открыть бота'))) : null,
+
+    h('section.set-block',
+      h('div.section-label', 'Турниры'),
+      h('button.set-row', { onclick: tournamentCreate }, h('div.set-body', h('div.set-title', 'Создать турнир'),
+        h('div.set-sub', 'Покер на одном столе · до 8 игроков')))),
 
     s.bot ? h('section.set-block',
       h('div.section-label', 'Поддержка'),

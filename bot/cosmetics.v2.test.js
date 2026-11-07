@@ -190,8 +190,8 @@ test('C v2: old snapshot v1 not rebuilt until next deal; unknown version and wro
   room.gameNo++;t.app.draw(room); assert.equal(spy.state().look.v,2);
   assert.deepEqual(spy.state().look.board,E('sever-chess-board'));
   assert.equal(gameAsset(E('sever-chess-board'),'checkers-board','checkers'),null);
-  assert.match(gameAsset(E('sever-chess-board'),'chess-board','chess'),/sever-chess-board-game.svg/);
-  markFailed('/collections/v2-art/sever-chess-board-game.svg');
+  assert.match(gameAsset(E('sever-chess-board'),'chess-board','chess'),/sever-board\.webp/);
+  markFailed('/collections/raster/sever-board.webp');
   assert.equal(gameAsset(E('sever-chess-board'),'chess-board','chess'),null);resetFailed();
 });
 

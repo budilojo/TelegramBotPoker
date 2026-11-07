@@ -6,6 +6,7 @@ const GAMES = new Set(['poker', 'durak', 'colors', 'chess', 'checkers', 'nardy',
 export const BOARD_SLOT = { chess: 'chess-board', checkers: 'checkers-board', nardy: 'nardy-board', battleship: 'battleship-panel' };
 export const dealNoOf = (room) => (room.game === 'poker' ? room.handNo : room.gameNo) || 0;
 const emptySlots = (v = 2) => Object.fromEntries((v === 2 ? SLOTS : LEGACY_SLOTS).map((s) => [s, null]));
+const hiddenKey = (uid) => `cosmetic:talisman-hidden:${uid}`;
 const same = (a, b) => (a?.item ?? null) === (b?.item ?? null) && (a?.color ?? null) === (b?.color ?? null);
 
 export class Collections {
@@ -13,6 +14,11 @@ export class Collections {
   get enabled() { return true; }
   get pay() { return this.app.payments ?? null; }
   visibleFor() { return true; }
+  talismanHidden(uid) { return this.app.store.getSetting(hiddenKey(uid)) === true; }
+  talismanFor(room, uid) {
+    const pick = room.look?.talismans?.[String(uid)];
+    return this.talismanHidden(uid) ? null : publicEntry(pick, 'talisman', room.game);
+  }
 
   sourcesOf(uid) {
     const u = String(uid), out = new Map();
@@ -62,19 +68,33 @@ export class Collections {
   fits(id, room) { return !!itemById(id)?.games.includes(room.game); }
   supported(room) { return !!room && GAMES.has(room.game) && room.status !== undefined; }
   build(room, dealNo) {
-    const c = this.choiceOf(room.hostId), backs = {}, frames = {}, badges = {};
+    const c = this.choiceOf(room.hostId), backs = {}, frames = {}, badges = {}, talismans = {};
     const fit = (e) => e && this.fits(e.item, room) ? e : null;
     for (const p of room.players.filter((p) => !p.bot && !p.left && !p.kicked)) {
       const own = this.choiceOf(p.id);
+      if (fit(own.talisman)) talismans[p.id] = own.talisman;
       if (room.game === 'poker' && own.cardback) backs[p.id] = own.cardback;
       const frame = this.personal(own, 'frame'), badge = this.personal(own, 'badge');
       // The old paired Graphit profile keeps its original two-game scope.
       if (frame && (itemById(frame.item)?.collection || ['poker', 'durak'].includes(room.game))) frames[p.id] = frame;
       if (badge && itemById(badge.item)?.collection) badges[p.id] = badge;
     }
-    return { v: 2, table: fit(c.table), board: fit(c[BOARD_SLOT[room.game]]), deckBack: fit(c['unoq-cardback']), backs, frames, badges, dealNo, hostId: room.hostId };
+    return { v: 2, table: fit(c.table), board: fit(c[BOARD_SLOT[room.game]]), deckBack: fit(c['unoq-cardback']), backs, frames, badges, talismans, dealNo, hostId: room.hostId };
   }
   freeze(room) { if (this.supported(room)) room.look = this.build(room, dealNoOf(room)); }
+  recordUse(room) {
+    const { look, hostId } = room;
+    if (look?.v !== 2) return;
+    const now = this.app.clock.now();
+    for (const p of room.players.filter(p => !p.bot && !p.left && !p.kicked && p.inHand !== false)) {
+      const picks = [look.backs[p.id], look.frames[p.id], look.badges[p.id], this.talismanFor(room, p.id)];
+      if (p.id === hostId) picks.push(look.table, look.board, look.deckBack);
+      for (const pick of picks.filter(Boolean)) {
+        try { this.app.store.noteProductUse?.(p.id, 'cosmetic', pick.item, now); }
+        catch (err) { this.app.log(err); }
+      }
+    }
+  }
   settle(room) {
     if (!this.supported(room)) return;
     if (room.status === 'lobby') { room.look = this.build(room, 0); return; }
@@ -85,7 +105,7 @@ export class Collections {
     const valid = (uid, e) => e && this.owns(uid, e.item) ? e : null;
     const host = l.hostId ?? room.hostId;
     for (const key of ['table', 'board', 'deckBack']) if (l[key]) l[key] = valid(host, l[key]);
-    for (const key of ['backs', 'frames', 'badges']) for (const uid of Object.keys(l[key] ?? {})) {
+    for (const key of ['backs', 'frames', 'badges', 'talismans']) for (const uid of Object.keys(l[key] ?? {})) {
       if (!valid(uid, l[key][uid])) delete l[key][uid];
     }
   }
@@ -96,6 +116,8 @@ export class Collections {
       const me = room.players.find((p) => p.id === String(uid) && !p.bot && !p.left && !p.kicked);
       if (!me) continue;
       const l = room.look;
+      const talisman = this.fits(mine.talisman?.item, room) ? mine.talisman : null;
+      if (!same(talisman, l.talismans?.[me.id])) out.talisman = 'next-deal';
       if (room.game === 'poker' && !same(mine.cardback, l.backs?.[me.id])) out.cardback = 'next-deal';
       for (const [slot, key] of [['frame', 'frames'], ['badge', 'badges']]) {
         if (!same(this.personal(mine, slot), l[key]?.[me.id])) out[slot] = 'next-deal';
@@ -117,6 +139,7 @@ export class Collections {
       s.choice[slot] = choice[slot]?.color === 'classic' || (legacy && itemById(choice[slot]?.item)?.collection) ? null : choice[slot];
       s.pending[slot] = pending[slot];
     }
+    if (!legacy) s.talismanHidden = this.talismanHidden(uid);
     if (!legacy) s.appearance = { frame: this.personal(choice, 'frame'), badge: publicEntry(choice.badge, 'badge') };
     if (!this.demo && this.pay) {
       s.shop = this.pay.shopState(String(uid));
@@ -145,6 +168,14 @@ export class Collections {
     if (msg.room || msg.code) return fail('COL_OP');
     const store = this.app.store, now = this.app.clock.now();
     if (store.collReqSeen(uid, msg.req)) return this.answer(op, uid, msg.slot, v);
+    if (op === 'hide-talisman') {
+      if (v !== 2 || typeof msg.hidden !== 'boolean') return fail('COL_OP');
+      store.setSetting(hiddenKey(uid), msg.hidden);
+      store.collReqAdd(uid, msg.req, now, REQ_KEEP);
+      this.changed(uid);
+      this.pushState(uid);
+      return this.answer(op, uid, null, v);
+    }
     if (op === 'grant') {
       const it = itemById(msg.item);
       if (!it) return fail('COL_ITEM');

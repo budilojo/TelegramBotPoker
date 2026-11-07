@@ -1,0 +1,14 @@
+.tour { gap: var(--k-s16); }
+.tour-form, .tour-actions, .tour-input, .tour-level, .tour-leaders {
+  display: grid;
+  gap: var(--k-s8);
+}
+.tour h1 { overflow-wrap: anywhere; }
+.tour-level > div { display: flex; justify-content: space-between; gap: var(--k-s8); }
+.tour-leaders { list-style: none; padding: 0; margin: 0; }
+.tour-player { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: baseline; gap: var(--k-s4) var(--k-s8); }
+.tour-player strong { overflow-wrap: anywhere; }
+.tour-topup { grid-column: 2 / -1; }
+.tour-input { min-width: 0; }
+.tour-form .inp { width: 100%; min-height: var(--k-tap); font: inherit; }
+.tour-form textarea.inp { padding: var(--k-s8); resize: vertical; }

@@ -20,9 +20,10 @@ import { dropItem } from '../drop.js';
 import { net, bus, send, serverNow } from '../net.js';
 import { chatMenuItem } from '../chat.js';
 import { shopMenuItem } from '../collections/menu.js';
+import { tournamentSummary, tournamentTopup } from '../tournament.js';
 import { markDone } from '../school.js';
 import { avatarEl } from '../profile.js';
-import { makeHolder, dressTable, placeDiamond, POKER_AVOID, backImgFor, frameAvatar, nameWithMark, frameOf as frameLook } from '../collections/look-view.js';
+import { makeHolder, dressTable, placeDiamond, POKER_AVOID, backImgFor, frameAvatar, nameWithMark, frameOf as frameLook, talismanImg } from '../collections/look-view.js';
 
 /* Оформление «Графит»: вид держим на раздачу — посреди неё он не меняется (docs/graphit-launch/contracts.md, п. 5, 9). */
 const lookHolder = makeHolder();
@@ -47,9 +48,11 @@ function newLobby() {
 
 let state = null;
 let prev = null;
+let tournamentTable = false;
 
 /** A new state from the server, and the one before it on this table (or null). */
 export function onState(s, p, { wasConnected }) {
+  if (!p || p.room.code !== s.room.code || s.room.status === 'finished') tournamentTable = false;
   state = s;
   prev = p;
   look = lookHolder.hold(`${s.game}:${s.room.code}`, s.room.status, s.look);
@@ -58,6 +61,10 @@ export function onState(s, p, { wasConnected }) {
 
 /** The whole screen, from the current state. */
 export function render() {
+  if (state.tournament && !tournamentTable) {
+    $app.append(tournamentSummary(state, () => { tournamentTable = true; bus.render(); }));
+    return;
+  }
   if (state.room.status === 'lobby') renderLobby();
   else if (state.room.status === 'finished' && !inFinale()) renderResults();
   else renderTable();
@@ -804,7 +811,7 @@ function heroEl(s) {
     info.append(animateOnce(h(`div.your-turn${urgent ? '.urgent' : ''}`, 'ВАШ ХОД', hd.deadline ? h('span.num', { 'data-count': hd.deadline }) : null),
       `yt:${turnId}`, [{ transform: 'scale(0.5)', opacity: 0, offset: 0 }, { transform: 'scale(1.12)', opacity: 1, offset: 0.6 }], { duration: 420 }));
   }
-  info.append(h('div.hero-name', mine.name));
+  info.append(h('div.talisman-label', talismanImg(s.talisman, 'poker'), h('div.hero-name', mine.name)));
   // Your balance, and what the last pot added to it — rolling up as the chips arrive.
   const won = hd?.phase === 'complete' && !hd.revealing ? hd.result?.winners?.find((w) => w.seat === mine.seat) : null;
   info.append(h('div.hero-stack-row',
@@ -860,6 +867,7 @@ function panelEl(s) {
     }
     return note('⏸ Пауза — хост продолжит игру');
   }
+  if (s.tournament && !me.seated) return note('Вы смотрите турнир. Регистрация закрыта.');
   // Not at the table (a spectator, or sat out): the one thing to offer is a seat.
   const mine = s.players.find((p) => p.isMe);
   const inThisHand = mine?.inHand && hd && hd.phase !== 'complete';
@@ -922,6 +930,11 @@ function panelEl(s) {
       panel.append(animateOnce(h('button.btn.gold.wide.lg', { onclick: () => { finale = null; bus.render(); } }, '🏁 Итоги вечера'),
         `finale:${hd.no}`, [{ transform: 'translateY(18px)', opacity: 0, offset: 0 }], { duration: 420, delay: (planFor(s)?.pay ?? 0) + 900 }));
       return panel;
+    }
+    if (s.tournament) {
+      const topup = tournamentTopup(s, true);
+      if (topup) { panel.append(topup); return panel; }
+      return note('Следующая раздача', s.autoNextAt ? h('span.num', { 'data-count': s.autoNextAt, 'data-prefix': ' через ' }) : null);
     }
     if (s.learn?.result) return learnButtons(s, panel);
     if (s.canNext) {
@@ -1218,6 +1231,14 @@ function openMenu() {
     const items = [];
     const item = (label, sub, onclick, cls = '') => items.push(h(`button.menu-item${cls ? '.' + cls : ''}`, { onclick }, label, sub ? h('small', sub) : null));
 
+    if (s.tournament) {
+      item('Турнирная таблица', 'блайнды, фишки и докупки', () => { closeSheet(); tournamentTable = false; bus.render(); });
+      if (me.isHost && s.room.status === 'playing') item('Пауза', 'остановит таймеры', () => { closeSheet(); send({ t: 'pause' }); });
+      if (me.isHost && s.room.status === 'paused') item('Продолжить игру', null, () => { closeSheet(); send({ t: 'resume' }); });
+      if (me.isHost) item('Завершить турнир', 'итоги останутся в турнирной таблице', () => confirmFinish(), 'danger');
+      items.push(chatMenuItem(s), shopMenuItem());
+      return h('div', h('h3', 'Меню турнира'), h('div.menu-list', items));
+    }
     if (s.solo) {
       // За столом с ботами человек играет, а не правит стол: только пауза и конец.
       item(s.hubLabel || '← Игры с ботами', 'партию можно будет продолжить', () => { closeSheet(); send({ t: 'hub' }, { lock: false }); });

@@ -22,6 +22,7 @@ import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { ym, ymd, ymdBack } from './fmt.js';
+import { PRODUCT_SCHEMA } from './product-metrics.js';
 import { PayStore } from './payments/store.js';
 import { SupportStore } from './support.js';
 
@@ -316,7 +317,7 @@ export class Store {
     if (file !== ':memory:') fs.mkdirSync(path.dirname(file), { recursive: true });
     this.db = new DatabaseSync(file);
     this.db.exec('PRAGMA journal_mode = WAL;');
-    this.db.exec(SCHEMA);
+    this.db.exec(SCHEMA + PRODUCT_SCHEMA);
     this.upgrade();
     this.db.exec(ROOMS);
     this.db.prepare('INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
@@ -700,6 +701,11 @@ export class Store {
    * Заметить, что человек открыл приложение. Второй раз за тот же день
    * ничего не пишет.
    */
+  noteProductUse(userId, kind, item, at) {
+    this.db.prepare('INSERT OR IGNORE INTO product_use (day, user_id, kind, item) VALUES (?, ?, ?, ?)')
+      .run(ymd(at), String(userId), kind, item);
+  }
+
   noteSeen(userId, at = Date.now()) {
     this.q.addSeen.run(String(userId), ymd(at));
   }

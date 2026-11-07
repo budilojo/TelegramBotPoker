@@ -2,7 +2,7 @@
  * Словарь протокола «страница ↔ сервер» для сообщений `{ t: 'col', … }`.
  * Контракт: `docs/graphit-launch/contracts.md`, раздел 2. Чистый модуль.
  */
-export const OPS = ['state', 'grant', 'apply', 'clear', 'apply-bundle'];
+export const OPS = ['state', 'grant', 'apply', 'clear', 'apply-bundle', 'hide-talisman'];
 
 /** Коды отказов и тексты по-русски; сервер отдаёт `{ code, text }`. */
 export const ERRORS = {

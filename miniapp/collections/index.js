@@ -40,6 +40,7 @@ let awaiting = null; // id, выдачу которого ждём: после �
 let lastKey = '';
 let wasVisible = false;
 let wasShopEnabled = false;
+let talismanHidden = false;
 let entryChecked = false;
 const FILTERS = {
   game: ['shopGame', GAMES],
@@ -227,6 +228,10 @@ function onStore() {
   const snap = store.snapshot();
   // Покупка подтверждается только состоянием сервера: вещь пришла в «owned» — тогда «Куплено».
   pay.sawOwned(snap.owned);
+  if (snap.talismanHidden !== talismanHidden) {
+    talismanHidden = snap.talismanHidden;
+    if (net.state && nav.activeTab(net.state) === 'settings') bus.render();
+  }
   if (wasVisible && !snap.visible) { close(); wasVisible = snap.visible; bus.render(); return; }
   if (wasVisible !== snap.visible || wasShopEnabled !== snap.shopEnabled) {
     wasVisible = snap.visible;

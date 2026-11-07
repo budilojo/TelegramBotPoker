@@ -102,3 +102,8 @@ img.card.gr-back { aspect-ratio: 200 / 280; object-fit: contain; }
 .cv2-board-art.cv2-nardy { left: -5.556%; top: -7.692%; width: 111.112%; height: 115.384%;
   clip-path: polygon(0 3.334%, 100% 3.334%, 100% 96.666%, 0 96.666%, 0 3.334%, 5% 6.667%, 5% 93.333%, 95% 93.333%, 95% 6.667%, 5% 6.667%); }
 .cv2-deck-back { pointer-events: none; user-select: none; }
+
+/* The talisman has its own space in the label row. It never sits on the felt or cards. */
+.talisman-label { display: flex; min-width: 0; align-items: center; gap: var(--k-s4); }
+.dk-talisman-label { justify-content: center; }
+.table-talisman { width: min(24px, 8vw); height: min(24px, 8vw); object-fit: contain; flex: none; pointer-events: none; }

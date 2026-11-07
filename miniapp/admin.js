@@ -80,6 +80,29 @@ const downBanner = (s) => h('div.down-banner',
 
 /* ------------------------------------------------------------- цифры */
 
+const collectionNames = { sever: 'Север', obsidian: 'Обсидиан', chertezh: 'Чертёж', terracotta: 'Терракота', orbita: 'Орбита', porcelain: 'Фарфор', graphit: 'Графит' };
+const share = (n, total) => total ? `${Math.round(100 * n / total)}%` : '—';
+
+function productTab(product) {
+  if (!product) return null;
+  const { activity: a, tournaments: t } = product;
+  const list = (title, items) => h('details.box.product-list',
+    h('summary', title),
+    items.length ? h('ol', items.map(x => h('li', `${x.title} · ${collectionNames[x.collection]} · ${fmt(x.players)}`))) : h('p.hint', 'Пока нет данных'));
+  const retention = (label, r) => tile(label, share(r.returned, r.cohort), `${fmt(r.returned)} из ${fmt(r.cohort)} новых`);
+  return h('section',
+    h('div.section-label', 'Активность и оформление'),
+    a ? h('div.tiles',
+      tile('активны сегодня · DAU', a.dau), tile('активны за 7 дней · WAU', a.wau),
+      retention('вернулись на 1-й день · D1', a.d1), retention('вернулись на 7-й день · D7', a.d7),
+      tile('получили первую вещь', share(a.converted, a.total), `${fmt(a.converted)} из ${fmt(a.total)} игроков`),
+      tile('использовали оформление или сыграли турнир · NSM', a.nsm, 'Среди активных за 7 дней'),
+      tile('талисманы надеты', a.installed.installed), tile('из них скрыты', a.installed.hidden)) : null,
+    h('div.tiles', tile('турниров идёт', t.active), tile('участников в среднем', t.average == null ? '—' : String(Math.round(t.average * 10) / 10).replace('.', ','))),
+    a ? list('10 популярных предметов за 7 дней', a.top) : null,
+    a?.collections.map(c => list(collectionNames[c.collection], c.top)));
+}
+
 function statsTab(s) {
   const p = s.stats.people;
   const g = s.stats.groups;
@@ -98,6 +121,7 @@ function statsTab(s) {
       tile('лобби ждут', live.lobbies),
       tile('групп с играми', live.groups)),
 
+    productTab(s.product),
     h('div.section-label', 'Люди'),
     h('div.tiles',
       tile('всего', p.total),

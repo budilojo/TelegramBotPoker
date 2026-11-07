@@ -225,7 +225,7 @@ export function nameWithMark(name, frame, badge = null) {
 export function gameAsset(raw, slot, game = null) {
   const e = publicEntry(raw, slot, game);
   const src = e && itemById(e.item)?.assets?.game;
-  return typeof src === 'string' && src.startsWith('/collections/v2-art/') && !failed.has(src) ? src : null;
+  return typeof src === 'string' && (src.startsWith('/collections/v2-art/') || src.startsWith('/collections/raster/')) && !failed.has(src) ? src : null;
 }
 
 /** External art frame. The board, coordinates and all interactive children retain their geometry. */
@@ -244,4 +244,10 @@ export function deckBackImg(look, cls = '') {
   const img = make('img', `cl-img cv2-deck-back ${cls}`, { src, alt: 'Закрытая карта', draggable: 'false' });
   img.addEventListener('error', () => { markFailed(src); img.src = '/colors/back.svg'; img.classList.remove('cv2-deck-back'); }, { once: true });
   return img;
+}
+
+/** Small personal decoration, rendered in the reserved space beside the player's label. */
+export function talismanImg(entry, game) {
+  const src = gameAsset(entry, 'talisman', game);
+  return src ? deco(src, 'table-talisman') : null;
 }

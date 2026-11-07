@@ -145,7 +145,7 @@ function backButton(s) {
     });
     backBound = true;
   }
-  if (s?.hub || currentSheet() || collections.isOpen() || activeRoute() || (s && nav.activeTab(s) !== 'games')) b.show?.();
+  if (s?.tournament || s?.hub || currentSheet() || collections.isOpen() || activeRoute() || (s && nav.activeTab(s) !== 'games')) b.show?.();
   else b.hide?.();
 }
 
