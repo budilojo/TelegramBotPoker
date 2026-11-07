@@ -197,7 +197,7 @@ export class App {
   constructor({
     api, store = new NullStore(), minIntervalMs = 1000, botUsername = '', onError = null, deck = null, durakDeck = null,
     clock = REAL_CLOCK, runoutStepMs = 1500, webappUrl = '', miniAppName = '', admins = [], ratingSoon = RATING_SOON,
-    botRng = Math.random, collectionsDemo = false, sales = null, skillShadow = null,
+    botRng = Math.random, collectionsDemo = false, shopEnabled = true, sales = null, skillShadow = null,
   } = {}) {
     this.api = api;
     this.store = store;
@@ -246,7 +246,7 @@ export class App {
     /** Личный прогресс «Тренировки» в покере (bot/train.js): ни в вид стола, ни в рейтинг не идёт. */
     this.training = new Training(this);
     // collections: коллекция «Графит». Демосреда — только строгое `true` из серверной настройки (bot/index.js).
-    this.collections = new Collections(this, { demo: collectionsDemo === true });
+    this.collections = new Collections(this, { demo: collectionsDemo === true, shopEnabled });
     // payments: покупки за Stars. Режим — только из настроек процесса (bot/index.js); по умолчанию продажи закрыты.
     this.payments = new Payments(this, sales || salesConfig({}));
     // поддержка: игрок пишет боту, владелец отвечает от имени бота (bot/support.js).

@@ -15,7 +15,7 @@
  *  - в игры не заглядываем: здесь нет карт, ходов и комнат.
  */
 import crypto from 'node:crypto';
-import { itemById, itemsOfBundle } from '../../miniapp/collections/catalog.js';
+import { ITEMS, itemById, itemsOfBundle } from '../../miniapp/collections/catalog.js';
 import { isReq } from '../../miniapp/collections/protocol.js';
 import { SELLABLE, isPrice, isHidden, priceOf, MAX_PRICE } from './config.js';
 
@@ -28,7 +28,7 @@ const ASK_MS = 10 * MINUTE;
 export const ASHOP_ERRORS = {
   OP: 'Не понял запрос.',
   FAST: 'Слишком часто. Подождите минуту.',
-  ITEM: 'Такой вещи в магазине нет.',
+  ITEM: 'Такой вещи в каталоге нет.',
   PRICE: `Цена — целое число звёзд от 1 до ${String(MAX_PRICE).replace(/\B(?=(\d{3})+$)/g, '.')}.`,
   SAME: 'Цена и так такая.',
   USER: 'Нужен Telegram id — только цифры.',
@@ -194,7 +194,7 @@ export class AdminShop {
     const uid = String(msg.user ?? '').trim();
     if (!isUid(uid)) return { error: this.fail(op, 'USER') };
     const id = String(msg.item ?? '');
-    if (!SELLABLE.has(id)) return { error: this.fail(op, 'ITEM') };
+    if (!itemById(id)) return { error: this.fail(op, 'ITEM') };
     return { uid, id };
   }
 
@@ -293,6 +293,7 @@ export class AdminShop {
         base: base.items[id] ?? null, price: eff.offers.items[id] ?? null,
         hidden: isHidden(eff, id), sells: g.open ? priceOf(eff, id) : null,
       })),
+      grantItems: ITEMS.map(({ id, title, kind }) => ({ id, title, kind, parts: partsOf(id) })),
       orders: this.db.recentOrders(15).map((o) => this.orderRow(o)),
       log: this.db.adminLogs(20),
       inFlight: this.db.inFlight(now),

@@ -9,7 +9,7 @@ const emptySlots = (v = 2) => Object.fromEntries((v === 2 ? SLOTS : LEGACY_SLOTS
 const same = (a, b) => (a?.item ?? null) === (b?.item ?? null) && (a?.color ?? null) === (b?.color ?? null);
 
 export class Collections {
-  constructor(app, { demo = false } = {}) { this.app = app; this.demo = demo === true; this.limits = new Map(); }
+  constructor(app, { demo = false, shopEnabled = true } = {}) { this.app = app; this.demo = demo === true; this.shopEnabled = shopEnabled; this.limits = new Map(); }
   get enabled() { return true; }
   get pay() { return this.app.payments ?? null; }
   visibleFor() { return true; }
@@ -110,7 +110,7 @@ export class Collections {
   }
   stateOf(uid, v = 2) {
     const legacy = v !== 2, choice = this.choiceOf(uid), pending = this.pendingOf(uid);
-    const s = { t: 'col', op: 'state', v: legacy ? 1 : 2, enabled: true, demo: this.demo,
+    const s = { t: 'col', op: 'state', v: legacy ? 1 : 2, enabled: true, demo: this.demo, shopEnabled: this.shopEnabled,
       owned: [...this.sourcesOf(uid)].filter(([id]) => !legacy || !itemById(id).collection).map(([item, from]) => (this.demo && legacy ? { item, demo: from.size === 1 && from.has('demo') } : { item, demo: this.demo && from.size === 1 && from.has('demo'), source: [...from].sort() })),
       choice: emptySlots(v), pending: emptySlots(v) };
     for (const slot of Object.keys(s.choice)) {

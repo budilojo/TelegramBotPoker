@@ -36,7 +36,7 @@ const shot = async (p, name) => { if (teeth) return; if (name.includes('-return-
 async function layout(p, label) {
   const r = await p.evaluate(() => {
     const root = document.querySelector('.col-root');
-    return { wide: root.scrollWidth > innerWidth || [...root.querySelectorAll('*')].some(e => e.getBoundingClientRect().right > innerWidth + 1),
+    return { wide: root.scrollWidth > innerWidth || [...root.querySelectorAll('*')].some(e => !e.closest('.col-chips') && e.getBoundingClientRect().right > innerWidth + 1),
       small: [...root.querySelectorAll('button,select')].filter(e => e.getClientRects().length && (e.getBoundingClientRect().height < 44 || e.getBoundingClientRect().width < 44)).map(e => e.textContent.slice(0, 40)),
       unnamed: [...root.querySelectorAll('button,select')].filter(e => !e.getAttribute('aria-label') && !e.textContent.trim()).map(e => e.outerHTML) };
   });
@@ -51,12 +51,17 @@ async function layout(p, label) {
   }));
   assert.deepEqual(offScale, [], `${label}: design tokens, flat UI`);
 }
-async function select(p, key, val) { await p.locator(`[data-filter="${key}"]`).selectOption(val); }
+async function select(p, key, val) {
+  const filter = p.locator(`[data-filter="${key}"]`);
+  if (key === 'game') await filter.selectOption(val);
+  else await filter.and(p.locator(`[data-value="${val}"]`)).click();
+}
 async function tab(p, name) { await p.locator('.col-controls').getByRole('button', { name, exact: true }).click(); }
 async function card(p, id) { await p.locator(`.col-card[data-item="${id}"]`).click(); await p.waitForSelector('.col-item'); }
 try {
  console.log('Chromium', browser.version());
  for (const width of dockTeeth ? [] : teeth ? [320] : [320, 390]) {
+  await t.clock.advance(60_000); // Separate scenarios get their own rate-limit window.
   t.chatId = -94000 - width; await t.cmd(H, '/game'); const code = `g_${t.group.code}`;
   const host = await open(H, code, width, width === 320), guest = await open(B, code, width);
   const p = host.page, b = guest.page;
@@ -74,15 +79,23 @@ try {
    // Native filters support keyboard; category options are populated, no empty sections.
    await select(p, 'game', 'chess'); await select(p, 'category', 'boards'); await select(p, 'collection', 'sever');
    assert.equal(await p.locator('.col-card').count(), 1);
-   await p.locator('[data-filter="collection"]').focus(); await p.keyboard.press('Tab');
+   await p.locator('[data-filter="collection"][data-value="sever"]').focus(); await p.keyboard.press('Tab');
    assert.ok(await p.evaluate(() => document.activeElement.tagName === 'BUTTON'));
    await card(p, 'sever-chess-board'); await layout(p, 'item'); await shot(p, `item-${width}`);
    await p.getByRole('button', { name: 'Примерить', exact: true }).click(); await p.waitForSelector('[data-sample="chess"]');
    assert.equal(await p.locator('.col-sample-grid img').count(), 32); await layout(p, 'fitting'); await shot(p, `fitting-${width}`);
    await back(p); await p.waitForSelector('.col-item'); await back(p); await p.waitForSelector('.col-show');
-   assert.equal(await p.locator('[data-filter="collection"]').inputValue(), 'sever');
+   assert.equal(await p.locator('[data-filter="collection"][aria-pressed="true"]').getAttribute('data-value'), 'sever');
+   assert.equal(new URL(p.url()).searchParams.get('shopCategory'), 'sever');
    assert.equal(await p.locator('[data-filter="game"]').inputValue(), 'chess');
    assert.equal(await p.evaluate(() => document.activeElement.dataset.item), 'sever-chess-board');
+   await p.reload();
+   await p.locator('.nav-tab[data-tab="shop"]').click();
+   await p.waitForSelector('.col-show');
+   assert.equal(await p.locator('.col-card').count(), 1, 'URL restored the filters after reload');
+   assert.equal(await p.locator('[data-chips="collection"] button').count(), 5);
+   await select(p, 'collection', 'talismans');
+   assert.equal(await p.locator('[data-result-count]').innerText(), 'Найдено: 0');
    await select(p, 'game', ''); await select(p, 'collection', ''); await select(p, 'category', '');
    await p.locator('.col-scroll').evaluate(e => e.scrollTop = 1100);
    const chosen = p.locator('.col-card[data-item="obsidian-frame"]'); await chosen.scrollIntoViewIfNeeded();
@@ -118,7 +131,7 @@ try {
    await p.locator('.nav-tab[data-tab="rating"]').click(); await p.waitForSelector('.ranked'); assert.match(await p.locator('.ranked').innerText(), /скоро/i);
    await p.locator('.nav-tab[data-tab="shop"]').click(); await tab(p, 'Каталог');
    // Bundle action is atomic and preserves Graphit data; server validates all nine rights.
-   await select(p, 'game', ''); await select(p, 'category', 'bundles'); await select(p, 'collection', 'orbita');
+   await select(p, 'game', ''); await select(p, 'category', 'bundles'); await select(p, 'collection', '');
    assert.ok(!host.requests.includes('/collections/v2-art/orbita-bundle-preview.svg'), 'unopened bundle has no detail request');
    await p.locator('.col-card[data-item="orbita-bundle"]').scrollIntoViewIfNeeded();
    await shot(p, `bundle-${width}`);
@@ -164,9 +177,9 @@ try {
     await layout(b, 'long title'); await shot(b, `long-${width}`);
     const loading = await open(B, code, width, true, true);
     try {
-     await loading.page.locator('.nav-tab[data-tab="shop"]').click(); await loading.page.waitForSelector('.col-skel');
-     assert.equal(await loading.page.locator('.col-card').count(), 0); await shot(loading.page, `loading-${width}`);
+     assert.equal(await loading.page.locator('.nav-tab[data-tab="shop"]').count(), 0, 'server flag is required before showing the entry');
      await loading.page.evaluate(() => { window.__holdCol = false; window.__heldCol.splice(0).forEach(f => f()); });
+     await loading.page.locator('.nav-tab[data-tab="shop"]').click();
      await loading.page.waitForSelector('.col-show'); assert.equal(await loading.page.locator('.col-card').count(), 64);
     } finally { await loading.context.close(); }
    }

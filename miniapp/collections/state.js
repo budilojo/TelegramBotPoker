@@ -47,6 +47,7 @@ export function normalizeState(msg) {
   out.v = msg.v === 2 ? 2 : 1;
   out.appearance = { frame: publicEntry(msg.appearance?.frame, ['frame', 'profile']), badge: publicEntry(msg.appearance?.badge, 'badge') };
   out.enabled = msg.enabled === true;
+  out.shopEnabled = msg.shopEnabled !== false;
   out.demo = msg.enabled === true && msg.demo === true;
   if (Array.isArray(msg.owned)) {
     for (const o of msg.owned) {
@@ -147,6 +148,7 @@ export function createStore(deps = {}) {
     attach(over) { Object.assign(d, over); },
 
     get visible() { return visible(); },
+    get shopEnabled() { return server?.shopEnabled === true; },
 
     snapshot() {
       const s = server || empty();
@@ -156,6 +158,7 @@ export function createStore(deps = {}) {
         enabled: s.enabled,
         demo: s.demo,
         shop: s.shop,
+        shopEnabled: api.shopEnabled,
         visible: visible(),
         owned: s.owned.map((o) => o.item),
         sources: Object.fromEntries(s.owned.map((o) => [o.item, o.source || []])),

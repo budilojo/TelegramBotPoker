@@ -144,6 +144,7 @@ const app = new App({
   miniAppName: MINIAPP,
   admins: ADMINS,
   collectionsDemo: COLLECTIONS_DEMO, // collections
+  shopEnabled: process.env.SHOP_ENABLED === 'true',
   sales: SALES, // payments
 });
 app.cosmeticsTesters = new Set(COSMETICS_TESTERS);

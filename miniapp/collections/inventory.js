@@ -43,5 +43,7 @@ export function renderInventory(ctx) {
       h('h3.col-cap', `${slotTitle(slot)} · ${personal(slot) ? 'Личное' : 'Общая тема хоста'}`), current(slot)))),
     !owned.length ? h('div.col-empty', h('p', 'Пока у вас только базовое оформление — оно всегда доступно.'))
       : remaining.length ? h('section.col-block', h('h2.col-name', 'Ваши вещи'), remaining.map(card)) : null,
-    h('div.col-actions', btn(h, { text: 'Открыть коллекции', cls: 'secondary', onClick: () => ctx.replace({ name: 'showcase' }) })));
+    h('div.col-actions', snap.shopEnabled
+      ? btn(h, { text: 'Открыть коллекции', cls: 'secondary', onClick: () => ctx.replace({ name: 'showcase' }) })
+      : btn(h, { text: 'Мои покупки и поддержка', cls: 'secondary', onClick: () => ctx.go({ name: 'purchases' }) })));
 }

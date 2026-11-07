@@ -11,8 +11,8 @@
 import { h, haptic, trapFocus, syncLayers, focusMemo, restoreFocus } from '../ui.js';
 import { net, bus, send } from '../net.js';
 import { store, DEFAULT_COLOR } from './state.js';
-import { itemById, itemsOfBundle, COLLECTIONS } from './catalog.js';
-import { GAMES, CATEGORIES, filteredItems, collectionOf } from './shop-model.js';
+import { itemById, itemsOfBundle } from './catalog.js';
+import { GAMES, CATEGORIES, COLLECTION_FILTERS } from './shop-model.js';
 import * as nav from '../nav.js';
 import { renderShowcase } from './showcase.js';
 import { renderItem, itemTitle, btn } from './item.js';
@@ -39,8 +39,29 @@ let colors = {}; // черновик выбранного цвета по пре
 let awaiting = null; // id, выдачу которого ждём: после ответа покажем «Получено»
 let lastKey = '';
 let wasVisible = false;
+let wasShopEnabled = false;
 let entryChecked = false;
-let filters = { game: '', category: '', collection: '' };
+const FILTERS = {
+  game: ['shopGame', GAMES],
+  category: ['shopType', CATEGORIES],
+  collection: ['shopCategory', COLLECTION_FILTERS],
+};
+function filtersFromUrl() {
+  const query = new URLSearchParams(location.search);
+  return Object.fromEntries(Object.entries(FILTERS).map(([key, [param, options]]) => {
+    const value = query.get(param);
+    return [key, options.some(([id]) => id === value) ? value : ''];
+  }));
+}
+function saveFilters() {
+  const url = new URL(location.href);
+  for (const [key, [param]] of Object.entries(FILTERS)) {
+    if (filters[key]) url.searchParams.set(param, filters[key]);
+    else url.searchParams.delete(param);
+  }
+  history.replaceState(history.state, '', url);
+}
+let filters = filtersFromUrl();
 const positions = new Map();
 const savePosition = () => { if (root && stack.length) { stack.at(-1).scroll = root.scroll.scrollTop; stack.at(-1).focus = document.activeElement?.closest('[data-item]')?.dataset.item; } };
 
@@ -61,8 +82,7 @@ const ctx = () => ({
   h, store, pay, snap: store.snapshot(), route: stack[stack.length - 1], filters,
   setFilters: (patch) => {
     filters = { ...filters, ...patch };
-    if (patch.game !== undefined && filters.collection && !filteredItems({ game: filters.game, collection: filters.collection }).length) filters.collection = '';
-    if ((patch.game !== undefined || patch.collection !== undefined) && filters.category && !filteredItems(filters).length) filters.category = '';
+    saveFilters();
     stack.at(-1).scroll = 0; root.scroll.scrollTop = 0; draw(false);
   },
   setGame: (game) => { stack.at(-1).game = game; draw(false); },
@@ -86,7 +106,7 @@ export function back() {
 }
 
 function build() {
-  const el = h('div.col-root', { role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Магазин', onkeydown: (e) => trapFocus(e, el, back) });
+  const el = h('div.col-root', { role: 'dialog', 'aria-modal': 'true', 'aria-label': store.shopEnabled ? 'Магазин' : 'Мои вещи', onkeydown: (e) => trapFocus(e, el, back) });
   const backBtn = h('button.col-back', { type: 'button', 'aria-label': 'Назад', onclick: back, html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>' });
   const title = h('h1.col-title', { tabindex: '-1' });
   const scroll = h('div.col-scroll');
@@ -103,17 +123,20 @@ function shopControls(c) {
   const select = (key, title, options) => h('label.col-filter', h('span', title), h('select', {
     'aria-label': title, 'data-filter': key, onchange: e => c.setFilters({ [key]: e.target.value }),
   }, options.map(([id, text]) => h('option', { value: id, selected: filters[key] === id }, text))));
-  const scoped = filteredItems({ game: filters.game, collection: filters.collection });
+  const chips = (key, title, options) => h('div.col-chips', { role: 'group', 'aria-label': title, 'data-chips': key },
+    options.map(([id, text]) => h('button.col-chip', {
+      type: 'button', 'data-filter': key, 'data-value': id, 'aria-pressed': String(filters[key] === id),
+      onclick: () => c.setFilters({ [key]: id }),
+    }, text)));
   return h('div.col-controls',
-    h('div.col-tabs', { 'aria-label': 'Магазин' }, [['showcase', 'Каталог'], ['inventory', 'Мои вещи']].map(([name, title]) => h('button.col-tab', {
+    snap.shopEnabled ? h('div.col-tabs', { 'aria-label': 'Магазин' }, [['showcase', 'Каталог'], ['inventory', 'Мои вещи']].map(([name, title]) => h('button.col-tab', {
       type: 'button', 'aria-pressed': String(c.route.name === name), onclick: () => {
         savePosition(); positions.set(c.route.name, c.route.scroll || 0); stack = [{ name, scroll: positions.get(name) || 0 }]; draw(true);
       },
-    }, title))),
+    }, title))) : null,
+    c.route.name === 'showcase' ? chips('collection', 'Коллекция', COLLECTION_FILTERS) : null,
     select('game', 'Игра', [['', 'Все игры'], ...GAMES]),
-    c.route.name === 'showcase' ? h('div.col-filters',
-      select('category', 'Категория', [['', 'Все категории'], ...CATEGORIES.filter(([id]) => filteredItems({ category: id }, scoped).length)]),
-      select('collection', 'Коллекция', [['', 'Все коллекции'], ...COLLECTIONS.filter(x => filteredItems({ game: filters.game }).some(it => collectionOf(it) === x.id)).map(x => [x.id, x.title])])) : null,
+    c.route.name === 'showcase' ? chips('category', 'Тип предмета', [['', 'Все типы'], ...CATEGORIES]) : null,
     !snap.visible && snap.loaded ? h('p.col-note', 'Магазин на этом сервере недоступен. Переоткройте Mini App или повторите позже.') : null);
 }
 
@@ -169,12 +192,18 @@ function draw(routeChanged) {
   const focused = document.activeElement;
   const control = focused?.closest('[data-filter],.col-tab,.col-btn,.col-back');
   const controlKey = control?.dataset.filter;
+  const controlValue = control?.dataset.value;
   const controlText = control?.textContent;
+  const chipScroll = new Map([...root.scroll.querySelectorAll('[data-chips]')].map(row => [row.dataset.chips, row.scrollLeft]));
   const focus = focusMemo(root.scroll);
   root.scroll.replaceChildren(...(['showcase', 'inventory'].includes(r.name) ? [shopControls(c), body] : [body]));
+  for (const row of root.scroll.querySelectorAll('[data-chips]')) {
+    if (chipScroll.has(row.dataset.chips)) row.scrollLeft = chipScroll.get(row.dataset.chips);
+    else row.scrollLeft = row.querySelector('[aria-pressed="true"]')?.offsetLeft ?? 0;
+  }
   restoreFocus(root.scroll, focus);
   if (!routeChanged && control) {
-    const target = controlKey ? root.scroll.querySelector(`[data-filter="${controlKey}"]`) : [...root.scroll.querySelectorAll('button')].find(b => b.textContent === controlText && !b.disabled);
+    const target = controlKey ? root.scroll.querySelector(`[data-filter="${controlKey}"]${controlValue === undefined ? '' : `[data-value="${controlValue}"]`}`) : [...root.scroll.querySelectorAll('button')].find(b => b.textContent === controlText && !b.disabled);
     target?.focus({ preventScroll: true });
   }
   root.foot.replaceChildren(...footNodes(snap));
@@ -199,10 +228,15 @@ function onStore() {
   // Покупка подтверждается только состоянием сервера: вещь пришла в «owned» — тогда «Куплено».
   pay.sawOwned(snap.owned);
   if (wasVisible && !snap.visible) { close(); wasVisible = snap.visible; bus.render(); return; }
-  if (wasVisible !== snap.visible) { wasVisible = snap.visible; bus.render(); }
+  if (wasVisible !== snap.visible || wasShopEnabled !== snap.shopEnabled) {
+    wasVisible = snap.visible;
+    wasShopEnabled = snap.shopEnabled;
+    if (root && !snap.shopEnabled && stack[0]?.name === 'showcase') close();
+    else bus.render();
+  }
   if (snap.loaded && net.state && !entryChecked) {
     entryChecked = true;
-    if (snap.visible) {
+    if (snap.visible && snap.shopEnabled) {
       const match = location.hash.match(/^#\/?collections(?:\/(item|fit|inventory|showcase)(?:\/([a-z0-9-]+))?)?$/);
       const query = new URLSearchParams(location.search);
       if (match || query.has('collections')) open(match?.[1] && match[1] !== 'showcase' ? { name: match[1], id: match[2] } : null);
@@ -224,7 +258,7 @@ function onStore() {
 }
 store.subscribe(onStore);
 window.addEventListener('hashchange', () => {
-  if (!/^#\/?collections(?:\/|$)/.test(location.hash)) return;
+  if (!store.shopEnabled || !/^#\/?collections(?:\/|$)/.test(location.hash)) return;
   entryChecked = false;
   close();
   onStore();
@@ -247,10 +281,12 @@ pay.subscribe(onPay);
 
 /** Открыть магазин; неизвестные права показывают загрузку, а не успех. */
 export function open(route = null) {
-  if (root) return false;
-  stack = [{ name: 'showcase', scroll: positions.get('showcase') || 0 }];
+  if (root || (!store.shopEnabled && route?.name !== 'inventory')) return false;
+  filters = filtersFromUrl();
+  const base = store.shopEnabled ? 'showcase' : 'inventory';
+  stack = [{ name: base, scroll: positions.get(base) || 0 }];
   // Old entry points may still supply an item or inventory route; unknown ids get a readable empty screen.
-  if (route && ['item', 'fit', 'inventory', 'purchases'].includes(route.name)) stack.push(route);
+  if (store.shopEnabled && route && ['item', 'fit', 'inventory', 'purchases'].includes(route.name)) stack.push(route);
   colors = {};
   awaiting = null;
   lastKey = '';

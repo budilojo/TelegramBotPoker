@@ -361,8 +361,9 @@ export class Payments {
     const o = r.order;
     if (r.kind === 'order') {
       this.app.collections.pushState(o.userId);
-      const btn = this.app.webappUrl ? [[{ text: DM.button, web_app: { url: `${this.app.webappUrl}/?room=home` } }]] : null;
-      await this.dm(o.userId, DM.paid(esc(itemById(o.item)?.title ?? o.item), o.id), btn);
+      const { shopEnabled } = this.app.collections;
+      const btn = this.app.webappUrl ? [[{ text: shopEnabled ? DM.button : DM.inventoryButton, web_app: { url: `${this.app.webappUrl}/?room=home` } }]] : null;
+      await this.dm(o.userId, DM.paid(esc(itemById(o.item)?.title ?? o.item), o.id, shopEnabled), btn);
       return;
     }
     if (r.kind === 'duplicate' && o) await this.dm(payer, DM.duplicate(o.id));

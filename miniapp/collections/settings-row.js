@@ -7,6 +7,7 @@ import { store, noteOf } from './state.js';
 
 export default function collectionsRow(/* state */) {
   if (!store.visible) return null;
+  const shopEnabled = store.shopEnabled;
   const mk = (tag, cls, text) => {
     const el = document.createElement(tag);
     if (cls) el.className = cls;
@@ -17,10 +18,10 @@ export default function collectionsRow(/* state */) {
   row.type = 'button';
   row.dataset.entry = 'collections';
   const body = mk('div', 'set-body');
-  body.append(mk('div', 'set-title', 'Коллекции'), mk('div', 'set-sub', noteOf(store.snapshot())));
+  body.append(mk('div', 'set-title', shopEnabled ? 'Коллекции' : 'Мои вещи'), mk('div', 'set-sub', noteOf(store.snapshot())));
   const arrow = mk('span', 'col-entry-go', '›');
   arrow.setAttribute('aria-hidden', 'true');
   row.append(body, arrow);
-  row.addEventListener('click', () => { import('./index.js').then((m) => m.open()); });
+  row.addEventListener('click', () => { import('./index.js').then((m) => m.open(shopEnabled ? null : { name: 'inventory' })); });
   return row;
 }

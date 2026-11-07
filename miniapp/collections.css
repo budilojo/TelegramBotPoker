@@ -241,7 +241,31 @@
 .col-root .col-scroll { padding-bottom: var(--k-s24); }
 .col-root .col-foot { position: static; flex: none; max-height: 35%; overflow-y: auto; pointer-events: auto; }
 .col-controls { display: flex; flex-direction: column; gap: var(--k-s12); padding-bottom: var(--k-s16); }
-.col-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--k-s8); }
+.col-chips {
+  position: relative;
+  display: flex;
+  gap: var(--k-s8);
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+.col-chip {
+  flex: none;
+  min-width: var(--k-tap);
+  min-height: var(--k-tap);
+  padding-inline: var(--k-s12);
+  border: 1px solid var(--text-secondary);
+  border-radius: var(--k-r-pill);
+  color: var(--text-secondary);
+  font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font);
+  white-space: nowrap;
+}
+.col-chip[aria-pressed="true"] {
+  border-color: var(--text-primary);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-weight: var(--k-w-semibold);
+}
+.col-chip:focus-visible { outline: 2px solid var(--text-primary); outline-offset: -4px; }
 .col-filter { display: flex; flex-direction: column; gap: var(--k-s4); min-width: 0; color: var(--text-secondary); font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font); }
 .col-filter select { width: 100%; min-width: 0; min-height: var(--k-tap); padding: var(--k-s8); border: 1px solid var(--text-secondary); border-radius: var(--k-r-md); background: var(--bg-surface); color: var(--text-primary); font: inherit; }
 .col-filter select:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 2px; }

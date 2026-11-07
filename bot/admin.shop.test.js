@@ -119,6 +119,27 @@ test('выдача — отдельный источник: не платёж, �
   assert.equal((await buy(t, ALICE, 'graphit-table')).error.code, 'PAY_OWNED');
 });
 
+test('выдача вещи без цены обновляет инвентарь получателя и не открывает продажу', async () => {
+  const t = adminShop();
+  const id = 'sever-frame';
+  t.openSolo(ALICE);
+  t.openSolo(BOB);
+  assert.equal(lastCol(t, ALICE).owned.some((x) => x.item === id), false);
+  const view = await shopView(t);
+  assert.ok(view.grantItems.some((x) => x.id === id));
+  assert.ok(!view.items.some((x) => x.id === id));
+  const result = await grant(t, ALICE, id);
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.user.items.find((x) => x.item === id).source, ['admin']);
+  assert.deepEqual(lastCol(t, ALICE).owned.find((x) => x.item === id)?.source, ['admin']);
+  assert.equal(lastCol(t, BOB).owned.some((x) => x.item === id), false);
+  assert.equal((await ash(t, { op: 'price', item: id, price: 1 })).error.code, 'ITEM');
+  t.openSolo(ALICE);
+  assert.ok(lastCol(t, ALICE).owned.some((x) => x.item === id));
+  assert.equal((await revoke(t, ALICE, id)).ok, true);
+  assert.ok(!lastCol(t, ALICE).owned.some((x) => x.item === id));
+});
+
 test('купил + выдан → забрали выдачу → осталось купленное и надетый вид', async () => {
   const t = adminShop();
   const p = await purchase(t, ALICE, 'graphit-cardback');

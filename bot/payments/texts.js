@@ -5,11 +5,12 @@
 export { PAY_ERRORS, PRECHECKOUT } from '../../miniapp/collections/pay-protocol.js';
 
 export const DM = {
-  paid: (title, order) => `✅ <b>Куплено: ${title}</b>\nЗаказ <code>${order}</code>. Вещь уже в вашей коллекции — наденьте её в «Настройки» → «Коллекции».`,
+  paid: (title, order, shopEnabled = true) => `✅ <b>Куплено: ${title}</b>\nЗаказ <code>${order}</code>. Вещь уже в вашей коллекции — наденьте её в «Настройки» → «${shopEnabled ? 'Коллекции' : 'Мои вещи'}».`,
   review: (order) => `Оплата получена, но в ней есть несоответствие (заказ <code>${order}</code>). Ничего не выдано; владелец проверит и вернёт звёзды. Вопросы — /paysupport.`,
   duplicate: (order) => `Этот заказ (<code>${order}</code>) уже был оплачен. Повторная оплата будет возвращена владельцем. Вопросы — /paysupport.`,
   refunded: (title, order) => `↩️ Возврат по заказу <code>${order}</code> (${title}) выполнен. Право от этой покупки прекращено. Другие права на вещь сохраняются.`,
   button: '🎨 Открыть коллекцию',
+  inventoryButton: '🎨 Мои вещи',
 };
 
 /** Ответ на /paysupport. Контакт задаёт владелец (PAY_SUPPORT); без него — честно, что продажи не открыты. */

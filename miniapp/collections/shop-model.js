@@ -1,6 +1,7 @@
 /** Shop projections use the one shared catalog; they never grant ownership. */
-import { ITEMS, itemsOfBundle, itemById } from './catalog.js';
+import { COLLECTIONS, ITEMS, itemsOfBundle, itemById } from './catalog.js';
 export const GAMES = [['poker', 'Покер'], ['durak', 'Дурак'], ['colors', 'UNOQ'], ['chess', 'Шахматы'], ['checkers', 'Шашки'], ['nardy', 'Нарды'], ['battleship', 'Морской бой']];
+export const COLLECTION_FILTERS = [['', 'Все'], ...['sever', 'obsidian', 'chertezh'].map(id => [id, COLLECTIONS.find(c => c.id === id).title]), ['talismans', 'Талисманы']];
 export const CATEGORIES = [['cards', 'Карты'], ['tables', 'Столы'], ['boards', 'Доски'], ['profile', 'Профиль'], ['bundles', 'Комплекты']];
 export const categoryOf = it => it.kind === 'bundle' ? 'bundles' : ['cardback', 'unoq-cardback'].includes(it.slot) ? 'cards' : it.slot === 'table' ? 'tables' : ['profile', 'frame', 'badge'].includes(it.slot) ? 'profile' : 'boards';
 export const collectionOf = it => it.collection || 'graphit';
@@ -15,5 +16,6 @@ export const personal = slot => ['cardback', 'profile', 'frame', 'badge'].includ
 const SOURCE_NAMES = new Map([['owner', 'Доступ владельца · бесплатно'], ['purchase', 'Покупка'], ['admin', 'Подарок владельца'], ['demo', 'Демонстрация'], ['staff', 'Служебный доступ']]);
 export const sourceText = sources => (sources || []).map(s => SOURCE_NAMES.get(s)).filter(Boolean).join(' · ');
 export function filteredItems({ game = '', category = '', collection = '' } = {}, items = ITEMS) {
-  return items.filter(it => (!game || gamesOf(it).includes(game)) && (!category || categoryOf(it) === category) && (!collection || collectionOf(it) === collection));
+  return items.filter(it => (!game || gamesOf(it).includes(game)) && (!category || categoryOf(it) === category)
+    && (!collection || (collection === 'talismans' ? it.slot === 'talisman' : collectionOf(it) === collection)));
 }

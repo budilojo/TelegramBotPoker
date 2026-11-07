@@ -16,7 +16,7 @@ const newReq = () => `adm-${Date.now().toString(36)}-${Math.random().toString(36
 const ask = (op, body = {}) => { haptic.tap(); send({ t: 'ashop', op, ...body }, { lock: false }); };
 const act = (op, body = {}) => { haptic.tap(); send({ t: 'ashop', op, req: newReq(), ...body }); };
 
-const SOURCE = { purchase: 'куплено', admin: 'выдано вами', staff: 'доступ тестера', demo: 'демо' };
+const SOURCE = { owner: 'доступ владельца', purchase: 'куплено', admin: 'выдано вами', staff: 'доступ тестера', demo: 'демо' };
 const ORDER = {
   paid: 'оплачен', refunded: 'возвращён', refund_pending: 'возврат в обработке', review: 'на проверке',
   created: 'счёт не оплачен', approved: 'оплата идёт', cancelled: 'отменён',
@@ -45,7 +45,7 @@ bus.onAdminShop = (msg) => {
     ui.found = msg.found ?? null;
   }
   if (msg.op === 'orders') ui.orders = Array.isArray(msg.orders) ? msg.orders : [];
-  if (msg.user) ui.user = msg.user;
+  if (msg.user && msg.user.id === ui.user?.id) ui.user = msg.user;
   if (msg.text) toast(msg.text, 3600);
   // Возврат прошёл — найденный список заказов перечитать, чтобы в нём было новое состояние.
   if (msg.op === 'refundConfirm' && ui.orders) ask('orders', { q: ui.oq });
@@ -83,7 +83,7 @@ export function shopTab(s) {
     h('div.box', v.items.map(itemRow)),
     h('div.hint', 'Цена меняется для новых заказов. Уже выставленный счёт со старой ценой Telegram не даст оплатить — человек откроет вещь заново. ' +
       '«Скрыть» убирает вещь из продажи; купленное и выданное остаётся у людей.'),
-    giveBox(v),
+    giveBox(v.grantItems),
     ordersBox(v),
     logBox(v));
 }
@@ -148,7 +148,7 @@ function itemRow(it) {
 
 /* ------------------------------------------------------- выдать / забрать */
 
-function giveBox(v) {
+function giveBox(items) {
   const input = h('input.inp', {
     placeholder: 'Telegram id или ник', value: ui.who, 'aria-label': 'Кому: Telegram id или ник',
     oninput: (e) => { ui.who = e.target.value; },
@@ -164,7 +164,7 @@ function giveBox(v) {
           ? h('div.ashop-found', ui.found.map((f) => h('button.btn', { onclick: () => { ui.who = f.id; ask('user', { q: f.id }); } }, `${f.nick} · ${f.id}`)))
           : h('div.hint', 'По этому нику никого нет. Ник — из профиля игрока; можно ввести Telegram id.'))
         : null,
-      u ? userCard(u, v) : null),
+      u ? userCard(u, items) : null),
     h('div.hint', 'Выдача — подарок от администратора: не покупка, звёзд не списывает, в «Мои покупки» игрок видит её с пометкой. ' +
       '«Забрать» снимает только вашу выдачу: купленное остаётся, вернуть покупку — возвратом ниже.'));
 }
@@ -176,21 +176,22 @@ function find() {
   ask('user', { q });
 }
 
-function userCard(u, v) {
+function userCard(u, items) {
   const have = new Map(u.items.map((x) => [x.item, x.source]));
   return h('div.ashop-user', { 'data-user': u.id },
     h('div.tool-head', u.nick ? `${u.nick} · ${u.id}` : `id ${u.id}`),
-    v.items.map((it) => {
-      const parts = it.kind === 'bundle' ? null : have.get(it.id);
-      // «Забрать» — только там, где есть ваша выдача (у комплекта — хотя бы у одной его вещи).
-      const mine = it.kind === 'bundle' ? v.items.some((x) => x.kind !== 'bundle' && have.get(x.id)?.includes('admin')) : !!parts?.includes('admin');
+    items.map((it) => {
+      const sources = have.get(it.id);
+      const granted = it.parts.filter((id) => have.get(id)?.includes('admin')).length;
+      const status = it.kind === 'bundle' ? `Выдано вещей: ${fmt(granted)} из ${fmt(it.parts.length)}`
+        : sources?.map((x) => SOURCE[x] || x).join(', ') || 'нет';
       return h('div.ashop-give', { 'data-item': it.id },
         h('div',
           h('div.gr-name', it.title),
-          h('div.ashop-meta', it.kind === 'bundle' ? 'все три вещи' : parts ? parts.map((x) => SOURCE[x] || x).join(', ') : 'нет')),
+          h('div.ashop-meta', status)),
         h('div.ashop-row',
           h('button.btn.primary', { 'data-act': 'ashop-grant', onclick: () => act('grant', { user: u.id, item: it.id }) }, 'Выдать'),
-          mine
+          granted
             ? h('button.btn.danger', { 'data-act': 'ashop-revoke', onclick: () => confirmRevoke(u, it) }, 'Забрать')
             : null));
     }),

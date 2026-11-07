@@ -53,10 +53,10 @@ const sdk = (initData) => `
 const browser = await chromium.launch();
 const problems = [];
 
-async function boot(port) {
+async function boot(port, shopEnabled) {
   const api = new TelegramStub();
   const store = new Store(':memory:');
-  const app = new App({ api, store, botUsername: 'All_InPoker_bot', minIntervalMs: 0, runoutStepMs: 0, webappUrl: `http://localhost:${port}`, miniAppName: 'table', admins: ['101'], sales: cfgOf({ mode: 'test' }) });
+  const app = new App({ api, store, botUsername: 'All_InPoker_bot', minIntervalMs: 0, runoutStepMs: 0, webappUrl: `http://localhost:${port}`, miniAppName: 'table', admins: ['101'], shopEnabled, sales: cfgOf({ mode: 'test' }) });
   const hub = new Hub(app, { botToken: TOKEN });
   app.attachHub(hub);
   const web = startServer({ hub, port, root: path.join(ROOT, 'miniapp'), log: () => {} });
@@ -73,13 +73,13 @@ async function boot(port) {
   return { app, api, store, web, port, order };
 }
 
-async function open(s, u, size, startParam = 'admin') {
+async function open(s, u, size, startParam = 'admin', path = '/') {
   const page = await browser.newPage({ viewport: { width: size[0], height: size[1] }, deviceScaleFactor: 2 });
   page.on('pageerror', (e) => problems.push(e.message));
   page.on('console', (m) => m.type() === 'error' && !/Failed to load resource/.test(m.text()) && problems.push(m.text()));
   const initData = signInitData({ auth_date: Math.floor(Date.now() / 1000), user: u, start_param: startParam }, TOKEN);
   await page.route('https://telegram.org/**', (r) => r.fulfill({ contentType: 'text/javascript', body: sdk(initData) }));
-  await page.goto(`http://localhost:${s.port}/`);
+  await page.goto(`http://localhost:${s.port}${path}`);
   return page;
 }
 
@@ -97,7 +97,8 @@ const sheetBtn = (page, name) => page.locator('.sheet').getByRole('button', { na
 
 let port = BASE_PORT;
 for (const size of [[320, 640], [390, 844]]) {
-  const s = await boot(port++);
+  const shopEnabled = size[0] === 390;
+  const s = await boot(port++, shopEnabled);
   const tag = `${size[0]}px`;
 
   // Посторонний по ссылке на админку: та же страница, что на выдуманный стол.
@@ -165,6 +166,30 @@ for (const size of [[320, 640], [390, 844]]) {
   await until(() => !s.app.collections.ownedItems('202').includes('graphit-profile'), 'забрано');
   assert.ok(s.app.collections.ownedItems('202').includes('graphit-table'), 'купленное осталось');
   step(`${tag}: нашёл «Максик» по нику, выдал знак (заказа нет), забрал — купленный стол на месте`);
+
+  // A non-sellable v2 item appears immediately for an already connected recipient.
+  const recipient = await open(s, max, size, 'solo', '/?collections=1#collections/item/sever-frame');
+  await recipient.locator('.nav-tab[data-tab="settings"]').waitFor();
+  if (shopEnabled) {
+    await recipient.locator('.col-item').waitFor();
+    await recipient.evaluate(async () => (await import('/collections/index.js')).close());
+  } else {
+    await recipient.waitForFunction(async () => (await import('/collections/state.js')).store.snapshot().loaded);
+    assert.equal(await recipient.locator('.nav-tab[data-tab="shop"], .col-root').count(), 0, 'flag hides navigation and rejects deep link');
+    assert.equal(await recipient.evaluate(async () => (await import('/collections/index.js')).open()), false);
+  }
+  await recipient.locator('.nav-tab[data-tab="settings"]').click();
+  await recipient.locator('[data-entry="collections"]').click();
+  if (shopEnabled) await recipient.locator('.col-controls').getByRole('button', { name: 'Мои вещи', exact: true }).click();
+  await recipient.locator('.col-inventory').waitFor();
+  const gift = recipient.locator('.col-inv[data-item="sever-frame"]');
+  assert.equal(await gift.count(), 0);
+  assert.equal(await pa.locator('.ashop-item[data-item="sever-frame"]').count(), 0, 'not a sale offer');
+  await pa.locator('.ashop-give[data-item="sever-frame"] [data-act="ashop-grant"]').click();
+  await gift.getByRole('button', { name: 'Надеть' }).waitFor();
+  assert.match(await gift.innerText(), /Подарок владельца/);
+  assert.equal(await recipient.locator('.col-controls .col-tab', { hasText: 'Каталог' }).count(), shopEnabled ? 1 : 0);
+  await recipient.close();
 
   // Возврат двумя шагами.
   const ord = pa.locator(`.ashop-order[data-order="${s.order.id}"]`);
