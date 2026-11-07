@@ -283,7 +283,6 @@
 .col-sample > .col-art { position: absolute; inset: 0; background: transparent; border-radius: 0; pointer-events: none; }
 .col-sample > .col-art img { object-fit: fill; }
 .col-sample-content { position: absolute; inset: 6%; }
-.col-sample.raster-frame .col-sample-content { inset: 12%; z-index: 1; }
 .col-sample-grid { display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); }
 .col-sample-cell { position: relative; display: flex; align-items: center; justify-content: center; background: var(--ch-light); color: var(--bg-main); }
 .col-sample-cell.dark { background: var(--ch-dark); }

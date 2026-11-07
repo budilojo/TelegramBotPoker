@@ -14,7 +14,8 @@
  *  • файла нет / не загрузился → база, и больше его не просим;
  *  • лица карт не трогаем никогда — только рубашку места.
  */
-import { ITEMS, COLORS, itemById, isColor, publicEntry } from './catalog.js';
+import { COLORS, itemById, isColor, publicEntry } from './catalog.js';
+import { RASTER_COLLECTIONS } from './raster.js';
 
 const ART_DIR = '/collections/art/';
 const KINDS = ['cardback-small', 'table-ornament', 'table-diamond', 'frame-small', 'mark'];
@@ -44,11 +45,12 @@ function entry(raw, field) {
   return publicEntry(raw, { back: 'cardback', table: 'table', frame: ['profile', 'frame'] }[field]);
 }
 
-/** Стол комнаты: `{color, ornament, diamond}` (адреса могут быть null — тогда без этого слоя) либо null. */
+/** Стол комнаты: материал серии или цвет и отдельные слои «Графита». */
 export function tableOf(look) {
   const e = entry(look?.table, 'table');
   if (!e) return null;
-  if (itemById(e.item)?.collection) { const src = gameAsset(e, 'table'); return src ? { color: 'v2', ornament: src, diamond: null } : null; }
+  const surface = surfaceOf(e, 'table');
+  if (surface) return { color: 'v2', surface };
   const ornament = artUrl('table-ornament', e.color);
   const diamond = artUrl('table-diamond', e.color);
   return ornament || diamond ? { color: e.color, ornament, diamond } : null;
@@ -119,8 +121,8 @@ function deco(url, cls, onFail) {
 }
 
 /**
- * Стол хоста: орнамент по краю овала и центральный ромб — слоями ВНУТРИ `felt`
- * (под сиденьями, картами, банком; нажатия не ловят). Раскладка не меняется: слои абсолютные.
+ * Материал стола хоста лежит под сиденьями, картами и банком. Слои
+ * «Графита» внутри сукна абсолютные и не ловят нажатия.
  */
 export function dressTable(felt, look) {
   try {
@@ -128,9 +130,12 @@ export function dressTable(felt, look) {
     if (!felt || !t) return false;
     felt.classList.add('gr-table', `gr-${t.color}`);
     felt.dataset.grTable = t.color;
-    if (t.ornament) felt.append(deco(t.ornament, 'gr-orn', () => {
-      if (t.color === 'v2') { felt.classList.remove('gr-table', 'gr-v2'); delete felt.dataset.grTable; }
-    }));
+    if (t.surface) dressFelt(felt, t.surface);
+    if (t.ornament) {
+      felt.classList.add('surface-felt');
+      felt.style.setProperty('--surface-base', colorInfo(t.color).bg);
+      felt.append(deco(t.ornament, 'gr-orn', () => felt.classList.remove('surface-felt')));
+    }
     if (t.diamond) felt.append(deco(t.diamond, 'gr-dia'));
     return true;
   } catch { return false; }
@@ -228,15 +233,28 @@ export function gameAsset(raw, slot, game = null) {
   return typeof src === 'string' && (src.startsWith('/collections/v2-art/') || src.startsWith('/collections/raster/')) && !failed.has(src) ? src : null;
 }
 
-/** External art frame. The board, coordinates and all interactive children retain their geometry. */
+export function surfaceOf(raw, slot, game = null) {
+  const e = publicEntry(raw, slot, game);
+  const collection = e && itemById(e.item)?.collection;
+  return RASTER_COLLECTIONS.has(collection) ? collection : null;
+}
+
+/** The board supplies the geometry. The collection supplies the materials. */
 export function dressBoard(el, look, game) {
   const slot = game === 'battleship' ? 'battleship-panel' : `${game}-board`;
-  const src = gameAsset(look?.board, slot, game);
-  if (el && src) {
-    el.classList.add('cv2-board'); el.dataset.v2Board = look.board.item;
-    el.append(deco(src, `cv2-board-art cv2-${game}`, () => { delete el.dataset.v2Board; }));
-  }
+  const surface = surfaceOf(look?.board, slot, game);
+  if (el && surface) el.dataset.surface = surface;
   return el;
+}
+
+function dressFelt(el, surface) {
+  el.classList.add('surface-felt');
+  el.dataset.surface = surface;
+}
+
+export function dressColorsFelt(el, look) {
+  const surface = surfaceOf(look?.deckBack, 'unoq-cardback', 'colors');
+  if (surface) dressFelt(el, surface);
 }
 export function deckBackImg(look, cls = '') {
   const src = gameAsset(look?.deckBack, 'unoq-cardback', 'colors');

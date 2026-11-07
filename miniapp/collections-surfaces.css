@@ -1,0 +1,98 @@
+/* Материалы игрового поля. Текстуры повторяются в исходных пропорциях.
+   Геометрия, элементы управления и состояния клеток остаются у самих игр. */
+[data-surface='sever'] {
+  --surface-base: #253b49;
+  --surface-pale: #dbe8ed;
+  --surface-mid: #819da8;
+  --surface-line: #8da9b7;
+  --surface-weave: url('/collections/surfaces/sever.svg');
+}
+[data-surface='obsidian'] {
+  --surface-base: #25252e;
+  --surface-pale: #e0d9d9;
+  --surface-mid: #8c818d;
+  --surface-line: #9b909d;
+  --surface-weave: url('/collections/surfaces/obsidian.svg');
+}
+[data-surface='chertezh'] {
+  --surface-base: #20334d;
+  --surface-pale: #dae8f2;
+  --surface-mid: #809db8;
+  --surface-line: #8eafd0;
+  --surface-weave: url('/collections/surfaces/chertezh.svg');
+}
+[data-surface='terracotta'] {
+  --surface-base: #50342b;
+  --surface-pale: #f0d5b9;
+  --surface-mid: #b17b63;
+  --surface-line: #c4997f;
+  --surface-weave: url('/collections/surfaces/terracotta.svg');
+}
+[data-surface='orbita'] {
+  --surface-base: #342941;
+  --surface-pale: #e6deed;
+  --surface-mid: #9684a5;
+  --surface-line: #a596b7;
+  --surface-weave: url('/collections/surfaces/orbita.svg');
+}
+[data-surface='porcelain'] {
+  --surface-base: #24404e;
+  --surface-pale: #e6eef0;
+  --surface-mid: #789cac;
+  --surface-line: #93b8c8;
+  --surface-weave: url('/collections/surfaces/porcelain.svg');
+}
+
+[data-surface] :is(.ch-board, .bs-grid, .nd-board, .col-sample-grid),
+.col-sample.sea[data-surface] .col-sample-content,
+.surface-felt[data-surface],
+.surface-preview[data-surface],
+.col-sample.nardy[data-surface] {
+  background-color: var(--surface-base);
+  background-image: var(--surface-weave, none);
+  background-position: center;
+}
+
+body[data-screen='poker'] .felt.surface-felt,
+body[data-screen='durak'] .dk-cloth.surface-felt,
+.cl-felt.surface-felt {
+  background-color: var(--surface-base);
+  background-image: var(--surface-weave, none);
+  background-position: center;
+  outline: 1px solid var(--surface-line, var(--border-color));
+  outline-offset: -1px;
+  box-shadow: none;
+}
+
+.ch-frame[data-surface], .bs-frame[data-surface] { background-color: var(--surface-base); }
+
+[data-surface] :is(.ch-sq, .col-sample-cell) {
+  background-color: color-mix(in srgb, var(--surface-pale) 93%, transparent);
+}
+[data-surface] :is(.ch-sq, .col-sample-cell).dark {
+  background-color: color-mix(in srgb, var(--surface-mid) 88%, transparent);
+}
+
+[data-surface] .bs-grid { border-color: var(--surface-line); }
+:where([data-surface]) .bs-cell { box-shadow: inset -1px -1px 0 var(--surface-line); }
+[data-surface] .bs-cell.around::after { background: var(--surface-line); }
+[data-surface] .col-sea-cell { border-color: var(--surface-line); }
+
+.nd-wrap[data-surface] {
+  --nd-pt-light: var(--surface-pale);
+  --nd-pt-dark: var(--surface-mid);
+  --nd-bar: var(--surface-mid);
+}
+[data-surface] .nd-board { outline: 1px solid var(--surface-line); outline-offset: -1px; }
+[data-surface] .nd-pt::before {
+  background-image: var(--surface-weave);
+  background-position: center;
+}
+[data-surface] .nd-no { opacity: 1; }
+
+.col-sample[data-surface] { background-color: var(--surface-base); }
+[data-surface] .col-sample-point { background-color: var(--surface-pale); }
+[data-surface] .col-sample-point:nth-child(even) { background-color: var(--surface-mid); }
+.col-sample.table[data-surface] { outline: 1px solid var(--surface-line); outline-offset: -1px; }
+
+.surface-preview > svg { width: 100%; height: 100%; display: block; }

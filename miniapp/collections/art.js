@@ -62,11 +62,52 @@ export function baseArt(h, ratio = '200 / 280') {
   return h('span.col-art.fallback.base', { style: { '--ratio': ratio }, 'data-art': 'base' }, h('span.col-art-base', { 'aria-hidden': 'true' }));
 }
 
+const SURFACE_SLOTS = new Set(['table', 'chess-board', 'checkers-board', 'nardy-board', 'battleship-panel']);
+const SVG = 'http://www.w3.org/2000/svg';
+const svgEl = (tag, attrs) => {
+  const node = document.createElementNS(SVG, tag);
+  for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+  return node;
+};
+const checker = Array.from({ length: 32 }, (_, i) => {
+  const row = Math.floor(i / 4);
+  return `M${i % 4 * 2 + (1 - row % 2)} ${row}h1v1h-1z`;
+}).join('');
+const seaGrid = Array.from({ length: 11 }, (_, i) => `M${i} 0v10M0 ${i}h10`).join('');
+const nardyPoints = offset => Array.from({ length: 6 }, (_, i) => {
+  const col = i * 2 + (i >= 3 ? .5 : 0) + offset;
+  return `M${col} 0h1l-.5 3zM${col} 8h1l-.5-3z`;
+}).join('');
+
+function surfacePreview(box, it) {
+  box.classList.add('surface-preview');
+  box.dataset.surface = it.collection;
+  const svg = svgEl('svg', { 'aria-hidden': 'true', viewBox: '0 0 8 8', preserveAspectRatio: 'none' });
+  const path = (d, fill, stroke = 'none', opacity = 1) => svgEl('path', { d, fill, stroke, opacity, 'stroke-width': '.05' });
+  if (it.slot === 'chess-board' || it.slot === 'checkers-board') {
+    svg.append(path('M0 0h8v8H0z' + checker, 'var(--surface-pale)', 'none', .93),
+      path(checker, 'var(--surface-mid)', 'none', .88));
+    svg.firstChild.setAttribute('fill-rule', 'evenodd');
+  } else if (it.slot === 'battleship-panel') {
+    svg.setAttribute('viewBox', '0 0 10 10');
+    svg.append(path(seaGrid, 'none', 'var(--surface-line)'));
+  } else if (it.slot === 'nardy-board') {
+    svg.setAttribute('viewBox', '0 0 12.5 8');
+    svg.append(path(nardyPoints(0), 'var(--surface-pale)'), path(nardyPoints(1), 'var(--surface-mid)'),
+      path('M6.25 0v8', 'none', 'var(--surface-line)'));
+  } else {
+    svg.append(path('M.4 .4h7.2v7.2H.4zM.65 .65h6.7v6.7H.65z', 'none', 'var(--surface-line)'));
+  }
+  box.append(svg);
+  return box;
+}
+
 /** Local catalog descriptor only. Detail is fetched on the item route, thumbnails stay small. */
 export function itemArt(h, id, detail = false) {
   const it = itemById(id), src = detail || it?.kind === 'bundle' ? it?.assets?.preview : it?.assets?.game;
   const ratio = ['cardback', 'unoq-cardback'].includes(it?.slot) ? '5 / 7' : it?.slot === 'table' || it?.kind === 'bundle' ? '3 / 2' : it?.slot === 'nardy-board' ? '4 / 3' : '1 / 1';
   const box = h('span.col-art', { 'data-art': id, style: { '--ratio': ratio } });
+  if (it?.collection && SURFACE_SLOTS.has(it.slot)) return surfacePreview(box, it);
   // Bundles have no game SVG. Compose their nine existing small assets instead
   // of downloading six detailed bundle previews on the catalog route.
   if (it?.collection && it.kind === 'bundle' && (!detail || it.assets.preview?.startsWith('/collections/raster/'))) {

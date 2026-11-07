@@ -30,7 +30,41 @@ const send=(p,m)=>p.page.evaluate(async m=>(await import('/net.js')).send(m,{loc
 const last=p=>p.frames.filter(m=>m.t==='state'&&m.state.game).at(-1)?.state;
 async function until(f,label){const end=Date.now()+6000;while(!await f()){if(Date.now()>end)throw Error(label);await new Promise(r=>setTimeout(r,20));}}
 const slotOf=g=>['poker','durak'].includes(g)?'table':g==='colors'?'unoq-cardback':BOARD_SLOT[g];
-const decoSelector=g=>['poker','durak'].includes(g)?'.gr-orn':g==='colors'?'.cv2-deck-back':'.cv2-board-art';
+const surfaceSelector=g=>['poker','durak','colors'].includes(g)?'.surface-felt':g==='nardy'?'.nd-wrap':g==='battleship'?'.bs-frame':'.ch-frame';
+const fieldSelector=g=>['poker','durak','colors'].includes(g)?'.surface-felt':g==='nardy'?'.nd-board':g==='battleship'?'.bs-grid':'.ch-board';
+async function checkSurface(p, game, series, decode = true) {
+  const themed = p.page.locator(`${surfaceSelector(game)}[data-surface="${series}"]`);
+  await themed.first().waitFor();
+  if (game === 'battleship') assert.equal(await themed.count(), 2, 'both boards are themed');
+  const field = p.page.locator(fieldSelector(game)).first();
+  const paint = await field.evaluate(async (el, { series, decode }) => {
+    const css = getComputedStyle(el), image = css.backgroundImage;
+    if (decode) {
+      const texture = new Image();
+      texture.src = image.match(/^url\("(.*)"\)$/)?.[1] ?? '';
+      await texture.decode();
+    }
+    return { image, base: css.backgroundColor,
+      light: el.querySelector('.ch-sq:not(.dark)') && getComputedStyle(el.querySelector('.ch-sq:not(.dark)')).backgroundColor,
+      dark: el.querySelector('.ch-sq.dark') && getComputedStyle(el.querySelector('.ch-sq.dark')).backgroundColor,
+      point: el.querySelector('.nd-pt') && getComputedStyle(el.querySelector('.nd-pt'),'::before').backgroundImage,
+      expected: '/collections/surfaces/' + series + '.svg' };
+  }, { series, decode });
+  assert.ok(paint.image.includes(paint.expected), 'the full playing area has the material');
+  assert.notEqual(paint.base, 'rgba(0, 0, 0, 0)');
+  if (['chess','checkers'].includes(game)) {
+    assert.ok(paint.light.startsWith('color(srgb') && paint.dark.startsWith('color(srgb'));
+    assert.notEqual(paint.light, paint.dark);
+  }
+  if (game === 'nardy') assert.ok(paint.point.includes(paint.expected), 'inlaid points carry the theme');
+  if (game === 'colors') {
+    const back = p.page.locator('.cv2-deck-back').first();
+    await back.waitFor();
+    assert.equal(await back.evaluate(async el=>{await el.decode();return el.getAttribute('src');}),itemById(series+'-unoq-cardback').assets.game);
+  }
+  assert.equal(await p.page.locator('.cv2-board-art, .gr-v2 .gr-orn').count(), 0, 'no overlay on boards or collection cloth');
+  return paint.base;
+}
 try {
  for(const width of [320,390]) for(const g of GAME_LIST){
   t.chatId=-93000-(++n);await t.cmd(H,'/game');t.openHub(H);await t.send(H,{t:'create',game:g.id,settings:{}});
@@ -38,7 +72,7 @@ try {
   const pages=[];
   try {
    for(const who of [H,B,S])pages.push(await open(who,room.code,width));
-   const [h,b,spy]=pages,slot=slotOf(g.id),selector=decoSelector(g.id);
+   const [h,b,spy]=pages,slot=slotOf(g.id);
    const apply=async collection=>{
     t.app.collections.limits.clear();
     const r=t.app.collections.handle({id:String(H.id)},{t:'col',v:2,op:'apply-bundle',item:`${collection}-bundle`,req:`browser-${++n}`});assert.equal(r.error,undefined);await t.app.settle();
@@ -53,12 +87,8 @@ try {
    await apply('sever');await send(h,{t:'start'});await until(()=>last(spy)?.room.status==='playing','start');
    if(g.id==='battleship') for(const p of [h,b]) { await send(p,{t:'random'}); await until(()=>last(p)?.match?.boards?.some(x=>x.ships.length>0),'placement'); await send(p,{t:'ready'}); }
    if(g.id==='battleship') await until(()=>last(spy)?.match?.phase==='battle','battle');
-   for(const p of pages)await p.page.waitForSelector(selector);
-   for(const p of pages){
-    const srcs=await p.page.locator(selector).evaluateAll(els=>els.map(e=>e.getAttribute('src')));
-    assert.ok(srcs.every(src=>src===itemById(`sever-${slot}`).assets.game));
-    const img=await p.page.locator(selector).first().evaluate(e=>({ok:e.complete&&e.naturalWidth>0,events:getComputedStyle(e).pointerEvents}));assert.equal(img.ok,true);assert.equal(img.events,'none');
-   }
+   const base = await checkSurface(h, g.id, 'sever');
+   for (const p of [b,spy]) assert.equal(await checkSurface(p,g.id,'sever'),base);
    const frozen=structuredClone(last(spy).look),turn=structuredClone(room.turn);
    t.app.collections.limits.clear();await send(h,{t:'col',v:2,op:'apply',item:`orbita-${slot}`,slot,color:'default',req:`browser-${++n}`});
    await until(()=>h.frames.some(m=>m.t==='col'&&m.op==='apply'&&m.when==='next-deal'),'pending ack');
@@ -76,7 +106,7 @@ try {
       const mod=await import(`/games/${game}.js`);mod.onState(s,net.net.state,{wasConnected:true});
       const ui=await import('/ui.js');ui.$app.replaceChildren();mod.render();ui.flushAnimations({still:true});
     },{collection,slot,game:g.id});
-    for(const p of pages){await p.page.waitForSelector(selector);await until(()=>p.page.locator(selector).first().evaluate(e=>e.complete&&e.naturalWidth>0),'asset loaded');}
+    for (const p of pages) await checkSurface(p,g.id,collection);
     rendered.add(`${collection}-${slot}`);rendered.add(`${collection}-frame`);rendered.add(`${collection}-badge`);if(g.id==='poker')rendered.add(`${collection}-cardback`);
     if(collection==='sever'||(width===320&&g.id==='chess')){
      await spy.page.waitForFunction(()=>!document.querySelector('#toast.show'));
@@ -85,11 +115,13 @@ try {
     for(const p of pages)assert.ok(await p.page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`${g.id} ${collection} ${width}: sideways`);
    }
    // Return from local fixture to authoritative server state; reconnect reload uses frozen server snapshot.
-   await h.page.reload();await h.page.waitForSelector(selector);assert.deepEqual(room.turn,turn);
-   assert.equal(await h.page.locator(selector).first().getAttribute('src'), itemById(`sever-${slot}`).assets.game);
-   // Asset failure keeps the game interactive and is remembered after redraw.
-   await spy.page.route(/\/collections\/(?:v2-art\/.*-game\.svg|raster\/.*\.webp)$/,r=>r.fulfill({status:404,body:''}));
-   await spy.page.reload();await until(()=>spy.page.locator(selector).count().then(n=>n===0),'fallback removes failed art');
+   await h.page.reload();
+   assert.equal(await checkSurface(h,g.id,'sever'),base);
+   assert.deepEqual(room.turn,turn);
+   // A missing texture leaves the full field usable in its solid collection color.
+   await spy.page.route('**/collections/surfaces/sever.svg',r=>r.fulfill({status:404,body:''}));
+   await spy.page.reload();
+   assert.equal(await checkSurface(spy,g.id,'sever',false),base);
    assert.ok(await spy.page.locator('.top,.ch-head').count());
    for(const p of pages)for(const m of p.frames.filter(m=>m.t==='state'&&m.state.game)){
     assert.doesNotMatch(JSON.stringify(m),/"(?:holes|fleets|initData|tgId|telegram_payment_charge_id|pay_order|user_id)"/);
@@ -117,7 +149,7 @@ try {
    await b.page.evaluate(async()=>(await import('/collections/index.js')).open());
    await b.page.waitForSelector('.col-show');await b.page.locator('.col-card[data-item="sever-chess-board"]').click();
    await b.page.getByRole('button',{name:'Примерить',exact:true}).click();await b.page.waitForSelector('.col-fit');
-   assert.equal(await b.page.locator('.col-fit [data-art="sever-chess-board"] img').getAttribute('src'),itemById('sever-chess-board').assets.preview);
+   assert.equal(await b.page.locator('.col-fit .col-sample[data-art="sever-chess-board"]').getAttribute('data-surface'),'sever');
    assert.equal(await b.page.locator('.col-fit .col-sample-grid img').count(),32);
    assert.deepEqual(t.app.store.collChoices(B.id),before);assert.deepEqual(t.app.collections.ownedItems(B.id),[]);
    await b.page.screenshot({path:path.join(out,`fitting-off-${width}.png`)});

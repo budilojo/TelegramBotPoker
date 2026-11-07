@@ -1,4 +1,4 @@
-import { makeHolder, dressBoard, nameWithMark, frameAvatar, deckBackImg } from '../collections/look-view.js';
+import { makeHolder, dressColorsFelt, nameWithMark, frameAvatar, deckBackImg } from '../collections/look-view.js';
 const lookHolder = makeHolder();
 let look = null;
 /**
@@ -211,6 +211,7 @@ function renderTable() {
     middleEl(s),
     eventsEl(s),
   );
+  dressColorsFelt(felt, look);
   $app.append(top, felt, heroEl(s), panelEl(s));
   // Общий тост прибит к верху экрана — а наверху здесь сидят соперники.
   // Опускаем его под их ряд, каким бы тот ни был: вшестером и восьмером он

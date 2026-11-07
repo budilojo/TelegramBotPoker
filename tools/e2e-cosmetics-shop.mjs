@@ -73,7 +73,7 @@ try {
    assert.equal(await p.locator('[data-result-count]').count(), 1, 'catalog count uses its own attribute');
    assert.equal(await p.locator('[data-result-count]').innerText(), `Найдено: ${ITEMS.length}`, 'catalog count is not a clock');
    assert.equal(await p.locator('.col-bundle-mini').count(), 6, 'six bundles use small asset compositions');
-   assert.equal(await p.locator('.col-bundle-mini img').count(), 54, 'nine small items in every bundle');
+   assert.equal(await p.locator('.col-bundle-mini > .col-art').count(), 54, 'nine small items in every bundle');
    assert.deepEqual(host.requests.filter(src => /v2-art\/.*-preview.svg$/.test(src)), [], 'catalog never fetches detailed previews, including bundles');
    await layout(p, 'catalog'); await shot(p, `catalog-${width}`);
    // Native filters support keyboard; category options are populated, no empty sections.
@@ -141,8 +141,10 @@ try {
    await p.locator('.col-card[data-item="orbita-bundle"]').scrollIntoViewIfNeeded();
    await shot(p, `bundle-${width}`);
    await card(p, 'orbita-bundle');
-   const art = p.locator('.col-hero .col-bundle-mini img');
+   const art = p.locator('.col-hero .col-bundle-mini > .col-art');
    assert.equal(await art.count(), itemById('orbita-bundle').includes.length);
+   assert.equal(await art.locator('svg').count(), 5, 'table and four board thumbnails show their full surfaces');
+   assert.equal(await art.locator('img').count(), 4, 'card backs, avatar frame and badge still use images');
    await p.waitForFunction(() => [...document.querySelectorAll('.col-hero .col-bundle-mini img')].every(
      e => e.getAttribute('src').startsWith('/collections/raster/orbita-') && e.complete && e.naturalWidth > 0));
    assert.ok(!host.requests.includes('/collections/v2-art/orbita-bundle-preview.svg'), 'raster bundle reuses its item art');
@@ -165,16 +167,16 @@ try {
    // Legacy/programmatic item entry still opens new store; broken image remembers fallback across redraw.
    await b.evaluate(async () => (await import('/collections/index.js')).close());
    let failedRequests = 0;
-   b.on('request', r => { if (r.url().endsWith('/sever-board.webp')) failedRequests++; });
-   await b.route('**/sever-board.webp', r => r.fulfill({ status: 404, body: '' }));
+   b.on('request', r => { if (r.url().endsWith('/sever-cardback.webp')) failedRequests++; });
+   await b.route('**/sever-cardback.webp', r => r.fulfill({ status: 404, body: '' }));
    await b.goto(url);
    await b.locator('.nav-tab[data-tab="shop"]').waitFor();
-   await b.evaluate(async () => (await import('/collections/index.js')).open({ name: 'fit', id: 'sever-chess-board' }));
-   await b.waitForSelector('[data-art="sever-chess-board"].fallback'); assert.equal(await b.locator('.col-sample .col-art-base').isVisible(), false, 'failed ornament leaves classic board without extra marks'); await layout(b, 'fallback'); await shot(b, `fallback-${width}`);
-   await b.getByRole('combobox', { name: 'Игра для примерки' }).selectOption('chess');
+   await b.evaluate(async () => (await import('/collections/index.js')).open({ name: 'fit', id: 'sever-cardback' }));
+   await b.waitForSelector('.col-sample-hand [data-art="sever-cardback"].fallback'); assert.equal(await b.locator('.col-sample-hand [data-art="sever-cardback"] img').count(), 0, 'failed art uses the classic preview'); await layout(b, 'fallback'); await shot(b, `fallback-${width}`);
+   await b.getByRole('combobox', { name: 'Игра для примерки' }).selectOption('poker');
    await b.waitForTimeout(100);
-   assert.equal(failedRequests, 1, 'failed SVG never retries on redraw');
-   assert.equal(await b.locator('[data-art="sever-chess-board"] img').count(), 0);
+   assert.equal(failedRequests, 1, 'failed image never retries on redraw');
+   assert.equal(await b.locator('[data-art="sever-cardback"] img').count(), 0);
    await b.evaluate(async () => (await import('/collections/index.js')).close());
    await b.evaluate(async () => (await import('/collections/index.js')).open({ name: 'item', id: 'unknown-id' })); assert.match(await b.locator('.col-empty').innerText(), /Такого предмета нет/);
    if (!teeth) {

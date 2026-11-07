@@ -12,7 +12,7 @@ import { SELLABLE, priceOf } from './payments/config.js';
 import { cfgOf } from './payments/testkit.js';
 import { shipCells } from './games/battleship/board.js';
 import { BOARD_SLOT } from './collections/index.js';
-import { gameAsset, makeHolder, markFailed, resetFailed } from '../miniapp/collections/look-view.js';
+import { gameAsset, makeHolder, markFailed, resetFailed, surfaceOf } from '../miniapp/collections/look-view.js';
 import { createStore } from '../miniapp/collections/state.js';
 const A = user(700101001, 'Алиса'), B = user(700101002, 'Боб'), S = user(700101003, 'Зритель');
 let n = 0;
@@ -192,7 +192,11 @@ test('C v2: old snapshot v1 not rebuilt until next deal; unknown version and wro
   assert.equal(gameAsset(E('sever-chess-board'),'checkers-board','checkers'),null);
   assert.match(gameAsset(E('sever-chess-board'),'chess-board','chess'),/sever-board\.webp/);
   markFailed('/collections/raster/sever-board.webp');
-  assert.equal(gameAsset(E('sever-chess-board'),'chess-board','chess'),null);resetFailed();
+  assert.equal(gameAsset(E('sever-chess-board'),'chess-board','chess'),null);
+  assert.equal(surfaceOf(E('sever-chess-board'),'chess-board','chess'),'sever', 'the surface needs no legacy image');
+  assert.equal(surfaceOf(E('sever-chess-board'),'checkers-board','checkers'),null);
+  assert.equal(surfaceOf(E('sever-chess-board'),'chess-board','nardy'),null);
+  resetFailed();
 });
 
 test('C v2: client requires server ack, sends version; old server cannot equip new stuff', () => {

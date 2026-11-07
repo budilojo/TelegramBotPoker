@@ -13,13 +13,21 @@ const TYPE = {
   'chess-board': 'board', 'checkers-board': 'board', 'nardy-board': 'board', 'battleship-panel': 'board',
   talisman: 'talisman',
 };
+const SURFACE_DESCRIPTION = {
+  table: 'Цвет и рисунок всей игровой поверхности.',
+  'chess-board': 'Цвет и фактура светлых и тёмных клеток, фон координат.',
+  'checkers-board': 'Цвет и фактура светлых и тёмных клеток, фон координат.',
+  'nardy-board': 'Фактурное основание, контрастные клинья и центральная перегородка.',
+  'battleship-panel': 'Фактура воды, линии сетки и фон координат обоих полей.',
+  'unoq-cardback': 'Рубашка стопки добора и оформление игровой поверхности UNOQ.',
+};
 const url = (collection, type) => `/collections/raster/${collection}-${type}.webp`;
 
 export function withRaster(item) {
   if (!RASTER_COLLECTIONS.has(item.collection)) return item;
   const src = url(item.collection, item.artType ?? TYPE[item.slot] ?? 'cardback');
   const game = item.kind === 'bundle' ? null : src;
-  return { ...item, assets: { preview: src, game }, preview: src, game };
+  return { ...item, description: SURFACE_DESCRIPTION[item.slot] ?? item.description, assets: { preview: src, game }, preview: src, game };
 }
 
 export const TALISMANS = [...RASTER_COLLECTIONS].flatMap(([collection, { title, description, alternate }]) =>
