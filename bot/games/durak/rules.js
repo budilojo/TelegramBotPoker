@@ -352,15 +352,14 @@ export function attack(room, userId, card, seq) {
   return played(room, id);
 }
 
-/** Rule 9: cover one attacking card with a higher one of its suit, or with a trump. */
+/** Rule 9: use the same predicate for legal targets and for a submitted defense. */
 export function defend(room, userId, card, target, seq) {
   const g = guard(room, userId, seq, card);
   if (g.error) return g;
   const { d, id } = g;
   if (id !== d.defender) return { error: 'NOT_DEFENDER', text: `Отбивается ${nameOf(room, d.defender)}.` };
   if (d.bout.taking) return { error: 'TAKING' };
-  const i = Number(target);
-  const pair = Number.isInteger(i) ? d.table[i] : null;
+  const pair = Number.isInteger(target) ? d.table[target] : null;
   if (!pair) return { error: 'BAD_TARGET' };
   if (pair.d) return { error: 'ALREADY_COVERED' };
   if (!beats(pair.a, card, d.trump)) {
@@ -368,7 +367,7 @@ export function defend(room, userId, card, target, seq) {
       error: 'CANNOT_BEAT',
       text: suitOf(pair.a) === d.trump
         ? `${label(card)} не бьёт ${label(pair.a)}: козырь бьётся только старшим козырем.`
-        : `${label(card)} не бьёт ${label(pair.a)}: нужна старшая ${SUIT_SIGN[suitOf(pair.a)]} или козырь.`,
+        : `${label(card)} не бьёт ${label(pair.a)}: нужна равная по достоинству, старшая ${SUIT_SIGN[suitOf(pair.a)]} или козырь не младше.`,
     };
   }
   take1(d.hands[id], card);

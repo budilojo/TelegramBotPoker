@@ -351,7 +351,8 @@ body[data-screen='durak'] .plate.passed { color: var(--k-text-2); }
 /* ------------------------------------------------------- поле и колода */
 
 /* Карта, которую можно покрыть, — зелёным контуром вместо золотого сияния. */
-body[data-screen='durak'] .dk-pair.target img.att {
+body[data-screen='durak'] .dk-pair.target img.att,
+body[data-screen='durak'] .dk-pair.drop-hover img.att {
   box-shadow: 0 0 0 2px var(--k-green), 0 0 0 3px var(--on-felt-accent-line);
   animation: none;
 }
@@ -400,3 +401,12 @@ body[data-screen='durak'] .panel .btn.danger small { color: var(--k-text-2); }
    В покере ± остаётся цветным: там цвет несёт знак числа, а не оценку. */
 body[data-screen='durak'] .res-row .pl.up { color: var(--k-text-2); }
 body[data-screen='durak'] .res-row .pl.down { color: var(--k-text); }
+
+.dk-card.can-cover { touch-action: none; cursor: grab; }
+.dk-card.drag-source img { opacity: 0; }
+.dk-drag-card {
+  position: fixed;
+  z-index: 35;
+  pointer-events: none;
+  border-radius: var(--k-r-md);
+}

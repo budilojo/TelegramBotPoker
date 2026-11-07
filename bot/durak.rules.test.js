@@ -253,18 +253,21 @@ test('8 · …and no more than the defender held when the bout began', () => {
   assert.match(r.text, /Макс отбивается, а у него было всего 3 карты/);
 });
 
-test('9 · beat with a higher card of the suit, or with a trump; a trump only with a higher trump', () => {
+test('9 · equal ranks cover plain cards; higher cards follow suit and trump rules', () => {
   const room = table(2);
   const d = position(room, {
-    hands: { 1: '9H KS 7D 6C', 2: '8H 10H 6D 9D AS' },
+    hands: { 1: '9H KS 7D 6C', 2: '8H 10H 6D 9D AS 9C' },
     trump: 'D',
     attacker: '1',
   });
   ok(D.attack(room, '1', '9H'));
   refused(D.defend(room, '2', '8H', 0), 'CANNOT_BEAT', 'a lower heart');
-  assert.match(D.defend(room, '2', '8H', 0).text, /8♥ не бьёт 9♥: нужна старшая ♥ или козырь/);
+  assert.match(D.defend(room, '2', '8H', 0).text, /8♥ не бьёт 9♥: нужна равная по достоинству, старшая ♥ или козырь не младше/);
   refused(D.defend(room, '2', 'AS', 0), 'CANNOT_BEAT', 'a higher card of another suit');
-  ok(D.defend(room, '2', '10H', 0), 'a higher heart');
+  refused(D.defend(room, '2', '6D', 0), 'CANNOT_BEAT', 'even a trump must meet the rank floor');
+  refused(D.defend(room, '2', '9C', null), 'BAD_TARGET', 'null must never resolve to the first pair');
+  assert.equal(beats('9H', '10H', 'D'), true, 'a higher heart');
+  ok(D.defend(room, '2', '9C', 0), 'an equal rank can cover a plain card');
   refused(D.defend(room, '2', '6D', 0), 'ALREADY_COVERED', 'one defending card per attacking card');
   passAll(room);
   // '2' beat off the attack and leads now: a trump, which only a higher trump beats.
@@ -276,8 +279,9 @@ test('9 · beat with a higher card of the suit, or with a trump; a trump only wi
   assert.match(r.text, /козырь бьётся только старшим козырем/);
   assert.equal(beats('9D', 'JD', 'D'), true, 'a higher trump does');
 
-  // And a trump beats any card that is not one.
-  assert.equal(beats('AS', '6D', 'D'), true);
+  assert.equal(beats('AS', '6D', 'D'), false);
+  assert.equal(beats('9H', '9D', 'D'), true);
+  assert.equal(beats('9D', '9H', 'D'), false);
   assert.equal(beats('7D', 'AS', 'D'), false);
 });
 

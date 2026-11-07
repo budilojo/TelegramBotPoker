@@ -50,13 +50,14 @@ export function isFullDeck(deck) {
   return seen.size === 36 && deck.every(isCard);
 }
 
-/**
- * Does `defense` beat `attack`? A higher card of the same suit, or any trump
- * over a card that is not a trump. A trump is beaten only by a higher trump.
- */
+/** Equal ranks can cover a non-trump; higher cards still follow suit and trump rules. */
 export function beats(attack, defense, trump) {
-  if (suitOf(defense) === suitOf(attack)) return rankIndex(defense) > rankIndex(attack);
-  return suitOf(defense) === trump && suitOf(attack) !== trump;
+  const order = rankIndex(defense) - rankIndex(attack);
+  if (order < 0 || attack === defense) return false;
+  const attackSuit = suitOf(attack);
+  const defenseSuit = suitOf(defense);
+  if (attackSuit === trump) return defenseSuit === trump;
+  return order === 0 || defenseSuit === attackSuit || defenseSuit === trump;
 }
 
 /** A hand the way people hold it: by suit, trumps on the right, low to high. */

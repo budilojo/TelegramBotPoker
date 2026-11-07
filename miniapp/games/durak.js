@@ -7,7 +7,7 @@
  * ones the server said you may play.
  *
  *   your cards — a fan at the bottom, big: tap to pick one, tap again to play
- *   (a defender taps the card on the table to cover it);
+ *   (a defender drags their card onto the attacking card);
  *   the table — attack/defence pairs; the pack with the trump under it; the
  *   discard, face down;
  *   the others round the top of the table — how many cards, and what they
@@ -42,6 +42,7 @@ let state = null;
 let prev = null;
 /** The card picked in your hand (first tap), or null. */
 let picked = null;
+let cancelDrag = null;
 
 const SUIT = { S: '♠', H: '♥', D: '♦', C: '♣' };
 const RANK_RU = { J: 'В', Q: 'Д', K: 'К', A: 'Т' };
@@ -79,6 +80,7 @@ function mustAct(s) {
 }
 
 export function render() {
+  cancelDrag?.();
   const s = state;
   if (s.room.status === 'lobby') return renderLobby();
   if (s.room.status === 'finished') return renderResults();
@@ -261,13 +263,13 @@ function middleEl(s) {
         const { dx, dy } = offsetTo(node, from);
         return [{ transform: `translate(${dx}px, ${dy}px) scale(0.6) rotate(-12deg)`, opacity: 0.2, offset: 0 }];
       }, { duration: 420 });
-      const def = x.d ? animateOnce(cardImg(x.d, 'def'), `dkd:${d.no}:${d.bout}:${i}:${x.d}`, (node) => {
+      const def = !x.d ? null : x.dby === me.seat ? cardImg(x.d, 'def') : animateOnce(cardImg(x.d, 'def'), `dkd:${d.no}:${d.bout}:${i}:${x.d}`, (node) => {
         const { dx, dy } = offsetTo(node, fromSeat(x.dby, s));
         return [{ transform: `translate(${dx}px, ${dy}px) scale(0.6) rotate(20deg)`, opacity: 0.2, offset: 0 }];
-      }, { duration: 420 }) : null;
+      }, { duration: 420 });
       return h(`button.dk-pair${target ? '.target' : ''}${x.d ? '.covered' : ''}`, {
         'data-i': i,
-        onclick: () => onTableTap(i),
+        onclick: (e) => { if (e.detail === 0) onTableKey(i); },
         'aria-label': x.d ? `${label(x.a)} побита ${label(x.d)}` : `${label(x.a)} — не побита`,
       }, a, def);
     }));
@@ -295,6 +297,7 @@ function lineText(s) {
   if (!d.table.length) return `Ходит ${att} · отбивается ${def}`;
   if (d.taking) return `${def} берёт — можно подкинуть вдогонку`;
   if (d.covered) return `${def} отбился — подкидывайте или «Бито»`;
+  if (s.me.seat === d.defenderSeat && Object.keys(s.legal?.defend ?? {}).length) return 'Перетащите карту на ту, которую хотите покрыть';
   return `${def} отбивается`;
 }
 
@@ -322,7 +325,8 @@ function heroEl(s) {
   const cards = me.cards;
   const cardEl = (c, k) => {
     const img = cardImg(c, [playable.has(c) ? 'ok' : myMove || playable.size ? 'no' : '', picked === c ? 'picked' : '', c.slice(-1) === d?.trump ? 'trump' : ''].filter(Boolean).join('.'));
-    const btn = h('button.dk-card', { onclick: () => onHandTap(c), 'aria-label': label(c), 'data-card': c }, img);
+    const btn = h('button.dk-card', { onclick: (e) => onHandTap(c, e.detail === 0), 'aria-label': label(c), 'data-card': c }, img);
+    if (L?.defend?.[c]?.length) bindDefendDrag(btn, img, c);
     return dealIn(btn, c, k, s);
   };
   // A big hand (a few takes) goes in two rows before the cards turn into
@@ -381,39 +385,83 @@ function roleText(s) {
   return { text: me.role === 'attacker' ? 'ВЫ ХОДИТЕ' : 'ВЫ ПОДКИДЫВАЕТЕ' };
 }
 
-/* --------------------------------------------------------------- taps */
+/* ------------------------------------------------------------- actions */
 
-function onHandTap(c) {
+/** Capture the pointer on the hand card, and hit-test the table beneath the copy. */
+function bindDefendDrag(button, img, card) {
+  let drag = null;
+  let dragged = false;
+  const targetAt = (e) => {
+    const pair = document.elementFromPoint(e.clientX, e.clientY)?.closest('.dk-pair');
+    return pair && state.legal?.defend?.[card]?.includes(Number(pair.dataset.i)) ? pair : null;
+  };
+  const cleanup = () => {
+    if (!drag) return;
+    drag.hover?.classList.remove('drop-hover');
+    drag.copy?.remove();
+    button.classList.remove('drag-source');
+    drag = null;
+    cancelDrag = null;
+  };
+  button.classList.add('can-cover');
+  button.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || !e.isPrimary || net.busy || cancelDrag) return;
+    dragged = false;
+    drag = { id: e.pointerId, x: e.clientX, y: e.clientY, rect: img.getBoundingClientRect() };
+    cancelDrag = cleanup;
+    button.setPointerCapture(e.pointerId);
+  });
+  button.addEventListener('pointermove', (e) => {
+    if (drag?.id !== e.pointerId) return;
+    const dx = e.clientX - drag.x;
+    const dy = e.clientY - drag.y;
+    if (!drag.copy) {
+      if (Math.hypot(dx, dy) < 6) return;
+      const { left, top, width } = drag.rect;
+      drag.copy = h('img.dk-drag-card', { src: img.src, alt: '', style: { left: left + 'px', top: top + 'px', width: width + 'px' } });
+      $app.append(drag.copy);
+      button.classList.add('drag-source');
+      dragged = true;
+      haptic.soft();
+    }
+    drag.copy.style.transform = `translate(${dx}px, ${dy}px)`;
+    drag.hover?.classList.remove('drop-hover');
+    drag.hover = targetAt(e);
+    drag.hover?.classList.add('drop-hover');
+  });
+  button.addEventListener('pointerup', (e) => {
+    if (drag?.id !== e.pointerId) return;
+    const target = drag.copy && targetAt(e);
+    cleanup();
+    if (target && !net.busy) play({ t: 'defend', card, target: Number(target.dataset.i) });
+  });
+  for (const type of ['pointercancel', 'lostpointercapture']) {
+    button.addEventListener(type, (e) => { if (drag?.id === e.pointerId) cleanup(); });
+  }
+  button.addEventListener('click', (e) => { if (dragged && e.detail !== 0) e.stopImmediatePropagation(); }, true);
+}
+
+function onHandTap(c, keyboard) {
   const s = state;
   const L = s.legal;
-  if (!L) return;
-  const d = s.deal;
-  const iDefend = s.me.seat === d.defenderSeat && !d.taking;
+  if (!L || net.busy) return;
+  const iDefend = s.me.seat === s.deal.defenderSeat && !s.deal.taking;
+  if (iDefend && !L.transfer?.includes(c) && !(keyboard && L.defend?.[c]?.length)) return;
   if (picked !== c) {
     picked = c;
     haptic.soft();
     bus.render();
-    // One possible target: say where it goes before the second tap.
+    if (keyboard) {
+      const next = iDefend ? document.querySelector('.dk-pair.target') : null;
+      (next || document.querySelector(`.dk-card[data-card="${c}"]`))?.focus();
+    }
     return;
   }
-  // The second tap on the same card plays it.
-  if (iDefend) {
-    const targets = L.defend?.[c] || [];
-    if (targets.length === 1) return play({ t: 'defend', card: c, target: targets[0] });
-    if (targets.length > 1) return toast('Тапните по карте на столе, которую кроете');
-    if (L.transfer?.includes(c)) return toast('Перевести — кнопкой «Перевести»');
-    haptic.err();
-    return toast(`${label(c)} здесь ничего не бьёт`);
-  }
-  if (L.attack?.includes(c)) return play({ t: 'attack', card: c });
-  // Not legal: let the server say why, in words — it knows the rule that stops it.
-  return play({ t: 'attack', card: c });
+  if (!iDefend) play({ t: 'attack', card: c });
 }
 
-function onTableTap(i) {
-  const s = state;
-  const d = s.deal;
-  if (!picked || s.me.seat !== d.defenderSeat || d.taking) return;
+function onTableKey(i) {
+  if (net.busy || !state.legal?.defend?.[picked]?.includes(i)) return;
   play({ t: 'defend', card: picked, target: i });
 }
 
@@ -495,7 +543,6 @@ function panelEl(s) {
   if (waitingOn.length) {
     return note('Ждём: ', h('b', waitingOn.join(', ')), L?.attack?.length ? ' · можно ещё подкинуть' : '');
   }
-  if (me.seat === d.defenderSeat && !d.taking && !d.covered) return note('Выберите карту и тапните по карте на столе, которую кроете');
   if (L?.attack?.length) return note(picked ? 'Ещё тап по карте — подкинуть' : 'Подкинуть — два тапа по карте');
   if (!d.table.length) return note('Ждём первый ход…');
   return note('Ждём, пока ', h('b', nameAt(s, d.defenderSeat)), d.taking ? ' заберёт карты' : ' отобьётся');
@@ -743,7 +790,7 @@ function openRules() {
     h('h3', 'Правила'),
     h('div.rules',
       h('p', '36 карт, по 6 каждому. Козырь — открытая карта под колодой. Первым ходит младший козырь, дальше — «под дурака».'),
-      h('p', 'Отбиться — старшей картой той же масти или козырем. Подкидывают все, кроме отбивающегося, — карты тех достоинств, что на столе; в отбое не больше 6 карт и не больше, чем карт у отбивающегося.'),
+      h('p', 'Младшей картой отбиться нельзя. Некозырную карту покрывает равная по достоинству, старшая той же масти или козырь не младше. Козырь покрывает только старший козырь. Подкидывают все, кроме отбивающегося, — карты тех достоинств, что на столе; в отбое не больше 6 карт и не больше, чем карт у отбивающегося.'),
       h('p', 'Всё побито и все сказали «пас» — бито, отбившийся ходит. Взял — пропускает ход. Добирают до 6: атаковавший, остальные по кругу, отбивавшийся последним.'),
       state.room.settings.variant === 'perevodnoy'
         ? h('p', 'Переводной: пока ни одна карта не побита, можно перевести атаку картой того же достоинства — если у следующего хватает карт.')

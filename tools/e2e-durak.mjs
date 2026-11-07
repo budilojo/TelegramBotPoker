@@ -88,7 +88,7 @@ const browser = await chromium.launch();
 const pages = new Map();
 const problems = [];
 async function openPage(u, startParam) {
-  const page = await browser.newPage({ viewport: { width: 360, height: 740 }, deviceScaleFactor: 2 });
+  const page = await browser.newPage({ viewport: { width: 360, height: 740 }, deviceScaleFactor: 2, hasTouch: u === max });
   page.on('pageerror', (e) => problems.push(`${u.first_name}: ${e.message}`));
   page.on('console', (m) => m.type() === 'error' && problems.push(`${u.first_name}: ${m.text()}`));
   const initData = signInitData({ auth_date: Math.floor(Date.now() / 1000), user: u, start_param: startParam }, TOKEN);
@@ -180,6 +180,32 @@ async function playCard(page, card) {
   await tapCard(page, card);
 }
 
+/** Drag the visible edge of a fanned card, with mouse or real browser touch events. */
+async function dragCover(page, card, at, { touch = false, valid = true } = {}) {
+  const hand = await page.locator(`.dk-card[data-card="${card}"]`).boundingBox();
+  const pair = valid ? await page.locator(`.dk-pair[data-i="${at}"]`).boundingBox() : null;
+  const start = { x: hand.x + 7, y: hand.y + 24 };
+  const end = pair ? { x: pair.x + pair.width / 2, y: pair.y + pair.height / 2 } : { x: 8, y: 8 };
+  if (touch) {
+    const cdp = await page.context().newCDPSession(page);
+    try {
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [start] });
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [end] });
+      if (valid) await page.waitForSelector(`.dk-pair[data-i="${at}"].drop-hover`);
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    } finally { await cdp.detach(); }
+  } else {
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await page.mouse.move(end.x, end.y, { steps: 5 });
+    if (valid) await page.waitForSelector(`.dk-pair[data-i="${at}"].drop-hover`);
+    await page.mouse.up();
+  }
+  await page.waitForSelector('.dk-drag-card', { state: 'detached' });
+}
+
+let touchCovers = 0;
+let mouseCovers = 0;
 let moves = 0;
 let throwsIn = 0;
 let takes = 0;
@@ -199,16 +225,33 @@ for (let guard = 0; room().deal.phase === 'play' && guard < 800; guard++) {
     const u = byId(d.defender);
     const page = pageOf(u);
     const at = d.table.findIndex((x) => !x.d);
+    const bout = d.bout.no;
     const trump = d.trump;
     const rank = (c) => ['6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'].indexOf(c.slice(0, -1));
     const a = d.table[at].a;
-    const ok = d.hands[d.defender].filter((c) => (c.slice(-1) === a.slice(-1) ? rank(c) > rank(a) : c.slice(-1) === trump && a.slice(-1) !== trump));
+    const ok = d.hands[d.defender].filter((c) => {
+      if (rank(c) < rank(a)) return false;
+      if (a.endsWith(trump)) return c.endsWith(trump) && rank(c) > rank(a);
+      return rank(c) === rank(a) || c.endsWith(a.slice(-1)) || c.endsWith(trump);
+    });
     if (ok.length) {
       const card = low(ok);
-      await tapCard(page, card);
-      await page.waitForSelector(`.dk-pair[data-i="${at}"].target`);
-      await page.locator(`.dk-pair[data-i="${at}"]`).click();
+      const touch = u === max;
+      const handCard = page.locator(`.dk-card[data-card="${card}"].can-cover`);
+      await handCard.waitFor();
+      if (!beats) {
+        await handCard.dblclick({ position: { x: 7, y: 24 } });
+        await dragCover(page, card, at, { touch, valid: false });
+        assert.equal(await handCard.locator('img').evaluate(el => getComputedStyle(el).opacity), '1');
+        assert.equal(room().seq, seq, 'двойной клик и сброс мимо не разыгрывают карту');
+      }
+      await dragCover(page, card, at, { touch });
       await until(moved, `${u.first_name} кроет`);
+      const after = room().deal;
+      if (after.bout.no === bout && after.phase === 'play') assert.equal(after.table[at]?.d, card, 'карта попала в выбранную пару');
+      else assert.ok(after.discard.includes(card), 'последняя защита закрыла отбой');
+      if (touch) touchCovers++;
+      else mouseCovers++;
       beats++;
     } else {
       await page.getByRole('button', { name: 'ВЗЯТЬ' }).click();
@@ -239,10 +282,10 @@ for (let guard = 0; room().deal.phase === 'play' && guard < 800; guard++) {
   if (moves % 20 === 0) for (const [id, p] of pages) await cardsInPlace(p, `ход ${moves} у ${id}`);
 }
 const d1 = room().deal;
-assert.equal(d1.phase, 'over', 'партия доиграна тапами');
+assert.equal(d1.phase, 'over', 'партия доиграна');
 for (const [id, page] of pages) await cardsInPlace(page, `конец партии у ${id}`, { empty: true });
 for (const page of [pi, pm]) await page.setViewportSize({ width: 360, height: 740 });
-step(`партия сыграна тапами: ${moves} действий — ${beats} раз покрыли, ${takes} раз взяли, ${throwsIn} подкинули`);
+step(`партия сыграна тапами и перетаскиванием: ${moves} действий — ${beats} раз покрыли, ${takes} раз взяли, ${throwsIn} подкинули`);
 
 const verdict = d1.fool ? `Дурак — ${room().players.find((p) => p.id === d1.fool).name}` : 'Ничья';
 for (const page of pages.values()) await page.waitForSelector(`.dk-line:has-text("${verdict}")`);
@@ -250,6 +293,8 @@ const card1 = api.message(room().ui.tableMessageId).text;
 assert.match(card1, d1.fool ? /Дурак партии #1/ : /ничья/);
 assert.match(card1, /Счёт: /);
 step(`итог на всех экранах: «${verdict}»; карточка в группе — «${card1.split('\n').find((l) => /Дурак партии|ничья/.test(l))?.replace(/<[^>]+>/g, '')}»`);
+
+assert.ok(touchCovers > 0 && mouseCovers > 0, 'за партию покрыли мышью и касанием');
 
 /* -------------------------------------------------- the results, in the group */
 
