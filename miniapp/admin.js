@@ -316,6 +316,70 @@ const when = (ts) => {
 
 /* -------------------------------------------------------------- пульт */
 
+const REVIEW_REASON = {
+  SHORT: 'Короткая партия',
+  FARMED: 'Лимит партий с тем же составом',
+  GAINED: 'Дневной лимит начислений игроку',
+};
+
+const REVIEW_ACTION = {
+  fold: 'Сброс карт', check: 'Чек', call: 'Уравнял', bet: 'Ставка', raise: 'Повысил', allin: 'Олл-ин',
+  attack: 'Атака', defend: 'Отбой', transfer: 'Перевод', take: 'Взял', pass: 'Пас', play: 'Сыграл карту',
+  draw: 'Ничья или добор', move: 'Ход', undo: 'Откат', roll: 'Бросок кубиков', end: 'Завершил ход',
+  fire: 'Выстрел', resign: 'Сдался', abort: 'Отмена', uno: 'Объявил UNOQ', catch: 'Поймал',
+};
+
+let ratingWatchInput = '';
+
+function ratingTools(r) {
+  if (!r) return null;
+  const id = h('input.num', {
+    inputmode: 'numeric', type: 'text', 'aria-label': 'Telegram ID для наблюдения',
+    value: ratingWatchInput, oninput: event => { ratingWatchInput = event.target.value; },
+  });
+  const watch = (userId, on) => send({ t: 'ratingWatch', userId, on });
+  return h('section',
+    h('div.section-label', 'Рейтинг'),
+    h('div.box',
+      h('div.hint', 'Сброс обнуляет очки, число зачётных партий и видимую историю всех игр и групп.'),
+      h('button.btn.danger.wide', { onclick: () => confirmRatingReset(r.generation) }, 'Сбросить весь рейтинг')),
+    h('div.section-label', 'Наблюдение за партиями'),
+    h('div.box',
+      h('div.hint', 'Добавьте Telegram ID для наблюдения. Партии, отклонённые по лимиту или за слишком короткую игру, отмечаются автоматически.'),
+      h('label.field', h('span.field-l', 'Telegram ID игрока'), id),
+      h('button.btn.wide', { onclick: () => watch(ratingWatchInput, true) }, 'Добавить наблюдение'),
+      r.watch.map(userId => h('div.tool-line', h('span.num', userId),
+        h('button.btn.sm', { onclick: () => watch(userId, false) }, 'Убрать')))),
+    h('div.section-label', 'Последние записи'),
+    r.recent.length ? r.recent.map(record => h('div.box',
+      h('div.tool-head', `${GAME[record.game] || record.game} · ${record.code}`),
+      h('div.hint', `${REVIEW_REASON[record.reason] || 'Ручное наблюдение'} · действий: ${fmt(record.actionCount)}`),
+      h('button.btn.wide', { onclick: () => send({ t: 'ratingReview', key: record.key }) }, 'Открыть запись')))
+      : h('div.hint', 'Записей пока нет.'),
+    r.selected ? h('div.box',
+      h('div.tool-head', `Запись партии · ${r.selected.code}`),
+      h('div.hint', new Date(r.selected.at).toLocaleString('ru-RU')),
+      h('div.hint', `Участники: ${r.selected.participants.join(', ') || '—'}`),
+      h('div.hint', `Порядок мест: ${r.selected.places.join(' → ') || '—'}`),
+      r.selected.actions.map(event => h('div.tool-line', h('span.num', new Date(event.at).toLocaleTimeString('ru-RU')),
+        h('span', `${event.actor} · ${REVIEW_ACTION[event.action] || event.action}${event.detail ? ' · ' + event.detail : ''}`))),
+      h('button.btn.wide', { onclick: () => send({ t: 'ratingReview', key: null }) }, 'Закрыть запись')) : null);
+}
+
+function confirmRatingReset(generation) {
+  const phrase = h('input', { type: 'text', autocomplete: 'off', 'aria-label': 'Подтверждение сброса' });
+  showSheet('rating-reset', () => h('form', { onsubmit: event => {
+    event.preventDefault();
+    const confirm = phrase.value;
+    closeSheet();
+    send({ t: 'ratingReset', generation, confirm });
+  } },
+  h('h3', 'Сбросить весь рейтинг?'),
+  h('div.hint', 'Чтобы начать таблицы с нуля, введите СБРОСИТЬ.'),
+  h('label.field', h('span.field-l', 'Слово подтверждения'), phrase),
+  h('button.btn.danger.wide', { type: 'submit' }, 'Подтвердить сброс')));
+}
+
 function toolsTab(s) {
   // Первый заход берёт текст с сервера, дальше — что набрали: новые цифры не
   // должны стирать недописанную фразу.
@@ -336,6 +400,7 @@ function toolsTab(s) {
         ? h('button.btn.primary.wide', { onclick: () => setDown(false) }, '▶️ Снять обслуживание')
         : h('button.btn.primary.wide.danger', { onclick: () => confirmDown() }, '⏸ Остановить всё')),
 
+    ratingTools(s.ratingAdmin),
     h('div.section-label', 'Завершить все игры'),
     h('div.box',
       h('div.hint', 'Все живые игры закроются с итогами в группы — как будто каждый хост нажал «Завершить». ' +

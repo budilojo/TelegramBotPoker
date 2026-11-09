@@ -21,6 +21,7 @@
  * the game module's view). The only moves the bot ever makes in somebody's
  * place are a turn timer's — switched on by the host.
  */
+import { RatingReview } from './rating-review.js';
 import crypto from 'node:crypto';
 import { identify } from './identity.js';
 import { Outbox } from './outbox.js';
@@ -195,6 +196,7 @@ export class App {
   } = {}) {
     this.api = api;
     this.store = store;
+    this.ratingReview = new RatingReview(store);
     // Наблюдатель, явно подключаемый сервером. Публичных очков не меняет.
     this.skillShadow = skillShadow;
     this.botUsername = botUsername;
@@ -766,6 +768,10 @@ export class App {
         this.log(err);
         continue; // рейтинг не должен ронять игру: сыграли — и ладно
       }
+      const at = this.clock.now();
+      queueMicrotask(() => {
+        try { this.ratingReview.finish(room, r, out, at); } catch (error) { this.log(error); }
+      });
       seen[r.id] = out;
       fresh.push({ round: r.id, ...out });
     }

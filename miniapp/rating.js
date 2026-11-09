@@ -65,6 +65,7 @@ export function render() {
           : 'Здесь пока пусто. Сыграйте партию до конца — и она появится.'),
 
     h('div.hint.rt-why',
+      h('div', 'Места в таблице определяет число зачётных партий. При равенстве выше игрок с большим числом очков.'),
       h('div', 'Очки за место: +20, +12, +6, дальше +3. Если у партии есть проигравший, ему −10. Итог не падает ниже нуля.'),
       h('div', `Считаются доигранные партии, не больше ${s.perDay} в сутки с одним и тем же составом.`)),
   );
@@ -96,10 +97,11 @@ function row(r) {
       h('div.rt-name', r.name, r.me ? h('span.rt-you', ' — вы') : null),
       h('div.rt-sub', r.sticky && r.total
         ? `${r.place}-е из ${fmt(r.total)} · ${games(r.played)}`
-        : `${games(r.played)} · побед ${winRate(r)}`)),
+        : `Побед ${winRate(r)}`)),
     h('div.rt-points',
-      h('b.num', fmt(r.points)),
-      h('small', 'очков')));
+      h('b.num', fmt(r.played)),
+      h('small', plural(r.played, 'партия', 'партии', 'партий')),
+      h('small', `${fmt(r.points)} очков`)));
 }
 
 let shown = null;
@@ -174,6 +176,20 @@ function askTables(game) {
   bus.render();
 }
 
+function chooseGameGroup(s, game) {
+  haptic.soft();
+  const play = code => send({ t: 'rating-play', game, code }, { lock: false });
+  if (s.group) return play(s.group.code);
+  const groups = Array.isArray(s.groups) ? s.groups : (s.ratingGroups ?? []);
+  if (groups.length === 1) return play(groups[0].code);
+  showSheet('rating-play', () => h('div',
+    h('h3', 'Где играем?'),
+    groups.length
+      ? groups.map(g => h('button.btn.wide', { onclick: () => { closeSheet(); play(g.code); } }, g.title))
+      : h('div.hint', 'Добавьте бота в группу и напишите там /game. Затем здесь можно будет выбрать игру.'),
+    h('button.btn.wide', { onclick: () => closeSheet() }, 'Закрыть')));
+}
+
 export function renderRanked(s) {
   const head = h('div.hub-head', h('h1', 'Рейтинг игроков'), h('div.sub', 'Игры, где идут очки'));
   if (s.ratingSoon) {
@@ -190,9 +206,11 @@ export function renderRanked(s) {
     h('div.rt-cup', '🏆'),
     h('div.rt-open-body', h('div.rt-open-title', 'Таблица лидеров'), h('div.rt-open-sub', 'Результаты партий за месяц и за всё время')),
     h('div.rt-open-go', '›'));
-  if (s.rankedTablesSoon) return h('div.lobby.hub.ranked', head, leaderboard,
-    h('div.hint', 'Таблица показывает уже набранные очки. Рейтинговые столы откроются отдельно.'));
   const games = s.rankGames || s.games || [];
+  if (s.rankedTablesSoon) return h('div.lobby.hub.ranked', head, leaderboard,
+    h('div.section-label', 'Играть с друзьями'),
+    h('div.rk-games', games.map(g => h('button.rt-chip', { onclick: () => chooseGameGroup(s, g.id) }, g.title))),
+    h('div.hint', 'Зачётные партии с друзьями учитываются в таблице.'));
   const sel = ranked.game;
   return h('div.lobby.hub.ranked',
     head,

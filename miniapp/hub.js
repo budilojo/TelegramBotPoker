@@ -21,6 +21,8 @@ export function onState(s) {
   state = s;
   bus.render();
   refreshSheet();
+  const game = s.playGame && s.games?.find(g => g.id === s.playGame);
+  if (game) openCreate(game);
 }
 
 const STATUS = { lobby: 'ждут игроков', playing: 'идёт игра', paused: 'пауза' };

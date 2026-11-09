@@ -239,6 +239,26 @@ await until(() => room.status === 'finished', 'все игры завершен�
 assert.match(api.groupTexts(CHAT).join('\n'), /ИТОГИ/, 'итоги ушли в группу, стол не пропал молча');
 step('«завершить все»: игра закрыта, итоги в группе');
 
+/* ----------------------------------------------------- рейтинг и журнал */
+store.rate({ userId: '202', game: 'chess', round: 'review-smoke', place: 1, of: 2, delta: 20 });
+store.saveRatingReview({ key: 'review-smoke', at: Date.now(), game: 'chess', code: 'DEMO',
+  reason: 'SHORT', places: ['202', '303'], participants: ['202', '303'], actions: [{ at: Date.now(), actor: '202', action: 'move', detail: 'e2 → e4' }] });
+await pa.getByRole('button', { name: 'Обновить' }).click();
+await pa.getByRole('button', { name: 'Открыть запись' }).first().waitFor();
+await pa.getByRole('textbox', { name: 'Telegram ID для наблюдения' }).fill('202');
+await pa.getByRole('button', { name: 'Добавить наблюдение' }).click();
+await until(() => store.ratingWatch().includes('202'), 'игрок добавлен в наблюдение');
+await pa.getByRole('button', { name: 'Открыть запись' }).first().click();
+await pa.getByText('202 · Ход · e2 → e4', { exact: true }).waitFor();
+await pa.getByRole('button', { name: 'Закрыть запись' }).click();
+await pa.getByRole('button', { name: 'Сбросить весь рейтинг' }).click();
+await pa.getByRole('textbox', { name: 'Подтверждение сброса' }).fill('СБРОСИТЬ');
+await pa.getByRole('button', { name: 'Подтвердить сброс' }).click();
+await toastSaid(pa, /Рейтинг всех игр сброшен/);
+assert.deepEqual(store.activityRating('chess'), []);
+assert.ok(store.ratingReview('review-smoke'));
+step('в пульте работает список наблюдения, просмотр записи и подтверждённый сброс рейтинга');
+
 /* ------------------------------------------------------------- вёрстка */
 
 for (const page of pages) {

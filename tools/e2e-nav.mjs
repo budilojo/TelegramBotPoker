@@ -278,16 +278,26 @@ try {
 
   // Публичный запуск таблицы отдельно от рейтинговых столов.
   const L = await boot(PORT + 3, false, [], true);
+  await group(L, -5002, 'Группа друзей');
   const leaderboard = await open(L, '', [320, 568]);
   await tab(leaderboard, 'rating').click();
-  assert.equal(await leaderboard.locator('.rk-games').count(), 0);
+  assert.equal(await leaderboard.locator('.rk-games button').count(), 7);
+  assert.equal(await leaderboard.getByRole('button', { name: 'Присоединиться' }).count(), 0);
+  await leaderboard.locator('.rk-games button', { hasText: 'Шахматы' }).click();
+  await leaderboard.getByRole('heading', { name: /Шахматы — новое лобби/ }).waitFor();
+  assert.ok(await leaderboard.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'форма шахмат помещается на 320 px');
+  await leaderboard.getByRole('button', { name: 'Создать лобби' }).click();
+  await leaderboard.locator('.lobby:not(.hub)').waitFor();
+  await leaderboard.locator('.back-link', { hasText: 'Все игры' }).first().click();
+  await leaderboard.waitForSelector('h1:has-text("Выберите игру")');
+  await tab(leaderboard, 'rating').click();
   await leaderboard.getByRole('button', { name: /Таблица лидеров/ }).click();
   await leaderboard.locator('.lobby.rating').waitFor();
   await leaderboard.getByRole('button', { name: 'За всё время', exact: true }).click();
   await fits(leaderboard, 'публичная таблица без рейтинговых столов');
   await leaderboard.close();
   await L.web.close();
-  step('публичная таблица открывается, выбор рейтинговых столов скрыт');
+  step('из рейтинга создано лобби выбранной игры, таблица по-прежнему доступна');
 
   assert.deepEqual(problems, [], `ошибки на странице: ${problems.join('; ')}`);
   console.log('e2e навигации: всё сошлось');

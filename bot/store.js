@@ -40,6 +40,30 @@ CREATE TABLE IF NOT EXISTS rooms (
 CREATE INDEX IF NOT EXISTS rooms_by_chat ON rooms (chat_id);
 `;
 
+const monthBoundsCache = new Map();
+function ratingMonthBounds(month) {
+  const key = `${process.env.TZ ?? ''}:${month}`;
+  if (monthBoundsCache.has(key)) return monthBoundsCache.get(key);
+  const year = Number(month.slice(0, 4));
+  const index = Number(month.slice(5)) - 1;
+  const start = offset => {
+    const utc = Date.UTC(year, index + offset, 1);
+    const target = new Date(utc).toISOString().slice(0, 7);
+    let lo = utc - 36 * 3600_000;
+    let hi = utc + 36 * 3600_000;
+    while (hi - lo > 1) {
+      const mid = Math.floor((lo + hi) / 2);
+      if (ym(mid) < target) lo = mid;
+      else hi = mid;
+    }
+    return hi;
+  };
+  const bounds = [start(0), start(1)];
+  if (monthBoundsCache.size >= 12) monthBoundsCache.clear();
+  monthBoundsCache.set(key, bounds);
+  return bounds;
+}
+
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS meta (
   key   TEXT PRIMARY KEY,
@@ -163,6 +187,13 @@ CREATE TABLE IF NOT EXISTS rating_log (
 );
 CREATE INDEX IF NOT EXISTS rating_log_by_user ON rating_log (user_id, game, at DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS rating_log_once ON rating_log (user_id, game, round);
+
+CREATE TABLE IF NOT EXISTS rating_review (
+  round_key TEXT NOT NULL PRIMARY KEY,
+  at INTEGER NOT NULL,
+  data TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS rating_review_at ON rating_review (at DESC);
 
 -- Профиль игрока (ник и аватар для показа). Только отображение: личность и
 -- права определяет Telegram. Таблица ДОБАВЛЕНА без смены версии схемы —
@@ -835,6 +866,67 @@ export class Store {
     return this.partyCount(fingerprint, at);
   }
 
+  ratingGeneration() { return this.getSetting('rating-generation', 0); }
+
+  resetRating(generation) {
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      if (generation !== this.ratingGeneration()) {
+        this.db.exec('ROLLBACK');
+        return false;
+      }
+      // Старый журнал остаётся защитой от повторного зачёта после перезапуска.
+      const cutoff = this.db.prepare('SELECT coalesce(max(id), 0) AS id FROM rating_log').get().id;
+      this.setSetting('rating-cutoff', cutoff);
+      this.setSetting('rating-generation', generation + 1);
+      this.db.exec('DELETE FROM ratings; DELETE FROM ratings_group; COMMIT');
+      return true;
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+  }
+
+  ratingWatch() { return this.getSetting('rating-watch', []); }
+  setRatingWatch(ids) { this.setSetting('rating-watch', ids); }
+
+  saveRatingReview(record) {
+    this.db.prepare('INSERT OR IGNORE INTO rating_review (round_key, at, data) VALUES (?, ?, ?)')
+      .run(record.key, record.at, JSON.stringify(record));
+    this.db.prepare('DELETE FROM rating_review WHERE round_key IN (SELECT round_key FROM rating_review ORDER BY at DESC, round_key DESC LIMIT -1 OFFSET 100)').run();
+  }
+
+  ratingReview(key) {
+    if (typeof key !== 'string') return null;
+    const row = this.db.prepare('SELECT data FROM rating_review WHERE round_key = ?').get(key);
+    return row ? JSON.parse(row.data) : null;
+  }
+
+  ratingReviews(limit = 12) {
+    return this.db.prepare('SELECT data FROM rating_review ORDER BY at DESC, round_key DESC LIMIT ?')
+      .all(limit).map(row => JSON.parse(row.data));
+  }
+
+  activityRating(game, { month = null, chatId = null, userId = null, limit = 50, offset = 0 } = {}) {
+    const table = chatId == null ? 'ratings' : 'ratings_group';
+    const scope = chatId == null ? '' : 'AND chat_id = ?';
+    const scopeArgs = chatId == null ? [] : [String(chatId)];
+    const period = month
+      ? `SELECT user_id, count(*) AS played, sum(place = 1) AS wins, sum(delta < 0) AS fools
+         FROM rating_log WHERE game = ? AND id > ? AND at >= ? AND at < ? ${scope} GROUP BY user_id`
+      : null;
+    const args = month ? [String(game), this.getSetting('rating-cutoff', 0), ...ratingMonthBounds(month), ...scopeArgs] : [];
+    const players = month
+      ? `SELECT r.user_id, r.name, r.month_points AS points, p.played, p.wins, p.fools
+         FROM ${table} r JOIN (${period}) p ON p.user_id = r.user_id
+         WHERE r.game = ? AND r.month = ? ${scope}`
+      : `SELECT user_id, name, points, played, wins, fools FROM ${table} WHERE game = ? AND played > 0 ${scope}`;
+    args.push(String(game), ...(month ? [month] : []), ...scopeArgs);
+    const sql = `WITH players AS (${players}), ranked AS (
+      SELECT *, row_number() OVER (ORDER BY played DESC, points DESC, user_id) AS place,
+        count(*) OVER () AS total FROM players)
+      SELECT * FROM ranked ${userId == null ? 'ORDER BY place LIMIT ? OFFSET ?' : 'WHERE user_id = ?'}`;
+    return this.db.prepare(sql).all(...args, ...(userId == null ? [limit, offset] : [String(userId)]))
+      .map(({ user_id, ...row }) => ({ ...row, userId: String(user_id) }));
+  }
+
   /**
    * Таблица рейтинга. `month` — за какой месяц ('2026-09'); без него за всё
    * время. При равенстве очков выше тот, кто сыграл меньше партий: одинаковый
@@ -914,8 +1006,8 @@ export class Store {
     const only = chatId == null ? '' : 'chat_id = ? AND ';
     const scope = chatId == null ? [] : [String(chatId)];
     return this.db
-      .prepare(`SELECT round, place, of, delta, at FROM rating_log WHERE ${only}user_id = ? AND game = ? ORDER BY at DESC, id DESC LIMIT ?`)
-      .all(...scope, String(userId), String(game), limit);
+      .prepare(`SELECT round, place, of, delta, at FROM rating_log WHERE id > ? AND ${only}user_id = ? AND game = ? ORDER BY at DESC, id DESC LIMIT ?`)
+      .all(this.getSetting('rating-cutoff', 0), ...scope, String(userId), String(game), limit);
   }
 
   // ---- «Тренировка»: личный прогресс (bot/train.js) ----
@@ -1015,6 +1107,7 @@ export class NullStore {
     /** Рейтинг — тоже в памяти, с теми же правилами: партия считается один раз. */
     this.rating = new Map();
     this.rated = new Set();
+    this.reviews = new Map();
     this.parties = new Map();
     this.train = new Map();
     // payments: настоящая SQLite в памяти — у покупок важны транзакции и уникальность, их не подделываем.
@@ -1246,6 +1339,37 @@ export class NullStore {
     const n = (this.decisions.get(String(userId)) ?? []).length;
     this.decisions.delete(String(userId));
     return n;
+  }
+  ratingGeneration() { return this.getSetting('rating-generation', 0); }
+  resetRating(generation) {
+    if (generation !== this.ratingGeneration()) return false;
+    this.rating.clear();
+    this.setSetting('rating-generation', generation + 1);
+    return true;
+  }
+  ratingWatch() { return this.getSetting('rating-watch', []); }
+  setRatingWatch(ids) { this.setSetting('rating-watch', ids); }
+  saveRatingReview(record) {
+    if (!this.reviews.has(record.key)) this.reviews.set(record.key, record);
+    if (this.reviews.size > 100) this.reviews.delete(this.reviews.keys().next().value);
+  }
+  ratingReview(key) { return this.reviews.get(key) ?? null; }
+  ratingReviews(limit = 12) {
+    return [...this.reviews.values()].sort((a, b) => b.at - a.at).slice(0, limit);
+  }
+  activityRating(game, { month = null, chatId = null, userId = null, limit = 50, offset = 0 } = {}) {
+    const chat = chatId == null ? null : String(chatId);
+    const sorted = [...this.rating.values()]
+      .filter(r => r.game === game && (r.chat ?? null) === chat && (!month || r.month === month))
+      .map(r => {
+        const log = month ? r.log.filter(x => ym(x.at) === month) : null;
+        return { userId: r.userId, name: r.name, points: month ? r.monthPoints : r.points,
+          played: log?.length ?? r.played, wins: log ? log.filter(x => x.place === 1).length : r.wins,
+          fools: log ? log.filter(x => x.delta < 0).length : r.fools };
+      })
+      .sort((a, b) => b.played - a.played || b.points - a.points || (a.userId < b.userId ? -1 : 1));
+    const rows = sorted.map((row, i) => ({ ...row, place: i + 1, total: sorted.length }));
+    return userId == null ? rows.slice(offset, offset + limit) : rows.filter(r => r.userId === String(userId));
   }
   ratingTop(game, { month = null, limit = 50, offset = 0, chatId = null } = {}) {
     const chat = chatId == null ? null : String(chatId);

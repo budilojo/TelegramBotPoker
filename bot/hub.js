@@ -48,6 +48,10 @@ const CORE_ERRORS = {
   SHARE_UNAVAILABLE: 'Бот не знает своего адреса — поделиться пока нельзя.',
   TOO_FAST: 'Подождите секунду и нажмите ещё раз.',
   RATING_SOON: RATING_SOON_TEXT,
+  RATING_RESET_STALE: 'Рейтинг уже сброшен в другом окне. Обновите пульт.',
+  RATING_RESET_CONFIRM: 'Для сброса введите СБРОСИТЬ.',
+  RATING_WATCH_INVALID: 'Укажите числовой Telegram ID игрока. В списке может быть до 50 человек.',
+  RATING_REVIEW_GONE: 'Запись партии уже недоступна.',
   RANKED_TABLES_SOON: 'Рейтинговые столы пока закрыты. Таблица лидеров доступна во вкладке «Рейтинг».',
   NO_RANKED_GAME: 'Такой игры в рейтинге нет.',
   ...PROFILE_ERRORS,
@@ -63,7 +67,7 @@ const HUB_ACTIONS = new Set(['create', 'again', 'join', 'home', 'rating', 'solo'
 /** Код, по которому открывается админка. Пускает не он, а список в `.env`. */
 const ADMIN_CODE = 'admin';
 /** Что страница админки может попросить. Всё остальное — отказ. */
-const ADMIN_ACTIONS = new Set(['refresh', 'maintenance', 'stopAll', 'stop', 'cast', 'castTest', 'castCancel']);
+const ADMIN_ACTIONS = new Set(['refresh', 'maintenance', 'stopAll', 'stop', 'cast', 'castTest', 'castCancel', 'ratingReset', 'ratingWatch', 'ratingReview']);
 
 export class Hub {
   /**
@@ -290,14 +294,14 @@ export class Hub {
     // последним сообщением при входе остаётся состояние стола (на это опираются клиенты и тесты).
   }
 
-  enterHub(session) {
+  enterHub(session, playGame = null) {
     this.detach(session);
     session.kind = 'hub';
     session.code = null;
     session.lastHub = null;
     if (!this.byGroup.has(session.group)) this.byGroup.set(session.group, new Set());
     this.byGroup.get(session.group).add(session);
-    this.pushHub(session);
+    this.pushHub(session, playGame);
   }
 
   /** Это же состояние заново — что бы страница ни смотрела. */
@@ -391,7 +395,7 @@ export class Hub {
   }
 
   /** The hub of a group, for one person. Skipped when nothing on it changed. */
-  pushHub(session) {
+  pushHub(session, playGame = null) {
     if (this.app.down) {
       // Сбросить «что уже отправлено»: иначе после обслуживания хаб решит,
       // что ничего не изменилось, и страница останется на экране паузы.
@@ -408,7 +412,7 @@ export class Hub {
       const json = JSON.stringify(view);
       if (json === session.lastHub) return;
       session.lastHub = json;
-      session.send({ t: 'state', state: { ...view, now: this.app.clock.now() } });
+      session.send({ t: 'state', state: { ...view, now: this.app.clock.now(), ...(playGame ? { playGame } : {}) } });
     } catch (err) {
       this.app.log(err);
     }
@@ -456,6 +460,7 @@ export class Hub {
       games: GAME_LIST.filter((g) => g.bot).map((g) => ({ id: g.id, title: g.title, icon: g.icon, blurb: g.blurb, catalog: g.bot.catalog?.() ?? {} })),
       resume: live ? { code: live.code, game: live.game, title: gameOf(live).bot?.label?.(live) || gameOf(live).title, icon: gameOf(live).icon } : null,
       groups: this.app.groupsOf(session.user.id).length,
+      ratingGroups: this.app.groupsOf(session.user.id).map(g => ({ code: g.code, title: g.title || 'Группа' })),
       ratingSoon: this.app.ratingSoon ? RATING_SOON_TEXT : null,
       rankedTablesSoon: this.app.rankedTablesSoon,
       rankGames: GAME_LIST.map((g) => ({ id: g.id, title: g.title, icon: g.icon })),
@@ -490,7 +495,7 @@ export class Hub {
   /** Всё, что видит владелец: цифры, живые сессии, обслуживание, рассылки. */
   pushAdmin(session) {
     try {
-      session.send({ t: 'state', state: adminView(this.app) });
+      session.send({ t: 'state', state: adminView(this.app, session.ratingReviewKey) });
     } catch (err) {
       this.app.log(err);
     }
@@ -635,6 +640,17 @@ export class Hub {
     }
     // Рейтинговые столы: спросить можно с любого экрана хаба, но только когда
     // рейтинг открыт. Пока закрыт — отказ словами, список не собирается.
+    if (msg.t === 'rating-play' && ['hub', 'home', 'solo', 'rating'].includes(session.kind)) {
+      if (this.app.ratingSoon) return this.refuse(session, 'RATING_SOON');
+      const game = GAME_LIST.find(g => g.id === msg.game);
+      if (!game) return this.refuse(session, 'BAD_GAME');
+      const code = msg.code ?? session.group;
+      const group = this.app.groupsOf(session.user.id).find(g => g.code === code);
+      if (!group) return this.refuse(session, 'NOT_YOUR_GROUP');
+      this.detach(session);
+      session.group = group.code;
+      return this.enterHub(session, game.id);
+    }
     if (msg.t === 'rtables' && ['hub', 'home', 'solo', 'rating'].includes(session.kind)) return this.sendRanked(session, msg);
     if (msg.t === 'rjoin' && ['hub', 'home', 'solo', 'rating'].includes(session.kind)) return this.joinRanked(session, msg);
     if (msg.t === 'shop' && session.kind !== 'admin') {
@@ -754,16 +770,20 @@ export class Hub {
     }
     // Что бы страница ни просила у стола — за ним кто-то есть.
     this.app.noteLive(room);
-    return game.handle({
+    const review = app.ratingReview.before(room, msg, session.user.id);
+    let refused = false;
+    const result = game.handle({
       app,
       hub: this,
       session,
       room,
       uid: session.user.id, // the ONLY identity there is
       msg,
-      refuse: (code, text) => this.refuse(session, code, text),
+      refuse: (code, text) => { refused = true; this.refuse(session, code, text); },
       push: () => this.push(session, room),
     });
+    if (!refused) app.ratingReview.accepted(room, review, app.clock.now());
+    return result;
   }
 
   /**
@@ -776,6 +796,35 @@ export class Hub {
 
     switch (msg.t) {
       case 'refresh':
+        return this.pushAdmin(session);
+
+      case 'ratingReset': {
+        if (msg.confirm !== 'СБРОСИТЬ') return this.refuse(session, 'RATING_RESET_CONFIRM');
+        if (!app.store.resetRating(msg.generation)) return this.refuse(session, 'RATING_RESET_STALE');
+        for (const page of this.pages) {
+          if (page.kind === 'rating') {
+            page.rating.who = null;
+            this.pushRating(page);
+          }
+        }
+        session.send({ t: 'notice', text: 'Рейтинг всех игр сброшен.' });
+        return this.pushAdmins();
+      }
+
+      case 'ratingWatch': {
+        const id = typeof msg.userId === 'string' ? msg.userId.trim() : '';
+        const ids = new Set(app.store.ratingWatch());
+        if (!/^[1-9]\d{0,15}$/.test(id) || typeof msg.on !== 'boolean') return this.refuse(session, 'RATING_WATCH_INVALID');
+        if (msg.on) ids.add(id);
+        else ids.delete(id);
+        if (ids.size > 50) return this.refuse(session, 'RATING_WATCH_INVALID');
+        app.store.setRatingWatch([...ids]);
+        return this.pushAdmins();
+      }
+
+      case 'ratingReview':
+        if (msg.key != null && !app.store.ratingReview(msg.key)) return this.refuse(session, 'RATING_REVIEW_GONE');
+        session.ratingReviewKey = msg.key;
         return this.pushAdmin(session);
 
       case 'maintenance': {
@@ -1112,8 +1161,8 @@ export function ratingView(app, user, {
   const month = period === 'month' ? ym(now) : null;
   const store = app.store;
   const uid = String(user.id);
-  const top = store.ratingTop(game, { month, limit: 50, chatId }).map((r, i) => ({
-    place: i + 1,
+  const top = store.activityRating(game, { month, limit: 50, chatId }).map(r => ({
+    place: r.place,
     userId: String(r.userId),
     ...app.profiles.shown(r.userId, r.name || 'Игрок'),
     points: r.points,
@@ -1123,7 +1172,7 @@ export function ratingView(app, user, {
     me: String(r.userId) === uid,
   }));
   const card = (id) => {
-    const r = store.ratingOf(id, game, { month, chatId });
+    const [r] = store.activityRating(game, { month, chatId, userId: id });
     if (!r) return null;
     return {
       userId: String(id),
@@ -1168,7 +1217,7 @@ export function ratingView(app, user, {
  * понять, какую игру снимать, хватает названия группы и кода; обещание «никто
  * не видит чужих карт» не знает исключений, в том числе для владельца.
  */
-export function adminView(app) {
+export function adminView(app, ratingReviewKey = null) {
   const now = app.clock.now();
   const rooms = [...app.rooms.values()].filter((r) => r.status !== 'finished');
   const sessions = rooms
@@ -1201,6 +1250,12 @@ export function adminView(app) {
     stats: app.store.stats(now),
     shopTab: shopTabSummary(app.store, now),
     product: productMetrics(app.store.db, now, app.rooms.values()),
+    ratingAdmin: {
+      generation: app.store.ratingGeneration(),
+      watch: app.store.ratingWatch(),
+      recent: app.store.ratingReviews().map(({ actions, ...record }) => ({ ...record, actionCount: actions.length })),
+      selected: ratingReviewKey == null ? null : app.store.ratingReview(ratingReviewKey),
+    },
     down: { on: app.down, text: app.maintenance.text || '', since: app.maintenance.since || null },
     sessions,
     casts: app.casts ? { list: app.casts.list(10), sizes: app.casts.sizes(), audiences: AUDIENCES, sending: app.casts.busy } : null,
