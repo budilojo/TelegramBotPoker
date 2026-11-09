@@ -35,7 +35,12 @@ const fieldSelector=g=>['poker','durak','colors'].includes(g)?'.surface-felt':g=
 async function checkSurface(p, game, series, decode = true) {
   const themed = p.page.locator(`${surfaceSelector(game)}[data-surface="${series}"]`);
   await themed.first().waitFor();
-  if (game === 'battleship') assert.equal(await themed.count(), 2, 'both boards are themed');
+  if (game === 'battleship') {
+    assert.equal(await themed.count(), 2, 'both boards are themed');
+    const water = await themed.locator('.bs-grid').evaluateAll(els => els.map(el => getComputedStyle(el).backgroundColor));
+    if (p.who === S) assert.equal(water[0], water[1], 'spectator sees both fleets neutrally');
+    else assert.notEqual(water[0], water[1], 'players can distinguish their fleet from the target');
+  }
   const field = p.page.locator(fieldSelector(game)).first();
   const paint = await field.evaluate(async (el, { series, decode }) => {
     const css = getComputedStyle(el), image = css.backgroundImage;
@@ -149,7 +154,7 @@ try {
    await b.page.evaluate(async()=>(await import('/collections/index.js')).open());
    await b.page.waitForSelector('.col-show');await b.page.locator('.col-card[data-item="sever-chess-board"]').click();
    await b.page.getByRole('button',{name:'Примерить',exact:true}).click();await b.page.waitForSelector('.col-fit');
-   assert.equal(await b.page.locator('.col-fit .col-sample[data-art="sever-chess-board"]').getAttribute('data-surface'),'sever');
+   assert.equal(await b.page.locator('.col-fit .col-sample-chess[data-art="sever-chess-board"]').getAttribute('data-surface'),'sever');
    assert.equal(await b.page.locator('.col-fit .col-sample-grid img').count(),32);
    assert.deepEqual(t.app.store.collChoices(B.id),before);assert.deepEqual(t.app.collections.ownedItems(B.id),[]);
    await b.page.screenshot({path:path.join(out,`fitting-off-${width}.png`)});

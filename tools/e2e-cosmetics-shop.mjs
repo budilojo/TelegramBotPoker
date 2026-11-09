@@ -223,7 +223,18 @@ try {
    const slot = ['poker', 'durak'].includes(g.id) ? 'table' : g.id === 'colors' ? 'unoq-cardback' : g.id === 'battleship' ? 'battleship-panel' : `${g.id}-board`;
    await select(p, 'category', ['poker', 'durak'].includes(g.id) ? 'tables' : g.id === 'colors' ? 'cards' : 'boards');
    await card(p, `sever-${slot}`); await p.getByRole('button', { name: 'Примерить', exact: true }).click();
-   await p.waitForSelector('.col-fit'); await layout(p, `${g.id} fit`); await shot(p, `${g.id}-fit-${width}`); await back(p);
+   await p.waitForSelector('.col-fit');
+   if (g.id === 'nardy') {
+     assert.equal(await p.locator('.col-fit .nd-pt').count(), 24);
+     assert.equal(await p.locator('.col-fit .nd-bar').count(), 2);
+     assert.equal(await p.locator('.col-fit .nd-no').last().textContent(), '24');
+   }
+   if (g.id === 'battleship') {
+     assert.equal(await p.locator('.col-fit .bs-frame').count(), 2);
+     assert.equal(await p.locator('.col-fit .bs-own .bs-ship').count(), 1);
+     assert.equal(await p.locator('.col-fit .bs-frame:not(.bs-own) .bs-ship').count(), 0);
+   }
+   await layout(p, `${g.id} fit`); await shot(p, `${g.id}-fit-${width}`); await back(p);
    await p.getByRole('button', { name: 'Надеть', exact: true }).click(); await p.getByRole('button', { name: 'Надето', exact: true }).waitFor();
    assert.deepEqual(room.turn, turn); assert.deepEqual(room.look, look); assert.equal(room.players.length, count);
    assert.equal(await p.locator('[data-act="return-table"]').count(), 1);

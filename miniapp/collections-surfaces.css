@@ -44,10 +44,8 @@
 }
 
 [data-surface] :is(.ch-board, .bs-grid, .nd-board, .col-sample-grid),
-.col-sample.sea[data-surface] .col-sample-content,
 .surface-felt[data-surface],
-.surface-preview[data-surface],
-.col-sample.nardy[data-surface] {
+.surface-preview[data-surface] {
   background-color: var(--surface-base);
   background-image: var(--surface-weave, none);
   background-position: center;
@@ -65,34 +63,54 @@ body[data-screen='durak'] .dk-cloth.surface-felt,
 }
 
 .ch-frame[data-surface], .bs-frame[data-surface] { background-color: var(--surface-base); }
+.surface-felt[data-surface] { background-size: 96px auto; }
+.cl-felt[data-surface],
+.col-sample-hand[data-surface] { background-size: 132px auto; }
+[data-surface] :is(.ch-board, .col-sample-grid) { background-size: 78px auto; }
 
 [data-surface] :is(.ch-sq, .col-sample-cell) {
   background-color: color-mix(in srgb, var(--surface-pale) 93%, transparent);
 }
 [data-surface] :is(.ch-sq, .col-sample-cell).dark {
-  background-color: color-mix(in srgb, var(--surface-mid) 88%, transparent);
+  background-color: color-mix(in srgb, var(--surface-mid) 81%, transparent);
 }
 
-[data-surface] .bs-grid { border-color: var(--surface-line); }
-:where([data-surface]) .bs-cell { box-shadow: inset -1px -1px 0 var(--surface-line); }
+.bs-frame[data-surface] {
+  --sea-grid-line: color-mix(in srgb, var(--surface-line) 84%, var(--surface-base));
+}
+[data-surface] .bs-grid { border-color: var(--sea-grid-line); background-size: 86px auto; }
+[data-surface] .bs-grid.mini { background-size: 44px auto; }
+.bs-own[data-surface] .bs-grid {
+  background-color: color-mix(in srgb, var(--surface-base) 95%, var(--surface-pale));
+}
+:where([data-surface]) .bs-cell { box-shadow: inset -1px -1px 0 var(--sea-grid-line); }
+/* В статической примерке линии те же, но прицелу не нужно их переопределять. */
+.col-sample-sea[data-surface] .bs-cell {
+  border-right: 1px solid var(--sea-grid-line);
+  border-bottom: 1px solid var(--sea-grid-line);
+  box-shadow: none;
+}
+.col-sample-sea .bs-ship { border: 1px solid var(--bg-main); box-shadow: none; }
 [data-surface] .bs-cell.around::after { background: var(--surface-line); }
-[data-surface] .col-sea-cell { border-color: var(--surface-line); }
 
-.nd-wrap[data-surface] {
+:is(.nd-wrap, .col-sample-nardy)[data-surface] {
   --nd-pt-light: var(--surface-pale);
   --nd-pt-dark: var(--surface-mid);
-  --nd-bar: var(--surface-mid);
+  --nd-bar: color-mix(in srgb, var(--surface-base) 74%, var(--surface-line));
 }
-[data-surface] .nd-board { outline: 1px solid var(--surface-line); outline-offset: -1px; }
+[data-surface] .nd-board {
+  outline: 1px solid var(--surface-line);
+  outline-offset: -1px;
+  background-size: 156px auto;
+}
 [data-surface] .nd-pt::before {
   background-image: var(--surface-weave);
   background-position: center;
+  background-size: 68px auto;
 }
 [data-surface] .nd-no { opacity: 1; }
 
 .col-sample[data-surface] { background-color: var(--surface-base); }
-[data-surface] .col-sample-point { background-color: var(--surface-pale); }
-[data-surface] .col-sample-point:nth-child(even) { background-color: var(--surface-mid); }
 .col-sample.table[data-surface] { outline: 1px solid var(--surface-line); outline-offset: -1px; }
 
 .surface-preview > svg { width: 100%; height: 100%; display: block; }

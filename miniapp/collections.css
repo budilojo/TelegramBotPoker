@@ -290,17 +290,14 @@
 .col-sample-cell i { width: 72%; height: 72%; border-radius: var(--k-r-pill); background: var(--text-primary); border: 2px solid var(--bg-main); }
 .col-sample-cell i.black { background: var(--bg-main); border-color: var(--text-primary); }
 .col-sample-cell i.king::after { content: '×'; color: var(--text-primary); display: block; text-align: center; }
-.col-sample.nardy { aspect-ratio: 4 / 3; }
-.col-sample-points { display: grid; grid-template-columns: repeat(12, 1fr); grid-template-rows: 1fr 1fr; column-gap: var(--k-s4); }
-.col-sample-point { position: relative; background: var(--ch-dark); clip-path: polygon(0 0, 100% 0, 50% 90%); }
-.col-sample-point:nth-child(even) { background: var(--ch-light); }
-.col-sample-point:nth-child(n+13) { transform: rotate(180deg); }
-.col-sample-point i { display: block; border-radius: var(--k-r-pill); width: 85%; aspect-ratio: 1; margin-inline: auto; background: var(--bg-main); border: 1px solid var(--text-primary); }
-.col-sample-point i.white { background: var(--text-primary); border-color: var(--bg-main); }
-.col-sample-dice { position: absolute; z-index: 2; inset: 42% 30%; text-align: center; background: var(--bg-surface); color: var(--text-primary); font: var(--k-w-semibold) var(--k-fs-body)/var(--k-lh-body) var(--k-font); }
-.col-sample.sea .col-sample-content { display: grid; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(10, 1fr); background: var(--bg-main); }
-.col-sea-cell { border: 1px solid var(--text-secondary); display: flex; align-items: center; justify-content: center; color: var(--text-primary); font-size: var(--k-fs-caption); }
-.col-sea-cell.ship { background: var(--color-muted); }
+.col-sample-chess,
+.col-sample-sea,
+.col-sample-nardy { width: 100%; max-width: 400px; margin-inline: auto; }
+.col-sample-chess { grid-template-columns: var(--ch-axis) minmax(0, 1fr); grid-template-rows: auto var(--ch-axis); }
+.col-sample-chess .col-sample-grid { aspect-ratio: 1; }
+.col-sample-nardy { container-type: inline-size; }
+.col-sample-nardy .nd-board { --nd-pc: min(7cqw, 28px); }
+.col-sample-nardy .nd-stack img { width: var(--nd-pc); height: var(--nd-pc); margin: -1px 0; }
 .col-sample.table { aspect-ratio: 3 / 2; background: var(--table-felt); }
 .col-sample.table .col-sample-content { display: flex; gap: var(--k-s8); align-items: center; justify-content: center; }
 .col-sample.table .col-sample-content img { width: 18%; }

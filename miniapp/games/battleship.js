@@ -274,7 +274,7 @@ function playerBar(side, { extra = null } = {}) {
  *   'place' — своё поле на расстановке: тянуть и поворачивать корабли;
  *   'view'  — только смотреть.
  */
-function boardEl({ board, mode, mini = false, spec = false, label, dead = new Set(), shown = false, last = null, preview = null, selected = -1 }) {
+function boardEl({ board, mode, mini = false, spec = false, label, dead = new Set(), shown = false, last = null, preview = null, selected = -1, own = mini || mode === 'place' }) {
   const k = known(board);
   const grid = h(`div.bs-grid${mini ? '.mini' : ''}`, { role: 'grid', 'aria-label': label });
   const shipCells = new Map();
@@ -309,7 +309,7 @@ function boardEl({ board, mode, mini = false, spec = false, label, dead = new Se
     if (mode === 'place' && drag && drag.moved && drag.slot === i) cls.push('lifted');
     grid.append(h(`div.${cls.join('.')}`, { style: { '--x': s.x, '--y': s.y, '--len': s.len }, 'aria-hidden': 'true' }));
   });
-  const frame = h(`div.bs-frame${mini ? '.mini' : ''}${spec ? '.spec' : ''}`,
+  const frame = h(`div.bs-frame${mini ? '.mini' : ''}${spec ? '.spec' : ''}${own ? '.bs-own' : ''}`,
     h('div.bs-corner'),
     h('div.bs-files', LETTERS.map((l) => h('span', l))),
     h('div.bs-ranks', Array.from({ length: N }, (_, i) => h('span.num', String(i + 1)))),
@@ -361,7 +361,7 @@ function renderPlace() {
   if (locked) {
     root.append(
       h('div.ch-status', foe.ready ? 'Флот заперт · соперник готов' : 'Флот заперт · ждём соперника', left ? ' · ' : null, left),
-      boardEl({ board: m.boards[me], mode: 'view', label: 'Ваш флот' }),
+      boardEl({ board: m.boards[me], mode: 'view', own: true, label: 'Ваш флот' }),
       h('div.hint.bs-hint', foe.ready ? 'Сейчас начнётся бой.' : 'Бой начнётся, когда соперник нажмёт «Я готов».'));
     const panel = h('div.panel');
     if (s.canAbort) panel.append(h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: confirmAbort }, 'Отменить партию'));
