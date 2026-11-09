@@ -1,3 +1,4 @@
+import { closeRankedLobby } from '../drop.js';
 import { makeHolder, dressColorsFelt, nameWithMark, frameAvatar, deckBackImg } from '../collections/look-view.js';
 const lookHolder = makeHolder();
 let look = null;
@@ -173,11 +174,12 @@ function renderLobby() {
     h('div.hint', 'Кладите карту того же цвета, того же числа или того же знака. Сбросил все — вышел; '
       + `кто остался с картами последним — последний. Осталась одна карта — жмите «${s.room.shout}», иначе поймают.`),
     notifyHint(),
-    me.isHost ? h('button.menu-item', { onclick: openSettings }, 'Настройки', h('small', 'накопление, таймер хода')) : null,
-    me.isHost ? h('button.menu-item', { onclick: openMenu }, 'Хост', h('small', 'удалить, передать')) : null,
+    me.isHost && !s.ranked ? h('button.menu-item', { onclick: openSettings }, 'Настройки', h('small', 'накопление, таймер хода')) : null,
+    me.isHost && !s.ranked ? h('button.menu-item', { onclick: openMenu }, 'Хост', h('small', 'удалить, передать')) : null,
   );
   const actions = h('div.panel');
   if (me.kicked) actions.append(h('div.hint', 'Хост удалил вас из этой игры.'));
+  else if (s.ranked && me.isHost) actions.append(h('button.btn', { onclick: closeRankedLobby }, 'Закрыть стол'));
   else if (me.seated) actions.append(h('button.btn', { onclick: () => send({ t: 'leave' }) }, 'Встать'));
   else actions.append(h('button.btn.primary.lg', { onclick: () => { haptic.tap(); send({ t: 'sit' }); } }, 'Сесть за стол'));
   if (me.isHost) {
@@ -642,8 +644,8 @@ function renderResults() {
         h('button.btn', { onclick: () => send({ t: 'hub' }, { lock: false }) }, s.hubLabel || '← Игры с ботами'),
         h('button.btn.primary.lg', { onclick: () => { haptic.tap(); send({ t: 'again' }); } }, '▶ Сыграть ещё'))
       : h('div.panel',
-        s.hub || s.canRematch ? h('button.btn.primary.lg', { onclick: newLobby }, '+ Новое лобби') : null,
-        h('button.btn', { onclick: () => send({ t: 'hub' }, { lock: false }) }, 'Все игры группы')),
+        (s.hub || s.canRematch) && !s.ranked ? h('button.btn.primary.lg', { onclick: newLobby }, '+ Новое лобби') : null,
+        h('button.btn', { onclick: () => send({ t: 'hub' }, { lock: false }) }, s.hubLabel || 'Все игры группы')),
   );
   void lines;
 }
@@ -667,12 +669,13 @@ function openMenu() {
         h('small', handOrder() === 'dealt' ? 'как пришли' : 'по цвету')),
       chatMenuItem(s), shopMenuItem(),
       // С ботами — только играть: ни настроек, ни прерываний; конец — на экране.
-      s.solo ? h('button.menu-item', { onclick: () => { closeSheet(); send({ t: 'hub' }, { lock: false }); } }, s.hubLabel || '← Игры с ботами', h('small', 'партию можно будет продолжить')) : null,
-      me.isHost && !s.solo ? h('button.menu-item', { onclick: openSettings }, 'Настройки', h('small', 'накопление, таймер')) : null,
-      me.isHost && !s.solo && s.deal?.phase === 'play'
+      (s.solo || s.ranked) ? h('button.menu-item', { onclick: () => { closeSheet(); send({ t: 'hub' }, { lock: false }); } }, s.hubLabel || '← Игры с ботами', h('small', 'партию можно будет продолжить')) : null,
+      me.isHost && !s.solo && !s.ranked ? h('button.menu-item', { onclick: openSettings }, 'Настройки', h('small', 'накопление, таймер')) : null,
+      me.isHost && !s.solo && !s.ranked && s.deal?.phase === 'play'
         ? h('button.menu-item.danger', { onclick: confirmAbort }, 'Прервать партию', h('small', 'она не засчитается')) : null,
-      me.isHost ? h('button.menu-item.danger', { onclick: confirmFinish }, 'Завершить игру', h('small', s.solo ? 'итоги — на экране' : 'итоги в группу')) : null,
-      me.isHost && !s.solo ? h('button.menu-item.danger', { onclick: confirmDrop }, 'Удалить игру', h('small', 'без итогов и рейтинга')) : null,
+      s.ranked && me.isHost && s.room.status === 'lobby' ? h('button.menu-item.danger', { onclick: closeRankedLobby }, 'Закрыть стол') : null,
+      me.isHost && (!s.ranked || (s.room.status === 'playing' && !s.rankedActive)) ? h('button.menu-item.danger', { onclick: confirmFinish }, 'Завершить игру', h('small', s.solo || s.ranked ? 'итоги — на экране' : 'итоги в группу')) : null,
+      me.isHost && !s.solo && !s.ranked ? h('button.menu-item.danger', { onclick: confirmDrop }, 'Удалить игру', h('small', 'без итогов и рейтинга')) : null,
       h('button.btn', { onclick: () => closeSheet(true) }, 'Закрыть'));
   });
 }
@@ -746,7 +749,7 @@ function confirmAbort() {
 function confirmFinish() {
   showSheet('finish', () => h('div.sheet-body',
     h('h3', 'Завершить игру?'),
-    h('div.hint', state.solo ? 'Открытую партию это снимет — она не засчитается.' : 'Итоги уйдут в группу. Открытую партию это снимет — она не засчитается.'),
+    h('div.hint', state.solo || state.ranked ? 'Открытую партию это снимет — она не засчитается.' : 'Итоги уйдут в группу. Открытую партию это снимет — она не засчитается.'),
     h('button.btn.danger.lg', { onclick: () => { closeSheet(); send({ t: 'finish' }); } }, 'Завершить'),
     h('button.btn', { onclick: () => closeSheet(true) }, 'Отмена')));
 }

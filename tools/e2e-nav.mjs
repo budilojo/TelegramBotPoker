@@ -7,7 +7,7 @@
  * «Играх с ботами» и таблице рейтинга; нет за столом, в пульте владельца, под
  * шторкой и при открытой клавиатуре. Пока рейтинг закрыт, вкладка «Рейтинг»
  * честно говорит «скоро» и не запрашивает у сервера ни одного стола; когда
- * открыт (второй сервер) — игра → рейтинговые столы → «Присоединиться», и
+ * открыт (второй сервер) — игра → публичные столы → «Войти», и
  * обычного стола группы в списке нет. 320, 360 и 390 px. Telegram — заглушка.
  * Снимки — в preview/nav-*.png (в git не попадают).
  */
@@ -68,13 +68,13 @@ const sdkStub = (initData) => `
   } };`;
 
 const browser = await chromium.launch();
-async function open(s, startParam, size = [360, 740]) {
+async function open(s, startParam, size = [360, 740], player = ivan) {
   const page = await browser.newPage({ viewport: { width: size[0], height: size[1] }, deviceScaleFactor: 2 });
   page.sent = [];
   page.on('pageerror', (e) => problems.push(e.message));
   page.on('console', (m) => m.type() === 'error' && problems.push(m.text()));
   page.on('websocket', (ws) => ws.on('framesent', (f) => page.sent.push(String(f.payload))));
-  const initData = signInitData({ auth_date: Math.floor(Date.now() / 1000), user: ivan, start_param: startParam }, TOKEN);
+  const initData = signInitData({ auth_date: Math.floor(Date.now() / 1000), user: player, start_param: startParam }, TOKEN);
   await page.route('https://telegram.org/**', (r) => r.fulfill({ contentType: 'text/javascript', body: sdkStub(initData) }));
   await page.goto(`http://localhost:${s.port}/`);
   return page;
@@ -248,56 +248,48 @@ try {
   assert.equal(await ro.locator('.rk-games .rt-chip').count(), 7, 'карточки семи игр');
   await fits(ro, 'рейтинг открыт, выбор игры');
   await ro.locator('.rk-games .rt-chip', { hasText: 'Дурак' }).click();
-  await ro.waitForSelector('.hint:has-text("Рейтинговых столов в этой игре пока нет")');
-  assert.equal(await ro.getByRole('button', { name: 'Присоединиться' }).count(), 0, 'обычный стол группы в рейтинговых не показан');
+  await ro.getByText('Свободных столов пока нет.', { exact: false }).waitFor();
+  assert.equal(await ro.getByRole('button', { name: 'Войти' }).count(), 0, 'обычный стол группы в рейтинговых не показан');
   await ro.screenshot({ path: path.join(SHOTS, 'nav-360px-rating-open-empty.png') });
-  step('рейтинг открыт: семь игр → у «Дурака» обычный стол группы НЕ в списке, пусто');
 
-  C.app.liveRooms(-5001)[0].ranked = true; // стол, объявленный рейтинговым
-  await ro.locator('.rk-games .rt-chip', { hasText: 'Покер' }).click();
-  await ro.locator('.rk-games .rt-chip', { hasText: 'Дурак' }).click();
-  await ro.getByRole('button', { name: 'Присоединиться' }).waitFor();
-  await ro.screenshot({ path: path.join(SHOTS, 'nav-360px-rating-open-table.png') });
-  await ro.getByRole('button', { name: 'Присоединиться' }).click();
-  await ro.waitForSelector('.lobby:not(.hub)');
-  assert.equal(await navCount(ro), 0, 'сел за стол — панели нет');
-  step('объявленный рейтинговым стол появился в списке; «Присоединиться» ведёт за стол');
+  const guest = await open(C, 'solo', [320, 568], user(202, 'Вера'));
+  await tab(guest, 'rating').click();
+  await guest.locator('.rk-games .rt-chip', { hasText: 'Дурак' }).click();
+  await guest.getByText('Свободных столов пока нет.', { exact: false }).waitFor();
+  await ro.getByRole('button', { name: 'Создать стол' }).click();
+  await ro.locator('.lobby:not(.hub)').waitFor();
+  await guest.getByRole('button', { name: 'Войти', exact: true }).waitFor();
+  await fits(guest, 'публичный стол на 320 px');
+  await guest.screenshot({ path: path.join(SHOTS, 'nav-320px-rating-open-table.png') });
+  await guest.getByRole('button', { name: 'Войти', exact: true }).click();
+  await guest.locator('.lobby:not(.hub)').waitFor();
+  assert.equal(await navCount(guest), 0, 'сел за стол — панели нет');
+  await ro.getByRole('button', { name: /Начать/ }).click();
+  await guest.locator('.lobby:not(.hub)').waitFor({ state: 'detached' });
+  await guest.getByRole('button', { name: /меню/i }).click();
+  await guest.getByRole('button', { name: /^← Рейтинговые столы/ }).click();
+  await guest.getByRole('button', { name: 'Вернуться' }).waitFor();
+  await guest.getByRole('button', { name: /Таблица лидеров/ }).click();
+  await guest.locator('.lobby.rating').waitFor();
+  assert.equal(await active(guest), 'rating');
+  await fits(guest, 'таблица лидеров');
+  await tab(guest, 'games').click();
+  await guest.waitForSelector('h1:has-text("Игры с ботами")');
+  await guest.close();
+  await ro.close();
+  step('публичный стол появился у другого игрока без группы, оба начали партию; список и таблица помещаются на 320 px');
 
-  // Таблица лидеров: панель на ней, активна «Рейтинг», «Игры» ведёт назад.
-  await ro.locator('.back-link', { hasText: 'Все игры' }).first().click();
-  await ro.waitForSelector('h1:has-text("Выберите игру")');
-  await tab(ro, 'rating').click();
-  await ro.getByRole('button', { name: /Таблица лидеров/ }).click();
-  await ro.waitForSelector('.lobby.rating');
-  assert.equal(await navCount(ro), 1, 'на таблице лидеров панель есть');
-  assert.equal(await active(ro), 'rating');
-  await fits(ro, 'таблица лидеров');
-  await tab(ro, 'games').click();
-  await ro.waitForSelector('h1:has-text("Выберите игру")');
-  step('таблица лидеров: панель есть, «Игры» возвращает в хаб');
-
-  // Публичный запуск таблицы отдельно от рейтинговых столов.
+  // Таблица может быть доступна и при закрытых публичных столах.
   const L = await boot(PORT + 3, false, [], true);
-  await group(L, -5002, 'Группа друзей');
-  const leaderboard = await open(L, '', [320, 568]);
+  const leaderboard = await open(L, 'solo', [320, 568]);
   await tab(leaderboard, 'rating').click();
-  assert.equal(await leaderboard.locator('.rk-games button').count(), 7);
-  assert.equal(await leaderboard.getByRole('button', { name: 'Присоединиться' }).count(), 0);
-  await leaderboard.locator('.rk-games button', { hasText: 'Шахматы' }).click();
-  await leaderboard.getByRole('heading', { name: /Шахматы — новое лобби/ }).waitFor();
-  assert.ok(await leaderboard.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'форма шахмат помещается на 320 px');
-  await leaderboard.getByRole('button', { name: 'Создать лобби' }).click();
-  await leaderboard.locator('.lobby:not(.hub)').waitFor();
-  await leaderboard.locator('.back-link', { hasText: 'Все игры' }).first().click();
-  await leaderboard.waitForSelector('h1:has-text("Выберите игру")');
-  await tab(leaderboard, 'rating').click();
+  await leaderboard.getByText('Рейтинговые столы пока закрыты.', { exact: true }).waitFor();
+  assert.equal(await leaderboard.locator('.rk-games button').count(), 0);
   await leaderboard.getByRole('button', { name: /Таблица лидеров/ }).click();
   await leaderboard.locator('.lobby.rating').waitFor();
-  await leaderboard.getByRole('button', { name: 'За всё время', exact: true }).click();
   await fits(leaderboard, 'публичная таблица без рейтинговых столов');
   await leaderboard.close();
   await L.web.close();
-  step('из рейтинга создано лобби выбранной игры, таблица по-прежнему доступна');
 
   assert.deepEqual(problems, [], `ошибки на странице: ${problems.join('; ')}`);
   console.log('e2e навигации: всё сошлось');

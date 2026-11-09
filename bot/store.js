@@ -806,6 +806,19 @@ export class Store {
 
   /* -------------------------------------------------------------- рейтинг */
 
+  /** Партия лиги и её дневные счётчики сохраняются целиком. */
+  rateAtomically(settle) {
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const out = settle();
+      this.db.exec('COMMIT');
+      return out;
+    } catch (err) {
+      this.db.exec('ROLLBACK');
+      throw err;
+    }
+  }
+
   /**
    * Начислить одному человеку за одну партию.
    *
@@ -815,7 +828,7 @@ export class Store {
    *
    * Ниже нуля рейтинг не опускается: упереться в дно и бросить не за что.
    */
-  rate({ userId, game, round, place, of, delta, name = null, win = false, fool = false, chatId = null, at = Date.now() }) {
+  rate({ userId, game, round, place, of, delta, name = null, win = false, fool = false, chatId = null, ranked = false, at = Date.now() }) {
     const id = String(userId);
     const g = String(game);
     const chat = chatId == null ? null : String(chatId);
@@ -823,7 +836,7 @@ export class Store {
       .prepare('INSERT OR IGNORE INTO rating_log (user_id, chat_id, game, round, place, of, delta, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
       .run(id, chat, g, String(round), Math.round(place), Math.round(of), Math.round(delta), at);
     if (!log.changes) return false;
-    this.#bump('ratings', null, { id, game: g, name, delta, win, fool, at });
+    if (!ranked) this.#bump('ratings', null, { id, game: g, name, delta, win, fool, at });
     // Тот же счёт внутри группы — по тем же правилам, включая «не ниже нуля».
     if (chat) this.#bump('ratings_group', chat, { id, game: g, name, delta, win, fool, at });
     return true;
@@ -1239,7 +1252,7 @@ export class NullStore {
     Object.assign(cur, patch);
     return cur;
   }
-  rate({ userId, game, round, place, of, delta, name = null, win = false, fool = false, chatId = null, at = Date.now() }) {
+  rate({ userId, game, round, place, of, delta, name = null, win = false, fool = false, chatId = null, ranked = false, at = Date.now() }) {
     if (this.rated.has(`${userId}:${game}:${round}`)) return false;
     this.rated.add(`${userId}:${game}:${round}`);
     const bump = (chat) => {
@@ -1260,7 +1273,7 @@ export class NullStore {
       r.log.unshift({ round: String(round), place, of, delta, at });
       this.rating.set(key, r);
     };
-    bump(null);
+    if (!ranked) bump(null);
     if (chatId != null) bump(String(chatId));
     return true;
   }

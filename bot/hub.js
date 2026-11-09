@@ -28,7 +28,7 @@ import { HUB_PREFIX, MAX_LIVE_PER_GROUP, RATING_SOON_TEXT, TOO_MANY_GAMES_TEXT, 
 import { AUDIENCES, ERRORS as CAST_ERRORS } from './broadcast.js';
 import { PER_DAY, sign } from './rating.js';
 import { ym } from './fmt.js';
-import { rankedTables } from './ranked.js';
+import { isRanked, rankedKey, rankedMember, rankedRoundActive, rankedSettings, rankedTables } from './ranked.js';
 import { Shop, shopTabSummary } from './shop.js';
 import { PROFILE_ERRORS } from './profile.js';
 import { ERRORS as REACT_ERRORS, ReactLimiter, react } from './reactions.js';
@@ -54,6 +54,11 @@ const CORE_ERRORS = {
   RATING_REVIEW_GONE: 'Запись партии уже недоступна.',
   RANKED_TABLES_SOON: 'Рейтинговые столы пока закрыты. Таблица лидеров доступна во вкладке «Рейтинг».',
   NO_RANKED_GAME: 'Такой игры в рейтинге нет.',
+  RANKED_FULL: 'За этим столом уже нет свободных мест. Выберите другой.',
+  RANKED_RULES: 'За рейтинговым столом действуют общие настройки.',
+  RANKED_ACTIVE: 'Доиграйте текущую партию. Затем можно завершить игру.',
+  RANKED_HOST_LEAVE: 'Место создателя закреплено за ним. Лобби можно закрыть до начала партии.',
+  RANKED_LIMIT: 'Слишком много открытых столов этой игры. Присоединитесь к одному из них.',
   ...PROFILE_ERRORS,
 };
 
@@ -175,6 +180,19 @@ export class Hub {
       enter(session, room);
       return { session };
     }
+    const ranked = this.app.roomByCode(asked || code);
+    if (isRanked(ranked)) {
+      // Прямой вход по коду только для тех, кто уже играл здесь. Новое место
+      // можно занять через публичный список с повторной проверкой доступности.
+      if (!rankedMember(ranked, auth.user.id) && !(ranked.status === 'finished' && ranked.players.some(p => p.id === auth.user.id))) {
+        return { error: 'NO_ROOM', text: 'Откройте рейтинговый стол из списка в приложении.' };
+      }
+      const group = signed.startsWith(HUB_PREFIX) ? this.app.groupByCode(signed.slice(HUB_PREFIX.length)) : null;
+      const session = { id: this.nextId++, user: auth.user, kind: 'room', group: group?.code ?? null,
+        code: null, send, visible: true, solo: signed === SOLO_CODE };
+      enter(session, ranked);
+      return { session };
+    }
     // Opened without a group or a room — from the bot's profile or a button in
     // private. Telegram does not say which group; the bot knows which groups
     // this person plays in, and shows those (one — straight to its games).
@@ -221,7 +239,7 @@ export class Hub {
     }
 
     const room = this.app.roomByCode(code);
-    if (!room) return { error: 'NO_ROOM', text: 'Стол не найден — возможно, игру уже удалили.' };
+    if (!room || isRanked(room)) return { error: 'NO_ROOM', text: 'Стол не найден — возможно, игру уже удалили.' };
     // Партия с ботами — только своя: чужую по коду не открыть даже посмотреть.
     if (room.solo) {
       if (room.solo.owner !== auth.user.id) return { error: 'NO_ROOM', text: 'Стол не найден — возможно, игру уже удалили.' };
@@ -286,6 +304,7 @@ export class Hub {
     // Кроме тихого переподключения свёрнутой страницы (см. `open`).
     if (!quiet) this.app.noteLive(room);
     session.kind = 'room';
+    session.rankedList = null;
     session.code = room.code;
     if (!this.byRoom.has(room.code)) this.byRoom.set(room.code, new Set());
     this.byRoom.get(room.code).add(session);
@@ -382,6 +401,14 @@ export class Hub {
       }
       if (session.group) state.hub = true; // it came from the group's hub: offer the way back
       if (!room.solo && this.rematchGroup(session, room, state.room?.status)) state.canRematch = true; // «+ Новое лобби» на итогах
+      if (isRanked(room)) {
+        state.ranked = true;
+        state.rankedActive = rankedRoundActive(room);
+        state.canAbort = false;
+        state.canTakeback = false;
+        state.hub = true;
+        state.hubLabel = '← Рейтинговые столы';
+      }
       if (room.solo) {
         // Путь назад из партии с ботами — к играм с ботами, а не к группе.
         state.hub = true;
@@ -529,8 +556,19 @@ export class Hub {
 
   /** Everyone at this table gets THEIR OWN view of it — and the group's hubs a fresh list. */
   broadcast(room) {
-    for (const s of this.byRoom.get(room.code) || []) this.push(s, room);
+    for (const s of this.byRoom.get(room.code) || []) {
+      if (isRanked(room) && room.status !== 'finished' && !rankedMember(room, s.user.id)) {
+        this.enterRating(s, { game: room.game, tables: true });
+      } else this.push(s, room);
+    }
     this.broadcastGroup(room.chatId);
+    if (isRanked(room)) this.broadcastRanked(room.game);
+  }
+
+  broadcastRanked(game) {
+    for (const session of this.pages) {
+      if (session.rankedList?.game === game) this.sendRankedList(session, game);
+    }
   }
 
   broadcastGroup(chatId) {
@@ -550,7 +588,9 @@ export class Hub {
       // Стол открывали кнопкой с карточки — тогда группы у сессии нет, и
       // раньше человек оставался на «Игру удалили» без выхода. Ведём его к
       // своим группам: оттуда он дойдёт куда хотел.
-      if (s.group && this.app.groupByCode(s.group)) this.enterHub(s);
+      const room = this.app.roomByCode(code);
+      if (isRanked(room)) this.enterRating(s, { game: room.game, tables: true });
+      else if (s.group && this.app.groupByCode(s.group)) this.enterHub(s);
       else this.pushHome(s);
     }
     this.byRoom.delete(code);
@@ -640,7 +680,7 @@ export class Hub {
     }
     // Рейтинговые столы: спросить можно с любого экрана хаба, но только когда
     // рейтинг открыт. Пока закрыт — отказ словами, список не собирается.
-    if (msg.t === 'rating-play' && ['hub', 'home', 'solo', 'rating'].includes(session.kind)) {
+    if (msg.t === 'rating-play' && this.app.legacyGroupRating && ['hub', 'home', 'solo', 'rating'].includes(session.kind)) {
       if (this.app.ratingSoon) return this.refuse(session, 'RATING_SOON');
       const game = GAME_LIST.find(g => g.id === msg.game);
       if (!game) return this.refuse(session, 'BAD_GAME');
@@ -653,6 +693,7 @@ export class Hub {
     }
     if (msg.t === 'rtables' && ['hub', 'home', 'solo', 'rating'].includes(session.kind)) return this.sendRanked(session, msg);
     if (msg.t === 'rjoin' && ['hub', 'home', 'solo', 'rating'].includes(session.kind)) return this.joinRanked(session, msg);
+    if (msg.t === 'rcreate' && ['hub', 'home', 'solo', 'rating'].includes(session.kind)) return this.createRanked(session, msg);
     if (msg.t === 'shop' && session.kind !== 'admin') {
       return void session.send(this.shop.handle(session.user, msg));
     }
@@ -718,6 +759,20 @@ export class Hub {
     }
     if (msg.t === 'chat-sync') return void syncChat(room, this.chats, session);
     if (room.solo) room.solo.seenAt = app.clock.now(); // партия с ботами жива, пока её трогают
+    if (isRanked(room)) {
+      if (msg.t === 'hub' || msg.t === 'again') return this.enterRating(session, { game: room.game, tables: true });
+      if (['settings', 'kick', 'role', 'rebuy', 'pause', 'resume', 'undo', 'takeback', 'host', 'abort'].includes(msg.t))
+        return this.refuse(session, 'RANKED_RULES');
+      if (msg.t === 'leave' && room.hostId === session.user.id) return this.refuse(session, 'RANKED_HOST_LEAVE');
+      if (msg.t === 'drop' && room.status !== 'lobby') return this.refuse(session, 'RANKED_ACTIVE');
+      if (msg.t === 'finish' && rankedRoundActive(room)) return this.refuse(session, 'RANKED_ACTIVE');
+      if (msg.t !== 'share' && !rankedMember(room, session.user.id)) return this.refuse(session, 'NOT_IN_GAME');
+      if (msg.t === 'leave' && room.game === 'poker' && room.status === 'lobby') {
+        const result = gameOf(room).markLeft(room, session.user.id);
+        if (result.error) return this.refuse(session, result.error);
+        return app.afterChange(room);
+      }
+    }
     if (msg.t === 'hub' && room.tournament && !session.group) return this.pushSolo(session);
     if (msg.t === 'hub' && room.solo) return this.pushSolo(session);
     if (msg.t === 'hub') {
@@ -770,7 +825,7 @@ export class Hub {
     }
     // Что бы страница ни просила у стола — за ним кто-то есть.
     this.app.noteLive(room);
-    const review = app.ratingReview.before(room, msg, session.user.id);
+    const review = isRanked(room) || app.legacyGroupRating ? app.ratingReview.before(room, msg, session.user.id) : null;
     let refused = false;
     const result = game.handle({
       app,
@@ -881,7 +936,7 @@ export class Hub {
    * Рейтинг. Своего списка подписчиков у него нет — как и у «моих групп»:
    * он не меняется сам по себе, его собирают по запросу.
    */
-  enterRating(session, { game = 'durak', period = 'month' } = {}) {
+  enterRating(session, { game = 'durak', period = 'month', tables = false } = {}) {
     // Решает сервер, а не кнопка на странице: старая вкладка не должна
     // открывать то, что ещё закрыто.
     if (this.app.ratingSoon) return this.refuse(session, 'RATING_SOON');
@@ -889,38 +944,71 @@ export class Hub {
     session.kind = 'rating';
     session.code = null;
     session.rating = {
-      game: GAMES[game] ? game : 'durak',
+      game: GAME_LIST.some(g => g.id === game) ? game : 'durak',
       period: period === 'all' ? 'all' : 'month',
-      // По умолчанию общий: у новой группы свой рейтинг пуст, и открывать
-      // экран на пустом списке — плохо. «Эту группу» включают вкладкой, и
-      // она есть только у страницы, открытой из группы.
+      tables,
       scope: 'all',
       who: null,
     };
     this.pushRating(session);
   }
 
-  /** «Рейтинговые столы игры»: ответ — отдельное сообщение, не состояние экрана. */
-  sendRanked(session, msg) {
-    if (this.app.ratingSoon) return this.refuse(session, 'RATING_SOON');
-    if (this.app.rankedTablesSoon) return this.refuse(session, 'RANKED_TABLES_SOON');
-    const game = GAMES[String(msg.game || '')];
-    if (!game) return this.refuse(session, 'NO_RANKED_GAME');
-    session.send({ t: 'rtables', game: game.id, tables: rankedTables(this.app, session.user.id, game.id) });
+  rankedEnabled(session) {
+    const code = this.app.ratingSoon ? 'RATING_SOON' : this.app.rankedTablesSoon ? 'RANKED_TABLES_SOON' : null;
+    if (code) this.refuse(session, code);
+    return !code;
   }
 
-  /**
-   * «Присоединиться» к рейтинговому столу. Садиться можно только за стол из
-   * списка, который сервер отдал бы этому человеку (`rankedTables`): код стола
-   * с обычного стола, чужой группы или уже идущей игры не подойдёт.
-   */
+  sendRanked(session, msg) {
+    if (!this.rankedEnabled(session)) return;
+    if (msg.game == null) {
+      session.rankedList = null;
+      return;
+    }
+    const game = GAME_LIST.find(g => g.id === msg.game);
+    if (!game) return this.refuse(session, 'NO_RANKED_GAME');
+    this.sendRankedList(session, game.id, true);
+  }
+
+  sendRankedList(session, game, force = false) {
+    if (this.app.down || this.app.ratingSoon || this.app.rankedTablesSoon) return;
+    const tables = rankedTables(this.app, session.user.id, game);
+    const key = JSON.stringify(tables);
+    if (!force && session.rankedList?.key === key) return;
+    session.rankedList = { game, key };
+    session.send({ t: 'rtables', game, tables });
+  }
+
   joinRanked(session, msg) {
-    if (this.app.ratingSoon) return this.refuse(session, 'RATING_SOON');
-    if (this.app.rankedTablesSoon) return this.refuse(session, 'RANKED_TABLES_SOON');
-    const room = this.app.roomByCode(String(msg.code || ''));
-    const ok = room && rankedTables(this.app, session.user.id, room.game).some((t) => t.code === room.code);
-    if (!ok) return this.refuse(session, 'NO_ROOM');
-    return this.enterRoom(session, room);
+    if (!this.rankedEnabled(session)) return;
+    const room = this.app.roomByCode(typeof msg.code === 'string' ? msg.code : '');
+    if (!isRanked(room) || room.status === 'finished') return this.refuse(session, 'NO_ROOM');
+    const allowed = rankedTables(this.app, session.user.id, room.game).find(t => t.code === room.code);
+    if (!allowed) return this.refuse(session, 'RANKED_FULL');
+    if (allowed.mine) return this.enterRoom(session, room);
+    const result = gameOf(room).handle({
+      app: this.app, hub: this, session, room, uid: session.user.id, msg: { t: 'sit' },
+      refuse: (code, message) => this.refuse(session, code, message),
+      push: () => {},
+    });
+    if (rankedMember(room, session.user.id)) this.enterRoom(session, room);
+    return result;
+  }
+
+  createRanked(session, msg) {
+    if (!this.rankedEnabled(session)) return;
+    const game = GAME_LIST.find(g => g.id === msg.game);
+    if (!game) return this.refuse(session, 'NO_RANKED_GAME');
+    const chatId = rankedKey(game.id);
+    const rooms = this.app.liveRooms(chatId);
+    const mine = rooms.find(room => rankedMember(room, session.user.id));
+    if (mine) return this.enterRoom(session, mine);
+    if (rooms.length >= 100) return this.refuse(session, 'RANKED_LIMIT');
+    const room = this.app.createGame(game.id, { chatId, title: 'Рейтинговый стол', host: session.user,
+      settings: Object.hasOwn(rankedSettings, game.id) ? rankedSettings[game.id] : null });
+    if (room.error) return this.refuse(session, room.error);
+    this.enterRoom(session, room);
+    return this.app.draw(room);
   }
 
   pushRating(session) {
@@ -929,7 +1017,7 @@ export class Hub {
       const group = session.group ? this.app.groupByCode(session.group) : null;
       session.send({ t: 'state', state: ratingView(this.app, session.user, {
         ...session.rating,
-        chatId: session.rating.scope === 'group' ? group?.chatId ?? null : null,
+        chatId: this.app.legacyGroupRating && session.rating.scope === 'group' ? group?.chatId ?? null : null,
         groupTitle: group?.title || '',
         back: session.group ? 'hub' : 'home',
       }) });
@@ -947,7 +1035,7 @@ export class Hub {
     switch (msg.t) {
       case 'pick':
         // Игра и срок — единственное, что страница здесь решает.
-        if (msg.game != null) session.rating.game = GAMES[String(msg.game)] ? String(msg.game) : session.rating.game;
+        if (GAME_LIST.some(g => g.id === msg.game)) session.rating.game = msg.game;
         if (msg.period != null) session.rating.period = msg.period === 'all' ? 'all' : 'month';
         // Группу подставляет сервер из сессии: страница не может попросить
         // рейтинг чужой группы, назвав её код.
@@ -1155,11 +1243,13 @@ export function hubView(app, group, user, { home = false } = {}) {
  * ни того, с кем именно играли, здесь нет: только места и очки.
  */
 export function ratingView(app, user, {
-  game = 'durak', period = 'month', scope = 'all', chatId = null, groupTitle = '', who = null, back = 'hub',
+  game = 'durak', period = 'month', chatId = null, groupTitle = '', who = null, back = 'hub', tables = false,
 } = {}) {
   const now = app.clock.now();
   const month = period === 'month' ? ym(now) : null;
   const store = app.store;
+  const publicOnly = !app.legacyGroupRating;
+  if (publicOnly) chatId = rankedKey(game);
   const uid = String(user.id);
   const top = store.activityRating(game, { month, limit: 50, chatId }).map(r => ({
     place: r.place,
@@ -1197,8 +1287,11 @@ export function ratingView(app, user, {
     game,
     period,
     // scope: 'all' — все группы вместе, 'group' — только эта.
-    scope: chatId == null ? 'all' : 'group',
-    canGroup: back === 'hub',
+    scope: publicOnly || chatId == null ? 'all' : 'group',
+    canGroup: !publicOnly && back === 'hub',
+    publicOnly,
+    tables,
+    rankedTablesSoon: app.rankedTablesSoon,
     groupTitle,
     month,
     perDay: PER_DAY,

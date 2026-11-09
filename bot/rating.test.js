@@ -403,5 +403,5 @@ test('пока рейтинг не открыт: кнопка есть, экра
   await t.send(ivan, { t: 'rating' });
   assert.equal(t.state(ivan).kind, 'hub', 'экран рейтинга не открылся');
   const said = t.page(ivan).inbox.map((m) => m.text || '').join(' ');
-  assert.match(said, /рейтинговыми группами/, 'и человеку сказано, чего ждать');
+  assert.match(said, /публичными столами в приложении/, 'и человеку сказано, чего ждать');
 });

@@ -17,7 +17,7 @@ import {
   tg, $app, h, clamp, cardImg, backImg, haptic, animateOnce, centerOf, offsetTo, onRelayout, watchBox, spawn, edgeGlow, celebrate,
   toast, ringSvg, showSheet, closeSheet, refreshSheet, avatar, REDUCED,
 } from '../ui.js';
-import { dropItem } from '../drop.js';
+import { closeRankedLobby, dropItem } from '../drop.js';
 const DEFAULT_BACK = '/cards/back.svg';
 import { makeHolder, dressTable, placeDiamond, DURAK_AVOID, frameAvatar, nameWithMark, frameOf as frameLook, talismanImg } from '../collections/look-view.js';
 
@@ -121,11 +121,12 @@ function renderLobby() {
       ? 'Переводной: пока ни одна карта не побита, отбивающийся может перевести атаку картой того же достоинства.'
       : 'Подкидной: подкидывают все, кроме отбивающегося, — карты тех достоинств, что уже на столе.'),
     notifyHint(),
-    me.isHost ? h('button.menu-item', { onclick: openSettings }, 'Настройки', h('small', 'вариант, таймер хода')) : null,
-    me.isHost ? h('button.menu-item', { onclick: openMenu }, 'Хост', h('small', 'удалить, передать')) : null,
+    me.isHost && !s.ranked ? h('button.menu-item', { onclick: openSettings }, 'Настройки', h('small', 'вариант, таймер хода')) : null,
+    me.isHost && !s.ranked ? h('button.menu-item', { onclick: openMenu }, 'Хост', h('small', 'удалить, передать')) : null,
   );
   const actions = h('div.panel');
   if (me.kicked) actions.append(h('div.hint', 'Хост удалил вас из этой игры.'));
+  else if (s.ranked && me.isHost) actions.append(h('button.btn', { onclick: closeRankedLobby }, 'Закрыть стол'));
   else if (me.seated) actions.append(h('button.btn', { onclick: () => send({ t: 'leave' }) }, 'Встать'));
   else actions.append(h('button.btn.primary.lg', { onclick: () => { haptic.tap(); send({ t: 'sit' }); } }, 'Сесть за стол'));
   if (me.isHost) {
@@ -735,7 +736,8 @@ function renderResults() {
           h('span.s.num', `${r.games} ${r.games === 1 ? 'партия' : r.games < 5 ? 'партии' : 'партий'}`),
           h(`span.pl.num.${r.fool ? 'down' : 'up'}`, `дурак ${r.fool}`)))
       : h('div.hint', 'Ни одной партии не сыграно.')),
-    h('div.hint', s.solo ? 'Игра с ботами — тренировка: в рейтинг не идёт.' : 'Итоги бот отправил и в группу.'),
+    s.ranked ? backToHub(s) : null,
+    h('div.hint', s.solo ? 'Игра с ботами — тренировка: в рейтинг не идёт.' : s.ranked ? 'Результат рейтингового стола' : 'Итоги бот отправил и в группу.'),
   );
   if (s.solo) {
     $app.append(box, h('div.panel',
@@ -744,7 +746,7 @@ function renderResults() {
     return;
   }
   $app.append(box, h('div.panel',
-    s.hub || s.canRematch ? h('button.btn.wide', { onclick: newLobby }, '+ Новое лобби') : null,
+    (s.hub || s.canRematch) && !s.ranked ? h('button.btn.wide', { onclick: newLobby }, '+ Новое лобби') : null,
     h('button.btn.primary.wide.lg', { onclick: () => tg.close() }, 'Закрыть')));
 }
 
@@ -768,12 +770,16 @@ function openMenu() {
       return h('div', h('h3', 'Меню'), h('div.sub', `🃏 Дурак с ботами · ${s.room.variantName}`), h('div.menu-list', items));
     }
     if (s.hub) item(s.hubLabel || '← Все игры группы', 'игра останется, как есть', () => { closeSheet(); send({ t: 'hub' }, { lock: false }); });
-    if (me.seated && !live) item('Встать из-за стола', 'со следующей партии вас не сдадут', () => { closeSheet(); send({ t: 'leave' }); });
+    if (me.seated && !live && !(s.ranked && me.isHost)) item('Встать из-за стола', 'со следующей партии вас не сдадут', () => { closeSheet(); send({ t: 'leave' }); });
     else if (!me.seated && !me.kicked) item('Сесть за стол', 'со следующей партии', () => { closeSheet(); send({ t: 'sit' }); });
     if (!me.notify && s.bot) item('🔔 Напоминать о ходе', 'нажмите Start у бота', () => tg.openTelegramLink(`https://t.me/${s.bot}?start=notify`));
     item('Правила', s.room.variantName, openRules);
     items.push(chatMenuItem(s), shopMenuItem());
-    if (me.isHost) {
+    if (s.ranked && me.isHost) {
+      if (s.room.status === 'lobby') item('Закрыть стол', null, closeRankedLobby, 'danger');
+      else if (s.room.status === 'playing' && !s.rankedActive) item('Завершить игру', 'итоги — на экране', confirmFinish, 'danger');
+    }
+    if (me.isHost && !s.ranked) {
       items.push(h('div.section-label', 'Хост'));
       item('Настройки', 'вариант, таймер хода', openSettings);
       if (live) item('Прервать партию', 'не засчитается; например, кто-то уснул', () => confirmAbort(), 'danger');
@@ -841,7 +847,7 @@ function confirmAbort() {
 function confirmFinish() {
   showSheet('finish', () => h('div',
     h('h3', 'Завершить игру?'),
-    h('div.sub', state.solo ? 'Незаконченная партия не засчитается.' : 'Незаконченная партия не засчитается. Итоги увидят все и группа.'),
+    h('div.sub', state.solo || state.ranked ? 'Незаконченная партия не засчитается.' : 'Незаконченная партия не засчитается. Итоги увидят все и группа.'),
     h('div.grid2',
       h('button.btn', { onclick: () => closeSheet() }, 'Отмена'),
       h('button.btn.danger', { onclick: () => { closeSheet(); send({ t: 'finish' }); } }, 'Завершить')),

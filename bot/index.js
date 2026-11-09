@@ -145,7 +145,7 @@ const app = new App({
   admins: ADMINS,
   collectionsDemo: COLLECTIONS_DEMO, // collections
   ratingSoon: false,
-  rankedTablesSoon: true,
+  rankedTablesSoon: false,
   shopEnabled: process.env.SHOP_ENABLED === 'true',
   sales: SALES, // payments
 });

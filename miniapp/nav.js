@@ -49,7 +49,7 @@ function scrollTop() {
 export function back() {
   if (!view) return false;
   view = null;
-  resetRanked();
+  resetRanked({ unsubscribe: true });
   bus.render();
   return true;
 }
@@ -60,7 +60,7 @@ export function go(tab, s) {
   if (tab === now) return scrollTop();
   if (tab === 'games') {
     view = null;
-    resetRanked();
+    resetRanked({ unsubscribe: true });
     if (s.kind === 'rating') return void send({ t: 'back' }, { lock: false });
     return bus.render();
   }
@@ -172,7 +172,7 @@ function settings(s) {
       h('div.section-label', 'О приложении'),
       h('div.set-row', h('div.set-body',
         h('div.set-title', 'Фишки и очки — виртуальные'),
-        h('div.set-sub', 'Денег в играх нет. Играть можно только с участниками своей группы и с ботами.')))),
+        h('div.set-sub', 'Денег в играх нет. Можно играть с друзьями, с ботами или за публичными столами.')))),
 
     // Строки из реестра (коллекции, иконка на рабочий стол): после существующих блоков; пустые не рисуются.
     ...extraRows(s));

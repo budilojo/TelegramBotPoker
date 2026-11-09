@@ -49,7 +49,10 @@ bus.onState = (wasConnected) => {
   prevSame = moved ? null : net.prev;
   SCREENS[screenOf(s)].onState(s, prevSame, { wasConnected });
   backButton(s);
-  if (!wasConnected) reportVisibility();
+  if (!wasConnected) {
+    reportVisibility();
+    if (!moved) rating.refreshRanked();
+  }
 };
 
 bus.render = render;

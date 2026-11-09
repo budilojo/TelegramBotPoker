@@ -31,7 +31,7 @@ let look = null;
 import {
   tg, $app, h, haptic, toast, showSheet, closeSheet, refreshSheet, avatar, animateOnce,
 } from '../ui.js';
-import { dropItem } from '../drop.js';
+import { closeRankedLobby, dropItem } from '../drop.js';
 import { net, bus, send } from '../net.js';
 import { avatarEl } from '../profile.js';
 import { chatMenuItem } from '../chat.js';
@@ -201,12 +201,13 @@ function renderLobby() {
     h('div.tags', h('span.tag', st.base ? `⏱ ${s.room.control}` : 'Без часов'), h('span.tag', 'Расстановка — 2 минуты')),
     h('div.hint', 'Партия на двоих. Каждый тайно расставляет флот, кто стреляет первым — решит жребий. Остальные из группы смогут смотреть — только выстрелы, без кораблей.'),
     notifyHint(),
-    me.isHost ? h('button.menu-item', { onclick: openSettings }, 'Настройки', h('small', 'часы')) : null,
-    me.isHost ? h('button.menu-item', { onclick: () => openPlayers('host') }, 'Хост', h('small', 'удалить, передать')) : null,
+    me.isHost && !s.ranked ? h('button.menu-item', { onclick: openSettings }, 'Настройки', h('small', 'часы')) : null,
+    me.isHost && !s.ranked ? h('button.menu-item', { onclick: () => openPlayers('host') }, 'Хост', h('small', 'удалить, передать')) : null,
     s.hub && !s.solo ? h('button.menu-item', { onclick: newLobby }, '+ Новое лобби', h('small', 'ещё один стол с теми же настройками')) : null,
   );
   const actions = h('div.panel');
   if (me.kicked) actions.append(h('div.hint', 'Хост удалил вас из этой игры.'));
+  else if (s.ranked && me.isHost) actions.append(h('button.btn', { onclick: closeRankedLobby }, 'Закрыть стол'));
   else if (me.seated) actions.append(h('button.btn', { onclick: () => send({ t: 'leave' }) }, 'Встать'));
   else if (seated.length >= 2) actions.append(h('div.hint', 'Оба места заняты — вы можете смотреть партию.'));
   else actions.append(h('button.btn.primary.lg', { onclick: () => { haptic.tap(); send({ t: 'sit' }); } }, 'Сесть за стол'));
@@ -748,11 +749,12 @@ function renderResults() {
         h('span.s.num', `${r.wins} · ${r.losses}`),
         h('span.pl.num', `${r.games} ${r.games === 1 ? 'партия' : r.games < 5 ? 'партии' : 'партий'}`)))
       : h('div.hint', 'Ни одной партии не сыграно.')),
-    h('div.hint', state.solo ? 'Победы · поражения. Партия с ботом — без рейтинга.' : 'Победы · поражения. Итоги бот отправил и в группу.'),
+    state.ranked ? backToHub(state) : null,
+    h('div.hint', state.solo ? 'Победы · поражения. Партия с ботом — без рейтинга.' : state.ranked ? 'Победы · поражения.' : 'Победы · поражения. Итоги бот отправил и в группу.'),
   );
   $app.append(box, h('div.panel',
     state.canShare ? h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: shareResult }, 'Поделиться') : null,
-    (state.hub && !state.solo) || state.canRematch ? h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: newLobby }, '+ Новое лобби') : null,
+    ((state.hub && !state.solo) || state.canRematch) && !state.ranked ? h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: newLobby }, '+ Новое лобби') : null,
     // Партия с ботом: «Сыграть ещё» — новый стол с тем же уровнем и часами.
     state.solo ? h('button.k-btn.k-btn--primary.k-btn--block', { onclick: () => { haptic.tap(); send({ t: 'again' }); } }, '▶ Сыграть ещё') : null,
     h(`button.btn.wide.lg${state.solo ? '' : '.primary'}`, { onclick: () => tg.close() }, 'Закрыть')));
@@ -770,15 +772,19 @@ function openMenu() {
     const items = [];
     const item = (text, sub, onclick, cls = '') => items.push(h(`button.menu-item${cls ? '.' + cls : ''}`, { onclick }, text, sub ? h('small', sub) : null));
     if (s.hub) item(s.hubLabel || '← Все игры группы', 'партия останется, как есть', () => { closeSheet(); send({ t: 'hub' }, { lock: false }); });
-    if (s.hub && !s.solo) item('+ Новое лобби', 'ещё один стол с теми же настройками', () => { closeSheet(); newLobby(); });
+    if (s.hub && !s.solo && !s.ranked) item('+ Новое лобби', 'ещё один стол с теми же настройками', () => { closeSheet(); newLobby(); });
     if (live && s.canAbort) item('Отменить партию', 'пока каждый не выстрелил — без результата', confirmAbort, 'danger');
     if (live && s.canResign) item('Сдаться', 'партия засчитается как поражение', confirmResign, 'danger');
-    if (me.seated && !live) item('Встать из-за стола', 'место освободится', () => { closeSheet(); send({ t: 'leave' }); });
+    if (me.seated && !live && !(s.ranked && me.isHost)) item('Встать из-за стола', 'место освободится', () => { closeSheet(); send({ t: 'leave' }); });
     else if (!me.seated && !me.kicked && s.players.filter((p) => p.seated).length < 2) item('Сесть за стол', 'со следующей партии', () => { closeSheet(); send({ t: 'sit' }); });
     if (!me.notify && s.bot) item('🔔 Напоминать о ходе', 'нажмите Start у бота', () => tg.openTelegramLink(`https://t.me/${s.bot}?start=notify`));
     item('Правила и часы', s.room.control, openRules);
     items.push(chatMenuItem(s), shopMenuItem());
-    if (me.isHost) {
+    if (s.ranked && me.isHost) {
+      if (s.room.status === 'lobby') item('Закрыть стол', null, closeRankedLobby, 'danger');
+      else if (s.room.status === 'playing' && !s.rankedActive) item('Завершить игру', 'итоги — на экране', confirmFinish, 'danger');
+    }
+    if (me.isHost && !s.ranked) {
       items.push(h('div.section-label', 'Хост'));
       if (!live) item('Настройки', 'часы', openSettings);
       item('Передать права хоста', null, () => openPlayers('host'));

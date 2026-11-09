@@ -37,6 +37,7 @@ import { Support, OPEN_KB } from './support.js';
 import { GAMES, GAME_LIST, HIDDEN_DRAFTS, gameOf } from './games/index.js';
 import { parkTournament } from './games/poker/tournament.js';
 import { apply as rateRound } from './rating.js';
+import { isRanked } from './ranked.js';
 
 /**
  * Справка НЕ НАЗЫВАЕТ ИГР. Ни одной — ни списком, ни примером.
@@ -106,8 +107,7 @@ export const TOO_MANY_GAMES_TEXT = `В группе уже ${MAX_LIVE_PER_GROUP}
 
 /** Значение по умолчанию для изолированных запусков App. */
 export const RATING_SOON = true;
-export const RATING_SOON_TEXT = 'Рейтинг почти готов. Он откроется вместе с рейтинговыми группами: '
-  + 'очки будут идти за партии в них, а не за домашние.';
+export const RATING_SOON_TEXT = 'Рейтинг откроется вместе с публичными столами в приложении.';
 /** A finished game stays (its results on open phones) this long after it ended. */
 export const FINISHED_KEEP_MS = 30 * 60_000;
 /** …and is dropped at start-up after this long, new game or not. */
@@ -192,7 +192,7 @@ export class App {
   constructor({
     api, store = new NullStore(), minIntervalMs = 1000, botUsername = '', onError = null, deck = null, durakDeck = null,
     clock = REAL_CLOCK, runoutStepMs = 1500, webappUrl = '', miniAppName = '', admins = [], ratingSoon = RATING_SOON,
-    rankedTablesSoon = ratingSoon, botRng = Math.random, collectionsDemo = false, shopEnabled = true, sales = null, skillShadow = null,
+    rankedTablesSoon = ratingSoon, legacyGroupRating = false, botRng = Math.random, collectionsDemo = false, shopEnabled = true, sales = null, skillShadow = null,
   } = {}) {
     this.api = api;
     this.store = store;
@@ -210,6 +210,7 @@ export class App {
     this.miniAppName = miniAppName;
     this.ratingSoon = !!ratingSoon;
     this.rankedTablesSoon = !!rankedTablesSoon;
+    this.legacyGroupRating = !!legacyGroupRating;
     /**
      * Кто видит админку. Список приходит из `.env`, а не из чата: файл правит
      * тот, кто запускает бота, и подделать это сообщением нельзя.
@@ -392,7 +393,7 @@ export class App {
         at: this.clock.now(),
         kind,
         game: room.game,
-        chatId: room.tournament ? null : room.chatId,
+        chatId: room.tournament || isRanked(room) ? null : room.chatId,
         code: room.code,
         n: room.players.filter((p) => !p.kicked && !p.left).length,
       });
@@ -410,7 +411,7 @@ export class App {
     return {
       playing: playing.length,
       lobbies: rooms.length - playing.length,
-      groups: new Set(rooms.filter((r) => !r.solo && !r.tournament).map((r) => r.chatId)).size,
+      groups: new Set(rooms.filter((r) => !r.solo && !r.tournament && !isRanked(r)).map((r) => r.chatId)).size,
       solo: rooms.filter((r) => r.solo).length,
       online: this.hub?.people ?? 0,
       byGame,
@@ -553,8 +554,8 @@ export class App {
     // (нет прав, сбой сети) — сыгранное всё равно переживёт перезапуск
     // (аудит, E-03). После карточки стол пишется ещё раз — с её номером.
     this.save(room);
-    // Партия с ботами живёт только в приложении: ни карточки, ни лички.
-    if (room.solo || room.tournament) return Promise.resolve();
+    // Столы без группы живут в приложении.
+    if (room.solo || room.tournament || isRanked(room)) return Promise.resolve();
     this.track(this.pingTurns(room));
     const produce = async () => {
       const view = gameOf(room).card(room, { link: this.tableLink(room) });
@@ -591,7 +592,7 @@ export class App {
 
   /** Post the card again at the bottom of the chat; the old copy loses its button. */
   async newCard(room) {
-    if (room.solo) return this.draw(room);
+    if (room.solo || isRanked(room)) return this.draw(room);
     this.outbox.cancel(room.chatId, room.code);
     const old = room.ui.tableMessageId;
     if (old) await this.outbox.dropKeyboard(room.chatId, old);
@@ -711,6 +712,7 @@ export class App {
     this.store.remove(room.code);
     this.syncClocks();
     this.hub?.broadcastGroup(room.chatId);
+    if (isRanked(room)) this.hub?.broadcastRanked(room.game);
   }
 
   purgeFinished(chatId) {
@@ -742,6 +744,8 @@ export class App {
   rate(room) {
     // С ботами — тренировка: в рейтинг людей она не идёт.
     if (room.solo || room.tournament) return [];
+    const ranked = isRanked(room);
+    if (!ranked && !this.legacyGroupRating && !this.skillShadow) return [];
     const rounds = gameOf(room).rounds?.(room) ?? [];
     if (!rounds.length) return [];
     const seen = (room.rated ||= {});
@@ -760,10 +764,10 @@ export class App {
           this.log(error); // отказ наблюдателя не мешает партии/старым очкам
         }
       }
-      if (seen[r.id]) continue;
+      if (seen[r.id] || (!ranked && !this.legacyGroupRating)) continue;
       let out;
       try {
-        out = rateRound(this.store, { ...r, game: room.game, round: r.id, chatId: room.chatId, at: this.clock.now() });
+        out = rateRound(this.store, { ...r, game: room.game, round: r.id, chatId: room.chatId, ranked, at: this.clock.now() });
       } catch (err) {
         this.log(err);
         continue; // рейтинг не должен ронять игру: сыграли — и ладно
@@ -797,7 +801,7 @@ export class App {
    * идут без группы: им объявлять некому.
    */
   announcements(room) {
-    return room.solo || room.tournament ? [] : gameOf(room).announcements?.(room) ?? [];
+    return room.solo || room.tournament || isRanked(room) ? [] : gameOf(room).announcements?.(room) ?? [];
   }
 
   async say(room, texts) {
@@ -930,6 +934,11 @@ export class App {
       return [{ id: 'idle', timer: { key: `solo:${at}`, deadline: at + SOLO_IDLE_MS }, fire: () => this.soloIdle(room.code, at) }];
     }
     if (room.status === 'finished') return [];
+    if (isRanked(room)) {
+      const at = room.idleAt ?? room.createdAt;
+      const span = room.status === 'lobby' ? IDLE_CLOSE_MS : IDLE_PLAY_MS;
+      return [{ id: 'idle', timer: { key: `ranked:${at}`, deadline: at + span }, fire: () => this.dropGame(room) }];
+    }
     const since = room.idleAt ?? room.createdAt ?? now;
     const seated = room.players.filter((p) => !p.left && !p.kicked).length;
     const span = room.status !== 'lobby' ? IDLE_PLAY_MS : seated >= 2 ? IDLE_READY_MS : IDLE_CLOSE_MS;
@@ -1211,7 +1220,7 @@ export class App {
     const out = new Map();
     for (const g of this.groups.values()) if (g.members?.includes(id)) out.set(g.chatId, g);
     for (const room of this.rooms.values()) {
-      if (out.has(room.chatId) || room.status === 'finished' || room.solo) continue;
+      if (out.has(room.chatId) || room.status === 'finished' || room.solo || isRanked(room)) continue;
       if (room.players.some((p) => p.id === id && !p.kicked && !p.left)) out.set(room.chatId, this.ensureGroup(room.chatId, room.title));
     }
     return [...out.values()];
@@ -1546,8 +1555,9 @@ export class App {
     // The card says the game is over; the results go below it as their own
     // message — the one message of the evening worth a notification.
     const g = gameOf(room);
-    if (room.solo || room.tournament) {
-      // Итоги партии с ботами — на экране игрока, не в чате.
+    if (room.solo || room.tournament || isRanked(room)) {
+      if (isRanked(room)) this.rate(room);
+      // Итоги столов без группы остаются в приложении.
       this.note('finished', room);
       g.onFinish?.(room);
       this.hub?.broadcast(room);

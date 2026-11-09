@@ -16,7 +16,7 @@ import {
   tg, $app, h, fmt, clamp, cardImg, backImg, initial, STAGE, haptic, REDUCED, counter, animateOnce, offsetTo, onRelayout, watchBox,
   flyChips, muck, celebrate, edgeGlow, toast, ringSvg, showSheet, closeSheet, refreshSheet, currentSheet,
 } from '../ui.js';
-import { dropItem } from '../drop.js';
+import { closeRankedLobby, dropItem } from '../drop.js';
 import { net, bus, send, serverNow } from '../net.js';
 import { chatMenuItem } from '../chat.js';
 import { shopMenuItem } from '../collections/menu.js';
@@ -228,12 +228,13 @@ function renderLobby() {
       ? h('div.hint', dealer ? `Дилер — ${dealer.name}: раздаёт настоящие карты и отмечает победителя.` : 'Дилер не назначен — победителя отметит любой за столом. Назначить: ⋯ → Роли.')
       : null,
     notifyHint(),
-    me.isHost ? h('button.menu-item', { onclick: openSettings }, 'Настройки стола', h('small', 'стек, блайнды, таймер, карты')) : null,
-    me.isHost ? h('button.menu-item', { onclick: openMenu }, 'Хост', h('small', 'роли, удалить, передать')) : null,
+    me.isHost && !s.ranked ? h('button.menu-item', { onclick: openSettings }, 'Настройки стола', h('small', 'стек, блайнды, таймер, карты')) : null,
+    me.isHost && !s.ranked ? h('button.menu-item', { onclick: openMenu }, 'Хост', h('small', 'роли, удалить, передать')) : null,
   );
 
   const actions = h('div.panel');
   if (me.kicked) actions.append(h('div.hint', 'Хост удалил вас из этой игры.'));
+  else if (s.ranked && me.isHost) actions.append(h('button.btn', { onclick: closeRankedLobby }, 'Закрыть стол'));
   else if (me.seated && !me.sittingOut) actions.append(h('button.btn', { onclick: () => send({ t: 'leave' }) }, 'Встать'));
   else actions.append(h('button.btn.primary.lg', { onclick: () => { haptic.tap(); send({ t: 'sit' }); } }, 'Сесть за стол'));
   if (me.isHost) {
@@ -976,7 +977,8 @@ function renderResults() {
       h('span.s.num', fmt(r.stack)),
       h(`span.pl.num.${r.net > 0 ? 'up' : r.net < 0 ? 'down' : ''}`, r.net > 0 ? `+${fmt(r.net)}` : r.net < 0 ? `−${fmt(-r.net)}` : '0'),
     ))),
-    h('div.hint', state.solo ? 'Игра с ботами — тренировка: в рейтинг не идёт.' : 'Итоги вечера бот отправил и в группу.'),
+    state.ranked ? backToHub(state) : null,
+    h('div.hint', state.solo ? 'Игра с ботами — тренировка: в рейтинг не идёт.' : state.ranked ? 'Результат рейтингового стола' : 'Итоги вечера бот отправил и в группу.'),
   );
   if (state.solo) {
     // С ботами — сразу новая партия с теми же соперниками или назад к выбору.
@@ -986,7 +988,7 @@ function renderResults() {
     return;
   }
   $app.append(box, h('div.panel',
-    state.hub || state.canRematch ? h('button.btn.wide', { onclick: newLobby }, '+ Новое лобби') : null,
+    (state.hub || state.canRematch) && !state.ranked ? h('button.btn.wide', { onclick: newLobby }, '+ Новое лобби') : null,
     h('button.btn.primary.wide.lg', { onclick: () => tg.close() }, 'Закрыть')));
 }
 
@@ -1256,7 +1258,7 @@ function openMenu() {
       items.push(chatMenuItem(s), shopMenuItem());
       return h('div', h('h3', 'Меню'), h('div.sub', 'Игра с ботами'), h('div.menu-list', items));
     }
-    if (me.seated && !me.sittingOut && me.role === 'player' && s.room.status !== 'lobby') {
+    if (!(s.ranked && me.isHost) && me.seated && !me.sittingOut && me.role === 'player' && s.room.status !== 'lobby') {
       item('Встать из-за стола', me.inHand && !me.folded ? 'ваши карты будут сброшены' : 'пропускать раздачи', () => { closeSheet(); send({ t: 'leave' }); });
     } else if (!me.kicked && me.role !== 'dealer' && (me.sittingOut || !me.seated)) {
       item('Сесть за стол', 'со следующей раздачи', () => { closeSheet(); send({ t: 'sit' }); });
@@ -1265,7 +1267,11 @@ function openMenu() {
     if (s.hub) item(s.hubLabel || '← Все игры группы', 'стол останется, как есть', () => { closeSheet(); send({ t: 'hub' }, { lock: false }); });
     items.push(chatMenuItem(s), shopMenuItem());
 
-    if (me.isHost) {
+    if (s.ranked && me.isHost) {
+      if (s.room.status === 'lobby') item('Закрыть стол', null, closeRankedLobby, 'danger');
+      else if (s.room.status === 'playing' && !s.rankedActive) item('Завершить игру', 'итоги — на экране', confirmFinish, 'danger');
+    }
+    if (me.isHost && !s.ranked) {
       items.push(h('div.section-label', 'Хост'));
       item('Настройки стола', 'блайнды, таймер, карты', openSettings);
       if (s.room.status !== 'lobby') item('Докупка', 'стартовый стек игроку', () => openPlayers('rebuy'));
@@ -1285,7 +1291,7 @@ function openMenu() {
 function confirmFinish() {
   showSheet('finish', () => h('div',
     h('h3', 'Завершить игру?'),
-    h('div.sub', state.solo ? 'Незаконченная раздача отменится, фишки вернутся владельцам.' : 'Незаконченная раздача отменится, фишки вернутся владельцам. Итоги увидят все.'),
+    h('div.sub', state.solo || state.ranked ? 'Незаконченная раздача отменится, фишки вернутся владельцам.' : 'Незаконченная раздача отменится, фишки вернутся владельцам. Итоги увидят все.'),
     h('div.grid2',
       h('button.btn', { onclick: () => closeSheet() }, 'Отмена'),
       h('button.btn.danger', { onclick: () => { closeSheet(); send({ t: 'finish' }); } }, 'Завершить')),

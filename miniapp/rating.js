@@ -15,9 +15,14 @@ import { bus, send } from './net.js';
 import { avatarEl } from './profile.js';
 
 let state = null;
+let tablesOn = false;
 
-export function onState(s) {
+export function onState(s, prev) {
   state = s;
+  if (!prev) {
+    tablesOn = !!s.tables;
+    if (tablesOn) return askTables(s.game, { quiet: true });
+  }
   bus.render();
 }
 
@@ -27,6 +32,10 @@ const when = (at) => new Date(at).toLocaleDateString('ru-RU', { day: 'numeric', 
 
 export function render() {
   const s = state;
+  if (tablesOn) {
+    $app.append(renderRanked(s));
+    return;
+  }
   const pill = (text, on, onclick) => h(`button.rt-tab${on ? '.on' : ''}`, { onclick }, text);
   const chip = (text, on, onclick) => h(`button.rt-chip${on ? '.on' : ''}`, { onclick }, text);
 
@@ -38,7 +47,12 @@ export function render() {
         h('h1', 'Рейтинг игроков'),
         h('div.sub', s.scope === 'group'
           ? `Только те, кто играл в${s.groupTitle ? ` «${s.groupTitle}»` : ' этой группе'}`
-          : 'Кто чего стоит — во всех группах сразу'))),
+          : s.publicOnly ? 'Только партии за публичными столами' : 'Кто чего стоит — во всех группах сразу'))),
+
+    s.publicOnly && !s.rankedTablesSoon ? h('button.btn.wide', { onclick: () => {
+      tablesOn = true;
+      askTables(s.game);
+    } }, 'Рейтинговые столы') : null,
 
     // Где считаем: во всех группах сразу или только в этой. Вкладка «эта
     // группа» есть только у страницы, открытой из группы.
@@ -65,6 +79,7 @@ export function render() {
           : 'Здесь пока пусто. Сыграйте партию до конца — и она появится.'),
 
     h('div.hint.rt-why',
+      s.publicOnly ? h('div', 'Партии с друзьями в Telegram-группах проходят вне рейтинга.') : null,
       h('div', 'Места в таблице определяет число зачётных партий. При равенстве выше игрок с большим числом очков.'),
       h('div', 'Очки за место: +20, +12, +6, дальше +3. Если у партии есть проигравший, ему −10. Итог не падает ниже нуля.'),
       h('div', `Считаются доигранные партии, не больше ${s.perDay} в сутки с одним и тем же составом.`)),
@@ -154,9 +169,15 @@ function showWho(p) {
 let ranked = { game: null, tables: null, loading: false };
 let rankedTimer = null;
 
-export function resetRanked() {
+export function resetRanked({ unsubscribe = false } = {}) {
+  if (unsubscribe && ranked.game) send({ t: 'rtables', game: null }, { lock: false });
+  tablesOn = false;
   ranked = { game: null, tables: null, loading: false };
   clearTimeout(rankedTimer);
+}
+
+export function refreshRanked() {
+  if (ranked.game) send({ t: 'rtables', game: ranked.game }, { lock: false });
 }
 
 bus.onRanked = (msg) => {
@@ -166,8 +187,8 @@ bus.onRanked = (msg) => {
   bus.render();
 };
 
-function askTables(game) {
-  haptic.soft();
+function askTables(game, { quiet = false } = {}) {
+  if (!quiet) haptic.soft();
   ranked = { game, tables: null, loading: true };
   clearTimeout(rankedTimer);
   // Ответа нет (отказ или обрыв) — не висеть вечно на «Загружаем…».
@@ -176,22 +197,8 @@ function askTables(game) {
   bus.render();
 }
 
-function chooseGameGroup(s, game) {
-  haptic.soft();
-  const play = code => send({ t: 'rating-play', game, code }, { lock: false });
-  if (s.group) return play(s.group.code);
-  const groups = Array.isArray(s.groups) ? s.groups : (s.ratingGroups ?? []);
-  if (groups.length === 1) return play(groups[0].code);
-  showSheet('rating-play', () => h('div',
-    h('h3', 'Где играем?'),
-    groups.length
-      ? groups.map(g => h('button.btn.wide', { onclick: () => { closeSheet(); play(g.code); } }, g.title))
-      : h('div.hint', 'Добавьте бота в группу и напишите там /game. Затем здесь можно будет выбрать игру.'),
-    h('button.btn.wide', { onclick: () => closeSheet() }, 'Закрыть')));
-}
-
 export function renderRanked(s) {
-  const head = h('div.hub-head', h('h1', 'Рейтинг игроков'), h('div.sub', 'Игры, где идут очки'));
+  const head = h('div.hub-head', h('h1', 'Рейтинг игроков'), h('div.sub', 'Публичные столы с другими игроками'));
   if (s.ratingSoon) {
     return h('div.lobby.hub.ranked',
       head,
@@ -199,18 +206,20 @@ export function renderRanked(s) {
         h('div.set-body',
           h('div.set-title', 'Пока закрыт', h('span.rt-soon-tag', 'скоро')),
           h('div.set-sub', s.ratingSoon))),
-      h('div.hint', 'Очки за доигранные партии уже копятся. Таблица игроков пока закрыта.'));
+      h('div.hint', 'Публичные столы и таблица лидеров пока закрыты.'));
   }
 
-  const leaderboard = s.kind === 'rating' ? null : h('button.rt-open', { onclick: () => { haptic.tap(); send({ t: 'rating' }, { lock: false }); } },
+  const leaderboard = h('button.rt-open', { onclick: () => {
+    haptic.tap();
+    if (s.kind === 'rating') { resetRanked({ unsubscribe: true }); bus.render(); }
+    else send({ t: 'rating', game: ranked.game || undefined }, { lock: false });
+  } },
     h('div.rt-cup', '🏆'),
-    h('div.rt-open-body', h('div.rt-open-title', 'Таблица лидеров'), h('div.rt-open-sub', 'Результаты партий за месяц и за всё время')),
+    h('div.rt-open-body', h('div.rt-open-title', 'Таблица лидеров'), h('div.rt-open-sub', 'Места и статистика')),
     h('div.rt-open-go', '›'));
   const games = s.rankGames || s.games || [];
   if (s.rankedTablesSoon) return h('div.lobby.hub.ranked', head, leaderboard,
-    h('div.section-label', 'Играть с друзьями'),
-    h('div.rk-games', games.map(g => h('button.rt-chip', { onclick: () => chooseGameGroup(s, g.id) }, g.title))),
-    h('div.hint', 'Зачётные партии с друзьями учитываются в таблице.'));
+    h('div.hint', 'Рейтинговые столы пока закрыты.'));
   const sel = ranked.game;
   return h('div.lobby.hub.ranked',
     head,
@@ -218,7 +227,7 @@ export function renderRanked(s) {
     h('div.section-label', '1. Выберите игру'),
     h('div.rk-games', games.map((g) => h(`button.rt-chip${g.id === sel ? '.on' : ''}`, { 'aria-pressed': g.id === sel ? 'true' : 'false', onclick: () => askTables(g.id) }, g.title))),
     sel ? h('div.section-label', '2. Рейтинговые столы') : null,
-    sel ? tablesBlock() : null);
+    sel ? tablesBlock() : h('div.hint', 'Чтобы сесть за стол, Telegram-группа не нужна.'));
 }
 
 function tablesBlock() {
@@ -226,10 +235,14 @@ function tablesBlock() {
   if (!ranked.tables) {
     return h('div.hint', 'Не получилось загрузить столы. ', h('button.link', { onclick: () => askTables(ranked.game) }, 'Ещё раз'));
   }
-  if (!ranked.tables.length) return h('div.hint', 'Рейтинговых столов в этой игре пока нет. Обычные столы вашей группы — на вкладке «Игры»; очков за них рейтинг не даёт.');
-  return h('div.lobby-list', ranked.tables.map((t) => h('div.lrow',
-    h('div.lr-body',
-      h('div.lr-title', t.host ? `Стол · ${t.host}` : 'Стол'),
-      h('div.lr-sub', h('b.num', `${t.seated}/${t.max}`), t.detail ? h('span.lr-detail', t.detail) : null)),
-    h('button.btn.sm.primary', { onclick: () => { haptic.tap(); send({ t: 'rjoin', code: t.code }); } }, 'Присоединиться'))));
+  const tables = ranked.tables;
+  const open = h('button.k-btn.k-btn--secondary.k-btn--block', { onclick: () => send({ t: 'rcreate', game: ranked.game }) }, 'Создать стол');
+  return h('div.lobby-list',
+    tables.length ? null : h('div.hint', 'Свободных столов пока нет. Создайте стол, и его увидят другие игроки.'),
+    tables.map(t => h(t.mine ? 'div.lrow.mine' : 'div.lrow',
+      h('div.lr-body',
+        h('div.lr-title', t.mine ? 'Ваш стол' : t.host ? `Стол · ${t.host}` : 'Стол'),
+        h('div.lr-sub', h('b.num', `${t.seated}/${t.max}`), t.detail ? h('span.lr-detail', t.detail) : null)),
+      h('button.k-btn.k-btn--primary.k-btn--compact', { onclick: () => { haptic.tap(); send({ t: 'rjoin', code: t.code }); } }, t.mine ? 'Вернуться' : 'Войти'))),
+    tables.some(t => t.mine) ? null : open);
 }

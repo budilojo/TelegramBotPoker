@@ -244,7 +244,7 @@ export class Table {
     clock = new FakeClock(), runoutStepMs = 0, miniAppName = 'table', webappUrl = 'https://poker.example',
     durakDeck = durakDecks(1), colorsDeck = null, colorsRand = null, chessRand = null, checkersRand = null, nardyDice = null, battleshipRand = null, battleshipFleetRand = null, botRng = null, tg = null, admins = [],
     // Тесты открывают нужный режим рейтинга явно.
-    ratingSoon = true, rankedTablesSoon,
+    ratingSoon = true, rankedTablesSoon, legacyGroupRating = true,
   } = {}) {
     this.chatId = chatId;
     this.tg = tg || new TelegramStub();
@@ -253,7 +253,7 @@ export class Table {
     this.app = new App({
       api: this.tg, store, minIntervalMs, botUsername, deck, durakDeck, clock, runoutStepMs, miniAppName, webappUrl, admins,
       ...(botRng ? { botRng } : {}),
-      ratingSoon, rankedTablesSoon,
+      ratingSoon, rankedTablesSoon, legacyGroupRating,
       onError: (e) => this.errors.push(e),
     });
     // Колода «UNOQ» и её случайность — сиденья модуля игры, а не ядра:
