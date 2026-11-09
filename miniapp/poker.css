@@ -49,17 +49,24 @@ body[data-screen='poker'] {
   background: var(--k-bg);
 }
 
-/*
- * Сукно плоское: ни градиента, ни свечения по ободу.
- *
- * Селектор был .cloth — класса, которого на этом экране нет: овал покера
- * рисует .felt (miniapp/games/poker.js), а .dk-cloth это дурак. Правило не
- * применялось ни к чему, и сукно всё это время оставалось градиентным с
- * тенью в сорок пикселей. Теперь плоское и сукно, и правило.
- */
+/* Плоский кант — часть игрового арта. Фактура коллекции остаётся внутри. */
 body[data-screen='poker'] .felt {
   background: var(--table-felt);
+  border-radius: var(--k-r-poker-felt);
   box-shadow: 0 0 0 1px var(--border-color);
+}
+body[data-screen='poker'] .felt::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border: var(--k-s4) solid color-mix(in srgb, var(--surface-line, var(--on-felt-line)) 26%, var(--bg-main));
+  border-radius: var(--k-r-poker-felt);
+  pointer-events: none;
+}
+body[data-screen='poker'] .felt::after {
+  inset: var(--k-s8);
+  border-radius: var(--k-r-poker-felt);
 }
 
 /* ------------------------------------------------------------ шапка */
@@ -109,7 +116,26 @@ body[data-screen='poker'] .plate.win {
 /* ------------------------------------------------------------ центр */
 
 body[data-screen='poker'] .pot { background: var(--k-surface); box-shadow: none; }
+.poker-chip {
+  align-self: center;
+  flex: none;
+  width: var(--k-s16);
+  height: var(--k-s16);
+  border: 2px dashed currentColor;
+  border-radius: var(--k-r-pill);
+  color: var(--k-text-2);
+}
 body[data-screen='poker'] .pot small { color: var(--k-text-2); }
+body[data-screen='poker'] .center .board { position: relative; isolation: isolate; }
+body[data-screen='poker'] .center .board::before {
+  content: '';
+  position: absolute;
+  inset: calc(-1 * var(--k-s4)) 0;
+  z-index: -1;
+  background: color-mix(in srgb, var(--bg-main) 14%, transparent);
+  border-block: 1px solid color-mix(in srgb, var(--on-felt-line) 25%, transparent);
+  pointer-events: none;
+}
 body[data-screen='poker'] .result-line { color: var(--k-text); }
 
 /* ------------------------------------------------------------ рука */
@@ -152,6 +178,18 @@ body[data-screen='poker'] .panel .btn.primary {
   color: var(--k-on-green);
   border: 0;
   box-shadow: none;
+}
+.poker-action-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--k-s4);
+}
+.poker-action-icon::before { content: attr(data-symbol); font-size: var(--k-fs-component); line-height: 1; }
+body[data-screen='poker'] .poker-actions .btn.gold { border-color: var(--on-felt-line); }
+body[data-screen='poker'] .poker-actions .btn.danger:not(.armed) { background: var(--k-surface); }
+@media (max-width: 360px) {
+  .poker-actions .btn { font-size: var(--k-fs-secondary); }
 }
 body[data-screen='poker'] .panel.note { color: var(--k-text-2); }
 body[data-screen='poker'] .panel.note b { color: var(--k-text); }

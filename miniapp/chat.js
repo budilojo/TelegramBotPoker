@@ -175,7 +175,7 @@ const bubbleIcon = () => {
 function ensureRoot() {
   if (root?.isConnected) return;
   badge = h('span.chat-badge', { 'aria-hidden': 'true' });
-  fab = h('button.chat-fab', { type: 'button', 'data-chat-fab': '', onclick: openPanel }, bubbleIcon(), badge);
+  fab = h('button.chat-fab', { type: 'button', 'data-chat-fab': '', style: { visibility: 'hidden' }, onclick: openPanel }, bubbleIcon(), badge);
   root = h('div.chat-root', { id: 'chat-root' }, fab);
   document.body.append(root);
 }

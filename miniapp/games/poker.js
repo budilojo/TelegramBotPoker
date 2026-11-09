@@ -419,7 +419,7 @@ function stageLabel(s) {
   return [STAGE[hd.street] || hd.street, ''];
 }
 
-/** Овал стола; оформление стола хоста — слоями внутри него (под сиденьями, картами и банком). */
+/** Игровое сукно под сиденьями, картами и банком. */
 function dressedFelt() {
   const felt = h('div.felt');
   dressTable(felt, look);
@@ -615,12 +615,14 @@ function layoutTable() {
       el.style.left = `${geo.spots[k2].x.toFixed(1)}px`;
       el.style.top = `${geo.spots[k2].y.toFixed(1)}px`;
     });
-    // The felt is the oval the seats sit on: each seat half on the rail.
+    // Сукно шире линии мест, чтобы все пять карт лежали внутри борта.
+    const feltRx = Math.min(W / 2 - EDGE, Math.max(geo.rx + geo.sw / 3, (cw * 5 + 16) / 2 + EDGE));
+    const feltRy = Math.min(H / 2 - EDGE, geo.ry + geo.sh / 3);
     Object.assign(felt.style, {
-      left: `${(W / 2 - geo.rx).toFixed(1)}px`,
-      top: `${(H / 2 - geo.ry).toFixed(1)}px`,
-      width: `${(2 * geo.rx).toFixed(1)}px`,
-      height: `${(2 * geo.ry).toFixed(1)}px`,
+      left: `${(W / 2 - feltRx).toFixed(1)}px`,
+      top: `${(H / 2 - feltRy).toFixed(1)}px`,
+      width: `${(2 * feltRx).toFixed(1)}px`,
+      height: `${(2 * feltRy).toFixed(1)}px`,
     });
     return !crowded(t);
   };
@@ -747,7 +749,7 @@ function centerEl(s) {
    */
   const played = paid ? (hd.result.winners || []).reduce((n, w) => n + (w.amount || 0), 0) : 0;
   return h('div.center',
-    h('div.pot', h('small', paid ? 'Разыграно' : 'Банк'),
+    h('div.pot', paid ? null : h('span.poker-chip', { 'aria-hidden': 'true' }), h('small', paid ? 'Разыграно' : 'Банк'),
       counter('b.num', `pot:${hd?.no ?? 0}`, paid ? played : hd?.pot || 0,
         { up: { dur: 500, delay: 320 }, down: { dur: 900, delay: (planFor(s)?.pay ?? 100) + 250 } })),
     board,
@@ -848,6 +850,11 @@ function dealerHint(s) {
   return { preflop: 'Раздайте по 2 карты', flop: 'Выложите флоп — 3 карты', turn: 'Выложите тёрн', river: 'Выложите ривер' }[hd.street] || '';
 }
 
+const actionLabel = (symbol, text, detail = null) => [
+  h('span.poker-action-label', h('span.poker-action-icon', { 'aria-hidden': 'true', 'data-symbol': symbol }), text),
+  detail,
+];
+
 function panelEl(s) {
   const hd = s.hand;
   const me = s.me;
@@ -879,6 +886,7 @@ function panelEl(s) {
 
   if (hd?.phase === 'betting') {
     if (L) {
+      panel.classList.add('poker-actions');
       // Школа: кнопку, которую советует наставник, видно сразу.
       const advice = s.learn?.tip?.advice;
       const adv = (kinds) => (advice && kinds.includes(advice) ? '.advised' : '');
@@ -899,13 +907,13 @@ function panelEl(s) {
           foldArmed = false;
           act('fold');
         },
-      }, free && foldArmed ? 'Fold anyway?' : 'Fold', free && foldArmed ? h('small', 'Check is free') : null));
-      if (L.canCheck) panel.append(h(`button.btn.primary${adv(['check'])}`, { onclick: () => act('check') }, 'Check'));
+      }, ...actionLabel('×', free && foldArmed ? 'Fold anyway?' : 'Fold', free && foldArmed ? h('small', 'Check is free') : null)));
+      if (L.canCheck) panel.append(h(`button.btn.primary${adv(['check'])}`, { onclick: () => act('check') }, ...actionLabel('✓', 'Check')));
       else if (L.canCall) {
         panel.append(h(`button.btn.primary${adv(['call'])}`, { onclick: () => act('call') },
-          `Call ${fmt(L.callAmount)}`, L.isCallAllIn ? h('small', 'all-in') : null));
+          ...actionLabel('✓', `Call ${fmt(L.callAmount)}`, L.isCallAllIn ? h('small', 'all-in') : null)));
       }
-      if (L.canBet || L.canRaise) panel.append(h(`button.btn.gold${adv(['bet', 'raise'])}`, { onclick: openRaise }, L.canBet ? 'Bet' : 'Raise'));
+      if (L.canBet || L.canRaise) panel.append(h(`button.btn.gold${adv(['bet', 'raise'])}`, { onclick: openRaise }, ...actionLabel('↑', L.canBet ? 'Bet' : 'Raise')));
       [...panel.children].forEach((b, i) => animateOnce(b, `btn:${turnId}:${i}`,
         [{ transform: 'translateY(18px) scale(0.92)', opacity: 0, offset: 0 }], { duration: 380, delay: 60 + i * 60 }));
       if (net.busy) panel.classList.add('busy');
