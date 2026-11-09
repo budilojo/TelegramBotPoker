@@ -144,6 +144,8 @@ const app = new App({
   miniAppName: MINIAPP,
   admins: ADMINS,
   collectionsDemo: COLLECTIONS_DEMO, // collections
+  ratingSoon: false,
+  rankedTablesSoon: true,
   shopEnabled: process.env.SHOP_ENABLED === 'true',
   sales: SALES, // payments
 });

@@ -65,7 +65,7 @@ export function render() {
           : 'Здесь пока пусто. Сыграйте партию до конца — и она появится.'),
 
     h('div.hint.rt-why',
-      h('div', 'Очки за место: первым +20, вторым +12, третьим +6, дураком −10. Ниже нуля не падает.'),
+      h('div', 'Очки за место: +20, +12, +6, дальше +3. Если у партии есть проигравший, ему −10. Итог не падает ниже нуля.'),
       h('div', `Считаются доигранные партии, не больше ${s.perDay} в сутки с одним и тем же составом.`)),
   );
 
@@ -186,14 +186,17 @@ export function renderRanked(s) {
       h('div.hint', 'Очки за доигранные партии уже копятся. Таблица игроков пока закрыта.'));
   }
 
+  const leaderboard = s.kind === 'rating' ? null : h('button.rt-open', { onclick: () => { haptic.tap(); send({ t: 'rating' }, { lock: false }); } },
+    h('div.rt-cup', '🏆'),
+    h('div.rt-open-body', h('div.rt-open-title', 'Таблица лидеров'), h('div.rt-open-sub', 'Результаты партий за месяц и за всё время')),
+    h('div.rt-open-go', '›'));
+  if (s.rankedTablesSoon) return h('div.lobby.hub.ranked', head, leaderboard,
+    h('div.hint', 'Таблица показывает уже набранные очки. Рейтинговые столы откроются отдельно.'));
   const games = s.rankGames || s.games || [];
   const sel = ranked.game;
   return h('div.lobby.hub.ranked',
     head,
-    s.kind === 'rating' ? null : h('button.rt-open', { onclick: () => { haptic.tap(); send({ t: 'rating' }, { lock: false }); } },
-      h('div.rt-cup', '🏆'),
-      h('div.rt-open-body', h('div.rt-open-title', 'Таблица лидеров'), h('div.rt-open-sub', 'Кто чего стоит — за месяц и за всё время')),
-      h('div.rt-open-go', '›')),
+    leaderboard,
     h('div.section-label', '1. Выберите игру'),
     h('div.rk-games', games.map((g) => h(`button.rt-chip${g.id === sel ? '.on' : ''}`, { 'aria-pressed': g.id === sel ? 'true' : 'false', onclick: () => askTables(g.id) }, g.title))),
     sel ? h('div.section-label', '2. Рейтинговые столы') : null,

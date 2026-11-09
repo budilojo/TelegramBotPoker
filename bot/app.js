@@ -103,14 +103,7 @@ export const MAX_LIVE_PER_GROUP = 10;
  */
 export const TOO_MANY_GAMES_TEXT = `В группе уже ${MAX_LIVE_PER_GROUP} незаконченных игр — завершите какую-нибудь.`;
 
-/**
- * Рейтинг ещё не открыт людям.
- *
- * Экран готов и очки считаются, но показывать таблицу рано: в неё должны идти
- * партии из рейтинговых групп, а их ещё не завели (docs/ranked.md). Пустить
- * людей сейчас — значит показать им доску, собранную из домашних партий, и
- * потом её отнять. Открыть обратно — снять этот флаг, больше ничего.
- */
+/** Значение по умолчанию для изолированных запусков App. */
 export const RATING_SOON = true;
 export const RATING_SOON_TEXT = 'Рейтинг почти готов. Он откроется вместе с рейтинговыми группами: '
   + 'очки будут идти за партии в них, а не за домашние.';
@@ -198,7 +191,7 @@ export class App {
   constructor({
     api, store = new NullStore(), minIntervalMs = 1000, botUsername = '', onError = null, deck = null, durakDeck = null,
     clock = REAL_CLOCK, runoutStepMs = 1500, webappUrl = '', miniAppName = '', admins = [], ratingSoon = RATING_SOON,
-    botRng = Math.random, collectionsDemo = false, shopEnabled = true, sales = null, skillShadow = null,
+    rankedTablesSoon = ratingSoon, botRng = Math.random, collectionsDemo = false, shopEnabled = true, sales = null, skillShadow = null,
   } = {}) {
     this.api = api;
     this.store = store;
@@ -213,8 +206,8 @@ export class App {
     this.runoutStepMs = runoutStepMs;
     this.webappUrl = String(webappUrl || '').replace(/\/+$/, '');
     this.miniAppName = miniAppName;
-    /** Рейтинг ещё не открыт людям — см. RATING_SOON. Снимается одним значением. */
     this.ratingSoon = !!ratingSoon;
+    this.rankedTablesSoon = !!rankedTablesSoon;
     /**
      * Кто видит админку. Список приходит из `.env`, а не из чата: файл правит
      * тот, кто запускает бота, и подделать это сообщением нельзя.

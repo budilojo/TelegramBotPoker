@@ -41,9 +41,9 @@ const ivan = user(101, 'Иван');
 const step = (s) => console.log(`· ${s}`);
 const problems = [];
 
-async function boot(port, ratingSoon, admins = []) {
+async function boot(port, ratingSoon, admins = [], rankedTablesSoon) {
   const api = new TelegramStub();
-  const app = new App({ api, store: new Store(':memory:'), botUsername: 'All_InPoker_bot', minIntervalMs: 0, runoutStepMs: 0, webappUrl: `http://localhost:${port}`, miniAppName: 'table', ratingSoon, admins });
+  const app = new App({ api, store: new Store(':memory:'), botUsername: 'All_InPoker_bot', minIntervalMs: 0, runoutStepMs: 0, webappUrl: `http://localhost:${port}`, miniAppName: 'table', ratingSoon, admins, rankedTablesSoon });
   const hub = new Hub(app, { botToken: TOKEN });
   app.attachHub(hub);
   const web = startServer({ hub, port, root: path.join(ROOT, 'miniapp'), log: () => {} });
@@ -275,6 +275,19 @@ try {
   await tab(ro, 'games').click();
   await ro.waitForSelector('h1:has-text("Выберите игру")');
   step('таблица лидеров: панель есть, «Игры» возвращает в хаб');
+
+  // Публичный запуск таблицы отдельно от рейтинговых столов.
+  const L = await boot(PORT + 3, false, [], true);
+  const leaderboard = await open(L, '', [320, 568]);
+  await tab(leaderboard, 'rating').click();
+  assert.equal(await leaderboard.locator('.rk-games').count(), 0);
+  await leaderboard.getByRole('button', { name: /Таблица лидеров/ }).click();
+  await leaderboard.locator('.lobby.rating').waitFor();
+  await leaderboard.getByRole('button', { name: 'За всё время', exact: true }).click();
+  await fits(leaderboard, 'публичная таблица без рейтинговых столов');
+  await leaderboard.close();
+  await L.web.close();
+  step('публичная таблица открывается, выбор рейтинговых столов скрыт');
 
   assert.deepEqual(problems, [], `ошибки на странице: ${problems.join('; ')}`);
   console.log('e2e навигации: всё сошлось');

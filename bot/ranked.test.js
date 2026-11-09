@@ -138,3 +138,24 @@ test('«Присоединиться»: закрыт рейтинг — отка
   await t.send(ivan, { t: 'rjoin', code: room.code });
   assert.equal(t.state(ivan).room.code, room.code, 'рейтинговый — пустили');
 });
+
+test('таблица открыта, но отдельные рейтинговые столы нельзя запросить или открыть по коду', async () => {
+  const t = new Table({ ratingSoon: false, rankedTablesSoon: true });
+  const ivan = user(101, 'Иван');
+  await t.cmd(ivan, '/game');
+  t.openHub(ivan);
+  await t.send(ivan, { t: 'create', game: 'durak' });
+  const room = t.app.liveRooms(t.chatId)[0];
+  room.ranked = true;
+  t.close(ivan);
+  t.openHub(ivan);
+  assert.equal(t.state(ivan).rankedTablesSoon, true);
+  await t.send(ivan, { t: 'rtables', game: 'durak' });
+  assert.equal(t.lastError(ivan).code, 'RANKED_TABLES_SOON');
+  assert.equal(gotTables(t, ivan).length, 0);
+  await t.send(ivan, { t: 'rjoin', code: room.code });
+  assert.equal(t.lastError(ivan).code, 'RANKED_TABLES_SOON');
+  assert.equal(t.state(ivan).kind, 'hub');
+  await t.send(ivan, { t: 'rating' });
+  assert.equal(t.state(ivan).kind, 'rating');
+});

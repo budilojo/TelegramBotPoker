@@ -48,6 +48,7 @@ const CORE_ERRORS = {
   SHARE_UNAVAILABLE: 'Бот не знает своего адреса — поделиться пока нельзя.',
   TOO_FAST: 'Подождите секунду и нажмите ещё раз.',
   RATING_SOON: RATING_SOON_TEXT,
+  RANKED_TABLES_SOON: 'Рейтинговые столы пока закрыты. Таблица лидеров доступна во вкладке «Рейтинг».',
   NO_RANKED_GAME: 'Такой игры в рейтинге нет.',
   ...PROFILE_ERRORS,
 };
@@ -433,6 +434,7 @@ export class Hub {
       // Тот же текст, что на хабе группы: один закрытый рейтинг — одно
       // объяснение, а не отказ на одном экране и спокойная шторка на другом.
       ratingSoon: this.app.ratingSoon ? RATING_SOON_TEXT : null,
+      rankedTablesSoon: this.app.rankedTablesSoon,
     } });
   }
 
@@ -455,6 +457,7 @@ export class Hub {
       resume: live ? { code: live.code, game: live.game, title: gameOf(live).bot?.label?.(live) || gameOf(live).title, icon: gameOf(live).icon } : null,
       groups: this.app.groupsOf(session.user.id).length,
       ratingSoon: this.app.ratingSoon ? RATING_SOON_TEXT : null,
+      rankedTablesSoon: this.app.rankedTablesSoon,
       rankGames: GAME_LIST.map((g) => ({ id: g.id, title: g.title, icon: g.icon })),
     } });
   }
@@ -851,6 +854,7 @@ export class Hub {
   /** «Рейтинговые столы игры»: ответ — отдельное сообщение, не состояние экрана. */
   sendRanked(session, msg) {
     if (this.app.ratingSoon) return this.refuse(session, 'RATING_SOON');
+    if (this.app.rankedTablesSoon) return this.refuse(session, 'RANKED_TABLES_SOON');
     const game = GAMES[String(msg.game || '')];
     if (!game) return this.refuse(session, 'NO_RANKED_GAME');
     session.send({ t: 'rtables', game: game.id, tables: rankedTables(this.app, session.user.id, game.id) });
@@ -863,6 +867,7 @@ export class Hub {
    */
   joinRanked(session, msg) {
     if (this.app.ratingSoon) return this.refuse(session, 'RATING_SOON');
+    if (this.app.rankedTablesSoon) return this.refuse(session, 'RANKED_TABLES_SOON');
     const room = this.app.roomByCode(String(msg.code || ''));
     const ok = room && rankedTables(this.app, session.user.id, room.game).some((t) => t.code === room.code);
     if (!ok) return this.refuse(session, 'NO_ROOM');
@@ -1085,6 +1090,7 @@ export function hubView(app, group, user, { home = false } = {}) {
     solo: true, // кнопка «🤖 Играть с ботами» (личная партия, группа не нужна)
     me: app.profiles.me(user),
     ratingSoon: app.ratingSoon ? RATING_SOON_TEXT : null,
+    rankedTablesSoon: app.rankedTablesSoon,
     rankGames: GAME_LIST.map((g) => ({ id: g.id, title: g.title, icon: g.icon })),
     games: GAME_LIST.map((g) => ({ id: g.id, title: g.title, icon: g.icon, blurb: g.blurb, min: g.minPlayers, max: g.maxPlayers })),
     lobbies,
