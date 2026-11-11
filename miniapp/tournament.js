@@ -46,6 +46,7 @@ export function tournamentCreate() {
 }
 
 function shareLink(url) {
+  document.dispatchEvent(new CustomEvent('ux-step', { detail: { name: 'invite_open', game: 'poker' } }));
   showSheet('tournament-share', () => {
     const field = h('input.inp', { readonly: true, value: url, 'aria-label': 'Ссылка на турнир', onclick: e => e.currentTarget.select() });
     return h('div.tour-form',

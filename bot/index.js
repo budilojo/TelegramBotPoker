@@ -31,6 +31,7 @@ import { Hub } from './hub.js';
 import { AdminBot } from './admin-bot.js';
 import { Broadcaster, castReport } from './broadcast.js';
 import { startServer } from './server.js';
+import { UX } from './ux.js';
 import { salesConfig, gate } from './payments/config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -43,11 +44,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  */
 const ENV_FILE = path.join(__dirname, '..', '.env');
 try {
-  process.loadEnvFile(ENV_FILE);
+  if (process.env.APP_ENV !== 'ux-test') process.loadEnvFile(ENV_FILE);
 } catch (err) {
   if (err?.code !== 'ENOENT') console.error(`[bot] не удалось прочитать ${ENV_FILE}:`, err.message);
 }
 
+if (process.env.APP_ENV === 'ux-test' && !globalThis.cardgameUXLauncher) throw new Error('Запускайте UX-Test через npm run ux');
 const TOKEN = process.env.BOT_TOKEN;
 if (!TOKEN) {
   console.error(
@@ -202,7 +204,10 @@ if (!MINIAPP) {
     'Зарегистрируйте приложение у @BotFather (/newapp) и впишите его короткое имя в .env.');
 }
 
+const ux = process.env.APP_ENV === 'ux-test' ? new UX({ app, botToken: TOKEN, enabled: true, testers: (process.env.UX_TESTERS || '').split(',').filter(Boolean) }) : null;
+hub.ux = ux;
 const web = startServer({
+  ux,
   hub,
   port: PORT,
   host: BIND_HOST,

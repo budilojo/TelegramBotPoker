@@ -131,7 +131,7 @@ export class Hub {
     return r;
   }
 
-  openInner({ initData, room: wanted, back, visible, leftTournament } = {}, send) {
+  openInner({ initData, room: wanted, back, visible, leftTournament, uxFirst = false } = {}, send) {
     const opts = { now: this.app.clock.now(), maxAgeSec: this.maxAgeSec };
     let auth = checkInitData(initData, this.botToken, opts);
     // Подпись админ-бота — вторая дверь, и ведёт она только в админку.
@@ -156,6 +156,11 @@ export class Hub {
       this.enterRoom(session, room, { quiet });
     };
     // The signed start_param wins over anything in the page's own URL.
+    if (this.ux && uxFirst === true && !wanted && this.ux.testers.has(String(auth.user.id)) && !viaAdmin) {
+      const session = { id: this.nextId++, user: auth.user, kind: 'solo', group: null, code: null, send, visible: true, solo: true };
+      this.pushSolo(session);
+      return { session };
+    }
     const signed = String(auth.startParam || '').trim();
     const code = leftTournament === true && TOURNAMENT_CODE.test(signed) && !TOURNAMENT_CODE.test(asked) ? '' : signed || asked;
 

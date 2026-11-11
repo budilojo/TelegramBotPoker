@@ -1,3 +1,4 @@
+import { local as uxStorage } from '../storage.js';
 /**
  * Подключение связки и определения уровня к экранам приложения (агент Y).
  * Один модуль на одну строку `import` в `miniapp/app.js`: при загрузке он
@@ -17,8 +18,8 @@ import { topicById } from './topics.js';
 import { h, haptic } from '../ui.js';
 
 const FLAG = 'train.placed';
-const read = () => { try { return localStorage.getItem(FLAG) === '1'; } catch { return false; } };
-const write = () => { try { localStorage.setItem(FLAG, '1'); } catch { /* приватный режим */ } };
+const read = () => { try { return uxStorage.getItem(FLAG) === '1'; } catch { return false; } };
+const write = () => { try { uxStorage.setItem(FLAG, '1'); } catch { /* приватный режим */ } };
 
 L.setRouter({
   // Урок рисует U на маршруте 'learn'; параметры: lesson (тема) и returnTo.

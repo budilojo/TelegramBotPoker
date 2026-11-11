@@ -1,3 +1,4 @@
+import { local as uxStorage } from '../storage.js';
 /**
  * Что прочитано. Храним на телефоне (localStorage), как у «Школы покера»: это удобство,
  * а не учёт; пропало — ничего страшного (решение 052). Серверу о чтении уроков знать нечего.
@@ -7,14 +8,14 @@ const QKEY = 'learn.quiz';
 
 function load(key) {
   try {
-    const v = JSON.parse(localStorage.getItem(key) || 'null');
+    const v = JSON.parse(uxStorage.getItem(key) || 'null');
     return v;
   } catch {
     return null;
   }
 }
 function save(key, v) {
-  try { localStorage.setItem(key, JSON.stringify(v)); } catch { /* приватный режим */ }
+  try { uxStorage.setItem(key, JSON.stringify(v)); } catch { /* приватный режим */ }
 }
 
 export function readTopics() {

@@ -11,7 +11,10 @@ import { tg, toast, haptic, openShare } from './ui.js';
 export const initData = tg?.initData || '';
 /** What the link opened: a room code, or `g_<code>` — a group's hub. Signed by Telegram. */
 const tournamentPath = () => /^\/tournament\/([a-z2-9]{10})$/.exec(location.pathname)?.[1];
-export const startCode = tg?.initDataUnsafe?.start_param || new URLSearchParams(location.search).get('room') || '';
+import { session as uxSession } from './storage.js';
+let uxFirst = false;
+try { uxFirst = globalThis.CARDGAME_UX && uxSession.getItem('first-launch') === '1'; } catch {}
+export const startCode = uxFirst ? '' : tg?.initDataUnsafe?.start_param || new URLSearchParams(location.search).get('room') || '';
 let leftTournament = false;
 
 /** Live connection facts every screen may read. */
@@ -72,7 +75,7 @@ export function connect() {
     // allows it only for a room of the group this page was opened for.
     // `back` — страница переподключается, а не открывается; `visible` — видна ли она:
     // свёрнутая страница стол «живым» не делает (иначе брошенный стол не закрыть).
-    ws.send(JSON.stringify({ t: 'hello', initData, room: tournamentPath() ? `t_${tournamentPath()}` : leftTournament ? '' : net.inside || startCode, leftTournament, back: connectedOnce, visible: !document.hidden }));
+    ws.send(JSON.stringify({ t: 'hello', uxFirst, initData, room: tournamentPath() ? `t_${tournamentPath()}` : leftTournament ? '' : net.inside || startCode, leftTournament, back: connectedOnce, visible: !document.hidden }));
   };
   ws.onmessage = (e) => {
     let msg;
@@ -82,11 +85,13 @@ export function connect() {
       return;
     }
     if (msg.t === 'state') {
+      if (uxFirst) { try { uxSession.removeItem('first-launch'); } catch {} }
       const wasConnected = net.connected;
       net.connected = true;
       connectedOnce = true;
       net.prev = net.state;
       net.state = msg.state;
+      document.dispatchEvent(new CustomEvent('ux-state', { detail: msg.state }));
       clockOffset = net.state.now - Date.now();
       // Where this page is now — asked for again after a reconnect. The server
       // lets a page back only into its own group's games (or its own groups).
@@ -110,6 +115,7 @@ export function connect() {
       setBusy(false);
       bus.onState(wasConnected);
     } else if (msg.t === 'error') {
+      document.dispatchEvent(new CustomEvent('ux-error'));
       setBusy(false);
       haptic.err();
       if (!bus.hideToast(msg)) toast(msg.text || 'Не получилось');
@@ -165,6 +171,7 @@ export function send(msg, { lock = true } = {}) {
   // Явная версия у карточного действия остаётся версией его исходного вида.
   const packet = net.state?.game && Number.isInteger(net.state.seq)
     ? { seq: net.state.seq, ...(net.state.match ? { matchNo: net.state.match.no } : {}), ...msg } : msg;
+  document.dispatchEvent(new CustomEvent('ux-send', { detail: msg }));
   ws.send(JSON.stringify(packet));
   if (lock) setBusy(true);
   return true;

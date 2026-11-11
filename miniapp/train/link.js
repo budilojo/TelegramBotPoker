@@ -12,6 +12,7 @@
  * не больше MAX_HOPS раз подряд, дальше — «домой» (решение 075).
  */
 export const MAX_HOPS = 3;
+import { session as uxSession } from '../storage.js';
 const KEY = 'train.link';
 
 let router = { lesson: null, exercise: null, training: null, home: null };
@@ -29,7 +30,7 @@ export function setStorage(s) {
 function store() {
   if (storage) return storage;
   try {
-    return globalThis.sessionStorage || null;
+    return globalThis.sessionStorage ? uxSession : null;
   } catch {
     return null;
   }

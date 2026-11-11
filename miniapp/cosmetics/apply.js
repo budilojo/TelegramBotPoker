@@ -1,3 +1,4 @@
+import { local as uxStorage } from '../storage.js';
 /**
  * Архивные помощники «Ночного клуба» для отдельного локального образца fitting.js.
  * Живые экраны их не вызывают. Импорт не меняет оформление страницы и не подписывает
@@ -54,15 +55,15 @@ const FX_KEY = 'fx-off';
 let fxFallback = false;
 export function fxOff() {
   try {
-    return localStorage.getItem(FX_KEY) === '1' || fxFallback;
+    return uxStorage.getItem(FX_KEY) === '1' || fxFallback;
   } catch {
     return fxFallback;
   }
 }
 export function setFxOff(on) {
   try {
-    if (on) localStorage.setItem(FX_KEY, '1');
-    else localStorage.removeItem(FX_KEY);
+    if (on) uxStorage.setItem(FX_KEY, '1');
+    else uxStorage.removeItem(FX_KEY);
     fxFallback = false;
   } catch {
     fxFallback = on;

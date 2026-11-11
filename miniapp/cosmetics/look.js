@@ -1,3 +1,4 @@
+import { local as uxStorage } from '../storage.js';
 /**
  * «Вид» — что из косметики включено на ЭТОМ телефоне (режим примерки).
  *
@@ -39,7 +40,7 @@ function clean(raw) {
 function load() {
   if (cur) return cur;
   try {
-    const t = localStorage.getItem(KEY);
+    const t = uxStorage.getItem(KEY);
     cur = clean(t ? JSON.parse(t) : memory);
   } catch {
     cur = clean(memory);
@@ -49,7 +50,7 @@ function load() {
 
 function save() {
   memory = cur;
-  try { localStorage.setItem(KEY, JSON.stringify(cur)); } catch { /* приватный режим: до перезагрузки */ }
+  try { uxStorage.setItem(KEY, JSON.stringify(cur)); } catch { /* приватный режим: до перезагрузки */ }
 }
 
 function emit() {

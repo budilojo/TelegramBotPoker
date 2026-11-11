@@ -216,6 +216,8 @@ function soonSheet(text) {
 const TIMERS = [[0, 'Выкл'], [30, '30 с'], [60, '60 с'], [90, '90 с']];
 
 function openCreate(g) {
+  document.dispatchEvent(new CustomEvent('ux-step', { detail: { name: 'game_select', game: g.id } }));
+  document.dispatchEvent(new CustomEvent('ux-step', { detail: { name: 'room_form_open', game: g.id } }));
   haptic.soft();
   // Какие настройки у стола, знает сама игра: хаб их только рисует. Иначе
   // каждая новая игра получала бы чужую форму — так UNOQ однажды и спросил
@@ -228,10 +230,10 @@ function openCreate(g) {
 
   showSheet('create', () => {
     const seg = (options, key) => h('div.seg', options.map(([v, label]) => h(`button${st[key] === v ? '.on' : ''}`, {
-      onclick: () => { st[key] = v; refreshSheet(); },
+      onclick: () => { st[key] = v; document.dispatchEvent(new CustomEvent('ux-step', { detail: { name: 'room_settings_change', game: g.id } })); refreshSheet(); },
     }, label)));
     const numField = (label, key) => h('div.field', h('label', label),
-      h('input.num', { type: 'number', inputmode: 'numeric', 'aria-label': label, value: st[key], oninput: (e) => (st[key] = Number(e.target.value)) }));
+      h('input.num', { type: 'number', inputmode: 'numeric', 'aria-label': label, value: st[key], oninput: (e) => (st[key] = Number(e.target.value), document.dispatchEvent(new CustomEvent('ux-step', { detail: { name: 'room_settings_change', game: g.id } }))) }));
 
     const fields = form ? form.fields(st, { seg, numField, TIMERS, h }) : [];
 

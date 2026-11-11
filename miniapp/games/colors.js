@@ -1,3 +1,4 @@
+import { local as uxStorage } from '../storage.js';
 import { closeRankedLobby } from '../drop.js';
 import { makeHolder, dressColorsFelt, nameWithMark, frameAvatar, deckBackImg } from '../collections/look-view.js';
 const lookHolder = makeHolder();
@@ -84,14 +85,14 @@ const shapeIcon = (c, cls = '') =>
 
 const handOrder = () => {
   try {
-    return localStorage.getItem(ORDER_KEY) === 'dealt' ? 'dealt' : 'color';
+    return uxStorage.getItem(ORDER_KEY) === 'dealt' ? 'dealt' : 'color';
   } catch {
     return 'color'; // приватное окно, заблокированное хранилище — порядок по умолчанию
   }
 };
 const setHandOrder = (v) => {
   try {
-    localStorage.setItem(ORDER_KEY, v);
+    uxStorage.setItem(ORDER_KEY, v);
   } catch {
     /* не сохранилось — не беда, работает и так */
   }

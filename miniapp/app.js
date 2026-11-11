@@ -22,6 +22,8 @@ import './learn/hook.js';
 import { activeRoute, resetRoute } from './train/route.js';
 import * as collections from './collections/index.js'; // магазин и примерка поверх текущей страницы
 
+if (globalThis.CARDGAME_UX) import('./ux.js');
+
 const SCREENS = { hub, rating, admin, down, solo, ...GAMES };
 
 /** Which module draws this state. Rooms saved before the hub carry no `game`: poker. */

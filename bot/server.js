@@ -61,7 +61,7 @@ function indexFiles(root) {
  * @param hub   the Hub
  * @param root  directory with the Mini App (index.html and friends)
  */
-export function startServer({ hub, port, root, host = '0.0.0.0', log = console.error, onListen, helloMs = HELLO_MS, maxPages = MAX_PAGES } = {}) {
+export function startServer({ hub, port, root, host = '0.0.0.0', log = console.error, onListen, ux = null, helloMs = HELLO_MS, maxPages = MAX_PAGES } = {}) {
   const files = indexFiles(root);
   /** user id -> сколько его страниц открыто сейчас */
   const pagesOf = new Map();
@@ -72,6 +72,23 @@ export function startServer({ hub, port, root, host = '0.0.0.0', log = console.e
       pathname = new URL(req.url, 'http://local').pathname;
     } catch {
       /* keep '/' */
+    }
+    if (pathname === '/ux-config.js') {
+      res.writeHead(200, { 'content-type': TYPES['.js'], 'cache-control': 'no-store' });
+      return res.end(ux ? 'globalThis.CARDGAME_UX = true;' : '');
+    }
+    if (pathname === '/ux' && ux && req.method === 'POST') {
+      let body = '', tooLarge = false;
+      req.on('data', chunk => { body += chunk; if (body.length > 16384) { tooLarge = true; req.destroy(); } });
+      req.on('end', () => {
+        if (tooLarge) return;
+        let result;
+        try { result = ux.request(JSON.parse(body)); }
+        catch { result = { status: 400, error: 'Не удалось выполнить запрос UX-Test.' }; }
+        res.writeHead(result.status || 200, { 'content-type': TYPES['.json'], 'cache-control': 'no-store' });
+        res.end(JSON.stringify(result));
+      });
+      return;
     }
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       res.writeHead(405).end();

@@ -39,3 +39,8 @@ assets-incoming/*
 # Локальный Atlas и его кэш: в продукт и на сервер не входят
 .tools/
 .atlas/
+
+.env.ux
+data-ux/
+
+!.env.ux.example

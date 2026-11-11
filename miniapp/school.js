@@ -1,3 +1,4 @@
+import { local as uxStorage } from './storage.js';
 /**
  * «Школа покера» на телефоне (режим «Обучение» в форме покера с ботами): азбука (что за игра, как идёт раздача, что
  * можно делать, комбинации и маленький тест) и список уроков с отметками.
@@ -15,7 +16,7 @@ const KEY = 'school.done';
 
 export function doneLessons() {
   try {
-    const v = JSON.parse(localStorage.getItem(KEY) || '[]');
+    const v = JSON.parse(uxStorage.getItem(KEY) || '[]');
     return Array.isArray(v) ? v : [];
   } catch {
     return [];
@@ -26,7 +27,7 @@ export function markDone(lesson) {
   try {
     const done = new Set(doneLessons());
     done.add(lesson);
-    localStorage.setItem(KEY, JSON.stringify([...done]));
+    uxStorage.setItem(KEY, JSON.stringify([...done]));
   } catch {
     /* приватный режим — просто не запомним */
   }

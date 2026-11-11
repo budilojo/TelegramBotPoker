@@ -1,3 +1,4 @@
+import { local as uxStorage } from './storage.js';
 /**
  * Смайлики во время игры — клиент. Сервер: bot/reactions.js.
  *
@@ -54,7 +55,7 @@ export const canReact = (s) => !!s?.me && s.me.seated !== false && s.me.seat >= 
 const OFF_KEY = 'reactions-off'; // тот же ключ, что у переключателя смайликов волны 1: выбор людей сохраняется
 export function reactionsOff() {
   try {
-    return localStorage.getItem(OFF_KEY) === '1' || offFallback;
+    return uxStorage.getItem(OFF_KEY) === '1' || offFallback;
   } catch {
     return offFallback;
   }
@@ -62,8 +63,8 @@ export function reactionsOff() {
 /** Включить или выключить чат и реакции на этом телефоне. */
 export function setReactionsOff(on) {
   try {
-    if (on) localStorage.setItem(OFF_KEY, '1');
-    else localStorage.removeItem(OFF_KEY);
+    if (on) uxStorage.setItem(OFF_KEY, '1');
+    else uxStorage.removeItem(OFF_KEY);
     offFallback = false;
   } catch {
     offFallback = on; // приватный режим: настройка проживёт до перезагрузки — и только
