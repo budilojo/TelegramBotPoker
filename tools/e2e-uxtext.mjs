@@ -7,6 +7,7 @@ import { App } from '../bot/app.js';
 import { Hub } from '../bot/hub.js';
 import { Store } from '../bot/store.js';
 import { startServer } from '../bot/server.js';
+import { fileURLToPath } from 'node:url';
 import { TelegramStub, cmdUpdate, dmUpdate, user } from '../bot/tg-stub.js';
 import { signInitData } from '../bot/webapp-auth.js';
 import { cfgOf } from '../bot/payments/testkit.js';
@@ -16,7 +17,7 @@ const token = `0:${crypto.randomBytes(16).toString('hex')}`;
 const api = new TelegramStub();
 const app = new App({ api, store: new Store(':memory:'), sales: cfgOf({ mode: 'test' }), botUsername: 'All_InPoker_bot', webappUrl: `http://localhost:${port}`, miniAppName: 'table', minIntervalMs: 0, runoutStepMs: 0 });
 const hub = new Hub(app, { botToken: token }); app.attachHub(hub);
-const web = startServer({ hub, port, host: '127.0.0.1', root: new URL('../miniapp', import.meta.url).pathname, log() {} });
+const web = startServer({ hub, port, host: '127.0.0.1', root: fileURLToPath(new URL('../miniapp', import.meta.url)), log() {} });
 await new Promise(r => web.server.once('listening', r));
 const browser = await chromium.launch();
 const errors = [];
@@ -117,7 +118,7 @@ try {
   }
   if(run('copy')) {
    await p.locator('[data-tab=rating]').click();
-   assert.equal(await p.getByText('Очки за доигранные партии уже копятся. Таблица игроков пока закрыта.').count(),1,'закрытый рейтинг не выдаёт будущую модель за текущую');
+   assert.equal(await p.getByText('Публичные столы и таблица лидеров пока закрыты.').count(),1,'закрытый рейтинг не выдаёт будущую модель за текущую');
    await p.locator('[data-tab=shop]').click(); await p.locator('[data-act=purchases]').click();
    assert.equal(await p.getByRole('button',{name:'Получить номера заказов',exact:true}).count(),1,'название кнопки соответствует справке, а не ответу оператора');
    await p.locator('.col-purchases [data-act=support]').click();

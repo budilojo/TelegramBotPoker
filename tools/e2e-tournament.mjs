@@ -4,6 +4,7 @@ import { chromium } from 'playwright';
 import { Table, user, initDataFor } from '../bot/harness.js';
 import { Store } from '../bot/store.js';
 import { startServer } from '../bot/server.js';
+import { fileURLToPath } from 'node:url';
 
 const host = user(8001, 'Вера');
 const guest = user(8002, 'Илья');
@@ -11,7 +12,7 @@ const store = new Store();
 const t = new Table({ store, admins: [String(host.id)] });
 store.pay.adminGrant(String(host.id), 'sever-talisman', String(host.id), t.clock.now());
 store.collApply(String(host.id), [{ slot: 'talisman', item: 'sever-talisman', color: 'default' }], 'talisman-e2e', t.clock.now(), 20);
-const web = startServer({ hub: t.hub, port: 0, host: '127.0.0.1', root: new URL('../miniapp', import.meta.url).pathname });
+const web = startServer({ hub: t.hub, port: 0, host: '127.0.0.1', root: fileURLToPath(new URL('../miniapp', import.meta.url)) });
 await new Promise(resolve => web.server.once('listening', resolve));
 const base = `http://127.0.0.1:${web.server.address().port}`;
 const browser = await chromium.launch();

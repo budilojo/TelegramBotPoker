@@ -89,7 +89,8 @@ function backToTable(s) {
 export function groupTable(s) {
   const top = topKind(s.lobbies);
   if (top.kind === 'back') return [];
-  if (top.kind === 'hint') return [h('div.hint.hub-pick', 'Выберите игру')];
+  // Не «Выберите игру»: это уже заголовок экрана строкой выше, два одинаковых текста подряд — шум.
+  if (top.kind === 'hint') return [h('div.hint.hub-pick', 'Открытых столов нет — выберите игру ниже')];
   const l = top.lobby;
   const join = l.status === 'lobby';
   return [h('div.group-table',

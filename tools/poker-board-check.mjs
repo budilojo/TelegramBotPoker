@@ -37,7 +37,7 @@ const TOKEN = `0:${crypto.randomBytes(16).toString('hex')}`;
 const SHOTS = process.env.SHOTS === '1';
 const OUT = path.join(ROOT, 'preview', 'poker-board');
 const SERIES = process.env.QUICK === '1' ? [null, 'obsidian'] : [null, 'sever', 'obsidian', 'chertezh', 'terracotta', 'orbita', 'porcelain'];
-const VIEWPORTS = [[320, 568], [390, 844], [414, 896], [430, 932]];
+const VIEWPORTS = [[320, 568], [360, 640], [390, 844], [414, 896], [430, 932]];
 
 const api = new TelegramStub();
 const app = new App({ api, botUsername: 'All_InPoker_bot', minIntervalMs: 0, runoutStepMs: 0, webappUrl: `http://localhost:${PORT}`, collectionsDemo: true });

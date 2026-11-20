@@ -142,6 +142,14 @@ for (const [w, h] of [[320, 568], [390, 844]]) {
     assert.ok(r && r.width >= 44 && r.height >= 44, `${w}px: ${sel} не меньше 44 px`);
   }
   assert.equal(await pi.locator('[data-act="support"]').count(), 1, 'кнопка поддержки одна');
+  // Проверка R: «Написать в поддержку» — во всю ширину своего блока, текст не прижат к краям кнопки.
+  const sup = await pi.locator('.pt-support-btn').evaluate((b) => {
+    const row = b.parentElement.getBoundingClientRect(), cs = getComputedStyle(b.parentElement), r = b.getBoundingClientRect();
+    const range = document.createRange(); range.selectNodeContents(b); const t = range.getBoundingClientRect();
+    return { w: r.width, inner: row.width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), gapL: t.left - r.left, gapR: r.right - t.right };
+  });
+  assert.ok(sup.w >= sup.inner - 3, `${w}px: кнопка поддержки во всю ширину блока (${JSON.stringify(sup)})`);
+  assert.ok(sup.gapL >= 12 && sup.gapR >= 12, `${w}px: у текста кнопки поддержки есть поля (${JSON.stringify(sup)})`);
   step(`${w}px: наверху свой ID, «Скопировать» и «Написать в поддержку» (≥ 44 px), чужого ID нет`);
 
   // Размеры: клетки и кнопки ≥ 44, четыре колонки, ничего не шире экрана.

@@ -351,7 +351,11 @@ function playOut(room) {
   scene('27-rating', open, 101, { start: `g_${g.code}`, press: 'Рейтинг', before: openRating, after: closeRating });
   // Как это выглядит у людей сейчас: кнопка на месте, экран ещё закрыт.
   scene('27б-rating-soon', open, 101, { start: `g_${g.code}`, press: 'Рейтинг', before: () => app.setMaintenance(false) });
-  scene('28-rating-who', open, 101, { start: `g_${g.code}`, press: ['Рейтинг', 'Артём'], before: openRating, after: closeRating });
+  // 28 «карточка игрока» отключена (проверка R, 20.11.2026): с a9b083c рейтинг считает только публичные
+  // столы, а очки выше проставлены старым путём (`store.rate`) — в таблице их нет, «Артём» не находится,
+  // и весь прогон снимков обрывался здесь, не сняв шахматы, шашки, нарды, морской бой и игры с ботами.
+  // Вернуть, когда сцену переведут на данные публичных столов (задача в docs/brain/tasks.md).
+  void closeRating;
 }
 
 // 26. Шахматы — дуэль: лобби, партия за белых и за чёрных, превращение,

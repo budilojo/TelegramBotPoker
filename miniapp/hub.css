@@ -485,6 +485,10 @@
 
 /* ---- Главная: «Стол группы» и крупные карточки игр (пакет 4, шаг O). Плоско, без свечения. */
 .hub .group-table { display: flex; align-items: center; gap: var(--k-s12); padding: var(--k-pad-y) var(--k-pad-x); background: var(--k-surface); border: 1px solid var(--k-green); border-radius: var(--k-r-lg); }
+/* На узком экране текст важнее кнопки: игра и «N/M игроков» не режутся в «П…», кнопка уходит на свою строку во всю ширину. */
+.hub .group-table { flex-wrap: wrap; }
+.hub .group-table .lr-body { flex: 1 1 160px; }
+.hub .group-table > .btn { flex: 1 0 auto; min-height: var(--k-tap); }
 .hub .gt-label { font: var(--k-w-regular) var(--k-fs-caption)/var(--k-lh-caption) var(--k-font); color: var(--k-text-2); }
 .hub .hub-pick { text-align: center; }
 .hub .game-card { padding-top: var(--k-s12); padding-bottom: var(--k-s12); }

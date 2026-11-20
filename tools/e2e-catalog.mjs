@@ -127,6 +127,46 @@ try {
     await page.close();
   }
 
+  step('верх главной: пустая группа — подсказка, чужое лобби — «Стол группы» (320 px)');
+  {
+    const page = await open([320, 568], `g_${gcode}`);
+    await page.waitForSelector('.game-card');
+    const h1 = (await page.locator('.hub-head h1').innerText()).trim();
+    const hint = (await page.locator('.hub-pick').innerText()).trim();
+    assert.equal(await page.locator('.group-table').count(), 0, 'столов нет — карточки «Стол группы» нет');
+    assert.notEqual(hint, h1, 'подсказка не повторяет заголовок экрана');
+    // Дима открывает свою страницу той же группы и создаёт лобби покера.
+    const dima = user(102, 'Дима');
+    const other = await browser.newPage({ viewport: { width: 320, height: 568 } });
+    const otherInit = signInitData({ auth_date: Math.floor(Date.now() / 1000), user: dima, start_param: `g_${gcode}` }, TOKEN);
+    await other.route('https://telegram.org/**', (r) => r.fulfill({ contentType: 'text/javascript', body: sdk(otherInit) }));
+    await other.goto(`http://localhost:${PORT}/`);
+    await other.waitForSelector('.game-card');
+    await other.evaluate(async () => { const { send } = await import('/net.js'); send({ t: 'create', game: 'poker', settings: { turnSeconds: 30 }, reqId: 'catalog-top' }); });
+    await page.waitForSelector('.group-table', { timeout: 6000 });
+    assert.equal(await page.locator('.hub-pick').count(), 0, 'есть стол — подсказки нет');
+    const card = await page.evaluate(() => {
+      const el = document.querySelector('.group-table');
+      const b = el.querySelector('button').getBoundingClientRect();
+      const doc = document.documentElement;
+      const cut = [...el.querySelectorAll('.lr-title, .lr-sub, .gt-label')].filter((e) => e.scrollWidth > e.clientWidth + 1 || e.getBoundingClientRect().height > 2 * parseFloat(getComputedStyle(e).lineHeight || '20') + 1).map((e) => e.className);
+      return { text: el.innerText, btnH: b.height, right: el.getBoundingClientRect().right, vw: doc.clientWidth, wide: doc.scrollWidth > doc.clientWidth, cut };
+    });
+    assert.match(card.text, /Стол группы/);
+    assert.match(card.text, /1\/\d+/, 'число игроков за столом');
+    assert.match(card.text, /Присоединиться/);
+    assert.deepEqual(card.cut, [], 'название стола, «Стол группы» и число игроков не обрезаны многоточием');
+    assert.ok(card.btnH >= 44, `кнопка не меньше 44 px: ${card.btnH}`);
+    assert.ok(card.right <= card.vw + 0.5 && !card.wide, 'карточка в экране, горизонтального скролла нет');
+    await page.screenshot({ path: path.join(SHOTS, 'home-group-table-320.png') });
+    await page.locator('.group-table button').click();
+    // «Присоединиться» открывает лобби этого стола; сесть — уже обычной кнопкой стола.
+    await page.getByRole('button', { name: /^Сесть за стол$/ }).waitFor({ timeout: 6000 });
+    assert.equal(app.liveRooms(-100555).length, 1, 'новый стол не создан — открыт тот же');
+    await other.close();
+    await page.close();
+  }
+
   step('«Игры с ботами»: те же страницы');
   {
     const page = await open([320, 568], '');

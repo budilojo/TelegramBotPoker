@@ -149,3 +149,30 @@ test('пригласить в покере (настоящая раздача): 
   await t.send(IVAN, { t: 'invite' });
   assert.ok(shares(t, IVAN).at(-1), 'и карточка готова');
 });
+
+test('пригласить (проверка R): друг по ссылке из карточки попадает за этот стол, садится по обычным правилам и не получает игр группы', async () => {
+  const t = new Table(OPTS);
+  const room = await lobby(t, 'durak');
+  await t.send(IVAN, { t: 'invite' });
+  const code = new URL(shares(t, IVAN).at(-1).link).searchParams.get('startapp');
+  assert.equal(code, room.code, 'в ссылке — код именно этого стола');
+  await t.start(DIMA);
+  const r = t.open(DIMA, { initData: (await import('./harness.js')).initDataFor(DIMA, { startParam: code, clock: t.clock }) });
+  assert.ok(r.session, 'стол открылся');
+  assert.equal(r.session.group, null, 'ссылка на стол не открывает хаб группы');
+  assert.equal(t.state(DIMA).room.code, room.code);
+  assert.equal(t.state(DIMA).hub, undefined, 'пути «к играм группы» по ссылке нет');
+  await t.send(DIMA, { t: 'sit' });
+  assert.ok(room.players.some((p) => p.id === '303' && !p.left), 'сел за стол');
+  assert.ok(!JSON.stringify(t.page(DIMA).inbox).includes('"id":"101"'), 'чужой номер Telegram в его телефон не пришёл');
+});
+
+test('пригласить (проверка R): рейтинговый стол не приглашает — туда садятся не по ссылке', async () => {
+  const t = new Table(OPTS);
+  const room = await lobby(t, 'durak');
+  assert.equal(t.app.inviteBlock(room, '101'), null);
+  const chat = room.chatId;
+  room.chatId = `ranked:${room.game}`;
+  assert.equal(t.app.inviteBlock(room, '101'), 'NOT_INVITABLE');
+  room.chatId = chat;
+});
