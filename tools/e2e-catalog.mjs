@@ -111,7 +111,7 @@ try {
     i = await info(page);
     assert.equal(i.cur, 1, 'жест листает страницу'); assert.match(i.label, /^Страница 2 из/, 'индикатор следует за жестом');
 
-    // Позиция сохраняется при возврате: уходим в «Настройки» и обратно, и после обновления состояния.
+    // Позиция сохраняется при возврате: уходим в «Профиль» и обратно, и после обновления состояния.
     await page.locator('.nav-tab[data-tab="settings"]').click();
     await page.locator('.nav-tab[data-tab="games"]').click(); await settle(page);
     assert.equal((await info(page)).cur, 1, 'после возврата открыта та же страница');

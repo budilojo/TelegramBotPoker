@@ -5,7 +5,7 @@
  * Telegram на сервере; страница лишь просит «покажи меня так» и читает ответ.
  *
  *   avatarEl(player, cls)            круг: картинка из набора или инициал
- *   renderProfileSettings(container) экран «Профиль» (его вызывает вкладка «Настройки»)
+ *   renderProfileSettings(container) экран «Профиль» (его вызывает вкладка «Профиль»)
  */
 import { h, avatar, haptic, toast } from './ui.js';
 import { bus, send } from './net.js';
@@ -24,6 +24,11 @@ const NICK_MAX_DEFAULT = 16;
 /** Что знаем о своём профиле: ответ сервера, черновик на экране, отказ под полем. */
 const st = { profile: null, nick: '', avatar: null, error: null, asked: false, patch: null };
 
+let listener = null; // один: верх вкладки перерисовывается вместе с экраном, старый больше не нужен
+/** Подписка на свежий профиль (для верха вкладки). Сразу отдаёт то, что уже известно. */
+export function onProfile(fn) { listener = fn; if (st.profile) fn(st.profile); }
+const emit = () => { try { listener?.(st.profile); } catch { /* экран уже ушёл */ } };
+
 bus.onProfile = (msg) => {
   if (msg.error) {
     st.error = msg.error.text || 'Не получилось сохранить.';
@@ -40,6 +45,7 @@ bus.onProfile = (msg) => {
     if (st.justSaved) toast('Профиль сохранён');
     st.justSaved = false;
   }
+  emit();
   st.patch?.();
 };
 
@@ -140,7 +146,7 @@ export function renderProfileSettings(container) {
   nickIn.id = 'pf-nick';
 
   const root = h('div.pf',
-    h('h2.k-section', 'Профиль'),
+    
     h('div.pf-prev', h('div.pf-prev-cap', 'Так вас увидят за столом'), h('div.pf-prev-row', previewAv, previewName)),
     wrap,
     h('div.pf-label', 'Аватар'),

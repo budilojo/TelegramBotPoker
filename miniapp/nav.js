@@ -1,5 +1,5 @@
 /**
- * Нижняя навигация: Игры · Рейтинг · Магазин · Настройки.
+ * Нижняя навигация: Игры · Рейтинг · Магазин · Профиль.
  *
  * Только на экранах хаба: «мои группы», игры группы, «Игры с ботами» и таблица
  * рейтинга. За столом (лобби, партия, итоги), в пульте владельца, под шторкой
@@ -7,7 +7,7 @@
  * теряют.
  *
  * «Игры» не придумывает свой экран: это тот, что сервер уже показывает
- * (группа, «мои группы» или игры с ботами). «Рейтинг» и «Настройки» — экраны
+ * (группа, «мои группы» или игры с ботами). «Рейтинг» и «Профиль» — экраны
  * самой страницы поверх него: сервер о них не знает, а шаг «назад» к играм
  * ничего не запрашивает.
  */
@@ -18,6 +18,7 @@ import { renderProfileSettings } from './profile.js';
 import { settingsRows } from './settings-rows.js';
 import { store as collectionsStore } from './collections/state.js';
 import { tournamentEntry } from './tournament.js';
+import { profileTop } from './profile-top.js';
 
 /** На каких состояниях сервера панель есть. */
 const KINDS = new Set(['home', 'hub', 'solo', 'rating']);
@@ -95,7 +96,7 @@ const ICONS = {
   shop: svg('<path d="M6 8h12l1 12H5L6 8z"/><path d="M9 8V7a3 3 0 0 1 6 0v1"/>'),
   settings: svg('<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>'),
 };
-const TABS = [['games', 'Игры'], ['rating', 'Рейтинг'], ['shop', 'Магазин'], ['settings', 'Настройки']];
+const TABS = [['games', 'Игры'], ['rating', 'Рейтинг'], ['shop', 'Магазин'], ['settings', 'Профиль']];
 
 export function bar(s, { active = activeTab(s), onPick = (id) => go(id, s) } = {}) {
   return h('nav.nav', { 'aria-label': 'Разделы' },
@@ -144,10 +145,12 @@ const profileBox = h('div.pf-host');
 
 function settings(s) {
   return h('div.lobby.hub.settings',
-    h('div.hub-head', h('h1', 'Настройки'), h('div.sub', 'Профиль, уведомления и поддержка')),
+    h('div.hub-head', h('h1', 'Профиль')),
+
+    profileTop(s, profileBox),
 
     h('section.set-block',
-      h('div.section-label', 'Профиль'),
+      h('div.section-label', 'Ник и аватар'),
       (renderProfileSettings(profileBox), profileBox)),
 
     s.bot ? h('section.set-block',
@@ -159,14 +162,6 @@ function settings(s) {
         h('button.btn.sm', { onclick: () => { haptic.tap(); tg?.openTelegramLink?.(`https://t.me/${s.bot}?start=notify`); } }, 'Открыть бота'))) : null,
 
     tournamentEntry(s),
-
-    s.bot ? h('section.set-block',
-      h('div.section-label', 'Поддержка'),
-      h('div.set-row.col',
-        h('div.set-body',
-          h('div.set-title', 'Написать в поддержку'),
-          h('div.set-sub', 'Вопрос или проблема — напишите боту, ответ придёт туда же. Пароли и коды не присылайте.')),
-        h('button.btn.sm', { 'data-act': 'support', onclick: () => { haptic.tap(); tg?.openTelegramLink?.(`https://t.me/${s.bot}?start=support`); } }, 'Написать'))) : null,
 
     h('section.set-block',
       h('div.section-label', 'О приложении'),

@@ -1,5 +1,5 @@
 /*
- * Нижняя навигация и экраны «Рейтинг» и «Настройки».
+ * Нижняя навигация и экраны «Рейтинг» и «Профиль».
  * Панель — плоская: поверхность, тонкая линия сверху. Активная вкладка
  * отмечена не только цветом: светлая подпись жирнее, значок светлый и над
  * вкладкой лежит зелёная полоса (зелёный здесь — «вы тут»).
@@ -46,7 +46,7 @@
 body:has(#sheet-root .sheet) .nav,
 body.kb-open .nav { display: none; }
 
-/* ----------------------------------------------------- «Настройки» и «Рейтинг» */
+/* ----------------------------------------------------- «Профиль» и «Рейтинг» */
 
 .settings, .ranked { gap: var(--k-s16); }
 .set-block { display: flex; flex-direction: column; gap: var(--k-s8); }
@@ -70,3 +70,12 @@ body.kb-open .nav { display: none; }
 .ranked .rt-chip { min-height: var(--k-tap); font-size: var(--k-fs-secondary); }
 .ranked .section-label { margin: 0 2px; }
 .ranked .link { font: inherit; }
+
+/* ----------------------------------------------------- верх «Профиля» */
+.pt { gap: var(--k-s12); }
+.pt-card { gap: var(--k-s12); }
+.pt-av .av { width: 48px; height: 48px; font-size: var(--k-fs-component); }
+.pt-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+.pt-idrow { font: var(--k-w-regular) var(--k-fs-secondary)/var(--k-lh-secondary) var(--k-font); color: var(--text-secondary); margin-top: var(--k-s4); overflow-wrap: anywhere; }
+.pt-copy { min-height: var(--k-tap); flex: none; }
+.set-row.col .pt-support-btn { min-height: var(--k-tap); align-self: stretch; }

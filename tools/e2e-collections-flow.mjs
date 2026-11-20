@@ -3,7 +3,7 @@
  *
  *   node tools/e2e-collections-flow.mjs
  *
- * Демо включена: «Настройки» → «Коллекции» → витрина → карточка рубашки → «Бордо» → «Примерить» (есть «Так видят друзья»)
+ * Демо включена: «Профиль» → «Коллекции» → витрина → карточка рубашки → «Бордо» → «Примерить» (есть «Так видят друзья»)
  * → «Получить для демонстрации» → «Получено» → переключатель → инвентарь → на сервере выбор записан →
  * в начатой раздаче у друга вид прежний → следующая раздача: «Бордо» на закрытых картах Ивана →
  * «Вернуть базовое» → выбор на сервере пуст. Затем рабочий режим: входа нет, `grant` отклонён (COL_DEMO_OFF),
@@ -74,7 +74,7 @@ async function open(s, u, { size = [360, 740], startParam = '' } = {}) {
   return page;
 }
 const text = (page, sel) => page.locator(sel).innerText();
-const goSettings = async (page) => { await page.locator('.nav-tab[data-tab="settings"]').click(); await page.waitForSelector('h1:has-text("Настройки")'); };
+const goSettings = async (page) => { await page.locator('.nav-tab[data-tab="settings"]').click(); await page.waitForSelector('h1:has-text("Профиль")'); };
 
 try {
   /* ================= демо включена, настоящий сервер ================= */

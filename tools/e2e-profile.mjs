@@ -127,10 +127,22 @@ for (const [w, h] of [[320, 568], [390, 844]]) {
   await until(() => room.players.length === 2, 'Макс сел');
   const pi = await openPage(ivan, `g_${group.code}`, w, h);
   await pi.waitForSelector('.nav');
-  await pi.getByRole('button', { name: 'Настройки' }).click();
+  await pi.getByRole('button', { name: 'Профиль' }).click();
   await pi.waitForSelector('.pf .pf-cell');
   await pi.waitForFunction(() => document.querySelectorAll('.pf-cell').length === 12);
   step(`${w}px: экран «Профиль» открыт, в сетке 12 клеток (без аватара + 11)`);
+
+  // Верх вкладки: свой ID (и ничей другой), «Скопировать», заметная «Поддержка» ≥ 44 px, вкладка названа «Профиль».
+  assert.equal(await pi.locator('.nav-tab[data-tab="settings"] .nav-label').innerText(), 'Профиль');
+  await pi.waitForFunction((id) => document.querySelector('.pt-id')?.textContent === id, String(ivan.id));
+  const body = await pi.locator('.settings').innerText();
+  assert.ok(!body.includes(String(max.id)), `${w}px: чужого ID на экране нет`);
+  for (const sel of ['.pt-copy', '.pt-support-btn']) {
+    const r = await pi.locator(sel).boundingBox();
+    assert.ok(r && r.width >= 44 && r.height >= 44, `${w}px: ${sel} не меньше 44 px`);
+  }
+  assert.equal(await pi.locator('[data-act="support"]').count(), 1, 'кнопка поддержки одна');
+  step(`${w}px: наверху свой ID, «Скопировать» и «Написать в поддержку» (≥ 44 px), чужого ID нет`);
 
   // Размеры: клетки и кнопки ≥ 44, четыре колонки, ничего не шире экрана.
   for (const sel of ['.pf-cell', '.pf-save', '.pf-reset', '.pf-input']) {

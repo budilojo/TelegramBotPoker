@@ -3,7 +3,7 @@
  *
  *   node tools/e2e-nav.mjs
  *
- * Панель «Игры · Рейтинг · Магазин · Настройки» есть на «моих группах», хабе группы,
+ * Панель «Игры · Рейтинг · Магазин · Профиль» есть на «моих группах», хабе группы,
  * «Играх с ботами» и таблице рейтинга; нет за столом, в пульте владельца, под
  * шторкой и при открытой клавиатуре. Пока рейтинг закрыт, вкладка «Рейтинг»
  * честно говорит «скоро» и не запрашивает у сервера ни одного стола; когда
@@ -139,9 +139,9 @@ try {
     if (size[0] === 320 || size[0] === 390) await page.screenshot({ path: path.join(SHOTS, `nav-${tag}-rating-soon.png`) });
 
     await tab(page, 'settings').click();
-    await page.waitForSelector('h1:has-text("Настройки")');
+    await page.waitForSelector('h1:has-text("Профиль")');
     assert.equal(await active(page), 'settings');
-    await fits(page, `вкладка «Настройки», ${tag}`);
+    await fits(page, `вкладка «Профиль», ${tag}`);
     if (size[0] === 320 || size[0] === 390) await page.screenshot({ path: path.join(SHOTS, `nav-${tag}-settings.png`) });
 
     await tab(page, 'games').click();
@@ -151,7 +151,7 @@ try {
 
     // Ни одного запроса столов, пока рейтинг закрыт.
     assert.equal(page.sent.filter((m) => m.includes('rtables') || m.includes('rjoin')).length, 0, 'страница не просила рейтинговые столы');
-    step(`${tag}: мои группы → Рейтинг (скоро) → Настройки → Игры; запросов столов нет`);
+    step(`${tag}: мои группы → Рейтинг (скоро) → Профиль → Игры; запросов столов нет`);
     if (size[0] !== 360) { await page.close(); continue; }
 
     // Нажатие по активной вкладке — к началу экрана, а не «обновление».

@@ -6,7 +6,7 @@
  * Telegram — заглушка (bot/tg-stub.js): окно оплаты — подменённый `Telegram.WebApp.openInvoice`, сама «оплата» —
  * обновления pre_checkout_query и successful_payment, которые тест посылает серверу. Реальных счетов и звёзд нет.
  *
- * Путь: «Настройки» → «Коллекции» → стол → «Примерить» → назад → состав/цена/условия → «Купить за 100 ⭐» → окно →
+ * Путь: «Профиль» → «Коллекции» → стол → «Примерить» → назад → состав/цена/условия → «Купить за 100 ⭐» → окно →
  * «оплачено» в окне (вещи ещё НЕТ — «ждём подтверждения») → successful_payment → «Куплено» → надеть → выбор на сервере.
  * Ещё: отмена окна, «Мои покупки», «Поддержка», условия; режим off — входа нет.
  */
@@ -80,7 +80,7 @@ async function open(s, u, size) {
   await page.waitForSelector('.nav-tab[data-tab="settings"]');
   return page;
 }
-const goSettings = async (page) => { await page.locator('.nav-tab[data-tab="settings"]').click(); await page.waitForSelector('h1:has-text("Настройки")'); };
+const goSettings = async (page) => { await page.locator('.nav-tab[data-tab="settings"]').click(); await page.waitForSelector('h1:has-text("Профиль")'); };
 const shot = async (page, name) => { if (SHOTS) { fs.mkdirSync(path.join(ROOT, 'preview'), { recursive: true }); await page.screenshot({ path: path.join(ROOT, 'preview', name), fullPage: false }); } };
 
 /** Нет горизонтального скролла, кнопки не ниже 44 px. */

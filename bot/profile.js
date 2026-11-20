@@ -107,6 +107,8 @@ export class Profiles {
   mine(user) {
     const p = this.raw(user.id);
     return {
+      // Свой номер — из подписанного initData; чужой в ответ не попадает никогда (показывается на экране «Профиль»).
+      id: String(user.id),
       frame: this.app.collections.personal(this.app.collections.choiceOf(user.id), 'frame'),
       badge: this.app.collections.personal(this.app.collections.choiceOf(user.id), 'badge'),
       nickname: p.nickname,

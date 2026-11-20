@@ -73,7 +73,7 @@ try {
       await h.page.evaluate(() => window.__back());
       await h.page.waitForSelector('.back-to-table');
       await h.page.locator('.nav-tab[data-tab="settings"]').click();
-      await h.page.waitForSelector('h1:has-text("Настройки")');
+      await h.page.waitForSelector('h1:has-text("Профиль")');
       await h.page.locator('.nav-tab[data-tab="rating"]').click();
       await h.page.locator('.nav-tab[data-tab="games"]').click();
       await h.page.locator('.back-to-table').click();

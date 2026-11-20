@@ -143,7 +143,7 @@ async function open(s, size, url = '/') {
 const colSent = (page, op) => page.sent.map((x) => { try { return JSON.parse(x); } catch { return {}; } }).filter((m) => m.t === 'col' && (!op || m.op === op));
 const text = (page, sel) => page.locator(sel).innerText();
 const shot = (page, name, tag) => page.screenshot({ path: path.join(SHOTS, `col-${tag}-${name}.png`) });
-const goSettings = async (page) => { await page.locator('.nav-tab[data-tab="settings"]').click(); await page.waitForSelector('h1:has-text("Настройки")'); };
+const goSettings = async (page) => { await page.locator('.nav-tab[data-tab="settings"]').click(); await page.waitForSelector('h1:has-text("Профиль")'); };
 const openCollections = async (page) => { await goSettings(page); await page.locator('[data-entry="collections"]').click(); await page.waitForSelector('.col-show'); };
 
 /** Экран по размеру: нет горизонтального скролла, ничто не вылезает за край, зоны нажатия ≥ 44 (кроме текстовых ссылок). */

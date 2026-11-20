@@ -47,7 +47,7 @@ try {
     const page = await pageFor(id, width);
     await page.locator('.nav').waitFor();
     assert.equal(await page.locator('.nav-tab').count(), 4);
-    assert.deepEqual(await page.locator('.nav-tab .nav-label').allTextContents(), ['Игры', 'Рейтинг', 'Магазин', 'Настройки']);
+    assert.deepEqual(await page.locator('.nav-tab .nav-label').allTextContents(), ['Игры', 'Рейтинг', 'Магазин', 'Профиль']);
     const box = await tab(page).boundingBox();
     assert.ok(box.width >= 44 && box.height >= 44, `вкладка мала: ${JSON.stringify(box)}`);
     assert.equal(taps(), width === 320 ? 0 : 1, 'до нажатия этот человек не посчитан');

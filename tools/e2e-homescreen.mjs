@@ -75,7 +75,7 @@ async function openSettings(cfg, w = 360, h = 740, clock = false) {
   await page.route('https://telegram.org/**', (r) => r.fulfill({ contentType: 'text/javascript', body: sdkStub(initData, cfg) }));
   await page.goto(`http://localhost:${PORT}/`);
   await page.waitForSelector('.nav');
-  await page.getByRole('button', { name: 'Настройки' }).click();
+  await page.getByRole('button', { name: 'Профиль' }).click();
   await page.waitForSelector('.hs-row');
   return page;
 }
@@ -149,7 +149,7 @@ step('проверка статуса молчит → не вечный спи�
   assert.equal(await st(p), 'checking');
   await waitSt(p, 'failed', 9000); assert.match(await p.locator('.hs-row').innerText(), /проверить/); await p.close(); }
 
-step('нажатие не двигает прокрутку и не пересоздаёт «Настройки» (assertNoJump)');
+step('нажатие не двигает прокрутку и не пересоздаёт «Профиль» (assertNoJump)');
 { const p = await openSettings(base, 320, 400); await waitSt(p, 'can');
   await assertNoJump(p, { scroller: 'auto', at: 'bottom', label: 'добавить иконку' }, () => p.locator('.hs-row .btn').click());
   await p.close(); }
