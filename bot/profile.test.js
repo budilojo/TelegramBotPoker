@@ -10,6 +10,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import os from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -327,7 +328,7 @@ test('профиль переживает перезапуск бота: ник 
 /* ---------------------------------------------------- файлы аватарок */
 
 test('у каждой аватарки из набора есть PNG: 128×128, палитровый, ≤ 20 КБ; лишних файлов нет', () => {
-  const dir = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'miniapp', 'avatars');
+  const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'miniapp', 'avatars'); // fileURLToPath: .pathname искажает путь с кириллицей
   for (const id of AVATARS) {
     const f = path.join(dir, `${id}.png`);
     assert.ok(fs.existsSync(f), `нет файла ${id}.png`);
