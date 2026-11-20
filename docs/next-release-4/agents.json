@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "baseBranch": "redesign",
+  "runBranch": "release4/run",
+  "stateDir": ".release-run/pack4",
+  "worktree": "release4",
+  "reportsDir": "docs/next-release-4/reports",
+  "portBase": 10000,
+  "maxAttempts": 3,
+  "common": ["docs/next-release/01-common.md", "docs/next-release-4/00-plan.md"],
+  "steps": [
+    { "id": "pokerbug", "letter": "N", "agent": "release4-pokerbug", "task": "docs/next-release-4/01-poker-bug.md", "decisions": [201, 203] },
+    { "id": "home", "letter": "O", "agent": "release4-home", "task": "docs/next-release-4/02-home.md", "decisions": [204, 207] },
+    { "id": "invite", "letter": "P", "agent": "release4-invite", "task": "docs/next-release-4/03-invite.md", "decisions": [208, 211] },
+    { "id": "profile", "letter": "Q", "agent": "release4-profile", "task": "docs/next-release-4/04-profile.md", "decisions": [212, 215] },
+    { "id": "check", "letter": "R", "agent": "release4-check", "task": "docs/next-release-4/05-check.md", "decisions": [216, 220] }
+  ]
+}
