@@ -592,6 +592,12 @@ input { font: inherit; color: inherit; }
 .lseat.empty .av { background: transparent; border: 1px dashed var(--line-hi); color: var(--faint); font-size: var(--k-fs-secondary); }
 .lseat.empty .nm { color: var(--faint); font-weight: 600; }
 .lseat.me .av { border-color: var(--accent); }
+/* «Пригласить» на пустом месте: та же пунктирная окружность, но это кнопка (зона не меньше 44 px). */
+button.lseat.invite { background: none; border: 0; padding: 0; margin: 0; font: inherit; color: inherit; cursor: pointer; min-height: 44px; -webkit-tap-highlight-color: transparent; }
+.lseat.invite .av { border-color: var(--text-2); color: var(--text); }
+.lseat.invite .nm { color: var(--text); }
+.lseat.invite:active .av { background: var(--panel-hi); }
+.lseat.invite:focus-visible .av { outline: 2px solid var(--text); outline-offset: 2px; }
 .tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .tag { font-size: var(--k-fs-caption); font-weight: 700; color: var(--text-2); background: var(--panel-hi); border: 1px solid var(--line); padding: 5px 9px; border-radius: var(--k-r-pill); }
 .hint { font-size: var(--k-fs-secondary); color: var(--muted); line-height: 1.4; }

@@ -47,6 +47,8 @@ const CORE_ERRORS = {
   NOT_SHAREABLE: 'Поделиться можно итогом сыгранной партии — когда она закончится.',
   SHARE_UNAVAILABLE: 'Бот не знает своего адреса — поделиться пока нельзя.',
   TOO_FAST: 'Подождите секунду и нажмите ещё раз.',
+  NOT_INVITABLE: 'Сейчас звать за этот стол нельзя: партия идёт или стол не для приглашений.',
+  NO_FREE_SEATS: 'Свободных мест за столом нет — звать некого.',
   RATING_SOON: RATING_SOON_TEXT,
   RATING_RESET_STALE: 'Рейтинг уже сброшен в другом окне. Обновите пульт.',
   RATING_RESET_CONFIRM: 'Для сброса введите СБРОСИТЬ.',
@@ -404,6 +406,7 @@ export class Hub {
         state.tournament.share = a.miniAppName ? `https://t.me/${a.botUsername}/${a.miniAppName}?startapp=t_${room.code}`
           : a.botUsername ? `https://t.me/${a.botUsername}?start=t_${room.code}` : `${a.webappUrl}/tournament/${room.code}`;
       }
+      state.canInvite = !this.app.inviteBlock(room, session.user.id);
       if (session.group) state.hub = true; // it came from the group's hub: offer the way back
       if (!room.solo && this.rematchGroup(session, room, state.room?.status)) state.canRematch = true; // «+ Новое лобби» на итогах
       if (isRanked(room)) {
@@ -817,6 +820,8 @@ export class Hub {
     }
     // «Поделиться итогом»: заготовка сообщения, которое человек сам отправит от своего имени.
     if (msg.t === 'share') return this.shareResult(session, room);
+    // «Пригласить» на пустом месте: карточка со ссылкой на этот стол.
+    if (msg.t === 'invite') return this.inviteToTable(session, room);
 
     const game = gameOf(room);
     // ply/turn/shot начинаются заново в следующей партии дуэли. Версия
@@ -1139,6 +1144,12 @@ export class Hub {
     this.enterRoom(session, room);
     await app.newCard(room);
     this.broadcastGroup(group.chatId);
+  }
+
+  async inviteToTable(session, room) {
+    const r = await this.app.prepareInvite(room, session.user);
+    if (r.error) return this.refuse(session, r.error);
+    session.send({ t: 'share', id: r.id, text: r.plain, link: r.link, invite: true });
   }
 
   async shareResult(session, room) {

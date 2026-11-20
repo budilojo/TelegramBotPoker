@@ -262,7 +262,12 @@ export function openShare({ id, text, link }) {
   }
   const url = `https://t.me/share/url?url=${encodeURIComponent(link || '')}&text=${encodeURIComponent(text || '')}`;
   if (tg?.openTelegramLink) tg.openTelegramLink(url);
-  else window.open(url, '_blank', 'noopener');
+  else if (link && navigator.clipboard?.writeText) {
+    // Совсем без Telegram-клиента: пересылать нечем — кладём ссылку в буфер и говорим об этом.
+    navigator.clipboard.writeText(link).then(
+      () => toast('Ссылка скопирована — отправьте её другу.'),
+      () => window.open(url, '_blank', 'noopener'));
+  } else window.open(url, '_blank', 'noopener');
 }
 
 /* ------------------------------------------------------------------ clocks */

@@ -20,6 +20,7 @@ let look = null;
  * Управление: тап по своей фигуре — выбрать, тап по подсвеченной клетке —
  * сходить. Пешка у края — шторка «в кого превратить».
  */
+import { emptySeat } from '../invite.js';
 import {
   tg, $app, h, haptic, toast, showSheet, closeSheet, refreshSheet, avatar, animateOnce, REDUCED, EASE,
 } from '../ui.js';
@@ -196,7 +197,7 @@ function renderLobby() {
     return p
       ? animateOnce(h(`div.lseat${p.isMe ? '.me' : ''}`, withMark(avatarEl(p), p.isHost), h('div.nm', nameWithMark(p.name, p.frame, p.badge) ?? p.name)),
         `chlseat:${p.name}`, [{ transform: 'scale(0.4)', opacity: 0, offset: 0 }], { duration: 450, delay: i * 45 })
-      : h('div.lseat.empty', h('div.av', '+'), h('div.nm', 'свободно'));
+      : emptySeat(state);
   });
   const st = s.room.settings;
   const lobby = h('div.lobby',

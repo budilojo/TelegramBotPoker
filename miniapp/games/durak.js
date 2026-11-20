@@ -13,6 +13,7 @@
  *   the others round the top of the table — how many cards, and what they
  *   are doing: ⚔ attacking, 🛡 defending, taking, «пас», out.
  */
+import { emptySeat } from '../invite.js';
 import {
   tg, $app, h, clamp, cardImg, backImg, haptic, animateOnce, centerOf, offsetTo, onRelayout, watchBox, spawn, edgeGlow, celebrate,
   toast, ringSvg, showSheet, closeSheet, refreshSheet, avatar, REDUCED,
@@ -104,7 +105,7 @@ function renderLobby() {
     slots.push(p
       ? animateOnce(h(`div.lseat${p.isMe ? '.me' : ''}`, frameAvatar(withMark(avatarEl(p), p.isHost), p.frame), h('div.nm', nameWithMark(p.name, p.frame, p.badge) ?? p.name)),
         `dklseat:${p.name}`, [{ transform: 'scale(0.4)', opacity: 0, offset: 0 }], { duration: 450, delay: i * 45 })
-      : h('div.lseat.empty', h('div.av', '+'), h('div.nm', 'свободно')));
+      : emptySeat(state));
   }
   const st = s.room.settings;
   const lobby = h('div.lobby',

@@ -12,6 +12,7 @@
  *
  * Moved here from app.js as it was; the shell (app.js) now picks the screen.
  */
+import { emptySeat, invite } from '../invite.js';
 import {
   tg, $app, h, fmt, clamp, cardImg, backImg, initial, STAGE, haptic, REDUCED, counter, animateOnce, offsetTo, onRelayout, watchBox,
   flyChips, muck, celebrate, edgeGlow, toast, ringSvg, showSheet, closeSheet, refreshSheet, currentSheet,
@@ -206,7 +207,7 @@ function renderLobby() {
         ? animateOnce(
           h(`div.lseat${p.isMe ? '.me' : ''}`, frameAvatar(withHost(avatarEl(p), p.isHost), p.frame), h('div.nm', nameWithMark(p.name, p.frame, p.badge) ?? p.name)),
           `lseat:${p.name}`, [{ transform: 'scale(0.4)', opacity: 0, offset: 0 }], { duration: 450, delay: i * 45 })
-        : h('div.lseat.empty', h('div.av', '+'), h('div.nm', 'свободно'))
+        : emptySeat(state)
     );
   }
   const st = s.room.settings;
@@ -1248,6 +1249,8 @@ function openMenu() {
     const me = s.me;
     const items = [];
     const item = (label, sub, onclick, cls = '') => items.push(h(`button.menu-item${cls ? '.' + cls : ''}`, { onclick }, label, sub ? h('small', sub) : null));
+    // Между раздачами на столе есть пустые места — позвать друга (во время раздачи сервер не разрешает).
+    if (s.canInvite && s.room.status !== 'lobby') item('Пригласить', 'ссылка на этот стол — другу в чат', () => { closeSheet(); invite(); });
 
     if (s.tournament) {
       item('Турнирная таблица', 'блайнды, фишки и докупки', () => { closeSheet(); tournamentTable = false; bus.render(); });

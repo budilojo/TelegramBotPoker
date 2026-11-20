@@ -202,6 +202,8 @@ export class App {
     this.botUsername = botUsername;
     /** Когда человек последний раз просил «поделиться»: заготовка — запрос к Telegram, чаще раза в две секунды не нужна. */
     this.lastShare = new Map();
+    /** То же для «Пригласить»: по человеку и столу, чтобы повторное нажатие не плодило заготовки. */
+    this.lastInvite = new Map();
     this.deck = deck;
     this.durakDeck = durakDeck;
     this.clock = clock;
@@ -1783,6 +1785,66 @@ export class App {
       this.log(err); // не вышло — страница обойдётся ссылкой
     }
     return { id, plain: card.plain, link };
+  }
+
+  /**
+   * Можно ли звать за этот стол: null — можно, иначе код отказа. Звать можно, пока
+   * есть свободное место и стол не идёт (лобби; в покере ещё и между раздачами).
+   * Партии с ботами, турниры и рейтинговые столы не приглашают: туда садятся
+   * не по ссылке.
+   */
+  inviteBlock(room, userId) {
+    if (room.solo || room.tournament || isRanked(room)) return 'NOT_INVITABLE';
+    const me = room.players.find((p) => p.id === String(userId) && !p.kicked && !p.left);
+    if (!me) return 'NOT_IN_GAME';
+    const g = gameOf(room);
+    if (room.status !== 'lobby') {
+      // Между раздачами решаем ТОЛЬКО по тому, что видит игрок: пока борд олл-ина
+      // открывается, настоящий статус стола («игра кончилась») ему знать рано, а
+      // отказ/согласие выдали бы его (аудит C-01).
+      const v = g.id === 'poker' ? g.view(room, userId, { now: this.clock.now(), botUsername: this.botUsername }) : null;
+      if (!(v && v.room?.status === 'playing' && v.hand?.phase === 'complete' && v.hand.revealing === false)) return 'NOT_INVITABLE';
+    }
+    const s = g.summary(room);
+    if (s.seated >= s.max) return 'NO_FREE_SEATS';
+    return null;
+  }
+
+  /**
+   * «Пригласить» на пустом месте: то же устройство, что у «Поделиться итогом»
+   * (`savePreparedInlineMessage` → `shareMessage`), но в сообщении — ссылка на
+   * этот стол. Присоединиться по ней — по обычным правилам стола: место, личность
+   * из initData; в ссылке только код стола.
+   *
+   * @returns {{ error: string } | { id: string|null, plain: string, link: string }}
+   */
+  async prepareInvite(room, user) {
+    const block = this.inviteBlock(room, user.id);
+    if (block) return { error: block };
+    const link = this.tableLink(room);
+    if (!link) return { error: 'SHARE_UNAVAILABLE' };
+    const key = `${user.id}:${room.code}`;
+    const now = this.clock.now();
+    if (now - (this.lastInvite.get(key) ?? 0) < 2000) return { error: 'TOO_FAST' };
+    this.lastInvite.set(key, now);
+    const g = gameOf(room);
+    const me = room.players.find((p) => p.id === String(user.id));
+    const line = `${g.icon} ${me.name} зовёт в ${g.title} — заходи!`;
+    let id = null;
+    try {
+      const prepared = await this.api.savePreparedInlineMessage?.(Number(user.tgId), {
+        type: 'article',
+        id: crypto.randomBytes(8).toString('hex'),
+        title: `${g.title}: зову за стол`,
+        description: `${me.name} зовёт в ${g.title}`,
+        input_message_content: { message_text: esc(line), parse_mode: 'HTML', link_preview_options: { is_disabled: true } },
+        reply_markup: { inline_keyboard: [[{ text: 'Зайти за стол', url: link }]] },
+      }, { allow_user_chats: true, allow_bot_chats: false, allow_group_chats: true, allow_channel_chats: false });
+      id = prepared?.id ?? null;
+    } catch (err) {
+      this.log(err); // не вышло — страница обойдётся обычной ссылкой
+    }
+    return { id, plain: line, link };
   }
 
   hostOnly(room) {

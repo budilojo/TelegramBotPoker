@@ -116,6 +116,7 @@ const deck6 = stack({ 101: 'As Kh', 102: 'Qs Qd', 103: '9c 9d', 104: '7h 2c', 10
   const r = table(4);
   r.settings.turnSeconds = 60;
   scene('01-lobby-host', r, 101);
+  scene('01б-lobby-host-320', r, 101, { width: 320, height: 568 }); // «Пригласить» на пустых местах в самом узком окне
 }
 // 2. My turn on the flop, facing a bet, timer on.
 {

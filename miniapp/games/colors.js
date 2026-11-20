@@ -1,4 +1,5 @@
 import { local as uxStorage } from '../storage.js';
+import { emptySeat } from '../invite.js';
 import { closeRankedLobby } from '../drop.js';
 import { makeHolder, dressColorsFelt, nameWithMark, frameAvatar, deckBackImg } from '../collections/look-view.js';
 const lookHolder = makeHolder();
@@ -159,7 +160,7 @@ function renderLobby() {
     slots.push(p
       ? animateOnce(h(`div.lseat${p.isMe ? '.me' : ''}`, withMark(avatarEl(p), p.isHost), h('div.nm', nameWithMark(p.name, p.frame, p.badge) ?? p.name)),
         `cllseat:${p.name}`, [{ transform: 'scale(0.4)', opacity: 0, offset: 0 }], { duration: 450, delay: i * 45 })
-      : h('div.lseat.empty', h('div.av', '+'), h('div.nm', 'свободно')));
+      : emptySeat(state));
   }
   const st = s.room.settings;
   const lobby = h('div.lobby',

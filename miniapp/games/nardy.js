@@ -21,6 +21,7 @@ let look = null;
  * куда можно сыграть; тап по точке — шаг. Перетаскивание пальцем — то же.
  * «Отменить» возвращает шаг, «Готово» отдаёт ход.
  */
+import { emptySeat } from '../invite.js';
 import {
   tg, $app, h, haptic, toast, showSheet, closeSheet, refreshSheet, avatar, animateOnce, REDUCED,
 } from '../ui.js';
@@ -116,7 +117,7 @@ function renderLobby() {
     return p
       ? animateOnce(h(`div.lseat${p.isMe ? '.me' : ''}`, withMark(avatarEl(p), p.isHost), h('div.nm', nameWithMark(p.name, p.frame, p.badge) ?? p.name)),
         `ndlseat:${p.name}`, [{ transform: 'scale(0.4)', opacity: 0, offset: 0 }], { duration: 450, delay: i * 45 })
-      : h('div.lseat.empty', h('div.av', '+'), h('div.nm', 'свободно'));
+      : emptySeat(state);
   });
   const st = s.room.settings;
   const lobby = h('div.lobby',

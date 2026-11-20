@@ -28,6 +28,7 @@ let look = null;
  * точка поменьше, ранил — крест на светлой клетке, убит — тёмная клетка со
  * светлым крестом и обводка всего корабля.
  */
+import { emptySeat } from '../invite.js';
 import {
   tg, $app, h, haptic, toast, showSheet, closeSheet, refreshSheet, avatar, animateOnce,
 } from '../ui.js';
@@ -191,7 +192,7 @@ function renderLobby() {
     return p
       ? animateOnce(h(`div.lseat${p.isMe ? '.me' : ''}`, withMark(avatarEl(p), p.isHost), h('div.nm', nameWithMark(p.name, p.frame, p.badge) ?? p.name)),
         `bslseat:${p.name}`, [{ transform: 'scale(0.4)', opacity: 0, offset: 0 }], { duration: 450, delay: i * 45 })
-      : h('div.lseat.empty', h('div.av', '+'), h('div.nm', 'свободно'));
+      : emptySeat(state);
   });
   const st = s.room.settings;
   const lobby = h('div.lobby',
