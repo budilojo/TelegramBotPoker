@@ -224,6 +224,15 @@ function gate(dir) {
   return { ok: ok(r), pass, fail, tail: text.slice(-600) };
 }
 
+/** Подтянуть свежий origin в рабочую ветку (нужно перед повторной проверкой: исправление могло прийти уже после остановки). */
+function syncWithOrigin(m, dir) {
+  git(dir, 'fetch', 'origin', m.baseBranch);
+  if (gitOut(dir, 'rev-list', '--count', `HEAD..origin/${m.baseBranch}`) === '0') return { ok: true, merged: false };
+  const mr = git(dir, 'merge', '--no-ff', '-m', `Слияние origin/${m.baseBranch} в ${m.runBranch} перед повторной проверкой`, `origin/${m.baseBranch}`);
+  if (!ok(mr)) { git(dir, 'merge', '--abort'); return { ok: false }; }
+  return { ok: true, merged: true };
+}
+
 function publish(m, dir, opts) {
   if (opts.noPush) return { pushed: false, why: 'указан --no-push' };
   if (gitOut(dir, 'status', '--porcelain')) return { pushed: false, why: 'в рабочей копии есть незакоммиченное' };
@@ -325,6 +334,9 @@ async function main() {
       if (!recheck && rec.attempts >= m.maxAttempts) { log(`\n«${s.id}»: исчерпаны попытки (${m.maxAttempts}). Смотрите журналы .release-run/logs/.`); exit = EXIT.FAIL; break; }
       if (recheck) {
         log(`\n▶ ${s.letter} · ${s.id}: агент уже отработал, повторяю только проверку тестов`);
+        const sy = syncWithOrigin(m, dir);
+        if (!sy.ok) { log('  ✗ не удалось слить свежий origin в рабочую ветку (конфликт) — разберитесь вручную или пришлите вывод'); exit = EXIT.FAIL; break; }
+        if (sy.merged) log(`  подтянул свежий origin/${m.baseBranch} (мог прийти фикс) — проверяю уже с ним`);
       } else {
         rec.attempts += 1;
         rec.base = gitOut(dir, 'rev-parse', 'HEAD');

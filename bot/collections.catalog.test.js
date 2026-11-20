@@ -112,7 +112,7 @@ test('реестр строк «Настроек»: заготовки молч�
 
 test('заготовки строк и стили подключены', async () => {
   for (const f of ['collections/settings-row.js', 'homescreen-row.js']) {
-    const m = await import(pathToFileURL(new URL(`../miniapp/${f}`, import.meta.url).pathname));
+    const m = await import(new URL(`../miniapp/${f}`, import.meta.url).href); // .href, не .pathname: путь с кириллицей и пробелами иначе искажается
     assert.equal(typeof m.default, 'function');
   }
   const html = fs.readFileSync(new URL('../miniapp/index.html', import.meta.url), 'utf8');
