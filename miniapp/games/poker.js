@@ -603,6 +603,13 @@ function layoutTable() {
   watchBox(t);
   const W = t.clientWidth;
   const H = t.clientHeight;
+  // Середина стола — в пикселях по измеренному столу, а не «50 %» от того, что в этот миг считает вёрстка:
+  // ряд общих карт всегда по центру стола, как бы ни легло оформление серии.
+  const mid = t.querySelector('.center');
+  if (mid) {
+    mid.style.left = `${(W / 2).toFixed(1)}px`;
+    mid.style.top = `${(H / 2).toFixed(1)}px`;
+  }
   const seats = [...t.querySelectorAll('.seat')];
   const felt = t.querySelector('.felt');
   const withHero = t.dataset.hero === '1';
@@ -837,7 +844,8 @@ function heroNote(s, mine) {
   const hd = s.hand;
   if (!hd) return '';
   if (hd.phase === 'complete') return ''; // a win is the gold "+N" next to the balance
-  if (mine.folded) return 'Вы сбросили — ждём конца раздачи';
+  // Пока идут торги, об этом уже говорит панель действий внизу (panelEl): одна подсказка, не две.
+  if (mine.folded) return hd.phase === 'betting' ? '' : 'Вы сбросили — ждём конца раздачи';
   if (mine.allIn) return 'Вы в олл-ине — ходить больше не нужно';
   if (mine.bet) return `Ваша ставка ${fmt(mine.bet)}`;
   return '';
