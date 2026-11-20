@@ -9,6 +9,7 @@ import { $app, h, haptic, showSheet, closeSheet, refreshSheet } from './ui.js';
 import { bus, send } from './net.js';
 import { GAMES } from './games/index.js';
 import { gameCatalog } from './catalog.js';
+import { topKind } from './hub-top.js';
 import { tournamentEntry } from './tournament.js';
 
 /** Форма «новое лобби» у каждой игры своя — хаб берёт её у игры. */
@@ -37,12 +38,13 @@ export function render() {
   const box = h('div.lobby.hub',
     s.home ? h('button.back-link', { onclick: () => send({ t: 'home' }, { lock: false }) }, '← Мои группы') : null,
     h('div.hub-head',
-      h('h1', 'Выберите игру', h('span.hh-2', 'из группы')),
-      h('div.sub', s.group.title ? `Играйте с участниками «${s.group.title}»` : 'Играйте с участниками группы')),
+      h('h1', 'Выберите игру'),
+      h('div.sub', s.group.title ? `Группа «${s.group.title}»` : 'Ваша группа')),
 
     // Человек вышел из партии посмотреть другой раздел, а место за столом осталось его: путь назад — первая
     // кнопка экрана, а не строка в списке ниже. Сервер отдаёт `inside` только про самого человека.
     ...backToTable(s),
+    ...groupTable(s),
     tournamentEntry(s),
 
     gameCatalog({ games: s.games, key: `hub:${s.group?.code || ''}`, card: (g) => gameRow(g, live(g.id)), empty: 'Игр пока нет.' }),
@@ -77,6 +79,26 @@ function backToTable(s) {
   return mine.slice(0, 3).map((l) => h('button.k-btn.k-btn--primary.k-btn--block.back-to-table', {
     onclick: () => { haptic.tap(); send({ t: 'join', code: l.code }); },
   }, `↩ Вернуться к столу · ${l.title}`, h('small.btt-sub', l.status === 'playing' ? 'партия идёт — ваше место за вами' : l.status === 'paused' ? 'пауза — ваше место за вами' : 'вы в лобби')));
+}
+
+/**
+ * «Стол группы»: открытый стол, за которым человека ещё нет (лобби или идёт игра).
+ * Если у человека есть свой стол — наверху «Вернуться к столу», карточка не нужна.
+ * Ничего не открыто и своего стола нет — одна короткая подсказка.
+ */
+export function groupTable(s) {
+  const top = topKind(s.lobbies);
+  if (top.kind === 'back') return [];
+  if (top.kind === 'hint') return [h('div.hint.hub-pick', 'Выберите игру')];
+  const l = top.lobby;
+  const join = l.status === 'lobby';
+  return [h('div.group-table',
+    gameIcon(l.game),
+    h('div.lr-body',
+      h('div.gt-label', 'Стол группы'),
+      h('div.lr-title', l.title, l.host ? h('span.lr-host', ` · ${l.host}`) : null),
+      h('div.lr-sub', h('b.num', `${l.seated}/${l.max}`), ` игроков · ${STATUS[l.status] || ''}`)),
+    h('button.btn.sm.primary', { onclick: () => { haptic.tap(); send({ t: 'join', code: l.code }); } }, join ? 'Присоединиться' : 'Открыть'))];
 }
 
 /** Две карты веером — значок игры. Берём из той же колоды, что и за столом. */
