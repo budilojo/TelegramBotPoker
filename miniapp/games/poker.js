@@ -1044,7 +1044,7 @@ function openRaise() {
           },
         }, allinArmed ? 'All-in — sure?' : 'All-in', h('b.num', fmt(p.total)));
       }
-      return h('button.btn.size-btn', { onclick: () => act(verb, p.total) }, SIZE_RU[p.label] || p.label, h('b.num', fmt(p.total)));
+      return h('button.btn.size-btn', { onclick: () => act(verb, p.total) }, SIZE_RU[p.label] || p.label.replace(/\d+$/, fmt), h('b.num', fmt(p.total))); // «+1000000» → «+1.000.000»
     }));
 
     /*

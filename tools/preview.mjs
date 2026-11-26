@@ -14,7 +14,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { App } from '../bot/app.js';
 import { Hub } from '../bot/hub.js';
 import { Broadcaster } from '../bot/broadcast.js';
@@ -43,7 +43,9 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SIZE_TAG = process.env.PREVIEW_W || process.env.PREVIEW_H
   ? `preview-${process.env.PREVIEW_W || 'auto'}x${process.env.PREVIEW_H || 'auto'}`
   : 'preview';
-const OUT = path.join(ROOT, SIZE_TAG);
+// Крючок автоскана вёрстки (tools/ui-scan.mjs): свои имена и сцены, замеры на каждом снимке.
+const hook = process.env.PREVIEW_HOOK ? await import(pathToFileURL(path.resolve(process.env.PREVIEW_HOOK))) : null;
+const OUT = process.env.PREVIEW_OUT ? path.resolve(process.env.PREVIEW_OUT) : path.join(ROOT, SIZE_TAG);
 const PORT = Number(process.env.PREVIEW_PORT || 8090);
 const TOKEN = `0:${crypto.randomBytes(16).toString('hex')}`;
 const serve = process.argv.includes('--serve');
@@ -51,12 +53,12 @@ const serve = process.argv.includes('--serve');
 const api = new TelegramStub();
 // Как в проде: рейтинг людям пока закрыт кнопкой «скоро». Экран живой, и его
 // снимки нужны — две его сцены открывают его сами и закрывают за собой.
-const app = new App({ api, store: new Store(':memory:'), botUsername: 'All_InPoker_bot', minIntervalMs: 0, runoutStepMs: 0, webappUrl: `http://localhost:${PORT}`, admins: ['101'] });
+const app = new App({ api, store: new Store(':memory:'), botUsername: 'All_InPoker_bot', minIntervalMs: 0, runoutStepMs: 0, webappUrl: `http://localhost:${PORT}`, admins: ['101'], ...hook?.appOptions });
 const hub = new Hub(app, { botToken: TOKEN });
 app.attachHub(hub);
 app.casts = new Broadcaster({ app });
 
-const PEOPLE = [
+const PEOPLE = hook?.people ?? [
   [101, 'Иван'], [102, 'Артём'], [103, 'Макс'], [104, 'Дима'], [105, 'Саша'], [106, 'Лена'],
 ];
 let chat = -100500;
@@ -99,14 +101,14 @@ const FORCE_W = Number(process.env.PREVIEW_W) || 0;
 const FORCE_H = Number(process.env.PREVIEW_H) || 0;
 
 const scenes = [];
-function scene(name, room, viewer, { width = 390, height = 780, click = null, press = null, start = room?.code, tap = [], sq = [], sel = [], scroll = 0, tab = null, before = null, after = null } = {}) {
+function scene(name, room, viewer, { width = 390, height = 780, click = null, press = null, start = room?.code, tap = [], sq = [], sel = [], scroll = 0, tab = null, before = null, after = null, run = null } = {}) {
   if (FORCE_W) width = FORCE_W;
   if (FORCE_H) height = FORCE_H;
   const user = { id: viewer, first_name: PEOPLE.find(([id]) => id === viewer)?.[1] ?? 'Гость' };
   const initData = signInitData({ auth_date: Math.floor(Date.now() / 1000), user, ...(start ? { start_param: start } : {}) }, TOKEN);
   // `before` — то, что надо сделать с ботом ровно перед этой страницей
   // (включить обслуживание): иначе оно попало бы на все остальные снимки.
-  scenes.push({ name, code: start, initData, width, height, click, press, tap, sq, sel, scroll, tab, before, after });
+  scenes.push({ name, code: start, initData, width, height, click, press, tap, sq, sel, scroll, tab, before, after, run });
 }
 
 const deck6 = stack({ 101: 'As Kh', 102: 'Qs Qd', 103: '9c 9d', 104: '7h 2c', 105: 'Jd 10d', 106: '5s 4s' }, '10s Jh Qc 3d 8s');
@@ -666,6 +668,8 @@ if (GAMES.battleship) {
   scene('37ж-school-lesson-passed', done, 108);
 }
 
+await hook?.extraScenes?.({ app, hub, scene, table, play, durak, deck6, PEOPLE, R, D, shuffledFor, playOut });
+
 app.syncClocks(); // turn deadlines, as the running bot would have them
 const web = startServer({ hub, port: PORT, root: path.join(ROOT, 'miniapp'), log: () => {} });
 await new Promise((r) => web.server.once('listening', r));
@@ -698,8 +702,11 @@ if (serve) {
   const JUNK_WORDS = /(^|[^\p{L}\p{N}_])(null|undefined|NaN)(?![\p{L}\p{N}_])|\[object Object\]/u;
   const junk = [];
   for (const s of scenes) {
+    if (hook?.skip?.(s)) continue;
     s.before?.();
-    const page = await browser.newPage({ viewport: { width: s.width, height: s.height }, deviceScaleFactor: 2 });
+    const page = await browser.newPage({ viewport: { width: s.width, height: s.height }, deviceScaleFactor: hook ? 1 : 2, ...hook?.pageOptions });
+    if (hook) page.setDefaultTimeout(5000);
+    try { // скан не бросает остальные экраны из-за одного не открывшегося
     page.on('pageerror', (err) => junk.push(`[${s.name}] ошибка JS: ${err.message}`));
     await page.route('https://telegram.org/**', (route) =>
       route.fulfill({ contentType: 'text/javascript', body: sdkStub(s.initData) }));
@@ -738,21 +745,28 @@ if (serve) {
       await page.waitForTimeout(120);
     }
     if (s.scroll) await page.evaluate((y) => document.querySelector('.lobby')?.scrollTo(0, y), s.scroll);
-    await page.waitForTimeout(700); // let the deal animations settle
+    if (s.run) await s.run(page);
+    await page.waitForTimeout(hook ? 350 : 700); // let the deal animations settle
     await page.screenshot({ path: path.join(OUT, `${s.name}.png`) });
     const words = await page.evaluate(() => [
       document.body.innerText,
       ...[...document.querySelectorAll('[alt],[title],[aria-label],[placeholder]')].map((e) => [e.alt, e.title, e.getAttribute('aria-label'), e.placeholder].filter(Boolean).join(' ')),
     ].join('\n'));
     const hit = JUNK_WORDS.exec(words);
+    await hook?.inspect?.(page, s, OUT);
     if (hit) junk.push(`[${s.name}] на экране «${hit[0].trim()}»: …${words.slice(Math.max(0, hit.index - 60), hit.index + 60).replace(/\n/g, ' ')}…`);
+    } catch (err) {
+      if (!hook) throw err;
+      await hook.failed(page, s, err, OUT);
+    }
     await page.close();
     s.after?.(); // снять то, что сцена включила для себя одной
   }
   await browser.close();
   await web.close();
+  await hook?.done?.({ junk, out: OUT });
   console.log(`preview: ${scenes.length} screenshots → ${path.relative(process.cwd(), OUT)}/`);
-  if (junk.length) {
+  if (junk.length && !hook) {
     console.log(`служебные слова и ошибки на экранах (${junk.length}):\n${junk.join('\n')}`);
     process.exit(1);
   }

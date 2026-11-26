@@ -53,7 +53,8 @@ export const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 export const cardImg = (code, cls = '') => h(`img.card${cls ? '.' + cls : ''}`, { src: `/cards/${code}.svg`, alt: code, draggable: 'false' });
 /** Базовая рубашка. Публичную рубашку места добавляет collections/look-view.js. */
 export const backImg = (cls = '') => cardImg('back', cls);
-export const initial = (name) => (String(name || '?').trim()[0] || '?').toUpperCase();
+// Первый СИМВОЛ, а не первая половина пары: у «🤖 Вася» name[0] — обрубок эмодзи, на аватаре «�».
+export const initial = (name) => ([...String(name || '?').trim()][0] || '?').toUpperCase();
 export const STAGE = { preflop: 'Префлоп', flop: 'Флоп', turn: 'Тёрн', river: 'Ривер' };
 
 export const haptic = {
