@@ -6,6 +6,7 @@ data/rooms.json
 # редакторское/агентское, к продукту отношения не имеет
 .claude/*
 !.claude/agents/
+!.claude/skills/
 
 # Telegram-бот: локальная база столов
 data/bot.db
