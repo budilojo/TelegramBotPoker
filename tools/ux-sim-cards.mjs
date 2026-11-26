@@ -17,8 +17,8 @@ const CARD = { x: 7, y: 24 };
 const dk = (c) => `.dk-card[data-card="${c}"]`;
 
 /** Стол дурака: Иван ходит (у него 6♣ козырь), Макс отбивается. */
-async function durak(s, { variant, bHand = B, touch = false } = {}) {
-  s.app.durakDeck = durakStack({ 1000: A, 1001: bHand }, { trump: 'AC' });
+async function durak(s, { variant, aHand = A, bHand = B, touch = false } = {}) {
+  s.app.durakDeck = durakStack({ 1000: aHand, 1001: bHand }, { trump: 'AC' });
   const t = await s.table('durak', { touch, settings: variant ? { variant } : null });
   const [a, b] = t.pages;
   await a.waitForSelector('.dk-hand .dk-card');
@@ -28,7 +28,7 @@ async function durak(s, { variant, bHand = B, touch = false } = {}) {
 /** …и 6♦ уже на столе: Макс отбивается. */
 async function attacked(s, opts) {
   const t = await durak(s, opts);
-  const p = await point(t.a, dk('6D'), CARD);
+  const p = await point(t.a, dk(opts?.lead ?? '6D'), CARD);
   await tapAt(t.a, p, opts);
   await tapAt(t.a, p, opts);
   await until(() => t.room.deal.table.length === 1, 'атака легла');
@@ -62,6 +62,28 @@ for (const gesture of ['tap', 'tap2', 'drag']) {
     return observe(t.a, cardGesture(t.a, '6D', gesture, '.dk-mid'), picked('6D'));
   }]);
 }
+/** 6♦ и подкинутая 6♣: козырной 7♣ подходят обе. Что чем покрыто — в записи. */
+async function attackedTwice(s) {
+  const t = await attacked(s);
+  const p = await point(t.a, dk('6C'), CARD);
+  await tapAt(t.a, p);
+  await tapAt(t.a, p);
+  await until(() => t.room.deal.table.length === 2, 'подкинули');
+  await t.b.locator('.dk-pair[data-i="1"]').waitFor();
+  await sleep(250);
+  return t;
+}
+const covered = (t, card) => async (p) => ({ ...(await picked(card)(p)), побито: t.room.deal.table.map((x) => x.d ?? '—').join(' ') });
+for (const [gesture, how] of [['tap2', 'tap2'], ['тап по второй карте стола', 'tap-цель']]) {
+  durakScenarios.push([`дурак: защита (две цели) — ${gesture}`, async (s) => {
+    const t = await attackedTwice(s);
+    return observe(t.b, cardGesture(t.b, '7C', how, '.dk-pair[data-i="1"]'), covered(t, '7C'));
+  }]);
+}
+durakScenarios.push(['дурак: перевод — козырь, которым можно и покрыть, tap2', async (s) => {
+  const t = await attacked(s, { variant: 'perevodnoy', lead: '9H', bHand: '9C 8D 7C 10S JS QS' });
+  return observe(t.b, cardGesture(t.b, '9C', 'tap2'), covered(t, '9C'));
+}]);
 for (const gesture of ['tap', 'tap2', 'drag', 'tap-цель']) {
   durakScenarios.push([`дурак: защита (одна цель) — ${gesture}`, async (s) => {
     const t = await attacked(s);

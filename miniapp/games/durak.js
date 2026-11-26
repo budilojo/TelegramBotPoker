@@ -7,7 +7,8 @@
  * ones the server said you may play.
  *
  *   your cards — a fan at the bottom, big: tap to pick one, tap again to play
- *   (a defender drags their card onto the attacking card);
+ *   — leading, throwing in and covering alike (durak-tap.js). With several
+ *   cards to cover, tap the one on the table; dragging onto it works too;
  *   the table — attack/defence pairs; the pack with the trump under it; the
  *   discard, face down;
  *   the others round the top of the table — how many cards, and what they
@@ -19,6 +20,7 @@ import {
   toast, ringSvg, showSheet, closeSheet, refreshSheet, avatar, REDUCED,
 } from '../ui.js';
 import { closeRankedLobby, dropItem } from '../drop.js';
+import { handTap, coverTargets, defendHint } from '../durak-tap.js';
 const DEFAULT_BACK = '/cards/back.svg';
 import { makeHolder, dressTable, placeDiamond, DURAK_AVOID, frameAvatar, nameWithMark, frameOf as frameLook, talismanImg } from '../collections/look-view.js';
 
@@ -56,6 +58,10 @@ export function onState(s, p) {
   look = lookHolder.hold(`${s.game}:${s.room.code}`, s.room.status, s.look);
   const me = s.me;
   if (picked && !me.cards.includes(picked)) picked = null;
+  // Другой отбой, перевод или «беру» — поднятая раньше карта опускается: иначе
+  // первый же тап по ней сработал бы как второй и сразу сходил.
+  const moment = (d) => (d ? `${d.no}:${d.bout}:${d.defenderSeat}:${d.taking}` : '');
+  if (p && moment(p.deal) !== moment(s.deal)) picked = null;
 
   const myMove = mustAct(s);
   const before = p ? mustAct(p) : false;
@@ -256,7 +262,7 @@ function middleEl(s) {
   const me = s.me;
   const L = s.legal;
   const iDefend = d.phase === 'play' && me.seat === d.defenderSeat && !d.taking;
-  const pickTargets = iDefend && picked ? (L?.defend?.[picked] || []) : [];
+  const pickTargets = iDefend && picked ? coverTargets(L, picked) : [];
   const pairs = h('div.dk-pairs', { 'data-n': d.table.length },
     d.table.map((x, i) => {
       const target = pickTargets.includes(i);
@@ -271,7 +277,7 @@ function middleEl(s) {
       }, { duration: 420 });
       return h(`button.dk-pair${target ? '.target' : ''}${x.d ? '.covered' : ''}`, {
         'data-i': i,
-        onclick: (e) => { if (e.detail === 0) onTableKey(i); },
+        onclick: () => onTableTap(i),
         'aria-label': x.d ? `${label(x.a)} побита ${label(x.d)}` : `${label(x.a)} — не побита`,
       }, a, def);
     }));
@@ -299,7 +305,7 @@ function lineText(s) {
   if (!d.table.length) return `Ходит ${att} · отбивается ${def}`;
   if (d.taking) return `${def} берёт — можно подкинуть вдогонку`;
   if (d.covered) return `${def} отбился — подкидывайте или «Бито»`;
-  if (s.me.seat === d.defenderSeat && Object.keys(s.legal?.defend ?? {}).length) return 'Перетащите карту на ту, которую хотите покрыть';
+  if (s.me.seat === d.defenderSeat && (s.legal?.take || s.legal?.transfer?.length)) return defendHint({ legal: s.legal, picked });
   return `${def} отбивается`;
 }
 
@@ -419,7 +425,8 @@ function bindDefendDrag(button, img, card) {
     const dx = e.clientX - drag.x;
     const dy = e.clientY - drag.y;
     if (!drag.copy) {
-      if (Math.hypot(dx, dy) < 6) return;
+      // Палец при тапе чуть ползёт — это ещё не перетаскивание.
+      if (Math.hypot(dx, dy) < (e.pointerType === 'touch' ? 10 : 6)) return;
       const { left, top, width } = drag.rect;
       drag.copy = h('img.dk-drag-card', { src: img.src, alt: '', style: { left: left + 'px', top: top + 'px', width: width + 'px' } });
       $app.append(drag.copy);
@@ -448,24 +455,49 @@ function onHandTap(c, keyboard) {
   const s = state;
   const L = s.legal;
   if (!L || net.busy) return;
-  const iDefend = s.me.seat === s.deal.defenderSeat && !s.deal.taking;
-  if (iDefend && !L.transfer?.includes(c) && !(keyboard && L.defend?.[c]?.length)) return;
-  if (picked !== c) {
-    picked = c;
-    haptic.soft();
-    bus.render();
-    if (keyboard) {
-      const next = iDefend ? document.querySelector('.dk-pair.target') : null;
-      (next || document.querySelector(`.dk-card[data-card="${c}"]`))?.focus();
-    }
+  const iDefend = s.me.inDeal && s.deal.phase === 'play' && s.me.seat === s.deal.defenderSeat && !s.deal.taking;
+  const act = handTap({ legal: L, picked, card: c, iDefend });
+  if (act.do === 'attack') return play({ t: 'attack', card: c });
+  if (act.do === 'defend') return play({ t: 'defend', card: c, target: act.target });
+  if (act.do === 'cannot') {
+    toast(cannotCover(c, s.deal));
+    if (picked) { picked = null; bus.render(); }
     return;
   }
-  if (!iDefend) play({ t: 'attack', card: c });
+  if (act.do === 'choose') return toast(defendHint({ legal: L, picked }));
+  if (act.do === 'transfer-button') return toast('Этой картой можно перевести — кнопкой «Перевести»');
+  picked = c;
+  haptic.soft();
+  bus.render();
+  if (keyboard) {
+    const next = iDefend ? document.querySelector('.dk-pair.target') : null;
+    (next || document.querySelector(`.dk-card[data-card="${c}"]`))?.focus();
+  }
 }
 
-function onTableKey(i) {
-  if (net.busy || !state.legal?.defend?.[picked]?.includes(i)) return;
-  play({ t: 'defend', card: picked, target: i });
+/** Почему этой картой сейчас не отбиться — словами, а не молчанием. */
+function cannotCover(card, d) {
+  if (!d.table.length) return 'Вы отбиваетесь — ждём первый ход';
+  const open = d.table.filter((x) => !x.d);
+  if (!open.length) return 'Всё покрыто — крыть пока нечего';
+  if (open.length > 1) return `${label(card)} не бьёт ни одну открытую карту`;
+  const a = open[0].a;
+  return a.slice(-1) === d.trump
+    ? `${label(card)} не бьёт ${label(a)}: козырь бьётся только старшим козырем`
+    : `${label(card)} не бьёт ${label(a)}: нужна старшая ${SUIT[a.slice(-1)]} или козырь`;
+}
+
+/** Тап по карте на столе: покрыть её поднятой картой. */
+function onTableTap(i) {
+  const s = state;
+  const L = s.legal;
+  const d = s.deal;
+  if (net.busy || !L || d.phase !== 'play' || d.taking || s.me.seat !== d.defenderSeat) return;
+  const x = d.table[i];
+  if (!x || x.d) return;
+  if (coverTargets(L, picked).includes(i)) return play({ t: 'defend', card: picked, target: i });
+  if (picked) toast(`${label(picked)} не бьёт ${label(x.a)}`);
+  else if (L.take) toast('Сначала нажмите свою карту');
 }
 
 function play(msg) {
@@ -803,7 +835,8 @@ function openRules() {
       state.room.settings.variant === 'perevodnoy'
         ? h('p', 'Переводной: пока ни одна карта не побита, можно перевести атаку картой того же достоинства — если у следующего хватает карт.')
         : null,
-      h('p', 'Колода кончилась — кто без карт, вышел. Последний с картами — дурак.')),
+      h('p', 'Колода кончилась — кто без карт, вышел. Последний с картами — дурак.'),
+      h('p', 'Как играть карту: тап поднимает, второй тап играет — ходить, подкидывать и крыть. Подходит несколько карт на столе — нажмите ту, которую кроете. Можно и перетащить на неё.')),
   ));
 }
 

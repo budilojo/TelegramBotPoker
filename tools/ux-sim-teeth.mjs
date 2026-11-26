@@ -13,7 +13,11 @@ import { spawnSync } from 'node:child_process';
 import { ROOT } from './lib/ux-sim.mjs';
 
 const CASES = [
-  { what: 'второй тап в Дураке перестал ходить', file: 'games/durak.js', from: "if (!iDefend) play({ t: 'attack', card: c });", to: '', sim: 'cards', only: 'дурак: атака — tap2' },
+  { what: 'второй тап в Дураке перестал ходить', file: 'games/durak.js', from: "if (act.do === 'attack') return play({ t: 'attack', card: c });", to: '', sim: 'cards', only: 'дурак: атака — tap2' },
+  { what: 'второй тап в защите перестал крыть единственную цель', file: 'durak-tap.js', from: "return { do: 'defend', target: targets[0] };", to: "return { do: 'pick' };", sim: 'cards', only: 'дурак: защита (одна цель) — tap2' },
+  { what: 'при двух целях второй тап кроет наугад', file: 'durak-tap.js', from: 'if (targets.length > 1 || transfers)', to: 'if (transfers)', sim: 'cards', only: 'дурак: защита (две цели) — tap2' },
+  { what: 'тап по карте стола кроет не ту', file: 'games/durak.js', from: "return play({ t: 'defend', card: picked, target: i });", to: "return play({ t: 'defend', card: picked, target: coverTargets(L, picked)[0] });", sim: 'cards', only: 'дурак: защита (две цели) — тап по второй' },
+  { what: 'козырь, годный на перевод, кроет сам', file: 'durak-tap.js', from: 'if (targets.length > 1 || transfers)', to: 'if (targets.length > 1)', sim: 'cards', only: 'дурак: перевод — козырь' },
   { what: 'отбой перетаскиванием отключён', file: 'games/durak.js', from: 'if (L?.defend?.[c]?.length) bindDefendDrag(btn, img, c);', to: '', sim: 'cards', only: 'дурак: защита (одна цель) — drag' },
   { what: 'в шахматах пропало перетаскивание', file: 'games/chess.js', from: 'function dragStart(e, board) {', to: 'function dragStart(e, board) { return;', sim: 'boards', only: 'шахматы: ход — перетаскивание' },
   { what: '«Сдаться» без подтверждения', file: 'games/chess.js', from: 'disabled: !s.canResign, onclick: confirmResign }', to: "disabled: !s.canResign, onclick: () => send({ t: 'resign' }) }", sim: 'boards', only: 'шахматы: «Сдаться»' },

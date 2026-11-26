@@ -410,3 +410,15 @@ body[data-screen='durak'] .res-row .pl.down { color: var(--k-text); }
   pointer-events: none;
   border-radius: var(--k-r-md);
 }
+
+/* Крыть можно и тапом по карте на столе: на тесном столе пара сжата, а зона
+   нажатия всё равно не меньше 44 px. */
+.dk-pair.target::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  translate: -50% -50%;
+}

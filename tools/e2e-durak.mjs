@@ -2,8 +2,10 @@
  * Durak played by real browsers, the whole way: `/game` in the group → the
  * hub in the Mini App → «Дурак» → «Создать лобби» → a friend joins from the
  * hub, another by the lobby's card → the host starts → a whole game played
- * by TAPPING cards and buttons → the durak on every screen and in the group
- * → the results. Then a transfer in perevodnoy, by the «Перевести» button.
+ * by TAPPING cards and buttons (covering too: the same two taps, sometimes a
+ * drag or the keyboard) → the durak on every screen and in the group → the
+ * results. Then perevodnoy: a transfer by the «Перевести» button, two cards
+ * to cover (the player chooses), covering the only one by the second tap.
  *
  *   node tools/e2e-durak.mjs
  *
@@ -168,6 +170,12 @@ async function assertPrivacy(label) {
 
 /* --------------------------------------------------- a game, by tapping */
 
+const RANKS = ['6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+/** Правило отбоя — своё, чтобы не проверять экран им же самим. */
+const beats1 = (a, c, trump) => (c.slice(-1) === a.slice(-1)
+  ? RANKS.indexOf(c.slice(0, -1)) > RANKS.indexOf(a.slice(0, -1))
+  : c.slice(-1) === trump && a.slice(-1) !== trump);
+
 const low = (cards) => cards.reduce((a, b) => (['6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'].indexOf(b.slice(0, -1)) < ['6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'].indexOf(a.slice(0, -1)) ? b : a));
 
 /**
@@ -207,8 +215,12 @@ async function dragCover(page, card, at, { touch = false, valid = true } = {}) {
   await page.waitForSelector('.dk-drag-card', { state: 'detached' });
 }
 
-let touchCovers = 0;
-let mouseCovers = 0;
+/** The same two taps by a finger. */
+async function fingerTap(page, selector, position) {
+  await page.locator(selector).tap(position ? { position } : {});
+}
+
+const covers = { 'мышь: два тапа': 0, 'палец: два тапа': 0, 'мышь: перетащить': 0, 'палец: перетащить': 0, 'клавиатура': 0 };
 let moves = 0;
 let throwsIn = 0;
 let takes = 0;
@@ -245,28 +257,51 @@ for (let guard = 0; room().deal.phase === 'play' && guard < 800; guard++) {
     const at = d.table.findIndex((x) => !x.d);
     const bout = d.bout.no;
     const trump = d.trump;
-    const rank = (c) => ['6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'].indexOf(c.slice(0, -1));
     const a = d.table[at].a;
     // правила подкидного: старшая той же масти или любой козырь; козырь бьётся только старшим козырем
-    const ok = d.hands[d.defender].filter((c) => (c.slice(-1) === a.slice(-1) ? rank(c) > rank(a) : c.slice(-1) === trump && a.slice(-1) !== trump));
+    const ok = d.hands[d.defender].filter((c) => beats1(a, c, trump));
     if (ok.length) {
       const card = low(ok);
       const touch = u === max;
-      const handCard = page.locator(`.dk-card[data-card="${card}"].can-cover`);
+      const selector = `.dk-card[data-card="${card}"]`;
+      const handCard = page.locator(`${selector}.can-cover`);
       await handCard.waitFor();
-      if (!beats) {
-        await handCard.dblclick({ position: { x: 7, y: 24 } });
-        await dragCover(page, card, at, { touch, valid: false });
+      const open = d.table.map((x, i) => (x.d ? -1 : i)).filter((i) => i >= 0);
+      const targets = open.filter((i) => beats1(d.table[i].a, card, trump));
+      if (!covers['мышь: перетащить'] && !touch) {
+        await dragCover(page, card, at, { valid: false });
         assert.equal(await handCard.locator('img').evaluate(el => getComputedStyle(el).opacity), '1');
-        assert.equal(room().seq, seq, 'двойной клик и сброс мимо не разыгрывают карту');
+        assert.equal(room().seq, seq, 'сброс мимо не разыгрывает карту');
       }
-      await dragCover(page, card, at, { touch });
-      await until(moved, `${u.first_name} кроет`);
+      // Каждый по очереди пробует оба способа; клавиатура — один раз.
+      const how = !covers['клавиатура'] && !touch ? 'клавиатура'
+        : `${touch ? 'палец' : 'мышь'}: ${covers[`${touch ? 'палец' : 'мышь'}: два тапа`] > covers[`${touch ? 'палец' : 'мышь'}: перетащить`] ? 'перетащить' : 'два тапа'}`;
+      if (how.endsWith('перетащить')) {
+        await dragCover(page, card, at, { touch });
+      } else if (how === 'клавиатура') {
+        await page.locator(selector).focus();
+        await page.keyboard.press('Enter');
+        await page.waitForSelector(`${selector} img.picked`);
+        await page.locator('.dk-pair.target:focus').waitFor();
+        assert.equal(room().seq, seq, 'первый Enter только поднимает');
+        await page.locator(`.dk-pair[data-i="${at}"]`).focus();
+        await page.keyboard.press('Enter');
+      } else {
+        const tapIt = () => (touch ? fingerTap(page, selector, { x: 7, y: 24 }) : tapCard(page, card));
+        await tapIt();
+        await page.waitForSelector(`${selector} img.picked`);
+        assert.equal(room().seq, seq, 'первый тап только поднимает');
+        assert.equal(await page.locator('.dk-pair.target').count(), targets.length, 'подсвечены ровно подходящие');
+        if (targets.length === 1) await tapIt(); // второй тап по своей карте
+        else if (touch) await fingerTap(page, `.dk-pair[data-i="${at}"]`); // выбрать на столе
+        else await page.locator(`.dk-pair[data-i="${at}"]`).click();
+      }
+      await until(moved, `${u.first_name} кроет (${how})`);
       const after = room().deal;
-      if (after.bout.no === bout && after.phase === 'play') assert.equal(after.table[at]?.d, card, 'карта попала в выбранную пару');
+      const where = how.endsWith('два тапа') && targets.length === 1 ? targets[0] : at;
+      if (after.bout.no === bout && after.phase === 'play') assert.equal(after.table[where]?.d, card, 'карта попала в нужную пару');
       else assert.ok(after.discard.includes(card), 'последняя защита закрыла отбой');
-      if (touch) touchCovers++;
-      else mouseCovers++;
+      covers[how]++;
       beats++;
     } else {
       await page.getByRole('button', { name: 'ВЗЯТЬ' }).click();
@@ -301,6 +336,7 @@ assert.equal(d1.phase, 'over', 'партия доиграна');
 for (const [id, page] of pages) await cardsInPlace(page, `конец партии у ${id}`, { empty: true });
 for (const page of [pi, pm]) await page.setViewportSize({ width: 360, height: 740 });
 step(`партия сыграна тапами и перетаскиванием: ${moves} действий — ${beats} раз покрыли, ${takes} раз взяли, ${throwsIn} подкинули`);
+step(`чем крыли: ${Object.entries(covers).map(([k, n]) => `${k} — ${n}`).join(', ')}`);
 
 const verdict = d1.fool ? `Дурак — ${room().players.find((p) => p.id === d1.fool).name}` : 'Ничья';
 for (const page of pages.values()) await page.waitForSelector(`.dk-line:has-text("${verdict}")`);
@@ -309,7 +345,7 @@ assert.match(card1, d1.fool ? /Дурак партии #1/ : /ничья/);
 assert.match(card1, /Счёт: /);
 step(`итог на всех экранах: «${verdict}»; карточка в группе — «${card1.split('\n').find((l) => /Дурак партии|ничья/.test(l))?.replace(/<[^>]+>/g, '')}»`);
 
-assert.ok(touchCovers > 0 && mouseCovers > 0, 'за партию покрыли мышью и касанием');
+for (const [how, n] of Object.entries(covers)) assert.ok(n > 0, `за партию ни разу не покрыли так: ${how}`);
 
 /* -------------------------------------------------- the results, in the group */
 
@@ -333,7 +369,7 @@ step('за вечер в группе три сообщения: /game, карт
 /* -------------------------------------------- perevodnoy: «Перевести» */
 
 app.durakDeck = durakStack(
-  { 202: '6D 7S 8S 9S 10S JS', 303: '7H 7C 8H 9H 10H JH', 101: 'QC KC AC QS KS AS' },
+  { 202: '6D 7S 8S 9S 10S JS', 303: '7H 7C 8H 9H 10H JH', 101: 'QC KC KD QS KS AS' },
   { trump: 'AD' },
 );
 await pi.close();
@@ -356,12 +392,46 @@ await playCard(pageOf(max), '7S');
 await until(() => room().deal.table.length === 1, 'Макс ходит 7♠');
 const pd2 = pageOf(dima);
 await pd2.waitForSelector('.panel button:has-text("ПЕРЕВЕСТИ")');
+const beforeTransfer = room().seq;
 await tapCard(pd2, '7H');
+await pd2.waitForSelector('.dk-line:has-text("Перевести — кнопкой")');
+await tapCard(pd2, '7H');
+await pd2.waitForSelector('#toast:has-text("кнопкой «Перевести»")');
+assert.equal(room().seq, beforeTransfer, 'второй тап не переводит и не молчит');
 await pd2.locator('.panel button', { hasText: 'ПЕРЕВЕСТИ' }).click();
 await until(() => room().deal.defender === '101', 'перевод на Ивана');
 await pi2.waitForSelector('.dk-role:has-text("ВЫ ОТБИВАЕТЕСЬ")');
 assert.equal(await pi2.locator('.dk-pair').count(), 2, 'у Ивана на столе обе семёрки');
 step('переводной: Дима перевёл семёрку кнопкой «Перевести» — теперь отбивается Иван');
+
+/* ---------------------------------- two cards to cover: the player chooses */
+
+// У Ивана на столе 7♠ и 7♥. Козырная К♦ бьёт обе, Q♠ — только 7♠.
+const two = room().seq;
+await pi2.waitForSelector('.dk-line:has-text("Покрыть: тап по своей карте и ещё тап")');
+await tapCard(pi2, 'QC');
+await pi2.waitForSelector('#toast:has-text("не бьёт ни одну открытую карту")');
+assert.equal(await pi2.locator('.dk-card img.picked').count(), 0, 'неподходящая не поднимается');
+await tapCard(pi2, 'KD');
+await pi2.waitForSelector('.dk-card[data-card="KD"] img.picked');
+assert.equal(await pi2.locator('.dk-pair.target').count(), 2, 'подсвечены обе');
+await tapCard(pi2, 'KD');
+await pi2.waitForSelector('#toast:has-text("на столе")');
+assert.equal(room().seq, two, 'при двух целях второй тап по своей карте не ходит');
+assert.equal(await pi2.locator('.dk-card[data-card="KD"] img.picked').count(), 1, 'карта остаётся поднятой');
+for (const pair of await pi2.locator('.dk-pair.target').all()) {
+  const hitArea = await pair.evaluate((el) => { const s = getComputedStyle(el, '::after'); return [parseFloat(s.width), parseFloat(s.height)]; });
+  assert.ok(hitArea.every((x) => x >= 44), `цель на столе не меньше 44 px: ${hitArea}`);
+}
+await pi2.locator('.dk-pair[data-i="1"]').click();
+await until(() => room().deal.table[1].d === 'KD', 'К♦ легла на выбранную 7♥');
+assert.equal(room().deal.table[0].d ?? null, null, '7♠ осталась открытой');
+await pi2.waitForSelector('.dk-pair[data-i="1"].covered');
+await tapCard(pi2, 'QS');
+await pi2.waitForSelector('.dk-card[data-card="QS"] img.picked');
+await tapCard(pi2, 'QS');
+await until(() => room().deal.table[0]?.d === 'QS', 'второй тап покрыл единственную открытую');
+step('защита: две цели — выбрал тапом по столу; одна — покрыл вторым тапом по своей карте');
 
 async function noSideways(what) {
   for (const [id, page] of pages) {
