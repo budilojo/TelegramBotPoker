@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import path from 'node:path';
 import { loadManifest, validateManifest, nextStep, manifestOf, ROOT } from './release-run.mjs';
 
@@ -91,5 +92,24 @@ test('четвёртый пакет (next-release-4): манифест корр�
   const all = [...real.steps, ...others.flatMap((o) => o.steps), ...m4.steps].map((s) => s.decisions);
   for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) {
     assert.ok(all[i][1] < all[j][0] || all[j][1] < all[i][0], `решения ${all[i]} и ${all[j]} пересекаются`);
+  }
+});
+
+test('пятый пакет (next-release-5): манифест корректен, порядок S→T→U→V→W→X→Y, скилл ux-ui-audit на месте, всё своё', () => {
+  const others = ['next-release-2', 'next-release-3', 'next-release-4'].map((p) => loadManifest(path.join(ROOT, manifestOf(p))));
+  const m5 = loadManifest(path.join(ROOT, manifestOf('next-release-5')));
+  assert.deepEqual(validateManifest(m5), []);
+  assert.deepEqual(m5.steps.map((s) => s.letter), ['S', 'T', 'U', 'V', 'W', 'X', 'Y']);
+  assert.ok(m5.stateDir.startsWith('.release-run/'), 'состояние внутри игнорируемой папки');
+  for (const o of others) for (const k of ['runBranch', 'worktree', 'stateDir', 'portBase']) assert.notEqual(m5[k], o[k], `${k} свой`);
+  const all = [...real.steps, ...others.flatMap((o) => o.steps), ...m5.steps].map((s) => s.decisions);
+  for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) {
+    assert.ok(all[i][1] < all[j][0] || all[j][1] < all[i][0], `решения ${all[i]} и ${all[j]} пересекаются`);
+  }
+  const skill = fs.readFileSync(path.join(ROOT, '.claude/skills/ux-ui-audit/SKILL.md'), 'utf8');
+  assert.match(skill, /^---\nname: ux-ui-audit\n/, 'у скилла есть имя в шапке');
+  for (const s of m5.steps) {
+    const agent = fs.readFileSync(path.join(ROOT, `.claude/agents/${s.agent}.md`), 'utf8');
+    assert.match(agent, /ux-ui-audit/, `${s.id}: агент обязан прочитать скилл`);
   }
 });

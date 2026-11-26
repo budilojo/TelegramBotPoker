@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "baseBranch": "redesign",
+  "runBranch": "release5/run",
+  "stateDir": ".release-run/pack5",
+  "worktree": "release5",
+  "reportsDir": "docs/next-release-5/reports",
+  "portBase": 10200,
+  "maxAttempts": 3,
+  "common": ["docs/next-release/01-common.md", "docs/next-release-5/00-plan.md"],
+  "steps": [
+    { "id": "uxsim", "letter": "S", "agent": "release5-uxsim", "task": "docs/next-release-5/01-ux-simulation.md", "decisions": [222, 226] },
+    { "id": "uiscan", "letter": "T", "agent": "release5-uiscan", "task": "docs/next-release-5/02-ui-overflow-scan.md", "decisions": [227, 230] },
+    { "id": "visual", "letter": "U", "agent": "release5-visual", "task": "docs/next-release-5/03-visual-review.md", "decisions": [231, 234] },
+    { "id": "durakfix", "letter": "V", "agent": "release5-durakfix", "task": "docs/next-release-5/04-durak-gesture.md", "decisions": [235, 238] },
+    { "id": "shop", "letter": "W", "agent": "release5-shop", "task": "docs/next-release-5/05-shop.md", "decisions": [239, 244] },
+    { "id": "uifix", "letter": "X", "agent": "release5-uifix", "task": "docs/next-release-5/06-ui-fixes.md", "decisions": [245, 250] },
+    { "id": "check", "letter": "Y", "agent": "release5-check", "task": "docs/next-release-5/07-check.md", "decisions": [251, 255] }
+  ]
+}
