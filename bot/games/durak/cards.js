@@ -50,14 +50,18 @@ export function isFullDeck(deck) {
   return seen.size === 36 && deck.every(isCard);
 }
 
-/** Equal ranks can cover a non-trump; higher cards still follow suit and trump rules. */
+/**
+ * Правило подкидного дурака: карту бьют старшей картой ТОЙ ЖЕ масти или любым козырем
+ * (даже младшим по достоинству), если атакующая карта — не козырь; козырь бьётся только
+ * старшим козырем. Карта того же достоинства другой масти НЕ бьёт: равное достоинство
+ * нужно только для перевода в переводном дураке (rules.js, transfer), это другое действие.
+ */
 export function beats(attack, defense, trump) {
-  const order = rankIndex(defense) - rankIndex(attack);
-  if (order < 0 || attack === defense) return false;
+  if (attack === defense) return false;
   const attackSuit = suitOf(attack);
   const defenseSuit = suitOf(defense);
-  if (attackSuit === trump) return defenseSuit === trump;
-  return order === 0 || defenseSuit === attackSuit || defenseSuit === trump;
+  if (defenseSuit === attackSuit) return rankIndex(defense) > rankIndex(attack);
+  return defenseSuit === trump && attackSuit !== trump;
 }
 
 /** A hand the way people hold it: by suit, trumps on the right, low to high. */

@@ -247,11 +247,8 @@ for (let guard = 0; room().deal.phase === 'play' && guard < 800; guard++) {
     const trump = d.trump;
     const rank = (c) => ['6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'].indexOf(c.slice(0, -1));
     const a = d.table[at].a;
-    const ok = d.hands[d.defender].filter((c) => {
-      if (rank(c) < rank(a)) return false;
-      if (a.endsWith(trump)) return c.endsWith(trump) && rank(c) > rank(a);
-      return rank(c) === rank(a) || c.endsWith(a.slice(-1)) || c.endsWith(trump);
-    });
+    // правила подкидного: старшая той же масти или любой козырь; козырь бьётся только старшим козырем
+    const ok = d.hands[d.defender].filter((c) => (c.slice(-1) === a.slice(-1) ? rank(c) > rank(a) : c.slice(-1) === trump && a.slice(-1) !== trump));
     if (ok.length) {
       const card = low(ok);
       const touch = u === max;

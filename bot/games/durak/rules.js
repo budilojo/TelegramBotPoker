@@ -367,7 +367,7 @@ export function defend(room, userId, card, target, seq) {
       error: 'CANNOT_BEAT',
       text: suitOf(pair.a) === d.trump
         ? `${label(card)} не бьёт ${label(pair.a)}: козырь бьётся только старшим козырем.`
-        : `${label(card)} не бьёт ${label(pair.a)}: нужна равная по достоинству, старшая ${SUIT_SIGN[suitOf(pair.a)]} или козырь не младше.`,
+        : `${label(card)} не бьёт ${label(pair.a)}: нужна старшая ${SUIT_SIGN[suitOf(pair.a)]} или козырь.`,
     };
   }
   take1(d.hands[id], card);

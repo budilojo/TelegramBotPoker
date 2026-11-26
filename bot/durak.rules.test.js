@@ -253,7 +253,7 @@ test('8 · …and no more than the defender held when the bout began', () => {
   assert.match(r.text, /Макс отбивается, а у него было всего 3 карты/);
 });
 
-test('9 · equal ranks cover plain cards; higher cards follow suit and trump rules', () => {
+test('9 · beat with a higher card of the suit, or with any trump; a trump only with a higher trump', () => {
   const room = table(2);
   const d = position(room, {
     hands: { 1: '9H KS 7D 6C', 2: '8H 10H 6D 9D AS 9C' },
@@ -262,13 +262,13 @@ test('9 · equal ranks cover plain cards; higher cards follow suit and trump rul
   });
   ok(D.attack(room, '1', '9H'));
   refused(D.defend(room, '2', '8H', 0), 'CANNOT_BEAT', 'a lower heart');
-  assert.match(D.defend(room, '2', '8H', 0).text, /8♥ не бьёт 9♥: нужна равная по достоинству, старшая ♥ или козырь не младше/);
+  assert.match(D.defend(room, '2', '8H', 0).text, /8♥ не бьёт 9♥: нужна старшая ♥ или козырь\./);
   refused(D.defend(room, '2', 'AS', 0), 'CANNOT_BEAT', 'a higher card of another suit');
-  refused(D.defend(room, '2', '6D', 0), 'CANNOT_BEAT', 'even a trump must meet the rank floor');
+  refused(D.defend(room, '2', '9C', 0), 'CANNOT_BEAT', 'an equal rank of another suit does not beat');
   refused(D.defend(room, '2', '9C', null), 'BAD_TARGET', 'null must never resolve to the first pair');
   assert.equal(beats('9H', '10H', 'D'), true, 'a higher heart');
-  ok(D.defend(room, '2', '9C', 0), 'an equal rank can cover a plain card');
-  refused(D.defend(room, '2', '6D', 0), 'ALREADY_COVERED', 'one defending card per attacking card');
+  ok(D.defend(room, '2', '6D', 0), 'ANY trump beats a plain card, even a lower one');
+  refused(D.defend(room, '2', '10H', 0), 'ALREADY_COVERED', 'one defending card per attacking card');
   passAll(room);
   // '2' beat off the attack and leads now: a trump, which only a higher trump beats.
   assert.equal(d.attacker, '2');
@@ -278,11 +278,28 @@ test('9 · equal ranks cover plain cards; higher cards follow suit and trump rul
   refused(r, 'CANNOT_BEAT', 'a lower trump on a higher one');
   assert.match(r.text, /козырь бьётся только старшим козырем/);
   assert.equal(beats('9D', 'JD', 'D'), true, 'a higher trump does');
+});
 
-  assert.equal(beats('AS', '6D', 'D'), false);
-  assert.equal(beats('9H', '9D', 'D'), true);
-  assert.equal(beats('9D', '9H', 'D'), false);
-  assert.equal(beats('7D', 'AS', 'D'), false);
+test('9б · «король пик королём бубен при козыре червях» — не бьёт; любой козырь бьёт любую некозырную', () => {
+  // правила подкидного дурака: старшая той же масти или любой козырь; одинаковое достоинство другой масти не бьёт
+  assert.equal(beats('KS', 'KD', 'H'), false, 'король пик королём бубен (козырь черви)');
+  assert.equal(beats('KS', 'KH', 'H'), true, 'король пик козырным королём');
+  assert.equal(beats('AS', '6H', 'H'), true, 'туз пик самым младшим козырем');
+  assert.equal(beats('10S', '7H', 'H'), true, '10 пик козырной семёркой');
+  assert.equal(beats('9S', 'JS', 'H'), true, 'старшая той же масти');
+  assert.equal(beats('9S', '8S', 'H'), false, 'младшая той же масти');
+  assert.equal(beats('9S', '9S', 'H'), false, 'та же карта');
+  assert.equal(beats('9H', 'AS', 'H'), false, 'козырь некозырной картой');
+  assert.equal(beats('9H', '8H', 'H'), false, 'козырь младшим козырем');
+  assert.equal(beats('9H', '10H', 'H'), true, 'козырь старшим козырем');
+  // и тот же ответ даёт сервер (не только функция)
+  const room = table(2);
+  position(room, { hands: { 1: 'KS 7C', 2: 'KD 6H 8C' }, trump: 'H', attacker: '1' });
+  ok(D.attack(room, '1', 'KS'));
+  const bad = D.defend(room, '2', 'KD', 0);
+  refused(bad, 'CANNOT_BEAT', 'король бубен не бьёт короля пик');
+  assert.match(bad.text, /К♦ не бьёт К♠: нужна старшая ♠ или козырь\./);
+  ok(D.defend(room, '2', '6H', 0), 'младший козырь бьёт короля пик');
 });
 
 test('10 · beaten off: the cards go to the discard face down, and the defender leads next', () => {

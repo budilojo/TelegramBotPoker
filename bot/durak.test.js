@@ -194,7 +194,7 @@ test('every refusal is said in words, and the page is put back to the truth', as
   await t.send(cast.dima, { t: 'defend', card: '8H', target: 0 });
   const err = t.lastError(cast.dima);
   assert.equal(err.code, 'CANNOT_BEAT');
-  assert.equal(err.text, '8♥ не бьёт 9♠: нужна равная по достоинству, старшая ♠ или козырь не младше.');
+  assert.equal(err.text, '8♥ не бьёт 9♠: нужна старшая ♠ или козырь.');
   assert.ok(t.page(cast.dima).inbox.slice(before).some((m) => m.t === 'state'), 'a fresh state follows the refusal');
   await t.send(cast.ivan, { t: 'attack', card: '10C' });
   assert.match(t.lastError(cast.ivan).text, /Подкидывать можно только 9/);
@@ -202,10 +202,13 @@ test('every refusal is said in words, and the page is put back to the truth', as
   assert.equal(t.lastError(cast.ivan).code, 'NOT_YOUR_CARD');
   await t.send(cast.ivan, { t: 'act', action: 'fold' });
   assert.equal(t.lastError(cast.ivan).code, 'BAD_REQUEST', 'a poker move at a durak table');
-  assert.deepEqual(t.state(cast.dima).legal.defend['9H'], [0]);
+  // у Димы одни червы, козырь — бубны: ничем из руки 9♠ не побить, и такое же достоинство (9♥) — не «бьёт»
+  assert.equal(t.state(cast.dima).legal.defend['9H'], undefined, 'равное достоинство другой масти не подсвечивается');
   assert.equal(t.state(cast.dima).legal.defend['8H'], undefined);
   await t.send(cast.dima, { t: 'defend', card: '9H', target: 0 });
-  assert.equal(t.durak.deal.table[0].d, '9H');
+  assert.equal(t.lastError(cast.dima).code, 'CANNOT_BEAT');
+  assert.equal(t.lastError(cast.dima).text, '9♥ не бьёт 9♠: нужна старшая ♠ или козырь.');
+  assert.equal(t.durak.deal.table[0].d ?? null, null, '9♥ не легла на 9♠');
 });
 
 test('somebody who only opened the link cannot play, cannot start, cannot deal the next game', async () => {
