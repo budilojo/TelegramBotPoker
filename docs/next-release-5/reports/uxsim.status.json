@@ -1,0 +1,11 @@
+{
+ "id": "uxsim",
+ "status": "partial",
+ "summary": "Аудит UX сделан (отчёт, npm run ux:sim, 90 сценариев, зубы 4/4), продукт не менялся. npm test красный: в git нет скилла ux-ui-audit — нужен владелец.",
+ "at": "2026-11-26T20:16:31Z",
+ "tests": "npm test 1697/1698 (красный: тест на наличие скилла ux-ui-audit, падал и до работы S); ux:sim зелёный; ux-sim-teeth 4/4",
+ "blockers": [
+  "В git нет .claude/skills/ux-ui-audit/SKILL.md (отсёк .gitignore в ac9e9f4): добавить в redesign через git add -f, затем node tools/release-run.mjs --pack next-release-5 --continue-partial",
+  "Из-за красного npm test скрипт не опубликует шаг и не запустит T–Y; телефон и живой Telegram не проверялись"
+ ]
+}

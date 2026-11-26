@@ -3,6 +3,8 @@
 ## Пятый пакет — UX/UI (26.11.2026)
 
 - [ ] Запустить `node tools/release-run.mjs --pack next-release-5` (S симуляция, T скан вёрстки, U красота, V жест Дурака, W магазин, X исправления, Y проверка). Скилл `ux-ui-audit`. Агенты ещё не запускались; продажи закрыты, выкатки нет.
+- [ ] **Блокер пятого пакета:** вернуть `.claude/skills/ux-ui-audit/SKILL.md` в git (`git add -f`, ветка `redesign`), затем `node tools/release-run.mjs --pack next-release-5 --continue-partial`. Шаг S сделан (partial), T–Y не запускались.
+- [ ] Находки S (`docs/next-release-5/ux-sim-report.md`) — исправить в V и X: P1 — защита в Дураке, «Удалить игрока» без подтверждения, кнопка «Хост» в лобби дуэлей и UNOQ.
 
 ## Исправление правил Дурака (26.11.2026)
 

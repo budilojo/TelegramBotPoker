@@ -6,6 +6,8 @@ data/rooms.json
 # редакторское/агентское, к продукту отношения не имеет
 .claude/*
 !.claude/agents/
+# скиллы проекта тоже в git: ux-ui-audit однажды не доехал из-за этой строки
+!.claude/skills/
 
 # Telegram-бот: локальная база столов
 data/bot.db
